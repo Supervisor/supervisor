@@ -729,7 +729,7 @@ class ServerOptions(Options):
                     self.logger.info('Failed to clean up %r' % pathname)
 
     def make_logger(self, held_messages):
-        # must be called after realize()
+        # must be called after realize() and after supervisor does setuid()
         format =  '%(asctime)s %(levelname)s %(message)s\n'
         self.logger = self.getLogger(
             self.logfile,

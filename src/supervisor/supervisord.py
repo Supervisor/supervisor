@@ -448,13 +448,14 @@ class Supervisor:
         self.options.make_logger(held_messages)
 
         if not self.options.nocleanup:
+            # clean up old automatic logs
             self.options.clear_childlogdir()
 
         # delay "automatic" child log creation until after setuid because
         # we want to use mkstemp, which needs to create the file eagerly
         for program in self.options.programs:
             if program.logfile is self.options.AUTOMATIC:
-                # temporary logfile which is erased at restart
+                # temporary logfile which is erased at start time
                 prefix='%s---%s-' % (program.name, self.options.identifier)
                 fd, logfile = tempfile.mkstemp(
                     suffix='.log',
