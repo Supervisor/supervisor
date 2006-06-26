@@ -20,39 +20,30 @@ from http import NOT_DONE_YET
 
 RPC_VERSION  = 1.0
 
-FAULTS = {
-    'SUPER_READ_NO_FILE':1000,
-    'SUPER_READ_BAD_ARGUMENTS':1001,
-    'SUPER_CLEAR_FAILED':1010,
-    'SUPER_CLEAR_NO_FILE':1011,
-    'START_BAD_NAME':2002,
-    'START_ABNORMAL_TERMINATION':2003,
-    'START_SPAWN_ERROR':2004,
-    'START_ALREADY_STARTED':2006,
-    'STOP_BAD_NAME':2010,
-    'STOP_UNSUCCESSFUL':2011,
-    'STOP_NOT_RUNNING':2012,
-    'INFO_BAD_NAME':2020,
-    'READ_BAD_NAME':2040,
-    'READ_BAD_ARGUMENTS':2041,
-    'READ_NO_FILE':2042,
-    'CLEAR_BAD_NAME':2050,
-    'CLEAR_FAILED':2051,
-    'UNKNOWN_METHOD':1,
-    'INCORRECT_PARAMETERS':2,
-    'SIGNATURE_UNSUPPORTED':4,
-    'SHUTDOWN_STATE':6,
-    }
+class Faults:
+    UNKNOWN_METHOD = 1
+    INCORRECT_PARAMETERS = 2
+    BAD_ARGUMENTS = 3
+    SIGNATURE_UNSUPPORTED = 4
+    SHUTDOWN_STATE = 6
+    BAD_NAME = 10
+    NO_FILE = 20
+    FAILED = 30
+    ABNORMAL_TERMINATION = 40
+    SPAWN_ERROR = 50
+    ALREADY_STARTED = 60
+    NOT_RUNNING = 70
 
-RFAULTS = dict([(v, k) for k, v in FAULTS.items()])
+def getFaultDescription(code):
+    for faultname in Faults.__dict__:
+        if getattr(Faults, faultname) == code:
+            return faultname
+    return 'UNKNOWN'
 
 class RPCError(Exception):
-    def __init__(self, text, code=None):
-        self.text = text
-        if code is None:
-            self.code = FAULTS[text]
-        else:
-            self.code = code
+    def __init__(self, code):
+        self.code = code
+        self.text = getFaultDescription(code)
 
 class DeferredXMLRPCResponse:
     """ A medusa producer that implements a deferred callback; requires
@@ -178,7 +169,7 @@ class SupervisorNamespaceRPCInterface:
         state = self.supervisord.get_state()
 
         if state == SupervisorStates.SHUTDOWN:
-            raise RPCError('SHUTDOWN_STATE')
+            raise RPCError(Faults.SHUTDOWN_STATE)
 
     # RPC API methods
 
@@ -225,13 +216,13 @@ class SupervisorNamespaceRPCInterface:
         logfile = self.supervisord.options.logfile
 
         if logfile is None or not os.path.exists(logfile):
-            raise RPCError('SUPER_READ_NO_FILE')
+            raise RPCError(Faults.NO_FILE)
 
         try:
             return _readFile(logfile, offset, length)
         except ValueError, inst:
             why = inst.args[0]
-            raise RPCError('SUPER_READ_' + why)
+            raise RPCError(getattr(Faults, why))
 
     def clearLog(self):
         """ Clear the main log.
@@ -242,12 +233,12 @@ class SupervisorNamespaceRPCInterface:
 
         logfile = self.supervisord.options.logfile
         if  logfile is None or not os.path.exists(logfile):
-            raise RPCError('SUPER_CLEAR_NO_FILE')
+            raise RPCError(Faults.NO_FILE)
 
         try:
             os.remove(logfile) # there is a race condition here, but ignore it.
         except (os.error, IOError):
-            raise RPCError('SUPER_CLEAR_FAILED')
+            raise RPCError(Faults.FAILED)
 
         for handler in self.supervisord.options.logger.handlers:
             if hasattr(handler, 'reopen'):
@@ -289,15 +280,15 @@ class SupervisorNamespaceRPCInterface:
         process = processes.get(name)
 
         if process is None:
-            raise RPCError('START_BAD_NAME')
+            raise RPCError(Faults.BAD_NAME)
 
         if process.pid:
-            raise RPCError('START_ALREADY_STARTED')
+            raise RPCError(Faults.ALREADY_STARTED)
 
         process.spawn()
 
         if process.spawnerr:
-            raise RPCError('START_SPAWN_ERROR')
+            raise RPCError(Faults.SPAWN_ERROR)
 
         if not timeout:
             return True
@@ -313,7 +304,7 @@ class SupervisorNamespaceRPCInterface:
             pid = processes[name].pid
             if pid:
                 return True
-            raise RPCError('START_ABNORMAL_TERMINATION')
+            raise RPCError(Faults.ABNORMAL_TERMINATION)
 
         check_still_running.delay = milliseconds
         check_still_running.rpcinterface = self
@@ -376,10 +367,10 @@ class SupervisorNamespaceRPCInterface:
 
         process = self.supervisord.processes.get(name)
         if process is None:
-            raise RPCError('STOP_BAD_NAME')
+            raise RPCError(Faults.BAD_NAME)
 
         if process.get_state() != ProcessStates.RUNNING:
-            raise RPCEror('STOP_NOT_RUNNING')
+            raise RPCEror(Faults.NOT_RUNNING)
 
         def killit():
             if process.killing:
@@ -387,7 +378,7 @@ class SupervisorNamespaceRPCInterface:
             elif process.pid:
                 msg = process.stop()
                 if msg is not None:
-                    raise RPCError('STOP_UNSUCCESSFUL')
+                    raise RPCError(Faults.FAILED)
                 return NOT_DONE_YET
             else:
                 return True
@@ -419,11 +410,7 @@ class SupervisorNamespaceRPCInterface:
                 return True
 
             callback = callbacks.pop(0)
-            try:
-                value = callback()
-            except RPCError, inst:
-                if inst.text == 'STOP_UNSUCCESSFUL':
-                    raise RPCError('STOP_ALL_UNSUCCESSFUL')
+            value = callback()
             
             if value is NOT_DONE_YET:
                 # push it back into the queue; it will finish eventually
@@ -467,7 +454,7 @@ class SupervisorNamespaceRPCInterface:
         
         process = self.supervisord.processes.get(name)
         if process is None:
-            raise RPCError('INFO_BAD_NAME')
+            raise RPCError(Faults.BAD_NAME)
 
         start = int(process.laststart)
         stop = int(process.laststop)
@@ -517,21 +504,18 @@ class SupervisorNamespaceRPCInterface:
 
         process = self.supervisord.processes.get(processName)
         if process is None:
-            raise RPCError('READ_BAD_NAME')
+            raise RPCError(Faults.BAD_NAME)
 
         logfile = process.config.logfile
 
         if logfile is None or not os.path.exists(logfile):
-            # XXX problematic: processes that don't start won't have a log
-            # file and we probably don't want to go into fatal state if we try
-            # to read the log of a process that did not start.
-            raise RPCError('READ_NO_FILE')
+            raise RPCError(Faults.NO_FILE)
 
         try:
             return _readFile(logfile, offset, length)
         except ValueError, inst:
             why = inst.args[0]
-            raise RPCError('READ_' + why)
+            raise RPCError(getattr(Faults, why))
 
     def clearProcessLog(self, processName):
         """ Clear the log for processName and reopen it
@@ -543,14 +527,13 @@ class SupervisorNamespaceRPCInterface:
 
         process = self.supervisord.processes.get(processName)
         if process is None:
-            raise RPCError('CLEAR_BAD_NAME')
+            raise RPCError(Faults.BAD_NAME)
 
         try:
             # implies a reopen
             process.removelogs()
         except (IOError, os.error):
-            msg = 'FATAL: failed clearing log file %r' % logfile
-            raise RPCError('CLEAR_FAILED')
+            raise RPCError(Faults.FAILED)
 
         return True
 
@@ -605,7 +588,7 @@ class SystemNamespaceRPCInterface:
         for methodname in methods.keys():
             if methodname == name:
                 return methods[methodname]
-        raise RPCError('SIGNATURE_UNSUPPORTED')
+        raise RPCError(Faults.SIGNATURE_UNSUPPORTED)
     
     def methodSignature(self, name):
         """ Return an array describing the method signature in the
@@ -629,9 +612,9 @@ class SystemNamespaceRPCInterface:
                     elif thing[1] == 'param': # tag name
                         ptypes.append(thing[2]) # datatype
                 if rtype is None:
-                    raise RPCError('SIGNATURE_UNSUPPORTED')
+                    raise RPCError(Faults.SIGNATURE_UNSUPPORTED)
                 return [rtype] + ptypes
-        raise RPCError('SIGNATURE_UNSUPPORTED')
+        raise RPCError(Faults.SIGNATURE_UNSUPPORTED)
 
     def multicall(self, calls):
         """Process an array of calls, and return an array of
@@ -654,7 +637,8 @@ class SystemNamespaceRPCInterface:
                 if name == 'system.multicall':
                     # Recursive system.multicall forbidden
                     error = 'INCORRECT_PARAMETERS'
-                    raise xmlrpclib.Fault(FAULTS[error], error)
+                    raise xmlrpclib.Fault(Faults.INCORRECT_PARAMETERS,
+                                          error)
                 root = AttrDict(self.namespaces)
                 value = traverse(root, name, params)
             except RPCError, inst:
@@ -770,15 +754,15 @@ def traverse(ob, method, params):
         if name.startswith('_'):
             # security (don't allow things that start with an underscore to
             # be called remotely)
-            raise RPCError('UNKNOWN_METHOD')
+            raise RPCError(Faults.UNKNOWN_METHOD)
         ob = getattr(ob, name, None)
         if ob is None:
-            raise RPCError('UNKNOWN_METHOD')
+            raise RPCError(Faults.UNKNOWN_METHOD)
 
     try:
         return ob(*params)
     except TypeError:
-        raise RPCError('INCORRECT_PARAMETERS')
+        raise RPCError(Faults.INCORRECT_PARAMETERS)
 
 def _readFile(filename, offset, length):
     """ Read length bytes from the file named by filename starting at

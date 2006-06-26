@@ -273,7 +273,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_readLog_unreadable(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
-        self._assertRPCError('SUPER_READ_NO_FILE', interface.readLog,
+        self._assertRPCError('NO_FILE', interface.readLog,
                              offset=0, length=1)
 
     def test_readLog_badargs(self):
@@ -284,9 +284,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f = open(logfile, 'w+')
             f.write('x' * 2048)
             f.close()
-            self._assertRPCError('SUPER_READ_BAD_ARGUMENTS',
+            self._assertRPCError('BAD_ARGUMENTS',
                                  interface.readLog, offset=-1, length=1)
-            self._assertRPCError('SUPER_READ_BAD_ARGUMENTS',
+            self._assertRPCError('BAD_ARGUMENTS',
                                  interface.readLog, offset=-1,
                                  length=-1)
         finally:
@@ -316,7 +316,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_clearLog_unreadable(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
-        self._assertRPCError('SUPER_CLEAR_NO_FILE', interface.clearLog)
+        self._assertRPCError('NO_FILE', interface.clearLog)
 
     def test_clearLog(self):
         supervisord = DummySupervisor()
@@ -359,13 +359,13 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process.pid = 10
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
-        self._assertRPCError('START_ALREADY_STARTED',
+        self._assertRPCError('ALREADY_STARTED',
                              interface.startProcess,'foo')
 
     def test_startProcess_badname(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
-        self._assertRPCError('START_BAD_NAME',  interface.startProcess,
+        self._assertRPCError('BAD_NAME',  interface.startProcess,
                              'foo')
 
     def test_startProcess_spawnerr(self):
@@ -375,7 +375,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process.spawnerr = 'abc'
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
-        self._assertRPCError('START_SPAWN_ERROR',  interface.startProcess,
+        self._assertRPCError('SPAWN_ERROR',  interface.startProcess,
                              'foo')
 
     def test_startProcess(self):
@@ -402,7 +402,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(process.spawned, True)
         self.assertEqual(interface.update_text, 'startProcess')
         process.pid = 0
-        self._assertRPCError('START_ABNORMAL_TERMINATION', callback, True)
+        self._assertRPCError('ABNORMAL_TERMINATION', callback, True)
     
     def test_startProcess_notimeout(self):
         options = DummyOptions()
@@ -441,7 +441,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_stopProcess_badname(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
-        self._assertRPCError('STOP_BAD_NAME', interface.stopProcess, 'foo')
+        self._assertRPCError('BAD_NAME', interface.stopProcess, 'foo')
 
     def test_stopProcess(self):
         options = DummyOptions()
@@ -567,7 +567,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = DummyProcess(options, config)
         supervisord = DummySupervisor({'process1':process})
         interface = self._makeOne(supervisord)
-        self._assertRPCError('READ_NO_FILE', interface.readProcessLog,
+        self._assertRPCError('NO_FILE', interface.readProcessLog,
                              'process1', offset=0, length=1)
 
     def test_readProcessLog_badargs(self):
@@ -583,10 +583,10 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f = open(logfile, 'w+')
             f.write('x' * 2048)
             f.close()
-            self._assertRPCError('READ_BAD_ARGUMENTS',
+            self._assertRPCError('BAD_ARGUMENTS',
                                  interface.readProcessLog,
                                  'process1', offset=-1, length=1)
-            self._assertRPCError('READ_BAD_ARGUMENTS',
+            self._assertRPCError('BAD_ARGUMENTS',
                                  interface.readProcessLog, 'process1',
                                  offset=-1, length=-1)
         finally:
@@ -620,7 +620,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_clearProcessLog_bad_name(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
-        self._assertRPCError('CLEAR_BAD_NAME', interface.clearProcessLog,
+        self._assertRPCError('BAD_NAME', interface.clearProcessLog,
                              'spew')
 
     def test_clearProcessLog(self):
