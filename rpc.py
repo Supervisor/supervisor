@@ -171,10 +171,6 @@ class SupervisorNamespaceRPCInterface:
 
     def __init__(self, supervisord):
         self.supervisord = supervisord
-        self.cache = {}
-        self._update('__init__')
-        if not self.supervisord.options.nocleanup:
-            self._clear_childlogdir()
 
     def _update(self, text):
         self.update_text = text # for unit tests, mainly
@@ -183,59 +179,6 @@ class SupervisorNamespaceRPCInterface:
 
         if state == SupervisorStates.SHUTDOWN:
             raise RPCError('SHUTDOWN_STATE')
-
-    def _clear_childlogdir(self):
-        options = self.supervisord.options
-        childlogdir = options.childlogdir
-        fnre = re.compile(r'.+?---\d{1,11}-%s-\S+?\.xlog' % options.identifier)
-        try:
-            filenames = os.listdir(childlogdir)
-        except (IOError, OSError):
-            options.logger.info('Could not clear childlog dir')
-            return
-        
-        for filename in filenames:
-            if fnre.match(filename):
-                pathname = os.path.join(childlogdir, filename)
-                try:
-                    os.remove(pathname)
-                except (os.error, IOError):
-                    options.logger.info('Failed to clean up %r' % pathname)
-
-    def _readFile(self, filename, offset, length):
-        """ Read length bytes from the file named by filename starting at
-        offset """
-
-        absoffset = abs(offset)
-        abslength = abs(length)
-
-        try:
-            f = open(filename, 'rb')
-            if absoffset != offset:
-                # negative offset returns offset bytes from tail of the file
-                if length:
-                    raise ValueError('BAD_ARGUMENTS')
-                f.seek(0, 2)
-                sz = f.tell()
-                pos = int(sz - absoffset)
-                f.seek(pos)
-                data = f.read(absoffset)
-            else:
-                if abslength != length:
-                    raise ValueError('BAD_ARGUMENTS')
-                if length == 0:
-                    f.seek(offset)
-                    data = f.read()
-                else:
-                    sz = f.seek(offset)
-                    data = f.read(length)
-        except (os.error, IOError):
-            # XXX don't set fatal state, bad offset or length
-            # shouldn't cause fatal
-            #msg = 'FATAL: failed reading log file %r' % filename
-            raise ValueError('FAILED')
-
-        return data
 
     # RPC API methods
 
@@ -285,7 +228,7 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError('SUPER_READ_NO_FILE')
 
         try:
-            return self._readFile(logfile, offset, length)
+            return _readFile(logfile, offset, length)
         except ValueError, inst:
             why = inst.args[0]
             raise RPCError('SUPER_READ_' + why)
@@ -317,9 +260,7 @@ class SupervisorNamespaceRPCInterface:
 
         @return boolean result always returns True unless error
         """
-        # we don't want to call _update here.
-        if self.supervisord.get_state() == SupervisorStates.SHUTDOWN:
-            raise RPCError('SHUTDOWN_STATE')
+        self._update('shutdown')
         
         self.supervisord.mood = -1
         return True
@@ -329,8 +270,7 @@ class SupervisorNamespaceRPCInterface:
 
         @return boolean result  always return True unless error
         """
-        if self.supervisord.get_state() == SupervisorStates.SHUTDOWN:
-            raise RPCError('SHUTDOWN_STATE')
+        self._update('restart')
         
         self.supervisord.mood = 0
         return True
@@ -588,7 +528,7 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError('READ_NO_FILE')
 
         try:
-            return self._readFile(logfile, offset, length)
+            return _readFile(logfile, offset, length)
         except ValueError, inst:
             why = inst.args[0]
             raise RPCError('READ_' + why)
@@ -828,8 +768,8 @@ def traverse(ob, method, params):
     path = method.split('.')
     for name in path:
         if name.startswith('_'):
-            # security (don't allow things like _readFile to be called
-            # remotely)
+            # security (don't allow things that start with an underscore to
+            # be called remotely)
             raise RPCError('UNKNOWN_METHOD')
         ob = getattr(ob, name, None)
         if ob is None:
@@ -839,4 +779,36 @@ def traverse(ob, method, params):
         return ob(*params)
     except TypeError:
         raise RPCError('INCORRECT_PARAMETERS')
+
+def _readFile(filename, offset, length):
+    """ Read length bytes from the file named by filename starting at
+    offset """
+
+    absoffset = abs(offset)
+    abslength = abs(length)
+
+    try:
+        f = open(filename, 'rb')
+        if absoffset != offset:
+            # negative offset returns offset bytes from tail of the file
+            if length:
+                raise ValueError('BAD_ARGUMENTS')
+            f.seek(0, 2)
+            sz = f.tell()
+            pos = int(sz - absoffset)
+            f.seek(pos)
+            data = f.read(absoffset)
+        else:
+            if abslength != length:
+                raise ValueError('BAD_ARGUMENTS')
+            if length == 0:
+                f.seek(offset)
+                data = f.read()
+            else:
+                sz = f.seek(offset)
+                data = f.read(length)
+    except (os.error, IOError):
+        raise ValueError('FAILED')
+
+    return data
 

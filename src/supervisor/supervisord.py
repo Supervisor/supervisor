@@ -458,7 +458,28 @@ class Supervisor:
         for msg in held_messages:
             self.options.logger.info(msg)
             
+        if not self.options.nocleanup:
+            self._clear_childlogdir()
+
         self.run(test)
+
+    def _clear_childlogdir(self):
+        options = self.options
+        childlogdir = options.childlogdir
+        fnre = re.compile(r'.+?---\d{1,11}-%s-\S+?\.xlog' % options.identifier)
+        try:
+            filenames = os.listdir(childlogdir)
+        except (IOError, OSError):
+            options.logger.info('Could not clear childlog dir')
+            return
+        
+        for filename in filenames:
+            if fnre.match(filename):
+                pathname = os.path.join(childlogdir, filename)
+                try:
+                    os.remove(pathname)
+                except (os.error, IOError):
+                    options.logger.info('Failed to clean up %r' % pathname)
 
     def get_state(self):
         if self.mood <= 0:

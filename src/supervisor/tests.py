@@ -206,7 +206,9 @@ class MainXMLRPCInterfaceTests(TestBase):
             traverse(interface, 'supervisor.getIdentification', []),
             'supervisor')
             
-def makeExecutable(file, substitutions={}):
+def makeExecutable(file, substitutions=None):
+    if substitutions is None:
+        substitutions = {}
     data = open(file).read()
     last = os.path.split(file)[1]
 
@@ -235,15 +237,13 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def _makeOne(self, *args, **kw):
         return self._getTargetClass()(*args, **kw)
 
-    def test_ctor(self):
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-
     def test_update(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
         interface._update('foo')
         self.assertEqual(interface.update_text, 'foo')
+        supervisord.state = SupervisorStates.SHUTDOWN
+        self._assertRPCError('SHUTDOWN_STATE', interface._update, 'foo')
 
     def test_getVersion(self):
         supervisord = DummySupervisor()
@@ -269,6 +269,88 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(stateinfo['statecode'], statecode)
         self.assertEqual(stateinfo['statename'], statename)
         self.assertEqual(interface.update_text, 'getState')
+
+    def test_readLog_unreadable(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        self._assertRPCError('SUPER_READ_NO_FILE', interface.readLog,
+                             offset=0, length=1)
+
+    def test_readLog_badargs(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        try:
+            logfile = supervisord.options.logfile
+            f = open(logfile, 'w+')
+            f.write('x' * 2048)
+            f.close()
+            self._assertRPCError('SUPER_READ_BAD_ARGUMENTS',
+                                 interface.readLog, offset=-1, length=1)
+            self._assertRPCError('SUPER_READ_BAD_ARGUMENTS',
+                                 interface.readLog, offset=-1,
+                                 length=-1)
+        finally:
+            os.remove(logfile)
+
+    def test_readLog(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        logfile = supervisord.options.logfile
+        try:
+            f = open(logfile, 'w+')
+            f.write('x' * 2048)
+            f.write('y' * 2048)
+            f.close()
+            data = interface.readLog(offset=0, length=0)
+            self.assertEqual(interface.update_text, 'readLog')
+            self.assertEqual(data, ('x' * 2048) + ('y' * 2048))
+            data = interface.readLog(offset=2048, length=0)
+            self.assertEqual(data, 'y' * 2048)
+            data = interface.readLog(offset=0, length=2048)
+            self.assertEqual(data, 'x' * 2048)
+            data = interface.readLog(offset=-4, length=0)
+            self.assertEqual(data, 'y' * 4)
+        finally:
+            os.remove(logfile)
+
+    def test_clearLog_unreadable(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        self._assertRPCError('SUPER_CLEAR_NO_FILE', interface.clearLog)
+
+    def test_clearLog(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        logfile = supervisord.options.logfile
+        try:
+            f = open(logfile, 'w+')
+            f.write('x')
+            f.close()
+            result = interface.clearLog()
+            self.assertEqual(interface.update_text, 'clearLog')
+            self.assertEqual(result, True)
+            self.failIf(os.path.exists(logfile))
+        finally:
+            try:
+                os.remove(logfile)
+            except:
+                pass
+
+        self.assertEqual(supervisord.options.logger.handlers[0].reopened, True)
+
+    def test_shutdown(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        value = interface.shutdown()
+        self.assertEqual(value, True)
+        self.assertEqual(supervisord.mood, -1)
+
+    def test_restart(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        value = interface.restart()
+        self.assertEqual(value, True)
+        self.assertEqual(supervisord.mood, 0)
 
     def test_startProcess_already_started(self):
         options = DummyOptions()
@@ -355,99 +437,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(process.spawned, True)
         self.assertEqual(process2.spawned, True)
         
-
-    def test_readLog_unreadable(self):
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-        self._assertRPCError('SUPER_READ_NO_FILE', interface.readLog,
-                             offset=0, length=1)
-
-    def test_readLog_badargs(self):
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-        try:
-            logfile = supervisord.options.logfile
-            f = open(logfile, 'w+')
-            f.write('x' * 2048)
-            f.close()
-            self._assertRPCError('SUPER_READ_BAD_ARGUMENTS',
-                                 interface.readLog, offset=-1, length=1)
-            self._assertRPCError('SUPER_READ_BAD_ARGUMENTS',
-                                 interface.readLog, offset=-1,
-                                 length=-1)
-        finally:
-            os.remove(logfile)
-
-    def test_readLog(self):
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-        logfile = supervisord.options.logfile
-        try:
-            f = open(logfile, 'w+')
-            f.write('x' * 2048)
-            f.write('y' * 2048)
-            f.close()
-            data = interface.readLog(offset=0, length=0)
-            self.assertEqual(interface.update_text, 'readLog')
-            self.assertEqual(data, ('x' * 2048) + ('y' * 2048))
-            data = interface.readLog(offset=2048, length=0)
-            self.assertEqual(data, 'y' * 2048)
-            data = interface.readLog(offset=0, length=2048)
-            self.assertEqual(data, 'x' * 2048)
-            data = interface.readLog(offset=-4, length=0)
-            self.assertEqual(data, 'y' * 4)
-        finally:
-            os.remove(logfile)
-
-    def test_clearLog_unreadable(self):
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-        self._assertRPCError('SUPER_CLEAR_NO_FILE', interface.clearLog)
-
-    def test_shutdown(self):
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-        value = interface.shutdown()
-        self.assertEqual(value, True)
-        self.assertEqual(supervisord.mood, -1)
-
-    def test_restart(self):
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-        value = interface.restart()
-        self.assertEqual(value, True)
-        self.assertEqual(supervisord.mood, 0)
-
-    def test_readFile_failed(self):
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-        logfile = supervisord.options.logfile
-        try:
-            interface._readFile('/notthere', 0, 10)
-        except ValueError, inst:
-            self.assertEqual(inst.args[0], 'FAILED')
-        else:
-            raise AssertionError("Didn't raise")
-
-    def test_clearLog(self):
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-        logfile = supervisord.options.logfile
-        try:
-            f = open(logfile, 'w+')
-            f.write('x')
-            f.close()
-            result = interface.clearLog()
-            self.assertEqual(interface.update_text, 'clearLog')
-            self.assertEqual(result, True)
-            self.failIf(os.path.exists(logfile))
-        finally:
-            try:
-                os.remove(logfile)
-            except:
-                pass
-
-        self.assertEqual(supervisord.options.logger.handlers[0].reopened, True)
 
     def test_stopProcess_badname(self):
         supervisord = DummySupervisor()
@@ -643,6 +632,19 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         interface.clearProcessLog('foo')
         self.assertEqual(process.logsremoved, True)
+
+    def test_readFile_failed(self):
+        from rpc import _readFile
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        logfile = supervisord.options.logfile
+        try:
+            _readFile('/notthere', 0, 10)
+        except ValueError, inst:
+            self.assertEqual(inst.args[0], 'FAILED')
+        else:
+            raise AssertionError("Didn't raise")
+
 
 class SystemNamespaceXMLRPCInterfaceTests(TestBase):
     def _getTargetClass(self):
