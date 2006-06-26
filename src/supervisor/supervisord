@@ -1,0 +1,4 @@
+#!/usr/bin/python
+from xsupervisor.supervisord import main
+main()
+

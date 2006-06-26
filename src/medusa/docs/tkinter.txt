@@ -1,0 +1,31 @@
+
+Here are some notes on combining the Tk Event loop with the async lib
+and/or Medusa.  Many thanks to Aaron Rhodes (alrhodes@cpis.net) for
+the info!
+
+  > Sam,
+  > 
+  > Just wanted to send you a quick message about how I managed to
+  > finally integrate Tkinter with asyncore.  This solution is pretty
+  > straightforward.  From the main tkinter event loop i simply added
+  > a repeating alarm that calls asyncore.poll() every so often. So
+  > the code looks like this:
+  > 
+  > in main:
+  > import asyncore
+  > 
+  >     self.socket_check()
+  > 
+  > ...
+  > 
+  > then, socket_check() is:
+  > 
+  >     def socket_check(self):
+  >         asyncore.poll(timeout=0.0)
+  >         self.after(100, self.socket_check)
+  > 
+  > 
+  > This simply causes asyncore to poll all the sockets every 100ms
+  > during the tkinter event loop.  The GUI doesn't block on IO since
+  > all the IO calls are now handled with asyncore.
+

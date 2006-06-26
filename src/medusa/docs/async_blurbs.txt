@@ -1,0 +1,48 @@
+
+[from the win32 sdk named pipe documentation]
+
+==================================================
+The simplest server process can use the CreateNamedPipe function to
+create a single instance of a pipe, connect to a single client,
+communicate with the client, disconnect the pipe, close the pipe
+handle, and terminate. Typically, however, a server process must
+communicate with multiple client processes. A server process can use a
+single pipe instance by connecting to and disconnecting from each
+client in sequence, but performance would be poor. To handle multiple
+clients simultaneously, the server process must create multiple pipe
+instances.
+
+There are three basic strategies for servicing multiple pipe instances.
+
+· Create multiple threads (and/or processes) with a separate thread
+for each instance of the pipe. For an example of a multithreaded
+server process, see Multithreaded Server.
+
+· Overlap operations by specifying an OVERLAPPED structure in the
+ReadFile, WriteFile, and ConnectNamedPipe functions. For an example of
+a server process that uses overlapped operations, see Server Using
+Overlapped Input and Output.
+
+· Overlap operations by using the ReadFileEx and WriteFileEx
+functions, which specify a completion routine to be executed when the
+operation is complete. For an example of a server process that uses
+completion routines, see Server Using Completion Routines.
+
+ 
+The multithreaded server strategy is easy to write, because the thread
+for each instance handles communications for only a single client. The
+system allocates processor time to each thread as needed. But each
+thread uses system resources, which is a potential disadvantage for a
+server that handles a large number of clients. Other complications
+occur if the actions of one client necessitate communications with
+other clients (as for a network game program, where a move by one
+player must be communicated to the other players).
+
+With a single-threaded server, it is easier to coordinate operations
+that affect multiple clients, and it is easier to protect shared
+resources (for example, a database file) from simultaneous access by
+multiple clients. The challenge of a single-threaded server is that it
+requires coordination of overlapped operations in order to allocate
+processor time for handling the simultaneous needs of the clients.
+
+==================================================

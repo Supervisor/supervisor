@@ -1,0 +1,126 @@
+
+			 Medusa Installation.
+---------------------------------------------------------------------------
+
+1. INSTALL PYTHON
+
+Medusa is distributed as Python source code.  Before using Medusa, you
+will need to install Python on your machine.
+
+The Python interpreter, source, documentation, etc... may be obtained
+from
+
+  http://www.python.org/
+
+Versions for many different operating systems are available, including
+Unix, 32-bit Windows (Win95 & NT), Macintosh, VMS, etc...  Medusa has
+been tested on Unix and Windows, though it may very well work on other
+operating systems.
+
+You don't need to learn Python in order to use Medusa.  However, if
+you are interested in extending Medusa, you should spend the hour or
+so that it will take you to go through the Python Tutorial:
+
+  http://www.python.org/doc/tut/
+
+Python is remarkably easy to learn, and I guarantee that it will be
+worth your while.  After only about thirty minutes, you should know
+enough about Python to be able to start customizing and extending
+Medusa.
+
+
+2. INSTALL MEDUSA
+
+The core Medusa code consists of a single package named 'medusa'.  To
+install it in the site-packages directory of your Python installation,
+run the command "python setup.py install".
+
+After running this command, you should be able to run the Python
+interpreter and import things from the 'medusa' package:
+
+bash-2.05$ python
+>>> from medusa import ftp_server
+>>>
+
+
+3. WRITE A MEDUSA STARTUP SCRIPT
+
+Once you have installed Python, you are ready to configure Medusa.
+Medusa does not use configuration files per se, or even command-line
+arguments.  It is configured via a 'startup script', written in
+Python.  A sample is provided in 'demo/start_medusa.py'.  You should make
+a copy of this.
+
+The sample startup script is heavily commented.  Many (though not all)
+of Medusa's features are made available in the startup script.  You may
+modify this script by commenting out portions, adding or changing
+parameters, etc...  
+
+Here is a section from the front of 'demo/start_medusa.py'
+
+|  if len(sys.argv) > 1:
+|      # process a few convenient arguments
+|      [HOSTNAME, IP_ADDRESS, PUBLISHING_ROOT] = sys.argv[1:]
+|  else:
+|      HOSTNAME            = 'www.nightmare.com'
+|      # This is the IP address of the network interface you want
+|      # your servers to be visible from.  This can be changed to ''
+|      # to listen on all interfaces.
+|      IP_ADDRESS            = '205.160.176.5'
+|  
+|      # Root of the http and ftp server's published filesystems.
+|      PUBLISHING_ROOT        = '/home/www'
+|  
+|  HTTP_PORT       = 8080 # The standard port is 80
+|  FTP_PORT        = 8021 # The standard port is 21
+|  CHAT_PORT    	= 8888
+|  MONITOR_PORT	= 9999
+
+If you are familiar with the process of configuring a web or ftp
+server, then these parameters should be fairly obvious:  You will
+need to change the hostname, IP address, and port numbers for the
+server that you wish to run.
+
+A Medusa configuration does not need to be this complex -
+demo/start_medusa.py is bloated somewhat by its attempt to include
+most of the available features.  Another example startup script,
+demo/publish.py, is also available for you to look at.
+
+Once you have made your own startup script, you may simply invoke
+the Python interpreter on it:
+
+[Unix]
+$ python start_medusa.py &
+[Win32]
+d:\medusa\> start python start_medusa.py
+
+Medusa (V3.8) started at Sat Jan 24 01:43:21 1998
+        Hostname: ziggurat.nightmare.com
+        Port:8080
+<Unix User Directory Handler at 080e9c08 [~user/public_html, 0 filesystems loaded]>
+FTP server started at Sat Jan 24 01:43:21 1998
+        Authorizer:<test_authorizer instance at 80e8938>
+        Hostname: ziggurat.nightmare.com
+        Port: 21
+192.168.200.40:1450 - - [24/Jan/1998:07:43:23 -0500] "GET /status HTTP/1.0" 200 1638
+192.168.200.40:1451 - - [24/Jan/1998:07:43:23 -0500] "GET /status/medusa.gif HTTP/1.0" 200 1084
+
+Documentation for specific Medusa servers is somewhat lacking, mostly
+because development continues to move rapidly.  The best place to go
+to understand Medusa and how it works is to dive into the source code.
+Many of the more interesting features, especially the latest, are
+described only in the source code.
+
+Some notes on data flow in Medusa are available in
+'docs/data_flow.html'.
+
+I encourage you to examine and experiment with Medusa.  You may
+develop your own extensions, handlers, etc...  I appreciate feedback
+from users and developers on desired features, and of course
+descriptions of your most splendid hacks.
+
+Medusa's design is somewhat novel compared to most other network
+servers.  In fact, the asynchronous i/o capability seems to have
+attracted the majority of paying customers, who are often more
+interested in harnessing the i/o framework than the actual web and ftp
+servers.

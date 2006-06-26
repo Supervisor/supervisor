@@ -1,0 +1,14 @@
+Source: python2.2-medusa
+Priority: optional
+Maintainer: A.M. Kuchling <amk@amk.ca>
+Build-Depends: debhelper (>> 3.0.0)
+Standards-Version: 3.5.8
+Section: net
+
+Package: python2.2-medusa
+Section: net
+Architecture: all
+Depends: python2.2
+Description: Medusa is a 'server platform' -- it provides a framework for
+    implementing asynchronous socket-based servers (TCP/IP and on Unix,
+    Unix domain, sockets).
