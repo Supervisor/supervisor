@@ -28,6 +28,7 @@ import StringIO
 import resource
 import stat
 import re
+import tempfile
 
 from fcntl import fcntl
 from fcntl import F_SETFL, F_GETFL
@@ -448,6 +449,19 @@ class Supervisor:
 
         if not self.options.nocleanup:
             self.options.clear_childlogdir()
+
+        # delay "automatic" child log creation until after setuid because
+        # we want to use mkstemp, which needs to create the file eagerly
+        for program in self.options.programs:
+            if program.logfile is self.options.AUTOMATIC:
+                # temporary logfile which is erased at restart
+                prefix='%s---%s-' % (program.name, self.options.identifier)
+                fd, logfile = tempfile.mkstemp(
+                    suffix='.log',
+                    prefix=prefix,
+                    dir=self.options.childlogdir)
+                os.close(fd)
+                program.logfile = logfile
 
         self.run(test)
 

@@ -40,8 +40,6 @@ import errno
 import signal
 import re
 
-AUTOMATIC = []
-
 class FileHandler(logging.StreamHandler):
     """File handler which supports reopening of logs.
 
@@ -453,6 +451,7 @@ class ServerOptions(Options):
     passwdfile = None
     nodaemon = None
     prompt = None
+    AUTOMATIC = []
     
     def __init__(self):
         Options.__init__(self)
@@ -555,17 +554,7 @@ class ServerOptions(Options):
 
         self.programs = self.configroot.supervisord.programs
 
-        for program in self.programs:
-            if program.logfile is AUTOMATIC:
-                # temporary logfile which is erased at restart
-                section = self.configroot.supervisord
-                prefix='%s---%s-' % (program.name, section.identifier)
-                fd, logfile = tempfile.mkstemp(
-                    suffix='.log',
-                    prefix=prefix,
-                    dir=section.childlogdir)
-                os.close(fd)
-                program.logfile = logfile
+        self.identifier = self.configroot.supervisord.identifier
 
         if self.nodaemon:
             self.daemon = False
@@ -701,7 +690,7 @@ class ServerOptions(Options):
             elif logfile is not None:
                 logfile = datatypes.existing_dirpath(logfile)
             else:
-                logfile = AUTOMATIC
+                logfile = self.AUTOMATIC
             logfile_backups = config.saneget(section, 'logfile_backups', 1)
             logfile_backups = datatypes.integer(logfile_backups)
             logfile_maxbytes = config.saneget(section, 'logfile_maxbytes',

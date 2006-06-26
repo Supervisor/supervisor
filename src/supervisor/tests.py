@@ -141,8 +141,7 @@ command=/bin/cat
         self.assertEqual(cat3.autostart, True)
         self.assertEqual(cat3.autorestart, True)
         self.assertEqual(cat3.uid, None)
-        self.failUnless(cat3.logfile.startswith('%s/cat3---fleeb' %
-                                                tempfile.gettempdir()))
+        self.assertEqual(cat3.logfile, instance.AUTOMATIC)
         self.assertEqual(cat3.logfile_maxbytes, datatypes.byte_size('5MB'))
         self.assertEqual(cat3.logfile_backups, 1)
         
