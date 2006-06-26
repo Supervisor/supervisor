@@ -17,11 +17,6 @@ Options:
 -z/--logfile_backups NUM -- number of backups to keep when max bytes reached
 -e/--loglevel LEVEL -- use LEVEL as log level (debug,info,warn,error,critical)
 -j/--pidfile FILENAME -- write a pid file for the daemon process to FILENAME
--s/--socketname SOCKET -- Unix/INET socket name for command line client
-    (default "/tmp/supervisordsock").  INET sockets must be spec'd in the form
-    "host:port".  UNIX domain sockets must be spec'd by absolute path.
--p/--socketmode MODE -- UNIX socket file mode bits (default is 700)
--o/--socketowner OWNER -- UNIX socket file owner/group (e.g. chrism.users)
 -i/--identifier STR -- identifier used for this instance of supervisord
 -q/--childlogdir DIRECTORY -- the log directory for child process logs
 -k/--nocleanup --  prevent the process from performing cleanup (removal of
@@ -43,6 +38,9 @@ import tempfile
 import socket
 import errno
 import signal
+import re
+
+AUTOMATIC = []
 
 class FileHandler(logging.StreamHandler):
     """File handler which supports reopening of logs.
@@ -467,12 +465,6 @@ class ServerOptions(Options):
                  default=0)
         self.add("forever", "supervisord.forever", "f", "forever",
                  flag=1, default=0)
-        self.add("sockname", "supervisord.sockname", "s:", "socketname=",
-                 datatypes.SocketAddress, default=None)
-	self.add("sockchmod", "supervisord.sockchmod", "p:", "socketmode=",
-		 datatypes.octal_type, default=0700)
-	self.add("sockchown", "supervisord.sockchown", "o:", "socketowner=",
-		 datatypes.dot_separated_user_group)
         self.add("exitcodes", "supervisord.exitcodes", "x:", "exitcodes=",
                  datatypes.list_of_ints, default=[0, 2])
         self.add("user", "supervisord.user", "u:", "user=")
@@ -521,7 +513,7 @@ class ServerOptions(Options):
         # then realize() thinks it has already seen the option.  If no
         # -c is used, realize() will call this method to try to locate
         # a configuration file.
-        config = '/etc/xsupervisord.conf'
+        config = '/etc/supervisord.conf'
         if not os.path.exists(config):
             self.usage('No config file found at default path "%s"; create '
                        'this file or use the -c option to specify a config '
@@ -540,36 +532,6 @@ class ServerOptions(Options):
                 self.usage("No such user %s" % self.user)
             self.uid = uid
             self.gid = datatypes.gid_for_uid(uid)
-
-        self.sockuid = None
-        self.sockgid = None
-
-	if self.sockchown:
-	    # Convert chown stuff to uid/gid
-            user, group = datatypes.dot_separated_user_group(self.sockchown)
-            uid = datatypes.name_to_uid(user)
-            if uid is None:
-                self.usage("No such sockchown user %s" % user)
-            if group is None:
-                gid = datatypes.gid_for_uid(uid)
-            else:
-                gid = datatypes.name_to_gid(group)
-                if gid is None:
-                    self.usage("No such sockchown group %s" % group)
-            self.sockuid = uid
-            self.sockgid = gid
-
-        if self.sockname:
-            self.sockfamily = self.sockname.family
-            self.sockname   = self.sockname.address
-            if self.sockfamily == socket.AF_UNIX:
-                # Convert socket name to absolute path
-                self.sockname = os.path.abspath(self.sockname)
-        else:
-            self.sockfamily = None
-
-        if not self.sockchmod:
-            self.sockchmod = 0700
 
         if not self.logfile:
             logfile = os.path.abspath(self.configroot.supervisord.logfile)
@@ -590,6 +552,20 @@ class ServerOptions(Options):
 
         self.noauth = True
         self.passwdfile = None
+
+        self.programs = self.configroot.supervisord.programs
+
+        for program in self.programs:
+            if program.logfile is AUTOMATIC:
+                # temporary logfile which is erased at restart
+                section = self.configroot.supervisord
+                prefix='%s---%s-' % (program.name, section.identifier)
+                fd, logfile = tempfile.mkstemp(
+                    suffix='.log',
+                    prefix=prefix,
+                    dir=section.childlogdir)
+                os.close(fd)
+                program.logfile = logfile
 
         if self.nodaemon:
             self.daemon = False
@@ -612,18 +588,6 @@ class ServerOptions(Options):
         minprocs = config.getdefault('minprocs', 200)
         section.minprocs = datatypes.integer(minprocs)
         
-        sockname = config.getdefault('socketname', None)
-        if sockname:
-            section.sockname = datatypes.SocketAddress(sockname)
-        else:
-            section.sockname = None
-
-        sockchmod = config.getdefault('socketmode', '0700')
-        section.sockchmod  = datatypes.octal_type(sockchmod)
-
-        sockchown = config.getdefault('socketowner', None)
-        section.sockchown = sockchown
-
         directory = config.getdefault('directory', None)
         if directory is None:
             section.directory = None
@@ -732,18 +696,67 @@ class ServerOptions(Options):
             if uid is not None:
                 uid = datatypes.name_to_uid(uid)
             logfile = config.saneget(section, 'logfile', None)
-            if logfile is not None:
+            if logfile in ('NONE', 'OFF'):
+                logfile = None
+            elif logfile is not None:
                 logfile = datatypes.existing_dirpath(logfile)
+            else:
+                logfile = AUTOMATIC
+            logfile_backups = config.saneget(section, 'logfile_backups', 1)
+            logfile_backups = datatypes.integer(logfile_backups)
+            logfile_maxbytes = config.saneget(section, 'logfile_maxbytes',
+                                              datatypes.byte_size('5MB'))
+            logfile_maxbytes = datatypes.integer(logfile_maxbytes)
             stopsignal = config.saneget(section, 'stopsignal', signal.SIGTERM)
             stopsignal = datatypes.signal(stopsignal)
             pconfig = ProcessConfig(name=name, command=command,
                                     priority=priority, autostart=autostart,
                                     autorestart=autorestart, uid=uid,
-                                    logfile=logfile, stopsignal=stopsignal)
+                                    logfile=logfile,
+                                    logfile_backups=logfile_backups,
+                                    logfile_maxbytes=logfile_maxbytes,
+                                    stopsignal=stopsignal)
             programs.append(pconfig)
 
         programs.sort() # asc by priority
         return programs
+
+    def clear_childlogdir(self):
+        # must be called after realize()
+        childlogdir = self.childlogdir
+        fnre = re.compile(r'.+?---%s-\S+\.log\.{0,1}\d{0,4}' % self.identifier)
+        try:
+            filenames = os.listdir(childlogdir)
+        except (IOError, OSError):
+            self.logger.info('Could not clear childlog dir')
+            return
+        
+        for filename in filenames:
+            if fnre.match(filename):
+                pathname = os.path.join(childlogdir, filename)
+                try:
+                    os.remove(pathname)
+                except (os.error, IOError):
+                    self.logger.info('Failed to clean up %r' % pathname)
+
+    def make_logger(self, held_messages):
+        # must be called after realize()
+        format =  '%(asctime)s %(levelname)s %(message)s\n'
+        self.logger = self.getLogger(
+            self.logfile,
+            self.loglevel,
+            format,
+            rotating=True,
+            maxbytes=self.logfile_maxbytes,
+            backups=self.logfile_backups,
+            )
+        if self.nodaemon:
+            stdout_handler = RawStreamHandler(sys.stdout)
+            formatter = logging.Formatter(format)
+            stdout_handler.setFormatter(formatter)
+            self.logger.addHandler(stdout_handler)
+        for msg in held_messages:
+            self.logger.info(msg)
 
 class ClientOptions(Options):
     positional_args_allowed = 1
@@ -781,7 +794,7 @@ class ClientOptions(Options):
 
     def default_configfile(self):
         """Return the name of the default config file, or None."""
-        config = '/etc/xsupervisord.conf'
+        config = '/etc/supervisord.conf'
         if not os.path.exists(config):
             self.usage('No config file found at default path "%s"; create '
                        'this file or use the -c option to specify a config '
@@ -833,7 +846,7 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
 
 class ProcessConfig:
     def __init__(self, name, command, priority, autostart, autorestart,
-                 uid, logfile, stopsignal):
+                 uid, logfile, logfile_backups, logfile_maxbytes, stopsignal):
         self.name = name
         self.command = command
         self.priority = priority
@@ -841,6 +854,8 @@ class ProcessConfig:
         self.autorestart = autorestart
         self.uid = uid
         self.logfile = logfile
+        self.logfile_backups = logfile_backups
+        self.logfile_maxbytes = logfile_maxbytes
         self.stopsignal = stopsignal
 
     def __cmp__(self, other):

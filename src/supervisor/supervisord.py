@@ -27,6 +27,7 @@ import traceback
 import StringIO
 import resource
 import stat
+import re
 
 from fcntl import fcntl
 from fcntl import F_SETFL, F_GETFL
@@ -92,7 +93,10 @@ class Subprocess:
         self.pidhistory = []
         self.readbuffer = ""
         if config.logfile:
-            self.childlog = options.getLogger(config.logfile, 10,'%(message)s')
+            self.childlog = options.getLogger(config.logfile, 10,
+                                              '%(message)s',
+                                              config.logfile_backups,
+                                              config.logfile_maxbytes)
 
     def removelogs(self):
         if self.childlog:
@@ -437,49 +441,15 @@ class Supervisor:
         if first:
             rlimit_messages = self.set_rlimits()
             held_messages.extend(rlimit_messages)
-        # delay logger instantiation until after setuid
-        format =  '%(asctime)s %(levelname)s %(message)s\n'
 
-        self.options.logger = self.options.getLogger(
-            self.options.logfile,
-            self.options.loglevel,
-            format,
-            rotating=True,
-            maxbytes=self.options.logfile_maxbytes,
-            backups=self.options.logfile_backups,
-            )
-        if self.options.nodaemon:
-            from options import RawStreamHandler
-            from logging import Formatter
-            stdout_handler = RawStreamHandler(sys.stdout)
-            formatter = Formatter(format)
-            stdout_handler.setFormatter(formatter)
-            self.options.logger.addHandler(stdout_handler)
-        for msg in held_messages:
-            self.options.logger.info(msg)
-            
+        # this sets the options.logger object
+        # delay logger instantiation until after setuid
+        self.options.make_logger(held_messages)
+
         if not self.options.nocleanup:
-            self._clear_childlogdir()
+            self.options.clear_childlogdir()
 
         self.run(test)
-
-    def _clear_childlogdir(self):
-        options = self.options
-        childlogdir = options.childlogdir
-        fnre = re.compile(r'.+?---\d{1,11}-%s-\S+?\.xlog' % options.identifier)
-        try:
-            filenames = os.listdir(childlogdir)
-        except (IOError, OSError):
-            options.logger.info('Could not clear childlog dir')
-            return
-        
-        for filename in filenames:
-            if fnre.match(filename):
-                pathname = os.path.join(childlogdir, filename)
-                try:
-                    os.remove(pathname)
-                except (os.error, IOError):
-                    options.logger.info('Failed to clean up %r' % pathname)
 
     def get_state(self):
         if self.mood <= 0:
@@ -655,8 +625,7 @@ class Supervisor:
         self.processes = {}
         for program in self.options.programs:
             name = program.name
-            self.processes[name] = Subprocess(options, program)
-        self.opensocketserver()
+            self.processes[name] = Subprocess(self.options, program)
         self.openhttpserver()
         try:
             self.setsignals()
@@ -669,11 +638,11 @@ class Supervisor:
             self.options.logger.info('supervisord started with pid %s' % pid)
             self.runforever(test)
         finally:
-            try:
-                if self.options.sockfamily == socket.AF_UNIX:
-                    os.unlink(self.options.sockname)
-            except os.error:
-                pass
+##             try:
+##                 if self.options.sockfamily == socket.AF_UNIX:
+##                     os.unlink(self.options.sockname)
+##             except os.error:
+##                 pass
             try:
                 os.unlink(self.options.pidfile)
             except os.error:
@@ -692,10 +661,6 @@ class Supervisor:
                                    'down first before starting supervisord. ' %
                                    port)
 
-
-    def opensocketserver(self):
-        from socketserver import makeCommandLineServer
-        self.socketserver = makeCommandLineServer(self)
 
     def setsignals(self):
         signal.signal(signal.SIGTERM, self.sigexit)

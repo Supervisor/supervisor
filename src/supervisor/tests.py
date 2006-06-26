@@ -15,6 +15,7 @@ import errno
 from StringIO import StringIO
 
 import supervisord
+import datatypes
 import rpc
 import http
 from options import ServerOptions
@@ -37,10 +38,7 @@ class INIOptionTests(unittest.TestCase):
 xmlrpc_port=127.0.0.1:8999 ; (default is to run no xmlrpc server)
 xmlrpc_username=chrism     ; (default is no username (open system))
 xmlrpc_password=foo        ; (default is no password (open system))
-socketname=/tmp/foo        ; (default no socketserver)
-socketmode=0701            ; (default 0700)
-socketowner=root           ; (default is to not change owner)
-directory=/tmp             ; (default is not to cd during daemonization)
+directory=%(tempdir)s     ; (default is not to cd during daemonization)
 backofflimit=10            ; (default 3)
 forever=false              ; (default false)
 exitcodes=0,1              ; (default 0,2)
@@ -53,7 +51,7 @@ loglevel=error             ; (default info)
 pidfile=supervisord.pid    ; (default supervisord.pid)
 nodaemon=true              ; (default false)
 identifier=fleeb           ; (default supervisor)
-childlogdir=/usr           ; (default tempfile.gettempdir())
+childlogdir=%(tempdir)s           ; (default tempfile.gettempdir())
 nocleanup=true             ; (default false)
 minfds=2048                ; (default 1024)
 minprocs=300               ; (default 200)
@@ -71,8 +69,14 @@ stopsignal=KILL
 command=/bin/cat
 autostart=true
 autorestart=false
-logfile=/tmp/cat2.log
-"""
+logfile_maxbytes = 1024
+logfile_backups = 2
+logfile = /tmp/cat2.log
+
+[program:cat3]
+command=/bin/cat
+""" % {'tempdir':tempfile.gettempdir()}
+
         from StringIO import StringIO
         fp = StringIO(s)
         instance = ServerOptions(*[])
@@ -80,11 +84,7 @@ logfile=/tmp/cat2.log
         instance.realize()
         options = instance.configroot.supervisord
         import socket
-        self.assertEqual(options.sockname.family, socket.AF_UNIX)
-        self.assertEqual(options.sockname.address, '/tmp/foo')
-        self.assertEqual(options.sockchmod, 0701)
-        self.assertEqual(options.sockchown, 'root')
-        self.assertEqual(options.directory, '/tmp')
+        self.assertEqual(options.directory, tempfile.gettempdir())
         self.assertEqual(options.backofflimit, 10)
         self.assertEqual(options.forever, False)
         self.assertEqual(options.exitcodes, [0,1])
@@ -99,7 +99,7 @@ logfile=/tmp/cat2.log
         self.assertEqual(options.passwdfile, None)
         self.assertEqual(options.noauth, True)
         self.assertEqual(options.identifier, 'fleeb')
-        self.assertEqual(options.childlogdir, '/usr')
+        self.assertEqual(options.childlogdir, tempfile.gettempdir())
         self.assertEqual(options.xmlrpc_port.family, socket.AF_INET)
         self.assertEqual(options.xmlrpc_port.address, ('127.0.0.1', 8999))
         self.assertEqual(options.xmlrpc_username, 'chrism')
@@ -108,7 +108,8 @@ logfile=/tmp/cat2.log
         self.assertEqual(options.minfds, 2048)
         self.assertEqual(options.minprocs, 300)
         self.assertEqual(options.nocleanup, True)
-        self.assertEqual(len(options.programs), 2)
+        self.assertEqual(len(options.programs), 3)
+
         cat = options.programs[0]
         self.assertEqual(cat.name, 'cat')
         self.assertEqual(cat.command, '/bin/cat')
@@ -118,6 +119,8 @@ logfile=/tmp/cat2.log
         self.assertEqual(cat.uid, 0)
         self.assertEqual(cat.logfile, '/tmp/cat.log')
         self.assertEqual(cat.stopsignal, signal.SIGKILL)
+        self.assertEqual(cat.logfile_maxbytes, datatypes.byte_size('5MB'))
+        self.assertEqual(cat.logfile_backups, 1)
 
         cat2 = options.programs[1]
         self.assertEqual(cat2.name, 'cat2')
@@ -128,16 +131,26 @@ logfile=/tmp/cat2.log
         self.assertEqual(cat2.uid, None)
         self.assertEqual(cat2.logfile, '/tmp/cat2.log')
         self.assertEqual(cat2.stopsignal, signal.SIGTERM)
+        self.assertEqual(cat2.logfile_maxbytes, 1024)
+        self.assertEqual(cat2.logfile_backups, 2)
+
+        cat3 = options.programs[2]
+        self.assertEqual(cat3.name, 'cat3')
+        self.assertEqual(cat3.command, '/bin/cat')
+        self.assertEqual(cat3.priority, 999)
+        self.assertEqual(cat3.autostart, True)
+        self.assertEqual(cat3.autorestart, True)
+        self.assertEqual(cat3.uid, None)
+        self.failUnless(cat3.logfile.startswith('%s/cat3---fleeb' %
+                                                tempfile.gettempdir()))
+        self.assertEqual(cat3.logfile_maxbytes, datatypes.byte_size('5MB'))
+        self.assertEqual(cat3.logfile_backups, 1)
+        
+        self.assertEqual(cat2.stopsignal, signal.SIGTERM)
 
         here = os.path.abspath(os.getcwd())
         self.assertEqual(instance.uid, 0)
         self.assertEqual(instance.gid, 0)
-        self.assertEqual(instance.sockuid, 0)
-        self.assertEqual(instance.sockgid, 0)
-        self.assertEqual(instance.sockfamily, socket.AF_UNIX)
-        self.assertEqual(instance.sockname, '/tmp/foo')
-        self.assertEqual(instance.sockchmod, 0701)
-        self.assertEqual(instance.sockchown, 'root')
         self.assertEqual(instance.directory, '/tmp')
         self.assertEqual(instance.backofflimit, 10)
         self.assertEqual(instance.forever, False)
@@ -153,7 +166,7 @@ logfile=/tmp/cat2.log
         self.assertEqual(instance.passwdfile, None)
         self.assertEqual(instance.noauth, True)
         self.assertEqual(instance.identifier, 'fleeb')
-        self.assertEqual(instance.childlogdir, '/usr')
+        self.assertEqual(instance.childlogdir, tempfile.gettempdir())
         self.assertEqual(instance.xmlrpc_port.family, socket.AF_INET)
         self.assertEqual(instance.xmlrpc_port.address, ('127.0.0.1', 8999))
         self.assertEqual(instance.xmlrpc_username, 'chrism')
@@ -161,6 +174,21 @@ logfile=/tmp/cat2.log
         self.assertEqual(instance.nocleanup, True)
         self.assertEqual(instance.minfds, 2048)
         self.assertEqual(instance.minprocs, 300)
+
+class SupervisorTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisord import Supervisor
+        return Supervisor
+
+    def _makeOne(self):
+        return self._getTargetClass()()
+    
+    def test_main(self):
+        supervisor = self._makeOne()
+        supervisor.main(['-c' 'sample.conf'], test=True)
+        self.assertEqual(supervisor.processes, {})
+        self.failUnless(supervisor.httpserver)
+        
 
 class TestBase(unittest.TestCase):
     def setUp(self):
@@ -815,7 +843,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.config, config)
         self.assertEqual(instance.pidhistory, [])
         self.assertEqual(instance.childlog.args, (config.logfile, 10,
-                                                  '%(message)s'))
+                                                  '%(message)s', 0, 0))
         self.assertEqual(instance.pid, 0)
         self.assertEqual(instance.laststart, 0)
         self.assertEqual(instance.laststop, 0)
@@ -1265,7 +1293,8 @@ class DummyProcess:
 
 class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,
-                 autorestart=False, uid=None, logfile=None):
+                 autorestart=False, uid=None, logfile=None, logfile_backups=0,
+                 logfile_maxbytes=0):
         self.name = name
         self.command = command
         self.priority = priority
@@ -1273,6 +1302,8 @@ class DummyPConfig:
         self.autorestart = autorestart
         self.uid = uid
         self.logfile = logfile
+        self.logfile_backups = logfile_backups
+        self.logfile_maxbytes = logfile_maxbytes
 
 
 class DummyLogger:
@@ -1347,6 +1378,7 @@ class DummyRequest:
         
 def test_suite():
     suite = unittest.TestSuite()
+    #suite.addTest(unittest.makeSuite(SupervisorTests))
     suite.addTest(unittest.makeSuite(INIOptionTests))
     suite.addTest(unittest.makeSuite(SupervisorNamespaceXMLRPCInterfaceTests))
     suite.addTest(unittest.makeSuite(MainXMLRPCInterfaceTests))
