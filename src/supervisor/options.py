@@ -55,7 +55,10 @@ class FileHandler(logging.StreamHandler):
         self.mode = mode
 
     def close(self):
-        self.stream.close()
+        try:
+            self.stream.close()
+        except IOError:
+            pass
 
     def reopen(self):
         self.close()

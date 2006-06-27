@@ -1264,7 +1264,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.do_tail('foo')
         self.assertEqual(result, None)
         lines = controller.stdout.getvalue().split('\n')
-        self.assertEqual(len(lines), 11)
+        self.assertEqual(len(lines), 12)
         self.assertEqual(lines[0], 'output line')
 
     def test_tail_twoargs(self):
@@ -1274,7 +1274,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.do_tail('-10 foo')
         self.assertEqual(result, None)
         lines = controller.stdout.getvalue().split('\n')
-        self.assertEqual(len(lines), 2)
+        self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0], 'tput line')
 
     def test_status_oneprocess(self):
@@ -1415,6 +1415,39 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
 
         self.assertEqual(controller.stdout.getvalue(),
          'foo: stopped\nfoo2: stopped\nfailed: ERROR (no such process)\n')
+
+    def test_restart_fail(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_restart('')
+        self.assertEqual(result, None)
+
+        self.assertEqual(controller.stdout.getvalue().split('\n')[0],
+         'Error: restart requires a process name')
+
+    def test_restart_one(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_restart('foo')
+        self.assertEqual(result, None)
+
+        self.assertEqual(controller.stdout.getvalue(),
+                         'foo: stopped\n\nfoo: OK\n')
+
+    def test_restart_all(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_restart('all')
+        self.assertEqual(result, None)
+
+        self.assertEqual(controller.stdout.getvalue(),
+                         ('foo: stopped\nfoo2: stopped\n'
+                          'failed: ERROR (no such process)\n\n'
+                          'foo: OK\nfoo2: OK\nfailed: ERROR (spawn error)\n'))
+        
         
 
 class TailFProducerTests(unittest.TestCase):

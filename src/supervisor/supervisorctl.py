@@ -119,7 +119,7 @@ class Controller(cmd.Cmd):
     def help_EOF(self):
         self._output("To quit, type ^D or use the quit command.")
 
-    def do_tailf(self, arg):
+    def _tailf(self, arg):
         # cant really unit test this, sorry.
         if not self._upcheck():
             return
@@ -142,11 +142,8 @@ class Controller(cmd.Cmd):
             handler.get(url)
             asyncore.loop()
         except KeyboardInterrupt:
+            self._output('')
             return
-
-    def help_tailf(self):
-        self._output("tailf <processname>\tContinuous tail of named process "
-                     "stdout, Ctrl-C to exit.")
 
     def do_tail(self, arg):
         if not self._upcheck():
@@ -168,7 +165,7 @@ class Controller(cmd.Cmd):
             if args[0].startswith('-'):
                 what = args[0][1:]
                 if what == 'f':
-                    return self.do_tailf(args[1])
+                    return self._tailf(args[1])
                 try:
                     what = int(what)
                 except:
@@ -192,8 +189,7 @@ class Controller(cmd.Cmd):
             if e.faultCode == rpc.Faults.FAILED:
                 self._output("Error: Log file doesn't yet exist on server")
         else:
-            self.stdout.write(output)
-            self.stdout.flush()
+            self._output(output)
 
     def help_tail(self):
         self._output(
@@ -227,7 +223,7 @@ class Controller(cmd.Cmd):
         elif state == supervisord.ProcessStates.ERROR:
             desc = info['spawnerr']
             if not desc:
-                desc = 'unknown error (try "tailf %s")' % info['name']
+                desc = 'unknown error (try "tail %s")' % info['name']
 
         elif state in (supervisord.ProcessStates.STOPPED,
                        supervisord.ProcessStates.KILLED,
@@ -256,7 +252,14 @@ class Controller(cmd.Cmd):
 
         if processnames:
             for processname in processnames:
-                info = supervisor.getProcessInfo(processname)
+                try:
+                    info = supervisor.getProcessInfo(processname)
+                except xmlrpclib.Fault, e:
+                    if e.faultCode == rpc.Faults.BAD_NAME:
+                        self._output('No such process %s' % processname)
+                    else:
+                        raise
+                    continue
                 newinfo = self._interpretProcessInfo(info)
                 self._output(template % newinfo)
         else:
@@ -419,6 +422,46 @@ class Controller(cmd.Cmd):
         self._output("  When all processes are restarted, they are "
                      "started in")
         self._output("  priority order (see config file)")
+
+    def do_shutdown(self, arg):
+        if self.options.interactive:
+            yesno = raw_input('Really shut the supervisord process down y/N? ')
+            really = yesno.lower().startswith('y')
+        else:
+            really = 1
+        if really:
+            supervisor = self._get_supervisor()
+            try:
+                supervisor.shutdown()
+            except xmlrpclib.Fault, e:
+                if e.faultCode == rpc.Faults.SHUTDOWN_STATE:
+                    self._output('ERROR: already shutting down')
+            else:
+                self._output('Shutting down')
+
+    def help_shutdown(self):
+        self._output("shutdown \t\tShut the remote supervisord down.")
+
+    def do_reload(self, arg):
+        if self.options.interactive:
+            yesno = raw_input('Really restart the remote supervisord process '
+                              'y/N? ')
+            really = yesno.lower().startswith('y')
+        else:
+            really = 1
+        if really:
+            supervisor = self._get_supervisor()
+            try:
+                supervisor.restart()
+            except xmlrpclib.Fault, e:
+                if e.faultCode == rpc.Faults.SHUTDOWN_STATE:
+                    self._output('ERROR: already shutting down')
+            else:
+                self._output('Restarting supervisord')
+
+    def help_reload(self):
+        self._output("reload \t\tRestart the remote supervisord.")
+
 
 def main(args=None, options=None):
     if options is None:
