@@ -498,11 +498,14 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         value = http.NOT_DONE_YET
         while 1:
             value = callback()
-            if value is True:
+            if value is not http.NOT_DONE_YET:
                 break
 
         processes = supervisord.processes
-        self.assertEqual(value, True)
+        self.assertEqual(value, [
+            {'status': 80, 'name': 'foo2', 'description': 'OK'},
+            {'status': 80, 'name': 'foo', 'description': 'OK'}
+            ] )
         self.assertEqual(len(processes), 2)
         self.assertEqual(process.stop_called, True)
         self.assertEqual(process2.stop_called, True)
@@ -814,7 +817,7 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
         result = http.NOT_DONE_YET
         while result is http.NOT_DONE_YET:
             result = callback()
-        self.assertEqual(result[0], True)
+        self.assertEqual(result[0], [])
 
     def test_methodHelp(self):
         interface = self._makeOne()
@@ -1312,7 +1315,7 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
         result = controller.do_start('BAD_NAME')
         self.assertEqual(result, None)
         self.assertEqual(controller.stdout.getvalue(),
-                         'Cannot start BAD_NAME (no such process)\n')
+                         'BAD_NAME: ERROR (no such process)\n')
 
     def test_start_alreadystarted(self):
         options = DummyClientOptions()
@@ -1321,7 +1324,7 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
         result = controller.do_start('ALREADY_STARTED')
         self.assertEqual(result, None)
         self.assertEqual(controller.stdout.getvalue(),
-                         'Cannot start ALREADY_STARTED (already started)\n')
+                         'ALREADY_STARTED: ERROR (already started)\n')
 
     def test_start_spawnerror(self):
         options = DummyClientOptions()
@@ -1330,7 +1333,7 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
         result = controller.do_start('SPAWN_ERROR')
         self.assertEqual(result, None)
         self.assertEqual(controller.stdout.getvalue(),
-                         'Cannot start SPAWN_ERROR (spawn error)\n')
+                         'SPAWN_ERROR: ERROR (spawn error)\n')
 
     def test_start_one_success(self):
         options = DummyClientOptions()
@@ -1356,7 +1359,7 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
         self.assertEqual(result, None)
 
         self.assertEqual(controller.stdout.getvalue(),
-                    'foo: OK\nfoo2: OK\nCannot start failed (spawn error)\n')
+                    'foo: OK\nfoo2: OK\nfailed: ERROR (spawn error)\n')
 
 
     def test_stop_fail(self):
@@ -1375,7 +1378,7 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
         result = controller.do_stop('BAD_NAME')
         self.assertEqual(result, None)
         self.assertEqual(controller.stdout.getvalue(),
-                         'Cannot stop BAD_NAME (no such process)\n')
+                         'BAD_NAME: ERROR (no such process)\n')
 
     def test_stop_notrunning(self):
         options = DummyClientOptions()
@@ -1384,7 +1387,7 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
         result = controller.do_stop('NOT_RUNNING')
         self.assertEqual(result, None)
         self.assertEqual(controller.stdout.getvalue(),
-                         'Cannot stop NOT_RUNNING (not running)\n')
+                         'NOT_RUNNING: ERROR (not running)\n')
 
     def test_stop_one_success(self):
         options = DummyClientOptions()
@@ -1411,7 +1414,7 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
         self.assertEqual(result, None)
 
         self.assertEqual(controller.stdout.getvalue(),
-         'foo: stopped\nfoo2: stopped\nCannot stop failed (no such process)\n')
+         'foo: stopped\nfoo2: stopped\nfailed: ERROR (no such process)\n')
         
 
 class TailFProducerTests(unittest.TestCase):

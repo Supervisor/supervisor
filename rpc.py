@@ -350,7 +350,7 @@ class SupervisorNamespaceRPCInterface:
 
         def startall(done=False): # done arg is for unit testing
             if not callbacks:
-                return True
+                return results
 
             name, callback = callbacks.pop(0)
             try:
@@ -396,7 +396,7 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.BAD_NAME, name)
 
         if process.get_state() != ProcessStates.RUNNING:
-            raise RPCEror(Faults.NOT_RUNNING)
+            raise RPCError(Faults.NOT_RUNNING)
 
         def killit():
             if process.killing:
@@ -429,12 +429,17 @@ class SupervisorNamespaceRPCInterface:
         for process in processes:
             if process.get_state() == ProcessStates.RUNNING:
                 # only stop running processes
-                callbacks.append((process.config.name,
-                                  self.stopProcess(process.config.name)))
+                try:
+                    callbacks.append((process.config.name,
+                                      self.stopProcess(process.config.name)))
+                except RPCError, e:
+                    results.append({'name':name, 'status':e.code,
+                                    'description':e.text})
+                    continue
 
         def killall():
             if not callbacks:
-                return True
+                return results
 
             name, callback = callbacks.pop(0)
             try:

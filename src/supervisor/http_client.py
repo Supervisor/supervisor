@@ -26,7 +26,8 @@ class Listener(object):
         pass
 
     def feed(self, url, data):
-        print data
+        sys.stdout.write(data)
+        sys.stdout.flush()
 
     def close(self, url):
         pass

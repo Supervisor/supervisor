@@ -271,15 +271,18 @@ class Controller(cmd.Cmd):
                      "processes.")
 
     def _startresult(self, code, processname, default=None):
-        template = 'Cannot start %s (%s)'
+        template = '%s: ERROR (%s)'
         if code == rpc.Faults.BAD_NAME:
             return template % (processname,'no such process')
         elif code == rpc.Faults.ALREADY_STARTED:
             return template % (processname,'already started')
         elif code == rpc.Faults.SPAWN_ERROR:
             return template % (processname, 'spawn error')
+        elif code == rpc.Faults.ABNORMAL_TERMINATION:
+            return template % (processname, 'abornal termination')
         elif code == rpc.Faults.SUCCESS:
             return '%s: OK' % processname
+        
         return default
 
     def do_start(self, arg):
@@ -333,7 +336,7 @@ class Controller(cmd.Cmd):
         self._output("  priority order (see config file)")
 
     def _stopresult(self, code, processname, default=None):
-        template = 'Cannot stop %s (%s)'
+        template = '%s: ERROR (%s)'
         if code == rpc.Faults.BAD_NAME:
             return template % (processname, 'no such process')
         elif code == rpc.Faults.NOT_RUNNING:
@@ -405,6 +408,7 @@ class Controller(cmd.Cmd):
             return
 
         self.do_stop(arg)
+        self._output('')
         self.do_start(arg)
 
     def help_restart(self):
