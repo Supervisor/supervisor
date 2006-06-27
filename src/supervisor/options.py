@@ -39,6 +39,8 @@ import socket
 import errno
 import signal
 import re
+import xmlrpclib
+import httplib
 
 class FileHandler(logging.StreamHandler):
     """File handler which supports reopening of logs.
@@ -811,6 +813,14 @@ class ClientOptions(Options):
         
         return section
 
+    def getServerProxy(self):
+        # mostly put here for unit testing
+        return xmlrpclib.ServerProxy(
+            self.serverurl,
+            transport = BasicAuthTransport(self.username,
+                                           self.password)
+            )
+
 _marker = []
 
 class UnhosedConfigParser(ConfigParser.RawConfigParser):
@@ -850,3 +860,48 @@ class ProcessConfig:
     def __cmp__(self, other):
         return cmp(self.priority, other.priority)
     
+class BasicAuthTransport(xmlrpclib.Transport):
+    # Py 2.3 backwards compatibility class
+    def __init__(self, username=None, password=None):
+        self.username = username
+        self.password = password
+        self.verbose = False
+
+    def request(self, host, handler, request_body, verbose=False):
+        # issue XML-RPC request
+
+        h = httplib.HTTP(host)
+        h.putrequest("POST", handler)
+
+        # required by HTTP/1.1
+        h.putheader("Host", host)
+
+        # required by XML-RPC
+        h.putheader("User-Agent", self.user_agent)
+        h.putheader("Content-Type", "text/xml")
+        h.putheader("Content-Length", str(len(request_body)))
+
+        # basic auth
+        if self.username is not None and self.password is not None:
+            unencoded = "%s:%s" % (self.username, self.password)
+            encoded = unencoded.encode('base64')
+            encoded = encoded.replace('\012', '')
+            h.putheader("Authorization", "Basic %s" % encoded)
+
+        h.endheaders()
+
+        if request_body:
+            h.send(request_body)
+
+        errcode, errmsg, headers = h.getreply()
+
+        if errcode != 200:
+            raise xmlrpclib.ProtocolError(
+                host + handler,
+                errcode, errmsg,
+                headers
+                )
+
+        return self.parse_response(h.getfile())
+
+

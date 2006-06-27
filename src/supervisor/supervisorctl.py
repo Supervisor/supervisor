@@ -43,21 +43,19 @@ import rpc
 from options import ClientOptions
 import xmlrpclib
 import urllib2
-import httplib
 import fcntl
 import socket
-import pprint
 import asyncore
 import errno
 import time
 import datetime
 
-class ZDCmd(cmd.Cmd):
+class Controller(cmd.Cmd):
 
-    def __init__(self, options):
+    def __init__(self, options, completekey='tab', stdin=None, stdout=None):
         self.options = options
         self.prompt = self.options.prompt + '> '
-        cmd.Cmd.__init__(self)
+        cmd.Cmd.__init__(self, completekey, stdin, stdout)
 
     def emptyline(self):
         # We don't want a blank line to repeat the last command.
@@ -88,16 +86,10 @@ class ZDCmd(cmd.Cmd):
 
     def _output(self, stuff):
         if stuff is not None:
-            print stuff
-
-    def _getServerProxy(self):
-        return xmlrpclib.ServerProxy(
-            self.options.serverurl,
-            transport = BasicAuthTransport(self.options.username,
-                                           self.options.password))
+            self.stdout.write(stuff + '\n')
 
     def _makeNamespace(self, namespace):
-        proxy = self._getServerProxy()
+        proxy = self.options.getServerProxy()
         namespace = getattr(proxy, namespace)
         return namespace
 
@@ -117,19 +109,22 @@ class ZDCmd(cmd.Cmd):
         return True
 
     def help_help(self):
-        print "help\t\tPrint a list of available actions."
-        print "help <action>\tPrint help for <action>."
+        self._output("help\t\tPrint a list of available actions.")
+        self._output("help <action>\tPrint help for <action>.")
 
     def do_EOF(self, arg):
-        print
+        self._output('')
         return 1
 
     def help_EOF(self):
-        print "To quit, type ^D or use the quit command."
+        self._output("To quit, type ^D or use the quit command.")
 
     def do_tailf(self, arg):
+        # cant really unit test this, sorry.
         if not self._upcheck():
             return
+
+        self._output('==> Press Ctrl-C to exit <==')
 
         url = self.options.serverurl + '/logtail/' + arg
         username = self.options.username
@@ -150,14 +145,69 @@ class ZDCmd(cmd.Cmd):
             return
 
     def help_tailf(self):
-        print ("tailf <processname>\tContinuous tail of named process stdout, "
-               "Ctrl-C to exit.")
+        self._output("tailf <processname>\tContinuous tail of named process "
+                     "stdout, Ctrl-C to exit.")
+
+    def do_tail(self, arg):
+        if not self._upcheck():
+            return
+        
+        args = arg.strip().split()
+
+        if len(args) < 1:
+            self._output('Error: too few arguments')
+            self.help_tail()
+            return
+
+        elif len(args) > 2:
+            self._output('Error: too many arguments')
+            self.help_tail()
+            return
+
+        elif len(args) == 2:
+            if args[0].startswith('-'):
+                what = args[0][1:]
+                if what == 'f':
+                    return self.do_tailf(args[1])
+                try:
+                    what = int(what)
+                except:
+                    self._output('Error: bad argument %s' % args[0])
+                    return
+                else:
+                    bytes = what
+            else:
+                self._output('Error: bad argument %s' % args[0])
+                
+        else:
+            bytes = 1600
+
+        processname = args[-1]
+        
+        supervisor = self._get_supervisor()
+
+        try:
+            output = supervisor.readProcessLog(processname, -bytes, 0)
+        except xmlrpclib.Fault, e:
+            if e.faultCode == rpc.Faults.FAILED:
+                self._output("Error: Log file doesn't yet exist on server")
+        else:
+            self.stdout.write(output)
+            self.stdout.flush()
+
+    def help_tail(self):
+        self._output(
+            "tail -f <processname>\tContinuous tail of named process stdout,\n"
+            "\t\t\tCtrl-C to exit.\n"
+            "tail -100 <processname>\tlast 100 *bytes* of process log file\n"
+            "tail <processname>\tlast 1600 *bytes* of process log file\n"
+            )
 
     def do_quit(self, arg):
         sys.exit(0)
 
     def help_quit(self):
-        print "quit\tExit the supervisor shell."
+        self._output("quit\tExit the supervisor shell.")
 
     def _interpretProcessInfo(self, info):
         result = {}
@@ -215,9 +265,22 @@ class ZDCmd(cmd.Cmd):
                 self._output(template % newinfo)
 
     def help_status(self):
-        print "status\t\t\tGet all process status info."
-        print "status <name>\t\tGet status on a single process by name."
-        print "status <name> <name>\tGet status on multiple named processes."
+        self._output("status\t\t\tGet all process status info.")
+        self._output("status <name>\t\tGet status on a single process by name.")
+        self._output("status <name> <name>\tGet status on multiple named "
+                     "processes.")
+
+    def _startresult(self, code, processname, default=None):
+        template = 'Cannot start %s (%s)'
+        if code == rpc.Faults.BAD_NAME:
+            return template % (processname,'no such process')
+        elif code == rpc.Faults.ALREADY_STARTED:
+            return template % (processname,'already started')
+        elif code == rpc.Faults.SPAWN_ERROR:
+            return template % (processname, 'spawn error')
+        elif code == rpc.Faults.SUCCESS:
+            return '%s: OK' % processname
+        return default
 
     def do_start(self, arg):
         if not self._upcheck():
@@ -225,31 +288,59 @@ class ZDCmd(cmd.Cmd):
 
         processnames = arg.strip().split()
         supervisor = self._get_supervisor()
+
         if not processnames:
-            print "You must provide a process name (see 'help start')"
+            self._output("Error: start requires a process name")
+            self.help_start()
             return
+
         if 'all' in processnames:
-            self._output(supervisor.startAllProcesses())
+            results = supervisor.startAllProcesses()
+            for result in results:
+                name = result['name']
+                code = result['status']
+                result = self._startresult(code, name)
+                if result is None:
+                    # assertion
+                    raise ValueError('Unknown result code %s for %s' %
+                                     (code, name))
+                else:
+                    self._output(result)
+                
         else:
             for processname in processnames:
                 try:
-                    self._output(supervisor.startProcess(processname))
+                    result = supervisor.startProcess(processname)
                 except xmlrpclib.Fault, e:
-                    template = 'Cannot start %s (%s)'
-                    if e.faultCode == rpc.FAULTS['START_BAD_NAME']:
-                        self._output(template % (processname,'no such process'))
-                    elif e.faultCode == rpc.FAULTS['START_ALREADY_STARTED']:
-                        self._output(template % (processname,'already started'))
+                    error = self._startresult(e.faultCode, processname)
+                    if error is not None:
+                        self._output(error)
                     else:
                         raise
+                else:
+                    if result == True:
+                        self._output('%s: OK' % processname)
+                    else:
+                        raise # assertion
 
     def help_start(self):
-        print "start <processname>\t\t\tStart a process."
-        print "start <processname> <processname>\tStart multiple processes"
-        print "start all\t\t\t\tStart all processes"
-        print "  When multiple processes are started, they are started in"
-        print "  priority order (see config file)"
-        # XXX the above is not true yet
+        self._output("start <processname>\t\t\tStart a process.")
+        self._output("start <processname> <processname>\tStart multiple "
+                     "processes")
+        self._output("start all\t\t\t\tStart all processes")
+        self._output("  When all processes are started, they are started "
+                     "in")
+        self._output("  priority order (see config file)")
+
+    def _stopresult(self, code, processname, default=None):
+        template = 'Cannot stop %s (%s)'
+        if code == rpc.Faults.BAD_NAME:
+            return template % (processname, 'no such process')
+        elif code == rpc.Faults.NOT_RUNNING:
+            return template % (processname, 'not running')
+        elif code == rpc.Faults.SUCCESS:
+            return '%s: stopped' % processname
+        return default
 
     def do_stop(self, arg):
         if not self._upcheck():
@@ -257,86 +348,79 @@ class ZDCmd(cmd.Cmd):
 
         processnames = arg.strip().split()
         supervisor = self._get_supervisor()
-        if processnames:
+
+        if not processnames:
+            self._output('Error: stop requires a process name')
+            self.help_stop()
+            return
+
+        if 'all' in processnames:
+            results = supervisor.stopAllProcesses()
+            for result in results:
+                name = result['name']
+                code = result['status']
+                result = self._stopresult(code, name)
+                if result is None:
+                    # assertion
+                    raise ValueError('Unknown result code %s for %s' %
+                                     (code, name))
+                else:
+                    self._output(result)
+
+        else:
+
             for processname in processnames:
-                self._output(supervisor.stopProcess(processname))
+                try:
+                    result = supervisor.stopProcess(processname)
+                except xmlrpclib.Fault, e:
+                    error = self._stopresult(e.faultCode, processname)
+                    if error is not None:
+                        self._output(error)
+                    else:
+                        raise
+                else:
+                    if result == True:
+                        self._output('%s: stopped' % processname)
+                    else:
+                        raise # assertion
 
     def help_stop(self):
-        print "stop <processname>\t\t\tStop a process."
-        print "stop <processname> <processname>\tStop multiple processes"
-        print "stop all\t\t\t\tStop all processes"
-        print "  When multiple processes are stopped, they are stopped in"
-        print "  reverse priority order (see config file)"
-        # XXX the above is not true yet
+        self._output("stop <processname>\t\t\tStop a process.")
+        self._output("stop <processname> <processname>\tStop multiple "
+                     "processes")
+        self._output("stop all\t\t\t\tStop all processes")
+        self._output("  When all processes are stopped, they are stopped "
+                     "in")
+        self._output("  reverse priority order (see config file)")
 
     def do_restart(self, arg):
         if not self._upcheck():
             return
 
         processnames = arg.strip().split()
-        supervisor = self._get_supervisor()
-        if processnames:
-            for processname in processnames:
-                self._output(supervisor.stopProcess(processname))
-                self._output(supervisor.startProcess(processname))
+
+        if not processnames:
+            self._output('Error: restart requires a process name')
+            self.help_restart()
+            return
+
+        self.do_stop(arg)
+        self.do_start(arg)
 
     def help_restart(self):
-        print "restart <processname>\t\t\tRestart a process."
-        print "restart <processname> <processname>\tRestart multiple processes"
-        print "restart all\t\t\t\tRestart all processes"
-        print "  When multiple processes are restarted, they are started in"
-        print "  priority order (see config file)"
-        # XXX the above is not true yet
-
-class BasicAuthTransport(xmlrpclib.Transport):
-    # Py 2.3 backwards compatibility class
-    def __init__(self, username=None, password=None):
-        self.username = username
-        self.password = password
-        self.verbose = False
-
-    def request(self, host, handler, request_body, verbose=False):
-        # issue XML-RPC request
-
-        h = httplib.HTTP(host)
-        h.putrequest("POST", handler)
-
-        # required by HTTP/1.1
-        h.putheader("Host", host)
-
-        # required by XML-RPC
-        h.putheader("User-Agent", self.user_agent)
-        h.putheader("Content-Type", "text/xml")
-        h.putheader("Content-Length", str(len(request_body)))
-
-        # basic auth
-        if self.username is not None and self.password is not None:
-            unencoded = "%s:%s" % (self.username, self.password)
-            encoded = unencoded.encode('base64')
-            encoded = encoded.replace('\012', '')
-            h.putheader("Authorization", "Basic %s" % encoded)
-
-        h.endheaders()
-
-        if request_body:
-            h.send(request_body)
-
-        errcode, errmsg, headers = h.getreply()
-
-        if errcode != 200:
-            raise xmlrpclib.ProtocolError(
-                host + handler,
-                errcode, errmsg,
-                headers
-                )
-
-        return self.parse_response(h.getfile())
+        self._output("restart <processname>\t\t\tRestart a process.")
+        self._output("restart <processname> <processname>\tRestart multiple "
+                     "processes")
+        self._output("restart all\t\t\t\tRestart all processes")
+        self._output("  When all processes are restarted, they are "
+                     "started in")
+        self._output("  priority order (see config file)")
 
 def main(args=None, options=None):
     if options is None:
         options = ClientOptions()
     options.realize(args)
-    c = ZDCmd(options)
+    c = Controller(options)
     if options.args:
         c.onecmd(" ".join(options.args))
     if options.interactive:
@@ -348,7 +432,7 @@ def main(args=None, options=None):
             c.onecmd('status')
             c.cmdloop()
         except KeyboardInterrupt:
-            print
+            c._output('')
             pass
 
 if __name__ == "__main__":

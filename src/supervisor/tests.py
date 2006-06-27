@@ -174,21 +174,6 @@ command=/bin/cat
         self.assertEqual(instance.minfds, 2048)
         self.assertEqual(instance.minprocs, 300)
 
-class SupervisorTests(unittest.TestCase):
-    def _getTargetClass(self):
-        from supervisord import Supervisor
-        return Supervisor
-
-    def _makeOne(self):
-        return self._getTargetClass()()
-    
-    def test_main(self):
-        supervisor = self._makeOne()
-        supervisor.main(['-c' 'sample.conf'], test=True)
-        self.assertEqual(supervisor.processes, {})
-        self.failUnless(supervisor.httpserver)
-        
-
 class TestBase(unittest.TestCase):
     def setUp(self):
         pass
@@ -196,11 +181,11 @@ class TestBase(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def _assertRPCError(self, errtext, callable, *args, **kw):
+    def _assertRPCError(self, code, callable, *args, **kw):
         try:
             callable(*args, **kw)
         except rpc.RPCError, inst:
-            self.assertEqual(inst.text, errtext)
+            self.assertEqual(inst.code, code)
         else:
             raise AssertionError("Didnt raise")
 
@@ -222,11 +207,11 @@ class MainXMLRPCInterfaceTests(TestBase):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
         from rpc import traverse
-        self._assertRPCError('UNKNOWN_METHOD',
+        self._assertRPCError(rpc.Faults.UNKNOWN_METHOD,
                              traverse, interface, 'notthere.hello', [])
-        self._assertRPCError('UNKNOWN_METHOD',
+        self._assertRPCError(rpc.Faults.UNKNOWN_METHOD,
                              traverse, interface, 'supervisor._readFile', [])
-        self._assertRPCError('INCORRECT_PARAMETERS',
+        self._assertRPCError(rpc.Faults.INCORRECT_PARAMETERS,
                              traverse, interface,
                              'supervisor.getIdentification', [1])
         self.assertEqual(
@@ -270,7 +255,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface._update('foo')
         self.assertEqual(interface.update_text, 'foo')
         supervisord.state = SupervisorStates.SHUTDOWN
-        self._assertRPCError('SHUTDOWN_STATE', interface._update, 'foo')
+        self._assertRPCError(rpc.Faults.SHUTDOWN_STATE, interface._update,
+                             'foo')
 
     def test_getVersion(self):
         supervisord = DummySupervisor()
@@ -300,7 +286,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_readLog_unreadable(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
-        self._assertRPCError('NO_FILE', interface.readLog,
+        self._assertRPCError(rpc.Faults.NO_FILE, interface.readLog,
                              offset=0, length=1)
 
     def test_readLog_badargs(self):
@@ -311,9 +297,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f = open(logfile, 'w+')
             f.write('x' * 2048)
             f.close()
-            self._assertRPCError('BAD_ARGUMENTS',
+            self._assertRPCError(rpc.Faults.BAD_ARGUMENTS,
                                  interface.readLog, offset=-1, length=1)
-            self._assertRPCError('BAD_ARGUMENTS',
+            self._assertRPCError(rpc.Faults.BAD_ARGUMENTS,
                                  interface.readLog, offset=-1,
                                  length=-1)
         finally:
@@ -343,7 +329,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_clearLog_unreadable(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
-        self._assertRPCError('NO_FILE', interface.clearLog)
+        self._assertRPCError(rpc.Faults.NO_FILE, interface.clearLog)
 
     def test_clearLog(self):
         supervisord = DummySupervisor()
@@ -386,13 +372,14 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process.pid = 10
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
-        self._assertRPCError('ALREADY_STARTED',
+        self._assertRPCError(rpc.Faults.ALREADY_STARTED,
                              interface.startProcess,'foo')
 
     def test_startProcess_badname(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
-        self._assertRPCError('BAD_NAME',  interface.startProcess,
+        self._assertRPCError(rpc.Faults.BAD_NAME,
+                             interface.startProcess,
                              'foo')
 
     def test_startProcess_spawnerr(self):
@@ -402,7 +389,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process.spawnerr = 'abc'
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
-        self._assertRPCError('SPAWN_ERROR',  interface.startProcess,
+        self._assertRPCError(rpc.Faults.SPAWN_ERROR,
+                             interface.startProcess,
                              'foo')
 
     def test_startProcess(self):
@@ -429,24 +417,22 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(process.spawned, True)
         self.assertEqual(interface.update_text, 'startProcess')
         process.pid = 0
-        self._assertRPCError('ABNORMAL_TERMINATION', callback, True)
+        self._assertRPCError(rpc.Faults.ABNORMAL_TERMINATION,
+                             callback, True)
     
-    def test_startProcess_notimeout(self):
+    def test_startProcess_badtimeout(self):
         options = DummyOptions()
         config = DummyPConfig('foo', '/bin/foo', autostart=False)
         process = DummyProcess(options, config)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
-        value = interface.startProcess('foo', timeout=0)
-        self.assertEqual(value, True)
-        self.assertEqual(interface.update_text, 'startProcess')
-
-        self.assertEqual(process.spawned, True)
+        self._assertRPCError(rpc.Faults.BAD_ARGUMENTS,
+                             interface.startProcess, 'foo', 'flee')
 
     def test_startAllProcesses(self):
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo')
-        config2 = DummyPConfig('foo2', '/bin/foo2')
+        config = DummyPConfig('foo', '/bin/foo', priority=1)
+        config2 = DummyPConfig('foo2', '/bin/foo2', priority=2)
         process = DummyProcess(options, config, ProcessStates.NOTSTARTED)
         process2 = DummyProcess(options, config2, ProcessStates.NOTSTARTED)
         supervisord = DummySupervisor({'foo':process, 'foo2':process2})
@@ -458,7 +444,13 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         from http import NOT_DONE_YET
         self.assertEqual(callback(done=True), NOT_DONE_YET)
         # second process
-        self.assertEqual(callback(done=True), True)
+        self.assertEqual(
+            callback(done=True),
+            [
+            {'name':'foo', 'status': 80, 'description': 'OK'},
+            {'name':'foo2', 'status': 80, 'description': 'OK'},
+            ]
+            )
         self.assertEqual(interface.update_text, 'startProcess')
 
         self.assertEqual(process.spawned, True)
@@ -468,7 +460,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_stopProcess_badname(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
-        self._assertRPCError('BAD_NAME', interface.stopProcess, 'foo')
+        self._assertRPCError(rpc.Faults.BAD_NAME,
+                             interface.stopProcess, 'foo')
 
     def test_stopProcess(self):
         options = DummyOptions()
@@ -594,7 +587,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = DummyProcess(options, config)
         supervisord = DummySupervisor({'process1':process})
         interface = self._makeOne(supervisord)
-        self._assertRPCError('NO_FILE', interface.readProcessLog,
+        self._assertRPCError(rpc.Faults.NO_FILE,
+                             interface.readProcessLog,
                              'process1', offset=0, length=1)
 
     def test_readProcessLog_badargs(self):
@@ -610,10 +604,10 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f = open(logfile, 'w+')
             f.write('x' * 2048)
             f.close()
-            self._assertRPCError('BAD_ARGUMENTS',
+            self._assertRPCError(rpc.Faults.BAD_ARGUMENTS,
                                  interface.readProcessLog,
                                  'process1', offset=-1, length=1)
-            self._assertRPCError('BAD_ARGUMENTS',
+            self._assertRPCError(rpc.Faults.BAD_ARGUMENTS,
                                  interface.readProcessLog, 'process1',
                                  offset=-1, length=-1)
         finally:
@@ -647,7 +641,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_clearProcessLog_bad_name(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
-        self._assertRPCError('BAD_NAME', interface.clearProcessLog,
+        self._assertRPCError(rpc.Faults.BAD_NAME,
+                             interface.clearProcessLog,
                              'spew')
 
     def test_clearProcessLog(self):
@@ -700,7 +695,8 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_methodSignature(self):
         interface = self._makeOne()
-        self._assertRPCError('SIGNATURE_UNSUPPORTED', interface.methodSignature,
+        self._assertRPCError(rpc.Faults.SIGNATURE_UNSUPPORTED,
+                             interface.methodSignature,
                              ['foo.bar'])
         result = interface.methodSignature('system.methodSignature')
         self.assertEqual(result, ['array', 'string'])
@@ -822,7 +818,8 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_methodHelp(self):
         interface = self._makeOne()
-        self._assertRPCError('SIGNATURE_UNSUPPORTED', interface.methodHelp,
+        self._assertRPCError(rpc.Faults.SIGNATURE_UNSUPPORTED,
+                             interface.methodHelp,
                              ['foo.bar'])
         help = interface.methodHelp('system.methodHelp')
         self.assertEqual(help, interface.methodHelp.__doc__)
@@ -1210,6 +1207,213 @@ class LogtailHandlerTests(unittest.TestCase):
         self.assertEqual(len(request.producers), 1)
         self.assertEqual(request._done, True)
 
+class ControllerTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisorctl import Controller
+        return Controller
+
+    def _makeOne(self, options):
+        return self._getTargetClass()(options)
+
+    def test_ctor(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        self.assertEqual(controller.prompt, options.prompt + '> ')
+
+    def test__upcheck(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        result = controller._upcheck()
+        self.assertEqual(result, True)
+
+    def test_onecmd(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.onecmd('help')
+        self.assertEqual(result, None)
+        self.failUnless(
+            controller.stdout.getvalue().find('Documented commands') != -1
+            )
+
+    def test_tail_noname(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_tail('')
+        self.assertEqual(result, None)
+        lines = controller.stdout.getvalue().split('\n')
+        self.assertEqual(lines[0], 'Error: too few arguments')
+
+    def test_tail_toomanyargs(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_tail('one two three')
+        self.assertEqual(result, None)
+        lines = controller.stdout.getvalue().split('\n')
+        self.assertEqual(lines[0], 'Error: too many arguments')
+
+    def test_tail_onearg(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_tail('foo')
+        self.assertEqual(result, None)
+        lines = controller.stdout.getvalue().split('\n')
+        self.assertEqual(len(lines), 11)
+        self.assertEqual(lines[0], 'output line')
+
+    def test_tail_twoargs(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_tail('-10 foo')
+        self.assertEqual(result, None)
+        lines = controller.stdout.getvalue().split('\n')
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[0], 'tput line')
+
+    def test_status_oneprocess(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_status('foo')
+        self.assertEqual(result, None)
+        expected = "foo            RUNNING    pid 11, uptime 0:01:40\n"
+        self.assertEqual(controller.stdout.getvalue(), expected)
+
+    def test_status_allprocesses(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_status('')
+        self.assertEqual(result, None)
+        expected = """\
+foo            RUNNING    pid 11, uptime 0:01:40
+bar            ERROR      screwed
+baz            STOPPED    Jun 26 11:42 PM (OK)
+"""
+        self.assertEqual(controller.stdout.getvalue(), expected)
+
+    def test_start_fail(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_start('')
+        self.assertEqual(result, None)
+        expected = "Error: start requires a process name"
+        self.assertEqual(controller.stdout.getvalue().split('\n')[0], expected)
+
+    def test_start_badname(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_start('BAD_NAME')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(),
+                         'Cannot start BAD_NAME (no such process)\n')
+
+    def test_start_alreadystarted(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_start('ALREADY_STARTED')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(),
+                         'Cannot start ALREADY_STARTED (already started)\n')
+
+    def test_start_spawnerror(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_start('SPAWN_ERROR')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(),
+                         'Cannot start SPAWN_ERROR (spawn error)\n')
+
+    def test_start_one_success(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_start('foo')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(), 'foo: OK\n')
+
+    def test_start_many(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_start('foo bar')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(), 'foo: OK\nbar: OK\n')
+
+    def test_start_all(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_start('all')
+        self.assertEqual(result, None)
+
+        self.assertEqual(controller.stdout.getvalue(),
+                    'foo: OK\nfoo2: OK\nCannot start failed (spawn error)\n')
+
+
+    def test_stop_fail(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_stop('')
+        self.assertEqual(result, None)
+        expected = "Error: stop requires a process name"
+        self.assertEqual(controller.stdout.getvalue().split('\n')[0], expected)
+
+    def test_stop_badname(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_stop('BAD_NAME')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(),
+                         'Cannot stop BAD_NAME (no such process)\n')
+
+    def test_stop_notrunning(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_stop('NOT_RUNNING')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(),
+                         'Cannot stop NOT_RUNNING (not running)\n')
+
+    def test_stop_one_success(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_stop('foo')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(), 'foo: stopped\n')
+
+    def test_stop_many(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_stop('foo bar')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(),
+                         'foo: stopped\nbar: stopped\n')
+
+    def test_stop_all(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_stop('all')
+        self.assertEqual(result, None)
+
+        self.assertEqual(controller.stdout.getvalue(),
+         'foo: stopped\nfoo2: stopped\nCannot stop failed (no such process)\n')
+        
+
 class TailFProducerTests(unittest.TestCase):
     def _getTargetClass(self):
         from http import tail_f_producer
@@ -1290,6 +1494,9 @@ class DummyProcess:
     def spawn(self):
         self.spawned = True
 
+    def __cmp__(self, other):
+        return cmp(self.config.priority, other.config.priority)
+
 class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,
                  autorestart=False, uid=None, logfile=None, logfile_backups=0,
@@ -1340,6 +1547,115 @@ class DummyOptions:
         logger.args = args
         return logger
 
+class DummyClientOptions:
+    def __init__(self):
+        self.prompt = 'supervisor'
+        self.serverurl = 'http://localhost:9001'
+        self.username = 'chrism'
+        self.password = '123'
+
+    def getServerProxy(self):
+        return DummyRPCServer()
+
+_NOW = 1151365354
+
+class DummySupervisorRPCNamespace:
+    def getVersion(self):
+        return '1.0'
+
+    def readProcessLog(self, name, offset, length):
+        a = 'output line\n' * 10
+        return a[offset:]
+
+    def getAllProcessInfo(self):
+        return [
+            {
+            'name':'foo',
+            'pid':11,
+            'state':ProcessStates.RUNNING,
+            'start':_NOW - 100,
+            'stop':0,
+            'spawnerr':'',
+            'reportstatusmsg':'',
+            'now':_NOW,
+             },
+            {
+            'name':'bar',
+            'pid':12,
+            'state':ProcessStates.ERROR,
+            'start':_NOW - 100,
+            'stop':_NOW - 50,
+            'spawnerr':'screwed',
+            'reportstatusmsg':'statusmsg',
+            'now':_NOW,
+             },
+            {
+            'name':'baz',
+            'pid':12,
+            'state':ProcessStates.STOPPED,
+            'start':_NOW - 100,
+            'stop':_NOW - 25,
+            'spawnerr':'',
+            'reportstatusmsg':'OK',
+            'now':_NOW,
+             },
+            ]
+                
+
+    def getProcessInfo(self, name):
+        return {
+            'name':'foo',
+            'pid':11,
+            'state':ProcessStates.RUNNING,
+            'start':_NOW - 100,
+            'stop':0,
+            'spawnerr':'',
+            'reportstatusmsg':'',
+            'now':_NOW,
+             }
+
+    def startProcess(self, name):
+        from xmlrpclib import Fault
+        if name == 'BAD_NAME':
+            raise Fault(rpc.Faults.BAD_NAME, 'BAD_NAME')
+        if name == 'ALREADY_STARTED':
+            raise Fault(rpc.Faults.ALREADY_STARTED, 'ALREADY_STARTED')
+        if name == 'SPAWN_ERROR':
+            raise Fault(rpc.Faults.SPAWN_ERROR, 'SPAWN_ERROR')
+        return True
+
+    def startAllProcesses(self):
+        return [
+            {'name':'foo', 'status': rpc.Faults.SUCCESS, 'description': 'OK'},
+            {'name':'foo2', 'status': rpc.Faults.SUCCESS, 'description': 'OK'},
+            {'name':'failed', 'status':rpc.Faults.SPAWN_ERROR,
+             'description':'SPAWN_ERROR'}
+            ]
+
+    def stopProcess(self, name):
+        from xmlrpclib import Fault
+        if name == 'BAD_NAME':
+            raise Fault(rpc.Faults.BAD_NAME, 'BAD_NAME')
+        if name == 'NOT_RUNNING':
+            raise Fault(rpc.Faults.NOT_RUNNING, 'NOT_RUNNING')
+        return True
+    
+    def stopAllProcesses(self):
+        return [
+            {'name':'foo', 'status': rpc.Faults.SUCCESS, 'description': 'OK'},
+            {'name':'foo2', 'status': rpc.Faults.SUCCESS, 'description': 'OK'},
+            {'name':'failed', 'status':rpc.Faults.BAD_NAME,
+             'description':'FAILED'}
+            ]
+        
+
+class DummySystemRPCNamespace:
+    pass
+
+class DummyRPCServer:
+    supervisor = DummySupervisorRPCNamespace()
+    system = DummySystemRPCNamespace()
+
 class DummySupervisor:
     def __init__(self, processes=None, state=SupervisorStates.ACTIVE):
         if processes is None:
@@ -1377,7 +1693,7 @@ class DummyRequest:
         
 def test_suite():
     suite = unittest.TestSuite()
-    #suite.addTest(unittest.makeSuite(SupervisorTests))
+    suite.addTest(unittest.makeSuite(ControllerTests))
     suite.addTest(unittest.makeSuite(INIOptionTests))
     suite.addTest(unittest.makeSuite(SupervisorNamespaceXMLRPCInterfaceTests))
     suite.addTest(unittest.makeSuite(MainXMLRPCInterfaceTests))
