@@ -1,0 +1,40 @@
+- Unix socket server.
+
+- Figure out why supervisord sends SIGKILL to processes at shutdown time
+  so quickly (and why they report they got SIGINT).
+
+- Clear process logs.
+
+- Tail main log.
+
+- Figure out how to test the actual supervisord class.
+
+- Ask for username and password in supervisorctl if it's not specified in
+  log file and supervisord needs it.
+
+- "open" command.
+
+- Test log rotation.
+
+- AUTO alias for child log if one needs to be specified.
+
+- Command-line arg tests.
+
+- supervisorctl one-shot tests.
+
+- packaging.
+
+- track down all config file options.
+
+- test under py 2.3 to make setup.py assertions true
+
+- supervisorctl command history
+
+- test startup as root
+
+- stop logging all RPC requests
+
+- reopen child logs when we get a logreopen signal
+
+- make sure pid file gets cleaned up when we quit
+
