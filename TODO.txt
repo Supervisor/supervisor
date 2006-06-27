@@ -38,3 +38,6 @@
 
 - make sure pid file gets cleaned up when we quit
 
+- Collector issues 75, 76, 78, 79, 82, 84, 152.
+
+- Docs for collector 81.
