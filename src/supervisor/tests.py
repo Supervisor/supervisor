@@ -1447,8 +1447,44 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
                          ('foo: stopped\nfoo2: stopped\n'
                           'failed: ERROR (no such process)\n\n'
                           'foo: OK\nfoo2: OK\nfailed: ERROR (spawn error)\n'))
+
+    def test_reload_fail(self):
+        options = DummyClientOptions()
+        options.interactive = False
+        options._server.supervisor._restartable = False
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_reload('')
+        self.assertEqual(result, None)
+        self.assertEqual(options._server.supervisor._restarted, False)
         
+    def test_reload(self):
+        options = DummyClientOptions()
+        options.interactive = False
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_reload('')
+        self.assertEqual(result, None)
+        self.assertEqual(options._server.supervisor._restarted, True)
         
+    def test_shutdown_fail(self):
+        options = DummyClientOptions()
+        options.interactive = False
+        options._server.supervisor._restartable = False
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_shutdown('')
+        self.assertEqual(result, None)
+        self.assertEqual(options._server.supervisor._shutdown, False)
+
+    def test_shutdown(self):
+        options = DummyClientOptions()
+        options.interactive = False
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_shutdown('')
+        self.assertEqual(result, None)
+        self.assertEqual(options._server.supervisor._shutdown, True)
 
 class TailFProducerTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -1589,13 +1625,18 @@ class DummyClientOptions:
         self.serverurl = 'http://localhost:9001'
         self.username = 'chrism'
         self.password = '123'
+        self._server = DummyRPCServer()
 
     def getServerProxy(self):
-        return DummyRPCServer()
+        return self._server
 
 _NOW = 1151365354
 
 class DummySupervisorRPCNamespace:
+    _restartable = True
+    _restarted = False
+    _shutdown = False
+
     def getVersion(self):
         return '1.0'
 
@@ -1683,14 +1724,28 @@ class DummySupervisorRPCNamespace:
             {'name':'failed', 'status':rpc.Faults.BAD_NAME,
              'description':'FAILED'}
             ]
-        
+
+    def restart(self):
+        if self._restartable:
+            self._restarted = True
+            return
+        from xmlrpclib import Fault
+        raise Fault(rpc.Faults.SHUTDOWN_STATE, '')
+
+    def shutdown(self):
+        if self._restartable:
+            self._shutdown = True
+            return
+        from xmlrpclib import Fault
+        raise Fault(rpc.Faults.SHUTDOWN_STATE, '')
 
 class DummySystemRPCNamespace:
     pass
 
 class DummyRPCServer:
-    supervisor = DummySupervisorRPCNamespace()
-    system = DummySystemRPCNamespace()
+    def __init__(self):
+        self.supervisor = DummySupervisorRPCNamespace()
+        self.system = DummySystemRPCNamespace()
 
 class DummySupervisor:
     def __init__(self, processes=None, state=SupervisorStates.ACTIVE):

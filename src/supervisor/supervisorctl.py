@@ -425,7 +425,8 @@ class Controller(cmd.Cmd):
 
     def do_shutdown(self, arg):
         if self.options.interactive:
-            yesno = raw_input('Really shut the supervisord process down y/N? ')
+            yesno = raw_input('Really shut the remote supervisord process '
+                              'down y/N? ')
             really = yesno.lower().startswith('y')
         else:
             really = 1
