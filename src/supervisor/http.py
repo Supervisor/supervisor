@@ -461,7 +461,7 @@ def makeHTTPServer(supervisord):
         def log(self, msg):
             if msg.endswith('\n'):
                 msg = msg[:-1]
-            options.logger.info(msg)
+            options.logger.debug(msg)
     wrapper = LogWrapper()
     hs = supervisor_http_server(host, port, logger_object=wrapper,
                                 username=username, password=password)

@@ -455,7 +455,6 @@ class ServerOptions(Options):
     pidfile = None
     passwdfile = None
     nodaemon = None
-    prompt = None
     AUTOMATIC = []
     
     def __init__(self):
@@ -546,9 +545,6 @@ class ServerOptions(Options):
         if not self.loglevel:
             self.loglevel = self.configroot.supervisord.loglevel
 
-        if not self.prompt:
-            self.prompt = self.configroot.supervisord.prompt
-
         if not self.pidfile:
             self.pidfile = os.path.abspath(self.configroot.supervisord.pidfile)
         else:
@@ -609,9 +605,6 @@ class ServerOptions(Options):
         umask = datatypes.octal_type(config.getdefault('umask', '022'))
         section.umask = umask
 
-        prompt = config.getdefault('prompt', 'supervisor')
-        section.prompt = prompt
-
         logfile = config.getdefault('logfile', 'supervisord.log')
         logfile = datatypes.existing_dirpath(logfile)
         section.logfile = logfile
@@ -631,9 +624,6 @@ class ServerOptions(Options):
         pidfile = config.getdefault('pidfile', 'supervisord.pid')
         pidfile = datatypes.existing_dirpath(pidfile)
         section.pidfile = pidfile
-
-        section.noauth = True # no SRP auth here
-        section.passwdfile = None # no SRP auth here
 
         identifier = config.getdefault('identifier', 'supervisor')
         section.identifier = identifier
@@ -692,10 +682,10 @@ class ServerOptions(Options):
             logfile = config.saneget(section, 'logfile', None)
             if logfile in ('NONE', 'OFF'):
                 logfile = None
-            elif logfile is not None:
-                logfile = datatypes.existing_dirpath(logfile)
-            else:
+            elif logfile in (None, 'AUTO'):
                 logfile = self.AUTOMATIC
+            else:
+                logfile = datatypes.existing_dirpath(logfile)
             logfile_backups = config.saneget(section, 'logfile_backups', 1)
             logfile_backups = datatypes.integer(logfile_backups)
             logfile_maxbytes = config.saneget(section, 'logfile_maxbytes',
