@@ -159,7 +159,6 @@ command=/bin/cat
         self.assertEqual(instance.pidfile, os.path.join(here,'supervisord.pid'))
         self.assertEqual(instance.nodaemon, True)
         self.assertEqual(instance.passwdfile, None)
-        self.assertEqual(instance.noauth, True)
         self.assertEqual(instance.identifier, 'fleeb')
         self.assertEqual(instance.childlogdir, tempfile.gettempdir())
         self.assertEqual(instance.xmlrpc_port.family, socket.AF_INET)
