@@ -24,8 +24,6 @@
 
 - packaging.
 
-- track down all config file options.
-
 - test under py 2.3 to make setup.py assertions true
 
 - supervisorctl command history
