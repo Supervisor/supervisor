@@ -120,7 +120,6 @@ class Controller(cmd.Cmd):
         self._output("To quit, type ^D or use the quit command.")
 
     def _tailf(self, arg):
-        # cant really unit test this, sorry.
         if not self._upcheck():
             return
 
@@ -438,7 +437,7 @@ class Controller(cmd.Cmd):
                 if e.faultCode == rpc.Faults.SHUTDOWN_STATE:
                     self._output('ERROR: already shutting down')
             else:
-                self._output('Shutting down')
+                self._output('Shut down')
 
     def help_shutdown(self):
         self._output("shutdown \t\tShut the remote supervisord down.")
@@ -458,7 +457,7 @@ class Controller(cmd.Cmd):
                 if e.faultCode == rpc.Faults.SHUTDOWN_STATE:
                     self._output('ERROR: already shutting down')
             else:
-                self._output('Restarting supervisord')
+                self._output('Restarted supervisord')
 
     def help_reload(self):
         self._output("reload \t\tRestart the remote supervisord.")
