@@ -466,7 +466,6 @@ class Supervisor:
 
         self.run(test)
 
-
     def get_state(self):
         if self.mood <= 0:
             return SupervisorStates.SHUTDOWN
@@ -654,11 +653,12 @@ class Supervisor:
             self.options.logger.info('supervisord started with pid %s' % pid)
             self.runforever(test)
         finally:
-##             try:
-##                 if self.options.sockfamily == socket.AF_UNIX:
-##                     os.unlink(self.options.sockname)
-##             except os.error:
-##                 pass
+            try:
+                if self.options.xmlrpc_port is not None:
+                    if self.options.xmlrpc_port.family == socket.AF_UNIX:
+                        os.unlink(self.options.xmlrpc_port.address)
+            except os.error:
+                pass
             try:
                 os.unlink(self.options.pidfile)
             except os.error:
@@ -676,7 +676,6 @@ class Supervisor:
                                    'remote clients (%s).  Shut this program '
                                    'down first before starting supervisord. ' %
                                    port)
-
 
     def setsignals(self):
         signal.signal(signal.SIGTERM, self.sigexit)
