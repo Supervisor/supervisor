@@ -497,7 +497,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
             s.connect(socketname)
-            s.send("HTTP/1.0 GET /\n\n")
+            s.send("GET / HTTP/1.0\r\n\r\n")
             data = s.recv(1)
             s.close()
         except socket.error:
