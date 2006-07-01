@@ -39,3 +39,5 @@
 - Docs for collector 81.
 
 - Web interface
+
+- Option to include/disinclude stderr in child logs.

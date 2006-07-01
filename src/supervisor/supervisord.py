@@ -671,9 +671,9 @@ class Supervisor:
         except socket.error, why:
             if why[0] == errno.EADDRINUSE:
                 port = str(self.options.xmlrpc_port.address)
-                self.options.usage('Another program is listening on the port '
-                                   'used for XML-RPC communications with '
-                                   'remote clients (%s).  Shut this program '
+                self.options.usage('Another program is already listening on '
+                                   'the port that our HTTP server is '
+                                   'configured to use (%s).  Shut this program '
                                    'down first before starting supervisord. ' %
                                    port)
 
