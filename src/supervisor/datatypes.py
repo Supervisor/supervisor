@@ -75,7 +75,7 @@ class SocketAddress:
     def __init__(self, s):
         # returns (family, address) tuple
         import socket
-        if "/" in s or s.find(os.sep) >= 0:
+        if "/" in s or s.find(os.sep) >= 0 or ":" not in s:
             self.family = getattr(socket, "AF_UNIX", None)
             self.address = s
         else:
@@ -83,15 +83,27 @@ class SocketAddress:
             self.address = inet_address(s)
 
 def dot_separated_user_group(arg):
-    if not arg:
-        return
     try:
         result = arg.split('.', 1)
         if len(result) == 1:
-            return (result[0], None)
+            username = result[0]
+            uid = name_to_uid(username)
+            if uid is None:
+                raise ValueError('Invalid user name %s' % username)
+            return (uid, -1)
+        else:
+            username = result[0]
+            groupname = result[1]
+            uid = name_to_uid(username)
+            gid = name_to_gid(groupname)
+            if uid is None:
+                raise ValueError('Invalid user name %s' % username)
+            if gid is None:
+                raise ValueError('Invalid group name %s' % groupname)
+            return (uid, gid)
         return result
     except:
-        raise ValueError, 'invalid user.group definition %s' % arg
+        raise ValueError, 'Invalid user.group definition %s' % arg
 
 def octal_type(arg):
     return int(arg, 8)
