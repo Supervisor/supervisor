@@ -1,4 +1,4 @@
-- Unix socket server.
+- Manually test UNIX domain socket setgid, setuid, chmod.
 
 - Figure out why supervisord sends SIGKILL to processes at shutdown time
   so quickly (and why they report they got SIGINT).
@@ -16,8 +16,6 @@
 
 - Test log rotation.
 
-- AUTO alias for child log if one needs to be specified.
-
 - Command-line arg tests.
 
 - supervisorctl one-shot tests.
@@ -30,7 +28,7 @@
 
 - test startup as root
 
-- stop logging all RPC requests
+- stop logging all RPC requests in info mode when we ship
 
 - reopen child logs when we get a logreopen signal
 
