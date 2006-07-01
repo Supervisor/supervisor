@@ -7,6 +7,8 @@ import stat
 import time
 import sys
 import string
+import socket
+import errno
 
 NOT_DONE_YET = []
 
@@ -341,30 +343,148 @@ class deferring_http_channel(http_server.http_channel):
 
 class supervisor_http_server(http_server.http_server):
     channel_class = deferring_http_channel
+    ip = None
 
-    def __init__ (self, ip, port, resolver=None, logger_object=None,
-                  username=None, password=None):
+    def prebind(self, sock, logger_object):
         """ Override __init__ to do logger setup earlier so it can
         go to our logger object instead of stdout """
         from medusa import logger
 
         if not logger_object:
-            logger_object = logger.file_logger (sys.stdout)
+            logger_object = logger.file_logger(sys.stdout)
 
-        if resolver:
-            self.logger = logger.resolving_logger (resolver, logger_object)
-        else:
-            self.logger = logger.unresolving_logger (logger_object)
+        logger_object = logger.unresolving_logger(logger_object)
+        self.logger = logger_object
+
+        asyncore.dispatcher.__init__ (self)
+        self.set_socket(sock)
+
+        self.handlers = []
+
+        sock.setblocking(0)
+        self.set_reuse_addr()
         
-        return http_server.http_server.__init__(self, ip, port, resolver,
-                                                logger_object)
+    def postbind(self):
+        from medusa.counter import counter
+        from medusa.http_server import VERSION_STRING
+
+        self.listen(1024)
+
+        self.total_clients = counter()
+        self.total_requests = counter()
+        self.exceptions = counter()
+        self.bytes_out = counter()
+        self.bytes_in  = counter()
+
+        self.log_info (
+                'Medusa (V%s) started at %s'
+                '\n\tHostname: %s'
+                '\n\tPort:%s'
+                '\n' % (
+                        VERSION_STRING,
+                        time.ctime(time.time()),
+                        self.server_name,
+                        self.port,
+                        )
+                )
 
     def log_info(self, message, type='info'):
         ip = ''
-        if hasattr(self, 'ip'):
+        if getattr(self, 'ip', None) is not None:
             ip = self.ip
         self.logger.log(ip, message)
 
+class supervisor_af_inet_http_server(supervisor_http_server):
+    """ AF_INET version of supervisor HTTP server """
+
+    def __init__(self, ip, port, logger_object):
+        self.ip = ip
+        self.port = port
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.prebind(sock, logger_object)
+        self.bind((ip, port))
+
+        host, port = self.socket.getsockname()
+        if not ip:
+            self.log_info('Computing default hostname', 'warning')
+            ip = socket.gethostbyname (socket.gethostname())
+        try:
+            self.server_name = socket.gethostbyaddr (ip)[0]
+        except socket.error:
+            self.log_info('Cannot do reverse lookup', 'warning')
+            self.server_name = ip       # use the IP address as the "hostname"
+
+        self.postbind()
+
+class supervisor_af_unix_http_server(supervisor_http_server):
+    """ AF_UNIX version of supervisor HTTP server """
+
+    def __init__(self, socketname, sockchmod, sockchown, logger_object):
+        self.ip = socketname
+        self.port = socketname
+
+        # XXX this is insecure.  We really should do something like
+        # http://developer.apple.com/samplecode/CFLocalServer/listing6.html
+        # (see also http://developer.apple.com/technotes/tn2005/tn2083.html#SECUNIXDOMAINSOCKETS)
+        # but it would be very inconvenient for the user to need to get all
+        # the directory setup right.
+
+        tempname = "%s.%d" % (socketname, os.getpid())
+
+        try:
+            os.unlink(tempname)
+        except os.error:
+            pass
+
+        while 1:
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            try:
+                sock.bind(tempname)
+                os.chmod(tempname, sockchmod)
+                try:
+                    os.link(tempname, socketname)
+                except os.error:
+                    # Lock contention, or stale socket.
+                    used = self.checkused(socketname)
+                    if used:
+                        # cooperate with 'openhttpserver' in supervisord
+                        raise socket.error(errno.EADDRINUSE)
+                        
+                    # Stale socket -- delete, sleep, and try again.
+                    msg = "Unlinking stale socket %s\n" % socketname
+                    sys.stderr.write(msg)
+                    try:
+                        os.unlink(socketname)
+                    except:
+                        pass
+                    sock.close()
+                    time.sleep(.3)
+                    continue
+                else:
+                    os.chown(socketname, sockchown[0], sockchown[1])
+                    self.prebind(sock, logger_object)
+                    break
+
+            finally:
+                try:
+                    os.unlink(tempname)
+                except os.error:
+                    pass
+
+        self.server_name = '<unix domain socket>'
+        self.postbind()
+
+    def checkused(self, socketname):
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            s.connect(socketname)
+            s.send("HTTP/1.0 GET /\n\n")
+            data = s.recv(1)
+            s.close()
+        except socket.error:
+            return False
+        else:
+            return True
 
 class tail_f_producer:
     def __init__(self, request, filename, head):
@@ -453,7 +573,6 @@ def makeHTTPServer(supervisord):
     if not options.xmlrpc_port:
         return
 
-    host, port = options.xmlrpc_port.address
     username = options.xmlrpc_username
     password = options.xmlrpc_password
 
@@ -463,8 +582,21 @@ def makeHTTPServer(supervisord):
                 msg = msg[:-1]
             options.logger.debug(msg)
     wrapper = LogWrapper()
-    hs = supervisor_http_server(host, port, logger_object=wrapper,
-                                username=username, password=password)
+
+    family = options.xmlrpc_port.family
+    
+    if family == socket.AF_INET:
+        host, port = options.xmlrpc_port.address
+        hs = supervisor_af_inet_http_server(host, port, logger_object=wrapper)
+    elif family == socket.AF_UNIX:
+        socketname = options.xmlrpc_port.address
+        sockchmod = options.sockchmod
+        sockchown = options.sockchown
+        hs = supervisor_af_unix_http_server(socketname, sockchmod, sockchown,
+                                            logger_object=wrapper)
+    else:
+        raise ValueError('Cannot determine socket type %r' % family)
+
     from rpc import supervisor_xmlrpc_handler
     xmlrpchandler = supervisor_xmlrpc_handler(supervisord)
     tailhandler = logtail_handler(supervisord)

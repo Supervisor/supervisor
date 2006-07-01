@@ -502,6 +502,10 @@ class ServerOptions(Options):
                  "", "minprocs=", int, default=200)
         self.add("nocleanup", "supervisord.nocleanup",
                  "k", "nocleanup", flag=1, default=0)
+	self.add("sockchmod", "supervisord.sockchmod", "p:", "socket-mode=",
+		 datatypes.octal_type, default=0700)
+	self.add("sockchown", "supervisord.sockchown", "o:", "socket-owner=",
+		 datatypes.dot_separated_user_group)
 
     def getLogger(self, filename, level, fmt, rotating=False,
                   maxbytes=0, backups=0):
@@ -540,6 +544,7 @@ class ServerOptions(Options):
             logfile = os.path.abspath(self.configroot.supervisord.logfile)
         else:
             logfile = os.path.abspath(self.logfile)
+
         self.logfile = logfile
 
         if not self.loglevel:
@@ -550,15 +555,30 @@ class ServerOptions(Options):
         else:
             self.pidfile = os.path.abspath(self.pidfile)
 
-        self.noauth = True
-        self.passwdfile = None
-
         self.programs = self.configroot.supervisord.programs
+
+        if not self.sockchown:
+            self.sockchown = self.configroot.supervisord.sockchown
 
         self.identifier = self.configroot.supervisord.identifier
 
         if self.nodaemon:
             self.daemon = False
+
+    def convert_sockchown(self, sockchown):
+        # Convert chown stuff to uid/gid
+        user = sockchown[0]
+        group = sockchown[1]
+        uid = datatypes.name_to_uid(user)
+        if uid is None:
+            self.usage("No such sockchown user %s" % user)
+        if group is None:
+            gid = datatypes.gid_for_uid(uid)
+        else:
+            gid = datatypes.name_to_gid(group)
+            if gid is None:
+                self.usage("No such sockchown group %s" % group)
+        return uid, gid
 
     def read_config(self, fp):
         section = self.configroot.supervisord
@@ -655,6 +675,25 @@ class ServerOptions(Options):
 
         nocleanup = config.getdefault('nocleanup', 'false')
         section.nocleanup = datatypes.boolean(nocleanup)
+
+        sockchown = config.getdefault('sockchown', None)
+        if sockchown is None:
+            section.sockchown = (-1, -1)
+        else:
+            try:
+                section.sockchown = datatypes.dot_separated_user_group(
+                    sockchown)
+            except ValueError:
+                raise ValueError('Invalid sockchown value %s' % sockchown)
+
+        sockchmod = config.getdefault('sockchmod', None)
+        if sockchmod is None:
+            section.sockchmod = 0700
+        else:
+            try:
+                section.sockchmod = datatypes.octal_type(sockchmod)
+            except (TypeError, ValueError):
+                raise ValueError('Invalid sockchmod value %s' % sockchmod)
 
         section.programs = self.programs_from_config(config)
         return section
