@@ -211,6 +211,25 @@ class deferring_http_request(http_server.http_request):
         if close_it:
             self.channel.close_when_done()
 
+    def log (self, bytes):
+        """ We need to override this because UNIX domain sockets return
+        an empty string for the addr rather than a (host, port) combination """
+        if self.channel.addr:
+            host = self.channel.addr[0]
+            port = self.channel.addr[1]
+        else:
+            host = 'localhost'
+            port = 0
+        self.channel.server.logger.log (
+                host,
+                '%d - - [%s] "%s" %d %d\n' % (
+                        port,
+                        self.log_date_string (time.time()),
+                        self.request,
+                        self.reply_code,
+                        bytes
+                        )
+                )
 
 class deferring_http_channel(http_server.http_channel):
 
@@ -226,11 +245,11 @@ class deferring_http_channel(http_server.http_channel):
         if self.delay:
             # we called a deferred producer on this channel (see refill_buffer)
             elapsed = now - self.last_writable_check
-            if elapsed < self.delay:
-                return False
+            if elapsed > self.delay:
+                return True
             self.last_writable_check = now
 
-        return True
+        return http_server.http_channel.writable(self)
 
     def refill_buffer (self):
         """ Implement deferreds """
@@ -580,7 +599,7 @@ def makeHTTPServer(supervisord):
         def log(self, msg):
             if msg.endswith('\n'):
                 msg = msg[:-1]
-            options.logger.debug(msg)
+            options.logger.info(msg)
     wrapper = LogWrapper()
 
     family = options.xmlrpc_port.family
