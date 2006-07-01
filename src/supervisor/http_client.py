@@ -56,7 +56,7 @@ class HTTPHandler(object, asynchat.async_chat):
         assert(self.url==None, "Already doing a get") #@@
         self.url = url
         scheme, host, path, params, query, fragment = urlparse(url)
-        if not scheme=="http":
+        if not scheme in ("http", "unix"):
             raise NotImplementedError
         self.host = host
         if ":" in host:
@@ -68,11 +68,16 @@ class HTTPHandler(object, asynchat.async_chat):
 
         self.path = "?".join([path, query])
         self.port = port
-        
-        ip = hostname
-        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.connect((ip, self.port))
-            
+
+        if scheme == "http":
+            ip = hostname
+            self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.connect((ip, self.port))
+        elif scheme == "unix":
+            socketname, path = url[7:].split('/', 1)
+            self.path = '/' + path
+            self.create_socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.connect(socketname)
     
     def close (self):
         self.listener.close(self.url)
