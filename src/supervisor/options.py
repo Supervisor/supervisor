@@ -848,9 +848,13 @@ class ClientOptions(Options):
     def getServerProxy(self):
         # mostly put here for unit testing
         return xmlrpclib.ServerProxy(
-            self.serverurl,
+            # dumbass ServerProxy won't allow us to pass in a non-HTTP url,
+            # so we fake the url we pass into it and always use the transport's
+            # 'serverurl' to figure out what to attach to
+            'http://127.0.0.1',
             transport = BasicAuthTransport(self.username,
-                                           self.password)
+                                           self.password,
+                                           self.serverurl)
             )
 
 _marker = []
@@ -893,16 +897,21 @@ class ProcessConfig:
         return cmp(self.priority, other.priority)
     
 class BasicAuthTransport(xmlrpclib.Transport):
-    # Py 2.3 backwards compatibility class
-    def __init__(self, username=None, password=None):
+    """ A transport that understands basic auth and UNIX domain socket
+    URLs """
+    def __init__(self, username=None, password=None, serverurl=None):
         self.username = username
         self.password = password
         self.verbose = False
+        self.serverurl = serverurl
 
     def request(self, host, handler, request_body, verbose=False):
         # issue XML-RPC request
 
-        h = httplib.HTTP(host)
+        h = self.make_connection(host)
+        if verbose:
+            h.set_debuglevel(1)
+
         h.putrequest("POST", handler)
 
         # required by HTTP/1.1
@@ -936,4 +945,22 @@ class BasicAuthTransport(xmlrpclib.Transport):
 
         return self.parse_response(h.getfile())
 
+    def make_connection(self, host):
+        serverurl = self.serverurl
+        if not serverurl.startswith('http'):
+            if serverurl.startswith('unix://'):
+                serverurl = serverurl[7:]
+            http = UnixStreamHTTP(serverurl)
+            return http
+        else:
+            return xmlrpclib.Transport.make_connection(self, serverurl)
+            
+class UnixStreamHTTPConnection(httplib.HTTPConnection):
+    def connect(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        # we abuse the host parameter as the socketname
+        self.sock.connect(self.host)
+
+class UnixStreamHTTP(httplib.HTTP):
+    _connection_class = UnixStreamHTTPConnection
 
