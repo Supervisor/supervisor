@@ -641,8 +641,8 @@ class Supervisor:
         for program in self.options.programs:
             name = program.name
             self.processes[name] = Subprocess(self.options, program)
-        self.openhttpserver()
         try:
+            self.openhttpserver()
             self.setsignals()
             if not self.options.nodaemon:
                 self.daemonize()
@@ -676,6 +676,8 @@ class Supervisor:
                                    'configured to use (%s).  Shut this program '
                                    'down first before starting supervisord. ' %
                                    port)
+        except ValueError, why:
+            self.options.usage(why[0])
 
     def setsignals(self):
         signal.signal(signal.SIGTERM, self.sigexit)

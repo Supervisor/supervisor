@@ -9,6 +9,7 @@ import sys
 import string
 import socket
 import errno
+import pwd
 
 NOT_DONE_YET = []
 
@@ -461,6 +462,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
                 sock.bind(tempname)
                 os.chmod(tempname, sockchmod)
                 try:
+                    # hard link
                     os.link(tempname, socketname)
                 except os.error:
                     # Lock contention, or stale socket.
@@ -480,7 +482,23 @@ class supervisor_af_unix_http_server(supervisor_http_server):
                     time.sleep(.3)
                     continue
                 else:
-                    os.chown(socketname, sockchown[0], sockchown[1])
+                    try:
+                        print sockchown[0], sockchown[1]
+                        os.chown(socketname, sockchown[0], sockchown[1])
+                    except os.error, why:
+                        if why[0] == errno.EPERM:
+                            msg = ('Not permitted to chown %s to uid/gid %s; '
+                                   'adjust "sockchown" value in config file or '
+                                   'on command line to values that the '
+                                   'current user (%s) can successfully chown')
+                            raise ValueError(msg % (socketname,
+                                                    repr(sockchown),
+                                                    pwd.getpwuid(
+                                                        os.geteuid())[0],
+                                                    ),
+                                             )
+                        else:
+                            raise
                     self.prebind(sock, logger_object)
                     break
 

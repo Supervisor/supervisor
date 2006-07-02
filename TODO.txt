@@ -1,5 +1,3 @@
-- Manually test UNIX domain socket setgid, setuid, chmod.
-
 - Figure out why supervisord sends SIGKILL to processes at shutdown time
   so quickly (and why they report they got SIGINT).
 
@@ -41,3 +39,5 @@
 - Option to include/disinclude stderr in child logs.
 
 - Unit test the http_client package.
+
+- Per-process exit code specifications.
