@@ -3,6 +3,8 @@
 
 - Create named process log files after we setuid.
 
+- Usage messages when we invoke supervisord/supervisorctl -h
+
 - Tail main log.
 
 - Figure out how to test the actual supervisord class.
