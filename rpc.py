@@ -577,6 +577,44 @@ class SupervisorNamespaceRPCInterface:
 
         return True
 
+    def clearAllProcessLogs(self):
+        """ Clear all process log files
+
+        @return boolean result      Always return true
+        """
+        self._update('clearAllProcessLogs')
+        results  = []
+        callbacks = []
+
+        processnames = self.supervisord.processes.keys()
+        processnames.sort()
+        
+        for processname in processnames:
+            callbacks.append((processname, self.clearProcessLog))
+
+        def clearall():
+            if not callbacks:
+                return results
+
+            name, callback = callbacks.pop(0)
+            try:
+                callback(name)
+            except RPCError, e:
+                results.append({'name':name, 'status':e.code,
+                                'description':e.text})
+            else:
+                results.append({'name':name, 'status':Faults.SUCCESS,
+                                'description':'OK'})
+            
+            if callbacks:
+                return NOT_DONE_YET
+
+            return results
+        
+        clearall.delay = 0.05
+        clearall.rpcinterface = self
+        return clearall # deferred
+
     def _rotateMainLog(self):
         """ Rotate the main supervisord log (for debugging/testing) """
         self._update('_rotateMainLog')

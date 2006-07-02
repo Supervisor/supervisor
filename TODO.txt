@@ -1,7 +1,7 @@
 - Figure out why supervisord sends SIGKILL to processes at shutdown time
   so quickly (and why they report they got SIGINT).
 
-- Clear process logs.
+- Create named process log files after we setuid.
 
 - Tail main log.
 

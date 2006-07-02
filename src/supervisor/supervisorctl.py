@@ -462,6 +462,64 @@ class Controller(cmd.Cmd):
     def help_reload(self):
         self._output("reload \t\tRestart the remote supervisord.")
 
+    def _clearresult(self, code, processname, default=None):
+        template = '%s: ERROR (%s)'
+        if code == rpc.Faults.BAD_NAME:
+            return template % (processname, 'no such process')
+        elif code == rpc.Faults.FAILED:
+            return template % (processname, 'failed')
+        elif code == rpc.Faults.SUCCESS:
+            return '%s: cleared' % processname
+        return default
+
+    def do_clear(self, arg):
+        if not self._upcheck():
+            return
+
+        processnames = arg.strip().split()
+
+        if not processnames:
+            self._output('Error: clear requires a process name')
+            self.help_clear()
+            return
+
+        supervisor = self._get_supervisor()
+
+        if 'all' in processnames:
+            results = supervisor.clearAllProcessLogs()
+            for result in results:
+                name = result['name']
+                code = result['status']
+                result = self._clearresult(code, name)
+                if result is None:
+                    # assertion
+                    raise ValueError('Unknown result code %s for %s' %
+                                     (code, name))
+                else:
+                    self._output(result)
+
+        else:
+
+            for processname in processnames:
+                try:
+                    result = supervisor.clearProcessLog(processname)
+                except xmlrpclib.Fault, e:
+                    error = self._clearresult(e.faultCode, processname)
+                    if error is not None:
+                        self._output(error)
+                    else:
+                        raise
+                else:
+                    if result == True:
+                        self._output('%s: cleared' % processname)
+                    else:
+                        raise # assertion
+
+    def help_clear(self):
+        self._output("clear <processname>\t\t\tClear a process' log file.")
+        self._output("clear <processname> <processname>\tclear multiple "
+                     "process log files")
+        self._output("clear all\t\t\t\tClear all process log files")
 
 def main(args=None, options=None):
     if options is None:

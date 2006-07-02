@@ -653,6 +653,55 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface.clearProcessLog('foo')
         self.assertEqual(process.logsremoved, True)
 
+    def test_clearProcessLog_failed(self):
+        pconfig = DummyPConfig('foo', 'foo')
+        options = DummyOptions()
+        process = DummyProcess(options, pconfig)
+        process.error_at_clear = True
+        processes = {'foo': process}
+        supervisord = DummySupervisor(processes)
+        interface = self._makeOne(supervisord)
+        self.assertRaises(rpc.RPCError, interface.clearProcessLog, 'foo')
+        
+
+    def test_clearAllProcessLogs(self):
+        pconfig = DummyPConfig('foo', 'foo')
+        pconfig2 = DummyPConfig('bar', 'bar')
+        options = DummyOptions()
+        process = DummyProcess(options, pconfig)
+        process2= DummyProcess(options, pconfig2)
+        processes = {'foo': process, 'bar':process2}
+        supervisord = DummySupervisor(processes)
+        interface = self._makeOne(supervisord)
+        callback = interface.clearAllProcessLogs()
+        callback()
+        callback()
+        self.assertEqual(process.logsremoved, True)
+        self.assertEqual(process2.logsremoved, True)
+
+    def test_clearAllProcessLogs_onefails(self):
+        pconfig = DummyPConfig('foo', 'foo')
+        pconfig2 = DummyPConfig('bar', 'bar')
+        options = DummyOptions()
+        process = DummyProcess(options, pconfig)
+        process2= DummyProcess(options, pconfig2)
+        process2.error_at_clear = True
+        processes = {'foo': process, 'bar':process2}
+        supervisord = DummySupervisor(processes)
+        interface = self._makeOne(supervisord)
+        callback = interface.clearAllProcessLogs()
+        callback()
+        results = callback()
+        self.assertEqual(process.logsremoved, True)
+        self.assertEqual(process2.logsremoved, False)
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0], {'name':'bar',
+                                      'status':rpc.Faults.FAILED,
+                                      'description':'FAILED: bar'})
+        self.assertEqual(results[1], {'name':'foo',
+                                      'status':rpc.Faults.SUCCESS,
+                                      'description':'OK'})
+
     def test_readFile_failed(self):
         from rpc import _readFile
         supervisord = DummySupervisor()
@@ -1481,6 +1530,55 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
         self.assertEqual(result, None)
         self.assertEqual(options._server.supervisor._shutdown, True)
 
+
+
+
+
+    def test_clear_fail(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_clear('')
+        self.assertEqual(result, None)
+        expected = "Error: clear requires a process name"
+        self.assertEqual(controller.stdout.getvalue().split('\n')[0], expected)
+
+    def test_clear_badname(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_clear('BAD_NAME')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(),
+                         'BAD_NAME: ERROR (no such process)\n')
+
+    def test_clear_one_success(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_clear('foo')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(), 'foo: cleared\n')
+
+    def test_clear_many(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_clear('foo bar')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(),
+                         'foo: cleared\nbar: cleared\n')
+
+    def test_clear_all(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_clear('all')
+        self.assertEqual(result, None)
+
+        self.assertEqual(controller.stdout.getvalue(),
+         'foo: cleared\nfoo2: cleared\nfailed: ERROR (failed)\n')
+
 class TailFProducerTests(unittest.TestCase):
     def _getTargetClass(self):
         from http import tail_f_producer
@@ -1543,8 +1641,11 @@ class DummyProcess:
         self.backoff_done = False
         self.spawned = True
         self.state = state
+        self.error_at_clear = False
 
     def removelogs(self):
+        if self.error_at_clear:
+            raise IOError('whatever')
         self.logsremoved = True
 
     def get_state(self):
@@ -1733,6 +1834,22 @@ class DummySupervisorRPCNamespace:
             return
         from xmlrpclib import Fault
         raise Fault(rpc.Faults.SHUTDOWN_STATE, '')
+
+    def clearProcessLog(self, name):
+        from xmlrpclib import Fault
+        if name == 'BAD_NAME':
+            raise Fault(rpc.Faults.BAD_NAME, 'BAD_NAME')
+        return True
+
+    def clearAllProcessLogs(self):
+        return [
+            {'name':'foo', 'status': rpc.Faults.SUCCESS, 'description': 'OK'},
+            {'name':'foo2', 'status': rpc.Faults.SUCCESS, 'description': 'OK'},
+            {'name':'failed', 'status':rpc.Faults.FAILED,
+             'description':'FAILED'}
+            ]
+        
+        
 
 class DummySystemRPCNamespace:
     pass
