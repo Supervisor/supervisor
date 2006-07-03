@@ -23,6 +23,6 @@ setup(
     maintainer = "Chris McDonough",
     maintainer_email = "chrism@plope.com",
     scripts=['supervisord'],
-    packages = ['supervisor', 'supervisor.medusa'],
+    packages = ['supervisor', 'supervisor.medusa', 'supervisor.meld3'],
     package_dir = {'supervisor':'.'},
     )

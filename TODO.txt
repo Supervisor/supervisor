@@ -1,5 +1,14 @@
-- Figure out why supervisord sends SIGKILL to processes at shutdown time
-  so quickly (and why they report they got SIGINT).
+- Web interface:
+
+   - present status in addition to state (e.g. spawnerr, etc, same as
+     supervisorctl)
+
+   - provide "restart all" functionality
+
+- Documentation:
+
+   - In nodaemon mode, child processes will be sent SIGINT when Ctrl-C
+     is pressed.
 
 - Create named process log files after we setuid.
 
@@ -8,9 +17,6 @@
 - Tail main log.
 
 - Figure out how to test the actual supervisord class.
-
-- Ask for username and password in supervisorctl if it's not specified in
-  log file and supervisord needs it.
 
 - "open" command.
 
@@ -35,8 +41,6 @@
 - Collector issues 75, 76, 78, 79, 82, 84, 152.
 
 - Docs for collector 81.
-
-- Web interface
 
 - Option to include/disinclude stderr in child logs.
 
