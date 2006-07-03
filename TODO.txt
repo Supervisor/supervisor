@@ -57,12 +57,6 @@
   environmental variable in the shell script and read that for the
   default?
 
-- Collector issues 78:
-
-  The logs fill up with "INFO waitpid error!" (on FreeBSD) when you
-  don't have any processes started. This happens when you don't have
-  auto-start on, or just when the last process has temporarily died.
-
 - Collector issue 84:
 
   I'd like to make Paste detect when it is running under Supervisor,
