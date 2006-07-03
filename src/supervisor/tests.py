@@ -948,8 +948,10 @@ class SubprocessTests(unittest.TestCase):
         options.forever = False
         instance.backoff = 1 # gt backofflimit
         instance.laststart = time.time()
+        instance.delay = 1
         instance.governor()
-        self.assertEqual(instance.backoff, 2)
+        self.assertEqual(instance.backoff, 0)
+        self.assertEqual(instance.delay, 0)
         self.assertEqual(instance.system_stop, 1)
         self.assertEqual(options.logger.data[0],
                          "notthere: restarting too frequently; quit")
