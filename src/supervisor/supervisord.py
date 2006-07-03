@@ -367,7 +367,7 @@ class Subprocess:
             if self.killing:
                 self.killing = 0
                 self.delay = 0
-            elif not es in self.options.exitcodes:
+            elif not es in self.config.exitcodes:
                 self.governor()
 
             if self.pid:
@@ -377,7 +377,7 @@ class Subprocess:
             self.stdoutfd = self.stderrfd  = self.stdinfd = None
             self.stdout = self.stderr = self.stdin = None
 
-            if es in self.options.exitcodes and not self.killing:
+            if es in self.config.exitcodes and not self.killing:
                 msg = msg + "; OK"
             self.options.logger.info(msg)
             self.exitstatus = es

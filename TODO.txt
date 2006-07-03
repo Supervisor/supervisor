@@ -18,7 +18,6 @@
 
 - Unit tests for meld classes and ui server.
 
-- Per-process exit code specifications.
 - Create named process log files after we setuid.
 
 - Change xmlrpc_user/xmlrpc_password to http_X.

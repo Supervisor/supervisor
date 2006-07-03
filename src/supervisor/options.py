@@ -10,7 +10,6 @@ Options:
 -h/--help -- print this usage message and exit
 -u/--user USER -- run supervisord as this user (or numeric uid)
 -m/--umask UMASK -- use this umask for daemon subprocess (default is 022)
--x/--exitcodes LIST -- list of fatal exit codes (default "0,2")
 -d/--directory DIRECTORY -- directory to chdir to when daemonized
 -l/--logfile FILENAME -- use FILENAME as logfile path
 -y/--logfile_maxbytes BYTES -- use BYTES to limit the max size of logfile
@@ -469,8 +468,6 @@ class ServerOptions(Options):
                  default=0)
         self.add("forever", "supervisord.forever", "f", "forever",
                  flag=1, default=0)
-        self.add("exitcodes", "supervisord.exitcodes", "x:", "exitcodes=",
-                 datatypes.list_of_ints, default=[0, 2])
         self.add("user", "supervisord.user", "u:", "user=")
         self.add("umask", "supervisord.umask", "m:", "umask=",
                  datatypes.octal_type, default='022')
@@ -615,11 +612,6 @@ class ServerOptions(Options):
         section.backofflimit = limit
         forever = config.getdefault('forever', 'false')
         section.forever = datatypes.boolean(forever)
-        exitcodes = config.getdefault('exitcodes', '0,2')
-        try:
-            section.exitcodes = datatypes.list_of_ints(exitcodes)
-        except:
-            raise ValueError("exitcodes must be a list of ints e.g. 1,2")
         user = config.getdefault('user', None)
         section.user = user
 
@@ -733,13 +725,19 @@ class ServerOptions(Options):
             logfile_maxbytes = datatypes.integer(logfile_maxbytes)
             stopsignal = config.saneget(section, 'stopsignal', signal.SIGTERM)
             stopsignal = datatypes.signal(stopsignal)
+            exitcodes = config.saneget(section, 'exitcodes', '0,2')
+            try:
+                exitcodes = datatypes.list_of_ints(exitcodes)
+            except:
+                raise ValueError("exitcodes must be a list of ints e.g. 1,2")
             pconfig = ProcessConfig(name=name, command=command,
                                     priority=priority, autostart=autostart,
                                     autorestart=autorestart, uid=uid,
                                     logfile=logfile,
                                     logfile_backups=logfile_backups,
                                     logfile_maxbytes=logfile_maxbytes,
-                                    stopsignal=stopsignal)
+                                    stopsignal=stopsignal,
+                                    exitcodes=exitcodes)
             programs.append(pconfig)
 
         programs.sort() # asc by priority
@@ -882,7 +880,8 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
 
 class ProcessConfig:
     def __init__(self, name, command, priority, autostart, autorestart,
-                 uid, logfile, logfile_backups, logfile_maxbytes, stopsignal):
+                 uid, logfile, logfile_backups, logfile_maxbytes, stopsignal,
+                 exitcodes):
         self.name = name
         self.command = command
         self.priority = priority
@@ -893,6 +892,7 @@ class ProcessConfig:
         self.logfile_backups = logfile_backups
         self.logfile_maxbytes = logfile_maxbytes
         self.stopsignal = stopsignal
+        self.exitcodes = exitcodes
 
     def __cmp__(self, other):
         return cmp(self.priority, other.priority)

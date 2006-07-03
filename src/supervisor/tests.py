@@ -41,7 +41,6 @@ xmlrpc_password=foo        ; (default is no password (open system))
 directory=%(tempdir)s     ; (default is not to cd during daemonization)
 backofflimit=10            ; (default 3)
 forever=false              ; (default false)
-exitcodes=0,1              ; (default 0,2)
 user=root                  ; (default is current user, required if root)
 umask=022                  ; (default 022)
 logfile=supervisord.log    ; (default supervisord.log)
@@ -75,6 +74,7 @@ logfile = /tmp/cat2.log
 
 [program:cat3]
 command=/bin/cat
+exitcodes=0,1,127
 """ % {'tempdir':tempfile.gettempdir()}
 
         from StringIO import StringIO
@@ -87,7 +87,6 @@ command=/bin/cat
         self.assertEqual(options.directory, tempfile.gettempdir())
         self.assertEqual(options.backofflimit, 10)
         self.assertEqual(options.forever, False)
-        self.assertEqual(options.exitcodes, [0,1])
         self.assertEqual(options.umask, 022)
         self.assertEqual(options.logfile, 'supervisord.log')
         self.assertEqual(options.logfile_maxbytes, 1000 * 1024 * 1024)
@@ -118,6 +117,7 @@ command=/bin/cat
         self.assertEqual(cat.stopsignal, signal.SIGKILL)
         self.assertEqual(cat.logfile_maxbytes, datatypes.byte_size('5MB'))
         self.assertEqual(cat.logfile_backups, 1)
+        self.assertEqual(cat.exitcodes, [0,2])
 
         cat2 = options.programs[1]
         self.assertEqual(cat2.name, 'cat2')
@@ -130,6 +130,7 @@ command=/bin/cat
         self.assertEqual(cat2.stopsignal, signal.SIGTERM)
         self.assertEqual(cat2.logfile_maxbytes, 1024)
         self.assertEqual(cat2.logfile_backups, 2)
+        self.assertEqual(cat2.exitcodes, [0,2])
 
         cat3 = options.programs[2]
         self.assertEqual(cat3.name, 'cat3')
@@ -141,6 +142,7 @@ command=/bin/cat
         self.assertEqual(cat3.logfile, instance.AUTOMATIC)
         self.assertEqual(cat3.logfile_maxbytes, datatypes.byte_size('5MB'))
         self.assertEqual(cat3.logfile_backups, 1)
+        self.assertEqual(cat3.exitcodes, [0,1,127])
         
         self.assertEqual(cat2.stopsignal, signal.SIGTERM)
 
@@ -150,7 +152,6 @@ command=/bin/cat
         self.assertEqual(instance.directory, '/tmp')
         self.assertEqual(instance.backofflimit, 10)
         self.assertEqual(instance.forever, False)
-        self.assertEqual(instance.exitcodes, [0,1])
         self.assertEqual(instance.umask, 022)
         self.assertEqual(instance.logfile, os.path.join(here,'supervisord.log'))
         self.assertEqual(instance.logfile_maxbytes, 1000 * 1024 * 1024)
@@ -1689,7 +1690,8 @@ class DummyProcess:
 class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,
                  autorestart=False, uid=None, logfile=None, logfile_backups=0,
-                 logfile_maxbytes=0):
+                 logfile_maxbytes=0, stopsignal=signal.SIGTERM,
+                 exitcodes=[0,2]):
         self.name = name
         self.command = command
         self.priority = priority
@@ -1699,7 +1701,8 @@ class DummyPConfig:
         self.logfile = logfile
         self.logfile_backups = logfile_backups
         self.logfile_maxbytes = logfile_maxbytes
-
+        self.stopsignal = stopsignal
+        self.exitcodes = exitcodes
 
 class DummyLogger:
     def __init__(self):
@@ -1726,7 +1729,6 @@ class DummyOptions:
         self.uid = 999
         self.logger = self.getLogger()
         self.backofflimit = 10
-        self.exitcodes = 0,2
         self.logfile = '/tmp/logfile'
         self.nocleanup = True
 
