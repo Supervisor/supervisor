@@ -829,9 +829,9 @@ class Supervisor:
                     data = _readfd(fd)
                     stdoutproc.log_stdout(data)
                 if stderrproc:
-                    # we intermingle stdout and stderr in the child log
                     data = _readfd(fd)
-                    stderrproc.log_stderr(data)
+                    if stderrproc.config.log_stderr:
+                        stderrproc.log_stderr(data)
 
                 if socket_map.has_key(fd):
                     try:

@@ -12,8 +12,6 @@
 
    - Error conditions when X-bit not set on command file.
 
-- Option to include/disinclude stderr in child logs.
-
 - Unit test the http_client package.
 
 - Unit tests for meld classes and ui server.

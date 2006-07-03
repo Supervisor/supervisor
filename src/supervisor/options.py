@@ -730,6 +730,8 @@ class ServerOptions(Options):
                 exitcodes = datatypes.list_of_ints(exitcodes)
             except:
                 raise ValueError("exitcodes must be a list of ints e.g. 1,2")
+            log_stderr = config.saneget(section, 'log_stderr', 'false')
+            log_stderr = datatypes.boolean(log_stderr)
             pconfig = ProcessConfig(name=name, command=command,
                                     priority=priority, autostart=autostart,
                                     autorestart=autorestart, uid=uid,
@@ -737,7 +739,8 @@ class ServerOptions(Options):
                                     logfile_backups=logfile_backups,
                                     logfile_maxbytes=logfile_maxbytes,
                                     stopsignal=stopsignal,
-                                    exitcodes=exitcodes)
+                                    exitcodes=exitcodes,
+                                    log_stderr=log_stderr)
             programs.append(pconfig)
 
         programs.sort() # asc by priority
@@ -881,7 +884,7 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
 class ProcessConfig:
     def __init__(self, name, command, priority, autostart, autorestart,
                  uid, logfile, logfile_backups, logfile_maxbytes, stopsignal,
-                 exitcodes):
+                 exitcodes, log_stderr):
         self.name = name
         self.command = command
         self.priority = priority
@@ -893,6 +896,7 @@ class ProcessConfig:
         self.logfile_maxbytes = logfile_maxbytes
         self.stopsignal = stopsignal
         self.exitcodes = exitcodes
+        self.log_stderr = log_stderr
 
     def __cmp__(self, other):
         return cmp(self.priority, other.priority)
