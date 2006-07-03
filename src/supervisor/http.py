@@ -637,7 +637,7 @@ def make_http_server(supervisord):
     else:
         raise ValueError('Cannot determine socket type %r' % family)
 
-    from rpc import supervisor_xmlrpc_handler
+    from xmlrpc import supervisor_xmlrpc_handler
     from web import supervisor_ui_handler
     xmlrpchandler = supervisor_xmlrpc_handler(supervisord)
     tailhandler = logtail_handler(supervisord)

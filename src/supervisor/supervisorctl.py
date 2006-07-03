@@ -38,9 +38,6 @@ import cmd
 import sys
 import time
 import getpass
-import supervisord
-import rpc
-from options import ClientOptions
 import xmlrpclib
 import urllib2
 import fcntl
@@ -50,6 +47,10 @@ import errno
 import time
 import datetime
 import urlparse
+
+from options import ClientOptions
+import supervisord
+import xmlrpc
 
 class Controller(cmd.Cmd):
 
@@ -204,7 +205,7 @@ class Controller(cmd.Cmd):
         try:
             output = supervisor.readProcessLog(processname, -bytes, 0)
         except xmlrpclib.Fault, e:
-            if e.faultCode == rpc.Faults.FAILED:
+            if e.faultCode == xmlrpc.Faults.FAILED:
                 self._output("Error: Log file doesn't yet exist on server")
         else:
             self._output(output)
@@ -273,7 +274,7 @@ class Controller(cmd.Cmd):
                 try:
                     info = supervisor.getProcessInfo(processname)
                 except xmlrpclib.Fault, e:
-                    if e.faultCode == rpc.Faults.BAD_NAME:
+                    if e.faultCode == xmlrpc.Faults.BAD_NAME:
                         self._output('No such process %s' % processname)
                     else:
                         raise
@@ -293,15 +294,15 @@ class Controller(cmd.Cmd):
 
     def _startresult(self, code, processname, default=None):
         template = '%s: ERROR (%s)'
-        if code == rpc.Faults.BAD_NAME:
+        if code == xmlrpc.Faults.BAD_NAME:
             return template % (processname,'no such process')
-        elif code == rpc.Faults.ALREADY_STARTED:
+        elif code == xmlrpc.Faults.ALREADY_STARTED:
             return template % (processname,'already started')
-        elif code == rpc.Faults.SPAWN_ERROR:
+        elif code == xmlrpc.Faults.SPAWN_ERROR:
             return template % (processname, 'spawn error')
-        elif code == rpc.Faults.ABNORMAL_TERMINATION:
+        elif code == xmlrpc.Faults.ABNORMAL_TERMINATION:
             return template % (processname, 'abornal termination')
-        elif code == rpc.Faults.SUCCESS:
+        elif code == xmlrpc.Faults.SUCCESS:
             return '%s: started' % processname
         
         return default
@@ -358,11 +359,11 @@ class Controller(cmd.Cmd):
 
     def _stopresult(self, code, processname, default=None):
         template = '%s: ERROR (%s)'
-        if code == rpc.Faults.BAD_NAME:
+        if code == xmlrpc.Faults.BAD_NAME:
             return template % (processname, 'no such process')
-        elif code == rpc.Faults.NOT_RUNNING:
+        elif code == xmlrpc.Faults.NOT_RUNNING:
             return template % (processname, 'not running')
-        elif code == rpc.Faults.SUCCESS:
+        elif code == xmlrpc.Faults.SUCCESS:
             return '%s: stopped' % processname
         return default
 
@@ -452,7 +453,7 @@ class Controller(cmd.Cmd):
             try:
                 supervisor.shutdown()
             except xmlrpclib.Fault, e:
-                if e.faultCode == rpc.Faults.SHUTDOWN_STATE:
+                if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                     self._output('ERROR: already shutting down')
             else:
                 self._output('Shut down')
@@ -472,7 +473,7 @@ class Controller(cmd.Cmd):
             try:
                 supervisor.restart()
             except xmlrpclib.Fault, e:
-                if e.faultCode == rpc.Faults.SHUTDOWN_STATE:
+                if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                     self._output('ERROR: already shutting down')
             else:
                 self._output('Restarted supervisord')
@@ -482,11 +483,11 @@ class Controller(cmd.Cmd):
 
     def _clearresult(self, code, processname, default=None):
         template = '%s: ERROR (%s)'
-        if code == rpc.Faults.BAD_NAME:
+        if code == xmlrpc.Faults.BAD_NAME:
             return template % (processname, 'no such process')
-        elif code == rpc.Faults.FAILED:
+        elif code == xmlrpc.Faults.FAILED:
             return template % (processname, 'failed')
-        elif code == rpc.Faults.SUCCESS:
+        elif code == xmlrpc.Faults.SUCCESS:
             return '%s: cleared' % processname
         return default
 

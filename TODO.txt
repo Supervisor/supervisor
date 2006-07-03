@@ -34,8 +34,7 @@
 
 - supervisorctl command history
 
-- test startup as root
-
 - stop logging all RPC requests in info mode when we ship
 
+- Test on Linux.
 
