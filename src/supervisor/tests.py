@@ -1579,6 +1579,27 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
         self.assertEqual(controller.stdout.getvalue(),
          'foo: cleared\nfoo2: cleared\nfailed: ERROR (failed)\n')
 
+    def test_open_fail(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_open('badname')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(),
+                         'ERROR: url must be http:// or unix://\n')
+
+    def test_open_succeed(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_open('http://localhost:9002')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(), """\
+foo            RUNNING    pid 11, uptime 0:01:40
+bar            ERROR      screwed
+baz            STOPPED    Jun 26 11:42 PM (OK)
+""")
+        
 class TailFProducerTests(unittest.TestCase):
     def _getTargetClass(self):
         from http import tail_f_producer

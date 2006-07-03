@@ -20,8 +20,6 @@
 
 - Figure out how to test the actual supervisord class.
 
-- "open" command.
-
 - Test log rotation.
 
 - Command-line arg tests.

@@ -49,6 +49,7 @@ import asyncore
 import errno
 import time
 import datetime
+import urlparse
 
 class Controller(cmd.Cmd):
 
@@ -537,6 +538,19 @@ class Controller(cmd.Cmd):
         self._output("clear <processname> <processname>\tclear multiple "
                      "process log files")
         self._output("clear all\t\t\t\tClear all process log files")
+
+    def do_open(self, arg):
+        url = arg.strip()
+        parts = urlparse.urlparse(url)
+        if parts[0] not in ('unix', 'http'):
+            self._output('ERROR: url must be http:// or unix://')
+            return
+        self.options.serverurl = url
+        self.do_status('')
+
+    def help_open(self):
+        self._output("open <url>\t\t\tConnect to a remote supervisord process.")
+        self._output("\t\t\t(for UNIX domain socket, use unix:///socket/path)")
 
 def main(args=None, options=None):
     if options is None:
