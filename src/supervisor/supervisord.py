@@ -709,6 +709,9 @@ class Supervisor:
             if hasattr(handler, 'reopen'):
                 handler.reopen()
 
+        for process in self.processes.values():
+            process.reopenlogs()
+
     def sigchild(self, sig, frame):
         # do nothing here, we reap our children synchronously
         self.options.logger.info('received sigchild')

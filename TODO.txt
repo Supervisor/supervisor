@@ -40,8 +40,6 @@
 
 - stop logging all RPC requests in info mode when we ship
 
-- reopen child logs when we get a logreopen signal
-
 - Collector issue 75:
 
   If the pid file isn't writable, it dies silently. When I ran it with
