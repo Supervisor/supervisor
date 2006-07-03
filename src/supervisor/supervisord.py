@@ -12,6 +12,34 @@
 # FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
+"""supervisord -- run a set of applications as daemons.
+
+Usage: %s [options]
+
+Options:
+-c/--configuration URL -- configuration file or URL
+-b/--backofflimit SECONDS -- set backoff limit to SECONDS (default 3)
+-n/--nodaemon -- run in the foreground (same as 'nodaemon true' in config file)
+-f/--forever -- try to restart processes forever when they die (default no)
+-h/--help -- print this usage message and exit
+-u/--user USER -- run supervisord as this user (or numeric uid)
+-m/--umask UMASK -- use this umask for daemon subprocess (default is 022)
+-d/--directory DIRECTORY -- directory to chdir to when daemonized
+-l/--logfile FILENAME -- use FILENAME as logfile path
+-y/--logfile_maxbytes BYTES -- use BYTES to limit the max size of logfile
+-z/--logfile_backups NUM -- number of backups to keep when max bytes reached
+-e/--loglevel LEVEL -- use LEVEL as log level (debug,info,warn,error,critical)
+-j/--pidfile FILENAME -- write a pid file for the daemon process to FILENAME
+-i/--identifier STR -- identifier used for this instance of supervisord
+-q/--childlogdir DIRECTORY -- the log directory for child process logs
+-k/--nocleanup --  prevent the process from performing cleanup (removal of
+                   orphaned child log files, etc.) at startup.
+-w/--http_port SOCKET -- the host/port that the HTTP server should listen on
+-g/--http_username STR -- the username for HTTP auth
+-r/--http_password STR -- the password for HTTP auth
+-a/--minfds NUM -- the minimum number of file descriptors for start success
+--minprocs NUM  -- the minimum number of processes available for start success
+"""
 
 import os
 import sys
