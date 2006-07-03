@@ -64,6 +64,7 @@ class Controller(cmd.Cmd):
     def onecmd(self, line):
         """ Override the onecmd method to catch and print all exceptions
         """
+        origline = line
         cmd, arg, line = self.parseline(line)
         if not line:
             return self.emptyline()
@@ -78,7 +79,24 @@ class Controller(cmd.Cmd):
             except AttributeError:
                 return self.default(line)
             try:
-                return func(arg)
+                try:
+                    return func(arg)
+                except xmlrpclib.ProtocolError, e:
+                    if e.errcode == 401:
+                        if self.options.interactive:
+                            self._output('Server requires authentication')
+                            username = raw_input('Username:')
+                            password = getpass.getpass(prompt='Password:')
+                            self._output('')
+                            self.options.username = username
+                            self.options.password = password
+                            return self.onecmd(origline)
+                        else:
+                            self.options.usage('Server requires authentication')
+                    else:
+                        raise
+            except SystemExit:
+                raise
             except Exception, e:
                 (file, fun, line), t, v, tbinfo = asyncore.compact_traceback()
                 error = 'error: %s, %s: file: %s line: %s' % (t, v, file, line)
