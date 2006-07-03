@@ -20,8 +20,6 @@
 
 - Unit tests for meld classes and ui server.
 
-- Usage messages when we invoke supervisord/supervisorctl -h
-
 - Tail main log.
 
 - Figure out how to test the actual supervisord class.
