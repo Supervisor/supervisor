@@ -968,3 +968,36 @@ class UnixStreamHTTPConnection(httplib.HTTPConnection):
 class UnixStreamHTTP(httplib.HTTP):
     _connection_class = UnixStreamHTTPConnection
 
+def readFile(filename, offset, length):
+    """ Read length bytes from the file named by filename starting at
+    offset """
+
+    absoffset = abs(offset)
+    abslength = abs(length)
+
+    try:
+        f = open(filename, 'rb')
+        if absoffset != offset:
+            # negative offset returns offset bytes from tail of the file
+            if length:
+                raise ValueError('BAD_ARGUMENTS')
+            f.seek(0, 2)
+            sz = f.tell()
+            pos = int(sz - absoffset)
+            if pos < 0:
+                pos = 0
+            f.seek(pos)
+            data = f.read(absoffset)
+        else:
+            if abslength != length:
+                raise ValueError('BAD_ARGUMENTS')
+            if length == 0:
+                f.seek(offset)
+                data = f.read()
+            else:
+                sz = f.seek(offset)
+                data = f.read(length)
+    except (os.error, IOError):
+        raise ValueError('FAILED')
+
+    return data

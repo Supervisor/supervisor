@@ -17,6 +17,7 @@ import StringIO
 import tempfile
 import errno
 from http import NOT_DONE_YET
+from options import readFile
 
 RPC_VERSION  = 1.0
 
@@ -222,7 +223,7 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.NO_FILE)
 
         try:
-            return _readFile(logfile, offset, length)
+            return readFile(logfile, offset, length)
         except ValueError, inst:
             why = inst.args[0]
             raise RPCError(getattr(Faults, why))
@@ -552,7 +553,7 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.NO_FILE, logfile)
 
         try:
-            return _readFile(logfile, offset, length)
+            return readFile(logfile, offset, length)
         except ValueError, inst:
             why = inst.args[0]
             raise RPCError(getattr(Faults, why))
@@ -842,37 +843,4 @@ def traverse(ob, method, params):
     except TypeError:
         raise RPCError(Faults.INCORRECT_PARAMETERS)
 
-def _readFile(filename, offset, length):
-    """ Read length bytes from the file named by filename starting at
-    offset """
-
-    absoffset = abs(offset)
-    abslength = abs(length)
-
-    try:
-        f = open(filename, 'rb')
-        if absoffset != offset:
-            # negative offset returns offset bytes from tail of the file
-            if length:
-                raise ValueError('BAD_ARGUMENTS')
-            f.seek(0, 2)
-            sz = f.tell()
-            pos = int(sz - absoffset)
-            if pos < 0:
-                pos = 0
-            f.seek(pos)
-            data = f.read(absoffset)
-        else:
-            if abslength != length:
-                raise ValueError('BAD_ARGUMENTS')
-            if length == 0:
-                f.seek(offset)
-                data = f.read()
-            else:
-                sz = f.seek(offset)
-                data = f.read(length)
-    except (os.error, IOError):
-        raise ValueError('FAILED')
-
-    return data
 

@@ -169,6 +169,15 @@ command=/bin/cat
         self.assertEqual(instance.minfds, 2048)
         self.assertEqual(instance.minprocs, 300)
 
+    def test_readFile_failed(self):
+        from options import readFile
+        try:
+            readFile('/notthere', 0, 10)
+        except ValueError, inst:
+            self.assertEqual(inst.args[0], 'FAILED')
+        else:
+            raise AssertionError("Didn't raise")
+
 class TestBase(unittest.TestCase):
     def setUp(self):
         pass
@@ -701,19 +710,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(results[1], {'name':'foo',
                                       'status':rpc.Faults.SUCCESS,
                                       'description':'OK'})
-
-    def test_readFile_failed(self):
-        from rpc import _readFile
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-        logfile = supervisord.options.logfile
-        try:
-            _readFile('/notthere', 0, 10)
-        except ValueError, inst:
-            self.assertEqual(inst.args[0], 'FAILED')
-        else:
-            raise AssertionError("Didn't raise")
-
 
 class SystemNamespaceXMLRPCInterfaceTests(TestBase):
     def _getTargetClass(self):
