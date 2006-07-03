@@ -21,7 +21,8 @@ setup(
     author_email = "chrism@plope.com",
     maintainer = "Chris McDonough",
     maintainer_email = "chrism@plope.com",
-    scripts=['supervisord'],
+    scripts=['supervisord', 'supervisorctl'],
     packages = ['supervisor', 'supervisor.medusa', 'supervisor.meld3'],
     package_dir = {'supervisor':'.'},
+    package_data= {'supervisor':['ui/*.gif', 'ui/*.css', 'ui/*.html']},
     )
