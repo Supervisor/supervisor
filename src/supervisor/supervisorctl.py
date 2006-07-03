@@ -301,7 +301,7 @@ class Controller(cmd.Cmd):
         elif code == rpc.Faults.ABNORMAL_TERMINATION:
             return template % (processname, 'abornal termination')
         elif code == rpc.Faults.SUCCESS:
-            return '%s: OK' % processname
+            return '%s: started' % processname
         
         return default
 
@@ -342,7 +342,7 @@ class Controller(cmd.Cmd):
                         raise
                 else:
                     if result == True:
-                        self._output('%s: OK' % processname)
+                        self._output('%s: started' % processname)
                     else:
                         raise # assertion
 
@@ -428,7 +428,6 @@ class Controller(cmd.Cmd):
             return
 
         self.do_stop(arg)
-        self._output('')
         self.do_start(arg)
 
     def help_restart(self):

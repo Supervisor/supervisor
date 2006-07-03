@@ -1385,7 +1385,7 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
         controller.stdout = StringIO()
         result = controller.do_start('foo')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(), 'foo: OK\n')
+        self.assertEqual(controller.stdout.getvalue(), 'foo: started\n')
 
     def test_start_many(self):
         options = DummyClientOptions()
@@ -1393,7 +1393,8 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
         controller.stdout = StringIO()
         result = controller.do_start('foo bar')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(), 'foo: OK\nbar: OK\n')
+        self.assertEqual(controller.stdout.getvalue(),
+                         'foo: started\nbar: started\n')
 
     def test_start_all(self):
         options = DummyClientOptions()
@@ -1403,7 +1404,7 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
         self.assertEqual(result, None)
 
         self.assertEqual(controller.stdout.getvalue(),
-                    'foo: OK\nfoo2: OK\nfailed: ERROR (spawn error)\n')
+                'foo: started\nfoo2: started\nfailed: ERROR (spawn error)\n')
 
 
     def test_stop_fail(self):
@@ -1478,7 +1479,7 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
         self.assertEqual(result, None)
 
         self.assertEqual(controller.stdout.getvalue(),
-                         'foo: stopped\n\nfoo: OK\n')
+                         'foo: stopped\nfoo: started\n')
 
     def test_restart_all(self):
         options = DummyClientOptions()
@@ -1489,8 +1490,9 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
 
         self.assertEqual(controller.stdout.getvalue(),
                          ('foo: stopped\nfoo2: stopped\n'
-                          'failed: ERROR (no such process)\n\n'
-                          'foo: OK\nfoo2: OK\nfailed: ERROR (spawn error)\n'))
+                          'failed: ERROR (no such process)\n'
+                          'foo: started\nfoo2: started\n'
+                          'failed: ERROR (spawn error)\n'))
 
     def test_reload_fail(self):
         options = DummyClientOptions()
