@@ -660,9 +660,9 @@ class Supervisor:
             self.runforever(test)
         finally:
             try:
-                if self.options.xmlrpc_port is not None:
-                    if self.options.xmlrpc_port.family == socket.AF_UNIX:
-                        os.unlink(self.options.xmlrpc_port.address)
+                if self.options.http_port is not None:
+                    if self.options.http_port.family == socket.AF_UNIX:
+                        os.unlink(self.options.http_port.address)
             except os.error:
                 pass
             try:
@@ -676,7 +676,7 @@ class Supervisor:
             self.httpserver = makeHTTPServer(self)
         except socket.error, why:
             if why[0] == errno.EADDRINUSE:
-                port = str(self.options.xmlrpc_port.address)
+                port = str(self.options.http_port.address)
                 self.options.usage('Another program is already listening on '
                                    'the port that our HTTP server is '
                                    'configured to use (%s).  Shut this program '

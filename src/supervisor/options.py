@@ -20,9 +20,9 @@ Options:
 -q/--childlogdir DIRECTORY -- the log directory for child process logs
 -k/--nocleanup --  prevent the process from performing cleanup (removal of
                    orphaned child log files, etc.) at startup.
--w/--xmlrpc_port SOCKET -- the host&port XML-RPC server should listen on
--g/--xmlrpc_username STR -- the username for XML-RPC auth
--r/--xmlrpc_password STR -- the password for XML-RPC auth
+-w/--http_port SOCKET -- the host&port XML-RPC server should listen on
+-g/--http_username STR -- the username for HTTP auth
+-r/--http_password STR -- the password for HTTP auth
 -a/--minfds NUM -- the minimum number of file descriptors for start success
 --minprocs NUM  -- the minimum number of processes available for start success
 """
@@ -488,12 +488,12 @@ class ServerOptions(Options):
                  datatypes.existing_dirpath, default="supervisor")
         self.add("childlogdir", "supervisord.childlogdir", "q:", "childlogdir=",
                  datatypes.existing_directory, default=tempfile.gettempdir())
-        self.add("xmlrpc_port", "supervisord.xmlrpc_port", "w:", "xmlrpc_port=",
+        self.add("http_port", "supervisord.http_port", "w:", "http_port=",
                  datatypes.SocketAddress, default=None)
-        self.add("xmlrpc_username", "supervisord.xmlrpc_username", "g:",
-                 "xmlrpc_username=", str, default=None)
-        self.add("xmlrpc_password", "supervisord.xmlrpc_password", "r:",
-                 "xmlrpc_password=", str, default=None)
+        self.add("http_username", "supervisord.http_username", "g:",
+                 "http_username=", str, default=None)
+        self.add("http_password", "supervisord.http_password", "r:",
+                 "http_password=", str, default=None)
         self.add("minfds", "supervisord.minfds",
                  "a:", "minfds=", int, default=1024)
         self.add("minprocs", "supervisord.minprocs",
@@ -648,23 +648,23 @@ class ServerOptions(Options):
         childlogdir = datatypes.existing_directory(childlogdir)
         section.childlogdir = childlogdir
 
-        xmlrpc_port = config.getdefault('xmlrpc_port', None)
-        if xmlrpc_port is None:
-            section.xmlrpc_port = None
+        http_port = config.getdefault('http_port', None)
+        if http_port is None:
+            section.http_port = None
         else:
-            section.xmlrpc_port = datatypes.SocketAddress(xmlrpc_port)
+            section.http_port = datatypes.SocketAddress(http_port)
 
-        xmlrpc_password = config.getdefault('xmlrpc_password', None)
-        xmlrpc_username = config.getdefault('xmlrpc_username', None)
-        if xmlrpc_password or xmlrpc_username:
-            if xmlrpc_password is None:
-                raise ValueError('Must specify xmlrpc_password if '
-                                 'xmlrpc_username is specified')
-            if xmlrpc_username is None:
-                raise ValueError('Must specify xmlrpc_username if '
-                                 'xmlrpc_password is specified')
-        section.xmlrpc_password = xmlrpc_password
-        section.xmlrpc_username = xmlrpc_username
+        http_password = config.getdefault('http_password', None)
+        http_username = config.getdefault('http_username', None)
+        if http_password or http_username:
+            if http_password is None:
+                raise ValueError('Must specify http_password if '
+                                 'http_username is specified')
+            if http_username is None:
+                raise ValueError('Must specify http_username if '
+                                 'http_password is specified')
+        section.http_password = http_password
+        section.http_username = http_username
 
         nocleanup = config.getdefault('nocleanup', 'false')
         section.nocleanup = datatypes.boolean(nocleanup)

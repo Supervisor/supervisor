@@ -891,11 +891,11 @@ class supervisor_ui_handler(default_handler.default_handler):
 
 def makeHTTPServer(supervisord):
     options = supervisord.options
-    if not options.xmlrpc_port:
+    if not options.http_port:
         return
 
-    username = options.xmlrpc_username
-    password = options.xmlrpc_password
+    username = options.http_username
+    password = options.http_password
 
     class LogWrapper:
         def log(self, msg):
@@ -904,13 +904,13 @@ def makeHTTPServer(supervisord):
             options.logger.info(msg)
     wrapper = LogWrapper()
 
-    family = options.xmlrpc_port.family
+    family = options.http_port.family
     
     if family == socket.AF_INET:
-        host, port = options.xmlrpc_port.address
+        host, port = options.http_port.address
         hs = supervisor_af_inet_http_server(host, port, logger_object=wrapper)
     elif family == socket.AF_UNIX:
-        socketname = options.xmlrpc_port.address
+        socketname = options.http_port.address
         sockchmod = options.sockchmod
         sockchown = options.sockchown
         hs = supervisor_af_unix_http_server(socketname, sockchmod, sockchown,
