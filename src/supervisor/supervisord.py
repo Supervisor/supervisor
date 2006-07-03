@@ -648,15 +648,22 @@ class Supervisor:
             name = program.name
             self.processes[name] = Subprocess(self.options, program)
         try:
+            pid = os.getpid()
+            try:
+                f = open(self.options.pidfile, 'w')
+                f.write('%s\n' % pid)
+                f.close()
+            except (IOError, os.error):
+                self.options.logger.critical('could not write pidfile %s' %
+                                             self.options.pidfile)
+            else:
+                self.options.logger.info('supervisord started with pid %s' %
+                                         pid)
+                
             self.openhttpserver()
             self.setsignals()
             if not self.options.nodaemon:
                 self.daemonize()
-            pid = os.getpid()
-            f = open(self.options.pidfile, 'w')
-            f.write('%s\n' % pid)
-            f.close()
-            self.options.logger.info('supervisord started with pid %s' % pid)
             self.runforever(test)
         finally:
             try:

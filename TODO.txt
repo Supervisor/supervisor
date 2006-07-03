@@ -40,12 +40,6 @@
 
 - stop logging all RPC requests in info mode when we ship
 
-- Collector issue 75:
-
-  If the pid file isn't writable, it dies silently. When I ran it with
-  --nodaemon this became clear, but nothing about the error goes into
-  the log file or console when daemonizing.
-
 - Collector issue 76:
 
   Adding -c to the shell script also drove me nuts for a while, since
