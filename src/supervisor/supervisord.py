@@ -157,6 +157,9 @@ class Subprocess:
         self.killing = 0
         self.spawnerr = None
         self.exitstatus = None
+        self.system_stop = 0
+        self.administrative_stop = 0
+        self.reportstatusmsg = None
         
         self.laststart = time.time()
 
@@ -244,6 +247,7 @@ class Subprocess:
             self.options.logger.info('spawned process %r with pid %s' % (
                 self.config.name, pid))
             self.spawnerr = None
+            self.do_backoff()
             return pid
         
         else:
@@ -277,6 +281,7 @@ class Subprocess:
         self.administrative_stop = 1
         # backoff needs to come before kill on MacOS, as there's
         # an apparent a race condition if it comes after
+        self.reportstatusmsg = None
         self.do_backoff()
         return self.kill(self.config.stopsignal)
 
@@ -303,6 +308,7 @@ class Subprocess:
                 self.config.name, self.pid, tb)
             self.options.logger.critical(msg)
             self.pid = 0
+            self.killing = 0
             return msg
             
         return None
@@ -324,7 +330,7 @@ class Subprocess:
             pass
         elif now - self.laststart < self.options.backofflimit:
             # Exited rather quickly; slow down the restarts
-            self.backoff += 1
+            self.backoff = self.backoff + 1
             if self.backoff >= self.options.backofflimit:
                 if self.options.forever:
                     self.backoff = self.options.backofflimit
@@ -334,6 +340,8 @@ class Subprocess:
                         self.config.name))
                     # stop trying
                     self.system_stop = 1
+                    self.backoff = 0
+                    self.delay = 0
                     return
             self.options.logger.info(
                 "%s: sleep %s to avoid rapid restarts" % (self.config.name,
@@ -359,8 +367,9 @@ class Subprocess:
             if self.killing:
                 self.killing = 0
                 self.delay = 0
-            else:
+            elif not es in self.options.exitcodes:
                 self.governor()
+
             if self.pid:
                 self.addpidtohistory(self.pid)
             self.pid = 0
@@ -370,7 +379,6 @@ class Subprocess:
 
             if es in self.options.exitcodes and not self.killing:
                 msg = msg + "; OK"
-                self.options.logger.info(msg)
             self.options.logger.info(msg)
             self.exitstatus = es
         self.reportstatusmsg = msg
@@ -408,16 +416,16 @@ class Subprocess:
     def get_state(self):
         if self.killing:
             return ProcessStates.STOPPING
+        elif self.system_stop:
+            return ProcessStates.ERROR
+        if self.administrative_stop:
+            return ProcessStates.STOPPED
         elif not self.pid and self.delay:
             return ProcessStates.STARTING
         elif self.pid:
             return ProcessStates.RUNNING
         else:
-            if self.system_stop:
-                return ProcessStates.ERROR
-            elif self.administrative_stop:
-                return ProcessStates.STOPPED
-            elif self.exitstatus == -1:
+            if self.exitstatus == -1:
                 return ProcessStates.KILLED
             elif self.exitstatus is not None:
                 return ProcessStates.EXITED
@@ -486,8 +494,6 @@ class Supervisor:
                         self.options.logger.info('(Re)starting %s' %
                                                  p.config.name)
                         p.spawn()
-                        if p.pid:
-                            p.do_backoff()
 
     def handle_procs_with_waitstatus(self):
         processes = self.processes.values()
