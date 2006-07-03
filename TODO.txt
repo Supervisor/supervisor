@@ -34,25 +34,23 @@
 
 - packaging.
 
-- test under py 2.3 to make setup.py assertions true
-
 - supervisorctl command history
 
 - test startup as root
 
 - stop logging all RPC requests in info mode when we ship
 
- - Collector issue 152:
+- Collector issue 152:
 
-   I'd like supervisor to look after a number of postgres instances
-   (well, initially only 1, but I will need it to manage 3). The first
-   difficulty I had was that the postgres start-up program (pg_ctl)
-   takes an options param that it passes directly to the postmaster
-   program it controls, which can contain several options that only
-   the postmaster understands and it expects these to be in quotes so
-   they are treated as a group, e.g pg_ctl -o "-p 4321 -h hostname -d
-   datadir" but supervisor doesn't appear to preserve the quotes. In
-   my case I only need the one option so I used -o "-p4321", as a
-   workaround.
+  I'd like supervisor to look after a number of postgres instances
+  (well, initially only 1, but I will need it to manage 3). The first
+  difficulty I had was that the postgres start-up program (pg_ctl)
+  takes an options param that it passes directly to the postmaster
+  program it controls, which can contain several options that only the
+  postmaster understands and it expects these to be in quotes so they
+  are treated as a group, e.g pg_ctl -o "-p 4321 -h hostname -d
+  datadir" but supervisor doesn't appear to preserve the quotes. In my
+  case I only need the one option so I used -o "-p4321", as a
+  workaround.
 
 
