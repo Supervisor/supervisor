@@ -14,6 +14,8 @@
 
    - SUPERVISOR_ENABLED envvar.
 
+   - stopsignal can be TERM, HUP, INT, QUIT, KILL, USR1, or USR2
+
 - Unit test the http_client package.
 
 - Unit tests for meld classes and ui server.
