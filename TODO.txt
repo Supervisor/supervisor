@@ -10,6 +10,15 @@
    - In nodaemon mode, child processes will be sent SIGINT when Ctrl-C
      is pressed.
 
+   - Error conditions when X-bit not set on command file.
+
+- Option to include/disinclude stderr in child logs.
+
+- Unit test the http_client package.
+
+- Unit tests for meld classes and ui server.
+
+- Per-process exit code specifications.
 - Create named process log files after we setuid.
 
 - Change xmlrpc_user/xmlrpc_password to http_X.
@@ -38,12 +47,44 @@
 
 - reopen child logs when we get a logreopen signal
 
-- Collector issues 75, 76, 78, 79, 82, 84, 152.
+- Collector issue 75:
 
-- Docs for collector 81.
+  If the pid file isn't writable, it dies silently. When I ran it with
+  --nodaemon this became clear, but nothing about the error goes into
+  the log file or console when daemonizing.
 
-- Option to include/disinclude stderr in child logs.
+- Collector issue 76:
 
-- Unit test the http_client package.
+  Adding -c to the shell script also drove me nuts for a while, since
+  I got an error about two -c's. Maybe instead it could set an
+  environmental variable in the shell script and read that for the
+  default?
 
-- Per-process exit code specifications.
+- Collector issues 78:
+
+  The logs fill up with "INFO waitpid error!" (on FreeBSD) when you
+  don't have any processes started. This happens when you don't have
+  auto-start on, or just when the last process has temporarily died.
+
+- Collector issue 84:
+
+  I'd like to make Paste detect when it is running under Supervisor,
+  mostly so it would know that it could safely die to be
+  restarted. Otherwise it starts its own monitoring process to handle
+  restarts.  I think always setting an environmental variable (e.g.,
+  "SUPERVISOR_ENABLED") would be sufficient.
+
+ - Collector issue 152:
+
+   I'd like supervisor to look after a number of postgres instances
+   (well, initially only 1, but I will need it to manage 3). The first
+   difficulty I had was that the postgres start-up program (pg_ctl)
+   takes an options param that it passes directly to the postmaster
+   program it controls, which can contain several options that only
+   the postmaster understands and it expects these to be in quotes so
+   they are treated as a group, e.g pg_ctl -o "-p 4321 -h hostname -d
+   datadir" but supervisor doesn't appear to preserve the quotes. In
+   my case I only need the one option so I used -o "-p4321", as a
+   workaround.
+
+
