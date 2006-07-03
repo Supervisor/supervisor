@@ -440,6 +440,7 @@ class Supervisor:
     stopping = False # set after we detect that we are handling a stop request
 
     def main(self, args=None, test=False, first=False):
+        os.environ['SUPERVISOR_ENABLED'] = '1'
         self.options = ServerOptions()
         self.options.realize(args)
         self.cleanup_fds()
@@ -582,7 +583,9 @@ class Supervisor:
                                    'user without a "user" setting in the '
                                    'configuration file')
             return
-        return dropPrivileges(self.options.uid)
+        msg = dropPrivileges(self.options.uid)
+        if msg is None:
+            return 'Set uid to user %s' % self.options.uid
 
     def set_rlimits(self):
         limits = []
