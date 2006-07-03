@@ -41,6 +41,7 @@ import signal
 import re
 import xmlrpclib
 import httplib
+import urllib
 
 class FileHandler(logging.StreamHandler):
     """File handler which supports reopening of logs.
@@ -952,8 +953,11 @@ class BasicAuthTransport(xmlrpclib.Transport):
                 serverurl = serverurl[7:]
             http = UnixStreamHTTP(serverurl)
             return http
-        else:
-            return xmlrpclib.Transport.make_connection(self, serverurl)
+        else:            
+            type, uri = urllib.splittype(serverurl)
+            host, path = urllib.splithost(uri)
+            hostpath = host+path
+            return xmlrpclib.Transport.make_connection(self, hostpath)
             
 class UnixStreamHTTPConnection(httplib.HTTPConnection):
     def connect(self):
