@@ -29,6 +29,7 @@ import resource
 import stat
 import re
 import tempfile
+import shlex
 
 from fcntl import fcntl
 from fcntl import F_SETFL, F_GETFL
@@ -113,7 +114,7 @@ class Subprocess:
     def get_execv_args(self):
         """Internal: turn a program name into a file name, using $PATH,
         make sure it exists """
-        commandargs = self.config.command.split()
+        commandargs = shlex.split(self.config.command)
 
         program = commandargs[0]
 

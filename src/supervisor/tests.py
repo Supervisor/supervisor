@@ -1079,12 +1079,27 @@ class SubprocessTests(unittest.TestCase):
         args = instance.get_execv_args()
         self.assertEqual(args, ('/notthere', ['/notthere'], None))
 
+    def test_get_execv_args_abs_withquotes_missing(self):
+        options = DummyOptions()
+        config = DummyPConfig('notthere', '/notthere "an argument"')
+        instance = self._makeOne(options, config)
+        args = instance.get_execv_args()
+        self.assertEqual(args, ('/notthere', ['/notthere', 'an argument'],
+                                None))
+
     def test_get_execv_args_rel_missing(self):
         options = DummyOptions()
         config = DummyPConfig('notthere', 'notthere')
         instance = self._makeOne(options, config)
         args = instance.get_execv_args()
         self.assertEqual(args, (None, ['notthere'], None))
+
+    def test_get_execv_args_rel_withquotes_missing(self):
+        options = DummyOptions()
+        config = DummyPConfig('notthere', 'notthere "an argument"')
+        instance = self._makeOne(options, config)
+        args = instance.get_execv_args()
+        self.assertEqual(args, (None, ['notthere', 'an argument'], None))
 
     def test_get_execv_args_abs(self):
         executable = '/bin/sh foo'
@@ -1105,6 +1120,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(args[0], '/bin/sh')
         self.assertEqual(args[1], ['sh', 'foo'])
         self.assertEqual(len(args[2]), 10)
+
         
     def test_spawn_already_running(self):
         options = DummyOptions()
