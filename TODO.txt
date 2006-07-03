@@ -18,8 +18,6 @@
 
    - copy sample.conf to /etc/supervisord.conf
 
-- Require root to change users?  README says otherwise.
-
 - Unit test the http_client package.
 
 - Unit tests for meld classes and ui server.

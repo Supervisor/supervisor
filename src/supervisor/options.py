@@ -735,7 +735,7 @@ class ServerOptions(Options):
                 except (os.error, IOError):
                     self.logger.info('Failed to clean up %r' % pathname)
 
-    def make_logger(self, held_messages):
+    def make_logger(self, critical_messages, info_messages):
         # must be called after realize() and after supervisor does setuid()
         format =  '%(asctime)s %(levelname)s %(message)s\n'
         self.logger = self.getLogger(
@@ -751,7 +751,9 @@ class ServerOptions(Options):
             formatter = logging.Formatter(format)
             stdout_handler.setFormatter(formatter)
             self.logger.addHandler(stdout_handler)
-        for msg in held_messages:
+        for msg in critical_messages:
+            self.logger.critical(msg)
+        for msg in info_messages:
             self.logger.info(msg)
 
 class ClientOptions(Options):

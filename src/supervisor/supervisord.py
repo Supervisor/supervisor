@@ -473,17 +473,18 @@ class Supervisor:
         self.options = ServerOptions()
         self.options.realize(args)
         self.cleanup_fds()
-        held_messages = []
+        info_messages = []
+        critical_messages = []
         setuid_msg = self.set_uid()
         if setuid_msg:
-            held_messages.append(setuid_msg)
+            critical_messages.append(setuid_msg)
         if first:
             rlimit_messages = self.set_rlimits()
-            held_messages.extend(rlimit_messages)
+            info_messages.extend(rlimit_messages)
 
         # this sets the options.logger object
         # delay logger instantiation until after setuid
-        self.options.make_logger(held_messages)
+        self.options.make_logger(critical_messages, info_messages)
 
         if not self.options.nocleanup:
             # clean up old automatic logs
@@ -608,13 +609,12 @@ class Supervisor:
     def set_uid(self):
         if self.options.uid is None:
             if os.getuid() == 0:
-                self.options.usage('supervisord may not be run as the root '
-                                   'user without a "user" setting in the '
-                                   'configuration file')
-            return
+                return 'Supervisor running as root (no user in config file)'
+            return None
         msg = dropPrivileges(self.options.uid)
         if msg is None:
             return 'Set uid to user %s' % self.options.uid
+        return msg
 
     def set_rlimits(self):
         limits = []
