@@ -3,7 +3,6 @@ import os
 from supervisord import ProcessStates
 from supervisord import SupervisorStates
 from supervisord import getSupervisorStateDescription
-import doctags
 import signal
 import time
 from medusa.xmlrpc_handler import xmlrpc_handler
@@ -18,6 +17,7 @@ import tempfile
 import errno
 from http import NOT_DONE_YET
 from options import readFile
+from options import gettags
 
 RPC_VERSION  = 1.0
 
@@ -684,7 +684,7 @@ class SystemNamespaceRPCInterface:
             if method == name:
                 rtype = None
                 ptypes = []
-                parsed = doctags.gettags(methods[method])
+                parsed = gettags(methods[method])
                 for thing in parsed:
                     if thing[1] == 'return': # tag name
                         rtype = thing[2] # datatype

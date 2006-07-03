@@ -710,9 +710,9 @@ class Supervisor:
                 pass
 
     def openhttpserver(self):
-        from http import makeHTTPServer
+        from http import make_http_server
         try:
-            self.httpserver = makeHTTPServer(self)
+            self.httpserver = make_http_server(self)
         except socket.error, why:
             if why[0] == errno.EADDRINUSE:
                 port = str(self.options.http_port.address)

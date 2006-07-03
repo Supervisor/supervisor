@@ -748,7 +748,7 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
     def test_allMethodDocs(self):
         # belt-and-suspenders test for docstring-as-typing parsing correctness
         # and documentation validity vs. implementation
-        import doctags
+        import options
         _RPCTYPES = ['int', 'double', 'string', 'boolean', 'dateTime.iso8601',
                      'base64', 'binary', 'array', 'struct']
         interface = self._makeOne()
@@ -770,7 +770,7 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
             meth = getattr(namespace, method_name)
             code = meth.func_code
             argnames = code.co_varnames[1:code.co_argcount]
-            parsed = doctags.gettags(str(meth.__doc__))
+            parsed = options.gettags(str(meth.__doc__))
 
             plines = []
             ptypes = []
