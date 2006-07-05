@@ -689,10 +689,10 @@ class ServerOptions(Options):
                 logfile = self.AUTOMATIC
             else:
                 logfile = datatypes.existing_dirpath(logfile)
-            logfile_backups = config.saneget(section, 'logfile_backups', 1)
+            logfile_backups = config.saneget(section, 'logfile_backups', 10)
             logfile_backups = datatypes.integer(logfile_backups)
             logfile_maxbytes = config.saneget(section, 'logfile_maxbytes',
-                                              datatypes.byte_size('5MB'))
+                                              datatypes.byte_size('50MB'))
             logfile_maxbytes = datatypes.integer(logfile_maxbytes)
             stopsignal = config.saneget(section, 'stopsignal', signal.SIGTERM)
             stopsignal = datatypes.signal(stopsignal)
