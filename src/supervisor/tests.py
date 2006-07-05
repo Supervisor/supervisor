@@ -1806,6 +1806,9 @@ class DummyProcess:
     def drain(self):
         self.drained = True
 
+    def fd_drains(self):
+        return []
+
     def reportstatus(self):
         self.status_reported = True
 

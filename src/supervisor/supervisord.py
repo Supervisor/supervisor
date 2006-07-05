@@ -133,18 +133,38 @@ class Subprocess:
             for handler in self.childlog.handlers:
                 handler.reopen()
 
-    def drain(self):
-        stdout = _readfd(self.stdoutfd)
-        stderr = _readfd(self.stderrfd)
-        self.writebuffer = stdout
-        if self.config.log_stderr:
-            self.writebuffer += stderr
+    def log(self, data):
+        if data:
+            if self.childlog:
+                self.childlog.info(data)
+            msg = '%s output:\n%s' % (self.config.name, data)
+            self.options.logger.log(self.options.TRACE, msg)
 
-    def readable_fds(self):
-        if self.stdoutfd and self.stderrfd:
-            return self.stdoutfd, self.stderrfd
-        return []
- 
+    def log_writebuffer(self):
+        if self.writebuffer:
+            self.log(self.writebuffer)
+            self.writebuffer = ''
+
+    def drain(self):
+        self.drain_stdout()
+        self.drain_stderr()
+
+    def drain_stderr(self, *ignored):
+        output = _readfd(self.stderrfd)
+        if self.config.log_stderr:
+            self.writebuffer += output
+
+    def drain_stdout(self, *ignored):
+        output = _readfd(self.stdoutfd)
+        self.writebuffer += output
+
+    def fd_drains(self):
+        if not self.stdoutfd or not self.stderrfd:
+            return []
+
+        return ( [ self.stderrfd, self.drain_stderr],
+                 [self.stdoutfd, self.drain_stdout] )
+        
     def get_execv_args(self):
         """Internal: turn a program name into a file name, using $PATH,
         make sure it exists """
@@ -436,22 +456,6 @@ class Subprocess:
         # sort by priority
         return cmp(self.config.priority, other.config.priority)
 
-    def log(self, data):
-        if data:
-            if self.childlog:
-                self.childlog.info(data)
-
-    def log_output(self, data):
-        if data:
-            self.log(data)
-            msg = '%s output:\n%s' % (self.config.name, data)
-            self.options.logger.log(self.options.TRACE, msg)
-
-    def log_writebuffer(self):
-        if self.writebuffer:
-            self.log_output(self.writebuffer)
-            self.writebuffer = ''
-
     def get_state(self):
         if self.killing:
             return ProcessStates.STOPPING
@@ -538,11 +542,11 @@ class Supervisor:
 
             # process output fds
             for proc in self.processes.values():
-                readable_fds = proc.readable_fds()
-                for fd in readable_fds:
-                    r.append(fd)
-                    process_map[fd] = proc
                 proc.log_writebuffer()
+                drains = proc.fd_drains()
+                for fd, drain in drains:
+                    r.append(fd)
+                    process_map[fd] = drain
 
             # medusa i/o fds
             for fd, dispatcher in socket_map.items():
@@ -556,10 +560,10 @@ class Supervisor:
                     self.stop_all()
                     self.stopping = True
 
-                # if there are no delayed processes, it's OK to stop or reload
-                delayprocs = self.handle_procs_with_delay()
-                if not delayprocs:
-                    break # reload or stop
+                # if there are no delayed processes (we're done killing
+                # everything), it's OK to stop or reload
+                if not self.handle_procs_with_delay():
+                    break
 
             try:
                 r, w, x = select.select(r, w, x, timeout)
@@ -575,8 +579,9 @@ class Supervisor:
 
             for fd in r:
                 if process_map.has_key(fd):
-                    proc = process_map[fd]
-                    proc.drain()
+                    drain = process_map[fd]
+                    # drain the file descriptor
+                    drain(fd)
 
                 if socket_map.has_key(fd):
                     try:
@@ -599,7 +604,7 @@ class Supervisor:
             self.reap()
 
             if self.options.signal:
-                # clear and handle a signal
+                # clear and handle the last signal
                 sig, self.options.signal = self.options.signal, None
                 if sig in (signal.SIGTERM, signal.SIGINT, signal.SIGQUIT):
                     self.options.logger.critical(
