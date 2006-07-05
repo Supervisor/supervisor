@@ -475,6 +475,7 @@ class ServerOptions(Options):
 		 datatypes.octal_type, default=0700)
 	self.add("sockchown", "supervisord.sockchown", "o:", "socket-owner=",
 		 datatypes.dot_separated_user_group)
+        self.pidhistory = {}
 
     def getLogger(self, filename, level, fmt, rotating=False,
                   maxbytes=0, backups=0):
@@ -738,6 +739,11 @@ class ServerOptions(Options):
     def make_logger(self, critical_messages, info_messages):
         # must be called after realize() and after supervisor does setuid()
         format =  '%(asctime)s %(levelname)s %(message)s\n'
+        logging.addLevelName(logging.CRITICAL, 'CRIT')
+        logging.addLevelName(logging.DEBUG, 'DEBG')
+        logging.addLevelName(logging.INFO, 'INFO')
+        logging.addLevelName(logging.WARN, 'WARN')
+        logging.addLevelName(logging.ERROR, 'ERRO')
         self.logger = self.getLogger(
             self.logfile,
             self.loglevel,
