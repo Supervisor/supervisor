@@ -1,17 +1,21 @@
 import ConfigParser
+import asyncore
+import socket
 import getopt
 import os
+import sys
 import datatypes
 import logging
-import sys
 import tempfile
-import socket
 import errno
 import signal
 import re
 import xmlrpclib
 import httplib
 import urllib
+import pwd
+import grp
+import resource
 
 class FileHandler(logging.StreamHandler):
     """File handler which supports reopening of logs.
@@ -427,6 +431,11 @@ class ServerOptions(Options):
     passwdfile = None
     nodaemon = None
     AUTOMATIC = []
+    TRACE = 5
+    mood = 1 # 1: up, 0: restarting, -1: suicidal
+    stopping = False # set after we detect that we are handling a stop request
+    mustreopen = False # set after we detect we handled a logreopen signal
+
     
     def __init__(self):
         Options.__init__(self)
@@ -499,11 +508,9 @@ class ServerOptions(Options):
 
     def realize(self, *arg, **kw):
         Options.realize(self, *arg, **kw)
-        import socket
 
         # Additional checking of user option; set uid and gid
         if self.user is not None:
-            import pwd
 	    uid = datatypes.name_to_uid(self.user)
             if uid is None:
                 self.usage("No such user %s" % self.user)
@@ -718,7 +725,136 @@ class ServerOptions(Options):
         programs.sort() # asc by priority
         return programs
 
-    def clear_childlogdir(self):
+    def daemonize(self):
+        # To daemonize, we need to become the leader of our own session
+        # (process) group.  If we do not, signals sent to our
+        # parent process will also be sent to us.   This might be bad because
+        # signals such as SIGINT can be sent to our parent process during
+        # normal (uninteresting) operations such as when we press Ctrl-C in the
+        # parent terminal window to escape from a logtail command.
+        # To disassociate ourselves from our parent's session group we use
+        # os.setsid.  It means "set session id", which has the effect of
+        # disassociating a process from is current session and process group
+        # and setting itself up as a new session leader.
+        #
+        # Unfortunately we cannot call setsid if we're already a session group
+        # leader, so we use "fork" to make a copy of ourselves that is
+        # guaranteed to not be a session group leader.
+        #
+        # We also change directories, set stderr and stdout to null, and
+        # change our umask.
+        #
+        # This explanation was (gratefully) garnered from
+        # http://www.hawklord.uklinux.net/system/daemons/d3.htm
+
+        pid = os.fork()
+        if pid != 0:
+            # Parent
+            self.logger.debug("supervisord forked; parent exiting")
+            os._exit(0)
+        # Child
+        self.logger.info("daemonizing the process")
+        if self.directory:
+            try:
+                os.chdir(self.directory)
+            except os.error, err:
+                self.logger.warn("can't chdir into %r: %s"
+                                 % (self.directory, err))
+            else:
+                self.logger.info("set current directory: %r"
+                                 % self.directory)
+        os.close(0)
+        sys.stdin = sys.__stdin__ = open("/dev/null")
+        os.close(1)
+        sys.stdout = sys.__stdout__ = open("/dev/null", "w")
+        os.close(2)
+        sys.stderr = sys.__stderr__ = open("/dev/null", "w")
+        os.setsid()
+        os.umask(self.umask)
+        # XXX Stevens, in his Advanced Unix book, section 13.3 (page
+        # 417) recommends calling umask(0) and closing unused
+        # file descriptors.  In his Network Programming book, he
+        # additionally recommends ignoring SIGHUP and forking again
+        # after the setsid() call, for obscure SVR4 reasons.
+
+    def write_pidfile(self):
+        pid = os.getpid()
+        try:
+            f = open(self.pidfile, 'w')
+            f.write('%s\n' % pid)
+            f.close()
+        except (IOError, os.error):
+            self.logger.critical('could not write pidfile %s' % self.pidfile)
+        else:
+            self.logger.info('supervisord started with pid %s' % pid)
+                
+    def cleanup(self):
+        try:
+            if self.http_port is not None:
+                if self.http_port.family == socket.AF_UNIX:
+                    os.unlink(self.http_port.address)
+        except os.error:
+            pass
+        try:
+            os.unlink(self.pidfile)
+        except os.error:
+            pass
+
+    def openhttpserver(self, supervisord):
+        from http import make_http_server
+        try:
+            self.httpserver = make_http_server(self, supervisord)
+        except socket.error, why:
+            if why[0] == errno.EADDRINUSE:
+                port = str(self.options.http_port.address)
+                self.usage('Another program is already listening on '
+                           'the port that our HTTP server is '
+                           'configured to use (%s).  Shut this program '
+                           'down first before starting supervisord. ' %
+                           port)
+        except ValueError, why:
+            self.usage(why[0])
+
+    def setsignals(self):
+        signal.signal(signal.SIGTERM, self.sigexit)
+        signal.signal(signal.SIGINT, self.sigexit)
+        signal.signal(signal.SIGQUIT, self.sigexit)
+        signal.signal(signal.SIGHUP, self.sighup)
+        signal.signal(signal.SIGCHLD, self.sigchild)
+        signal.signal(signal.SIGUSR2, self.sigreopenlog)
+
+    def sigexit(self, sig, frame):
+        self.mood = -1 # exiting
+        self.logger.critical('received %s indicating exit request' %
+                                     signame(sig))
+
+    def sighup(self, sig, frame):
+        self.mood = 0 # restarting
+        self.logger.critical('received %s indicating restart request' %
+                             signame(sig))
+
+    def sigreopenlog(self, sig, frame):
+        self.mustreopen = True
+        self.logger.info('received %s indicating log reopen request' %
+                         signame(sig))
+
+    def sigchild(self, sig, frame):
+        # do nothing here, we reap our children synchronously
+        self.logger.debug('received %s' % signame(sig))
+
+    def create_autochildlogs(self):
+        for program in self.programs:
+            if program.logfile is self.AUTOMATIC:
+                # temporary logfile which is erased at start time
+                prefix='%s---%s-' % (program.name, self.identifier)
+                fd, logfile = tempfile.mkstemp(
+                    suffix='.log',
+                    prefix=prefix,
+                    dir=self.childlogdir)
+                os.close(fd)
+                program.logfile = logfile
+
+    def clear_autochildlogdir(self):
         # must be called after realize()
         childlogdir = self.childlogdir
         fnre = re.compile(r'.+?---%s-\S+\.log\.{0,1}\d{0,4}' % self.identifier)
@@ -736,6 +872,142 @@ class ServerOptions(Options):
                 except (os.error, IOError):
                     self.logger.info('Failed to clean up %r' % pathname)
 
+    def get_socket_map(self):
+        return asyncore.socket_map
+
+    def cleanup_fds(self):
+        # try to close any unused file descriptors to prevent leakage.
+        # we start at the "highest" descriptor in the asyncore socket map
+        # because this might be called remotely and we don't want to close
+        # the internet channel during this call.
+        asyncore_fds = asyncore.socket_map.keys()
+        start = 5
+        if asyncore_fds:
+            start = max(asyncore_fds) + 1
+        for x in range(start, self.minfds):
+            try:
+                os.close(x)
+            except:
+                pass
+
+    def kill(self, pid, signal):
+        os.kill(pid, signal)
+
+    def set_uid(self):
+        if self.uid is None:
+            if os.getuid() == 0:
+                return 'Supervisor running as root (no user in config file)'
+            return None
+        msg = self.dropPrivileges(self.uid)
+        if msg is None:
+            return 'Set uid to user %s' % self.uid
+        return msg
+
+    def dropPrivileges(self, user):
+        # Drop root privileges if we have them
+        if user is None:
+            return "No used specified to setuid to!"
+        if os.getuid() != 0:
+            return "Can't drop privilege as nonroot user"
+        try:
+            uid = int(user)
+        except ValueError:
+            try:
+                pwrec = pwd.getpwnam(user)
+            except KeyError:
+                return "Can't find username %r" % user
+            uid = pwrec[2]
+        else:
+            try:
+                pwrec = pwd.getpwuid(uid)
+            except KeyError:
+                return "Can't find uid %r" % uid
+        if hasattr(os, 'setgroups'):
+            user = pwrec[0]
+            groups = [grprec[2] for grprec in grp.getgrall() if user in
+                      grprec[3]]
+            try:
+                os.setgroups(groups)
+            except OSError:
+                return 'Could not set groups of effective user'
+        gid = pwrec[3]
+        try:
+            os.setgid(gid)
+        except OSError:
+            return 'Could not set group id of effective user'
+        os.setuid(uid)
+
+    def waitpid(self):
+        try:
+            pid, sts = os.waitpid(-1, os.WNOHANG)
+        except os.error, why:
+            err = why[0]
+            if err not in (errno.ECHILD, errno.EINTR):
+                self.logger.info(
+                    'waitpid error; a process may not be cleaned up properly')
+            if err == errno.EINTR:
+                self.logger.debug('EINTR during reap')
+            pid, sts = None, None
+        return pid, sts
+
+    def set_rlimits(self):
+        limits = []
+        if hasattr(resource, 'RLIMIT_NOFILE'):
+            limits.append(
+                {
+                'msg':('The minimum number of file descriptors required '
+                       'to run this process is %(min)s as per the "minfds" '
+                       'command-line argument or config file setting. '
+                       'The current environment will only allow you '
+                       'to open %(hard)s file descriptors.  Either raise '
+                       'the number of usable file descriptors in your '
+                       'environment (see README.txt) or lower the '
+                       'minfds setting in the config file to allow '
+                       'the process to start.'),
+                'min':self.minfds,
+                'resource':resource.RLIMIT_NOFILE,
+                'name':'RLIMIT_NOFILE',
+                })
+        if hasattr(resource, 'RLIMIT_NPROC'):
+            limits.append(
+                {
+                'msg':('The minimum number of available processes required '
+                       'to run this program is %(min)s as per the "minprocs" '
+                       'command-line argument or config file setting. '
+                       'The current environment will only allow you '
+                       'to open %(hard)s processes.  Either raise '
+                       'the number of usable processes in your '
+                       'environment (see README.txt) or lower the '
+                       'minprocs setting in the config file to allow '
+                       'the program to start.'),
+                'min':self.minprocs,
+                'resource':resource.RLIMIT_NPROC,
+                'name':'RLIMIT_NPROC',
+                })
+
+        msgs = []
+            
+        for limit in limits:
+
+            min = limit['min']
+            res = limit['resource']
+            msg = limit['msg']
+            name = limit['name']
+
+            soft, hard = resource.getrlimit(res)
+            
+            if (soft < min) and (soft != -1): # -1 means unlimited 
+                if (hard < min) and (hard != -1):
+                    self.usage(msg % locals())
+
+                try:
+                    resource.setrlimit(res, (min, hard))
+                    msgs.append('Increased %(name)s limit to %(min)s' %
+                                locals())
+                except (resource.error, ValueError):
+                    self.usage(msg % locals())
+        return msgs
+
     def make_logger(self, critical_messages, info_messages):
         # must be called after realize() and after supervisor does setuid()
         format =  '%(asctime)s %(levelname)s %(message)s\n'
@@ -744,6 +1016,7 @@ class ServerOptions(Options):
         logging.addLevelName(logging.INFO, 'INFO')
         logging.addLevelName(logging.WARN, 'WARN')
         logging.addLevelName(logging.ERROR, 'ERRO')
+        logging.addLevelName(self.TRACE, 'TRAC')
         self.logger = self.getLogger(
             self.logfile,
             self.loglevel,
@@ -761,6 +1034,10 @@ class ServerOptions(Options):
             self.logger.critical(msg)
         for msg in info_messages:
             self.logger.info(msg)
+
+    def make_process(self, config):
+        from supervisord import Subprocess
+        return Subprocess(self, config)
 
 class ClientOptions(Options):
     positional_args_allowed = 1
@@ -792,6 +1069,7 @@ class ClientOptions(Options):
         self.add("password", "supervisorctl.password", "p:", "password=")
 
     def realize(self, *arg, **kw):
+        os.environ['SUPERVISOR_ENABLED'] = '1'
         Options.realize(self, *arg, **kw)
         if not self.args:
             self.interactive = 1
@@ -1027,3 +1305,58 @@ def gettags(comment):
     tags.append((tag_lineno, tag, datatype, name, '\n'.join(tag_text)))
 
     return tags
+
+
+# Helpers for dealing with signals and exit status
+
+def decode_wait_status(sts):
+    """Decode the status returned by wait() or waitpid().
+
+    Return a tuple (exitstatus, message) where exitstatus is the exit
+    status, or -1 if the process was killed by a signal; and message
+    is a message telling what happened.  It is the caller's
+    responsibility to display the message.
+    """
+    if os.WIFEXITED(sts):
+        es = os.WEXITSTATUS(sts) & 0xffff
+        msg = "exit status %s" % es
+        return es, msg
+    elif os.WIFSIGNALED(sts):
+        sig = os.WTERMSIG(sts)
+        msg = "terminated by %s" % signame(sig)
+        if hasattr(os, "WCOREDUMP"):
+            iscore = os.WCOREDUMP(sts)
+        else:
+            iscore = sts & 0x80
+        if iscore:
+            msg += " (core dumped)"
+        return -1, msg
+    else:
+        msg = "unknown termination cause 0x%04x" % sts
+        return -1, msg
+
+
+_signames = None
+
+def signame(sig):
+    """Return a symbolic name for a signal.
+
+    Return "signal NNN" if there is no corresponding SIG name in the
+    signal module.
+    """
+
+    if _signames is None:
+        _init_signames()
+    return _signames.get(sig) or "signal %d" % sig
+
+def _init_signames():
+    global _signames
+    d = {}
+    for k, v in signal.__dict__.items():
+        k_startswith = getattr(k, "startswith", None)
+        if k_startswith is None:
+            continue
+        if k_startswith("SIG") and not k_startswith("SIG_"):
+            d[v] = k
+    _signames = d
+

@@ -608,8 +608,7 @@ class logtail_handler:
 
         request.done()
 
-def make_http_server(supervisord):
-    options = supervisord.options
+def make_http_server(options, supervisord):
     if not options.http_port:
         return
 

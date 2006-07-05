@@ -985,14 +985,6 @@ class SubprocessTests(unittest.TestCase):
         instance.log('foo')
         self.assertEqual(instance.childlog.data, ['foo'])
 
-    def test_trace(self):
-        # trace messages go to the main logger
-        options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
-        instance = self._makeOne(options, config)
-        instance.trace('foo')
-        self.assertEqual(options.logger.data, [5, 'notthere output:\nfoo'])
-
     def test_log_stdout(self):
         # stdout goes to the process log and the main log
         options = DummyOptions()
@@ -1249,6 +1241,95 @@ class LogtailHandlerTests(unittest.TestCase):
         self.assertEqual(len(request.producers), 1)
         self.assertEqual(request._done, True)
 
+class SupervisordTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisord import Supervisor
+        return Supervisor
+
+    def _makeOne(self, options):
+        return self._getTargetClass()(options)
+
+    def test_main(self):
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+        pconfig = DummyPConfig('foo', 'foo', '/bin/foo')
+        options.programs = [pconfig]
+        supervisord.main(args='abc', test=True, first=True)
+        self.assertEqual(options.realizeargs, 'abc')
+        self.assertEqual(options.fds_cleaned_up, True)
+        self.assertEqual(options.rlimits_set, True)
+        self.assertEqual(options.make_logger_messages,
+                         (['setuid_called'], ['rlimits_set']))
+        self.assertEqual(options.autochildlogdir_cleared, True)
+        self.assertEqual(options.autochildlogs_created, True)
+        self.assertEqual(len(supervisord.processes), 1)
+        self.assertEqual(supervisord.processes['foo'].options, options)
+        self.assertEqual(options.pidfile_written, True)
+        self.assertEqual(options.httpserver_opened, True)
+        self.assertEqual(options.signals_set, True)
+        self.assertEqual(options.daemonized, True)
+        self.assertEqual(options.cleaned_up, True)
+
+    def test_get_state(self):
+        from supervisord import SupervisorStates
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+        self.assertEqual(supervisord.get_state(), SupervisorStates.ACTIVE)
+        options.mood = -1
+        self.assertEqual(supervisord.get_state(), SupervisorStates.SHUTDOWN)
+
+    def test_start_necessary(self):
+        from supervisord import ProcessStates
+        options = DummyOptions()
+        pconfig1 = DummyPConfig('killed', 'killed', '/bin/killed')
+        process1 = DummyProcess(options, pconfig1, ProcessStates.KILLED)
+        pconfig2 = DummyPConfig('error', 'error', '/bin/error')
+        process2 = DummyProcess(options, pconfig2, ProcessStates.ERROR)
+        pconfig3 = DummyPConfig('notstarted', 'notstarted', '/bin/notstarted',
+                                autostart=True)
+        process3 = DummyProcess(options, pconfig3, ProcessStates.NOTSTARTED)
+        pconfig4 = DummyPConfig('wontstart', 'wonstart', '/bin/wontstart',
+                                autostart=False)
+        process4 = DummyProcess(options, pconfig4, ProcessStates.NOTSTARTED)
+
+        supervisord = self._makeOne(options)
+        supervisord.processes = {'killed': process1, 'error': process2,
+                                 'notstarted':process3, 'wontstart':process4}
+        supervisord.start_necessary()
+        self.assertEqual(process1.spawned, True)
+        self.assertEqual(process2.spawned, False)
+        self.assertEqual(process3.spawned, True)
+        self.assertEqual(process4.spawned, False)
+
+    def handle_procs_with_waitstatus(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig('process1', 'process1', '/bin/process1')
+        process1 = DummyProcess(options, pconfig1)
+        pconfig2 = DummyPConfig('process2', 'process2', '/bin/process2')
+        process2 = DummyProcess(options, pconfig2)
+        process2.waitstatus = True
+        supervisord = self._makeOne(options)
+        supervisord.processes = {'killed': process1, 'error': process2}
+
+        supervisord.handle_procs_with_waitstatus()
+        self.assertEqual(process1.status_reported, False)
+        self.assertEqual(process2.status_reported, True)
+
+    def test_stop_all(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig('process1', 'process1', '/bin/process1')
+        process1 = DummyProcess(options, pconfig1)
+        pconfig2 = DummyPConfig('process2', 'process2', '/bin/process2')
+        process2 = DummyProcess(options, pconfig2)
+        process2.pid = 1
+        supervisord = self._makeOne(options)
+        supervisord.processes = {'killed': process1, 'error': process2}
+
+        supervisord.stop_all()
+        self.assertEqual(process1.stop_called, False)
+        self.assertEqual(process2.stop_called, True)
+        
+        
 class ControllerTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisorctl import Controller
@@ -1628,6 +1709,7 @@ class TailFProducerTests(unittest.TestCase):
 class DummyProcess:
     # Initial state; overridden by instance variables
     pid = 0 # Subprocess pid; 0 when not running
+    beenstarted = False
     laststart = 0 # Last time the subprocess was started; 0 if never
     laststop = 0  # Last time the subprocess was stopped; 0 if never
     delay = 0 # If nonzero, delay starting or killing until this time
@@ -1656,7 +1738,7 @@ class DummyProcess:
         self.logsremoved = False
         self.stop_called = False
         self.backoff_done = False
-        self.spawned = True
+        self.spawned = False
         self.state = state
         self.error_at_clear = False
 
@@ -1679,12 +1761,15 @@ class DummyProcess:
     def spawn(self):
         self.spawned = True
 
+    def reportstatus(self):
+        self.status_reported = True
+
     def __cmp__(self, other):
         return cmp(self.config.priority, other.config.priority)
 
 class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,
-                 autorestart=False, uid=None, logfile=None, logfile_backups=0,
+                 autorestart=True, uid=None, logfile=None, logfile_backups=0,
                  logfile_maxbytes=0, stopsignal=signal.SIGTERM,
                  exitcodes=[0,2]):
         self.name = name
@@ -1718,6 +1803,11 @@ class DummyLogger:
         self.removed = True
 
 class DummyOptions:
+
+    TRACE = 5
+    directory = None
+    waitpid_return = None, None
+
     def __init__(self):
         self.identifier = 'supervisor'
         self.childlogdir = '/tmp'
@@ -1725,14 +1815,66 @@ class DummyOptions:
         self.logger = self.getLogger()
         self.backofflimit = 10
         self.logfile = '/tmp/logfile'
-        self.nocleanup = True
+        self.nocleanup = False
         self.pidhistory = {}
+        self.programs = []
+        self.nodaemon = False
+        self.socket_map = {}
+        self.mood = 1
+        self.mustreopen = False
 
     def getLogger(self, *args):
         logger = DummyLogger()
         logger.handlers = [DummyLogger()]
         logger.args = args
         return logger
+
+    def realize(self, args):
+        self.realizeargs = args
+
+    def cleanup_fds(self):
+        self.fds_cleaned_up = True
+
+    def set_rlimits(self):
+        self.rlimits_set = True
+        return ['rlimits_set']
+
+    def set_uid(self):
+        self.setuid_called = True
+        return 'setuid_called'
+
+    def openhttpserver(self, supervisord):
+        self.httpserver_opened = True
+
+    def setsignals(self):
+        self.signals_set = True
+
+    def daemonize(self):
+        self.daemonized = True
+
+    def get_socket_map(self):
+        return self.socket_map
+
+    def make_logger(self, critical_msgs, info_msgs):
+        self.make_logger_messages = critical_msgs, info_msgs
+
+    def create_autochildlogs(self):
+        self.autochildlogs_created = True
+
+    def clear_autochildlogdir(self):
+        self.autochildlogdir_cleared = True
+
+    def cleanup(self):
+        self.cleaned_up = True
+
+    def write_pidfile(self):
+        self.pidfile_written = True
+
+    def waitpid(self):
+        return self.waitpid_return
+
+    def make_process(self, config):
+        return DummyProcess(self, config)
 
 class DummyClientOptions:
     def __init__(self):
@@ -1915,6 +2057,7 @@ class DummyRequest:
         
 def test_suite():
     suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(SupervisordTests))
     suite.addTest(unittest.makeSuite(ControllerTests))
     suite.addTest(unittest.makeSuite(INIOptionTests))
     suite.addTest(unittest.makeSuite(SupervisorNamespaceXMLRPCInterfaceTests))
