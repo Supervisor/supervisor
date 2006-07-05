@@ -95,6 +95,7 @@ class Subprocess:
 
     # Initial state; overridden by instance variables
     pid = 0 # Subprocess pid; 0 when not running
+    beenstarted = False # true if has been started at least once
     laststart = 0 # Last time the subprocess was started; 0 if never
     laststop = 0  # Last time the subprocess was stopped; 0 if never
     delay = 0 # If nonzero, delay starting or killing until this time
@@ -120,7 +121,6 @@ class Subprocess:
         """
         self.options = options
         self.config = config
-        self.pidhistory = []
         self.readbuffer = ""
         if config.logfile:
             self.childlog = options.getLogger(config.logfile, 10,
@@ -169,7 +169,7 @@ class Subprocess:
 
     def record_spawnerr(self, msg):
         self.spawnerr = msg
-        self.options.logger.critical(msg)
+        self.options.logger.critical("spawnerr: %s" % msg)
         self.do_backoff()
         self.governor()
 
@@ -183,6 +183,7 @@ class Subprocess:
             self.options.logger.critical(msg)
             return
 
+        self.beenstarted = True
         self.killing = 0
         self.spawnerr = None
         self.exitstatus = None
@@ -273,16 +274,25 @@ class Subprocess:
             os.close(child_stdin)
             os.close(child_stdout)
             os.close(child_stderr)
-            self.options.logger.info('spawned process %r with pid %s' % (
+            self.options.logger.info('spawned: %r with pid %s' % (
                 self.config.name, pid))
             self.spawnerr = None
             self.do_backoff()
+            self.options.pidhistory[pid] = self
             return pid
         
         else:
             # Child
             try:
-                os.setsid()
+                # prevent child from receiving signals sent to the
+                # parent by calling os.setpgrp to create a new process
+                # group for the child; this prevents, for instance,
+                # the case of child processes being sent a SIGINT when
+                # running supervisor in foreground mode and Ctrl-C in
+                # the terminal window running supervisord is pressed.
+                # Presumably it also prevents HUP, etc received by
+                # supervisord from being sent to children.
+                os.setpgrp()
                 os.dup2(child_stdin, 0)
                 os.dup2(child_stdout, 1)
                 os.dup2(child_stderr, 2)
@@ -325,11 +335,10 @@ class Subprocess:
         if not self.pid:
             return "no subprocess running"
         try:
-            self.options.logger.info('killing %s (%s)' % (self.config.name,
-                                                          self.pid))
+            self.options.logger.debug('killing %s (pid %s)' % (self.config.name,
+                                                               self.pid))
             self.killing = 1
             os.kill(self.pid, sig)
-            self.addpidtohistory(self.pid)
         except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
@@ -342,16 +351,6 @@ class Subprocess:
             return msg
             
         return None
-
-    def addpidtohistory(self, pid):
-        self.pidhistory.append(pid)
-        if len(self.pidhistory) > 10: # max pid history to keep around is 10
-            self.pidhistory.pop(0)
-
-    def isoneofmypids(self, pid):
-        if pid == self.pid:
-            return True
-        return pid in self.pidhistory
 
     def governor(self):
         # Back off if respawning too frequently
@@ -366,7 +365,7 @@ class Subprocess:
                     self.backoff = self.options.backofflimit
                 else:
                     self.options.logger.critical(
-                        "%s: restarting too frequently; quit" % (
+                        "stopped: %s (restarting too frequently)" % (
                         self.config.name))
                     # stop trying
                     self.system_stop = 1
@@ -374,8 +373,9 @@ class Subprocess:
                     self.delay = 0
                     return
             self.options.logger.info(
-                "%s: sleep %s to avoid rapid restarts" % (self.config.name,
-                                                          self.backoff))
+                "backoff: %s (avoid rapid restarts %s)" % (
+                self.config.name,
+                self.backoff))
             self.delay = now + self.backoff
         else:
             # Reset the backoff timer
@@ -389,9 +389,10 @@ class Subprocess:
         pid, sts = self.waitstatus
         self.waitstatus = None
         es, msg = decode_wait_status(sts)
-        msg = "pid %d: " % pid + msg
-        if not self.isoneofmypids(pid):
-            msg = "unknown " + msg
+        process = self.options.pidhistory.get(pid)
+
+        if process is not self:
+            msg = "stopped: unknown " + msg
             self.options.logger.warn(msg)
         else:
             if self.killing:
@@ -400,15 +401,19 @@ class Subprocess:
             elif not es in self.config.exitcodes:
                 self.governor()
 
-            if self.pid:
-                self.addpidtohistory(self.pid)
             self.pid = 0
-            
             self.stdoutfd = self.stderrfd  = self.stdinfd = None
             self.stdout = self.stderr = self.stdin = None
+            processname = process.config.name
 
             if es in self.config.exitcodes and not self.killing:
-                msg = msg + "; OK"
+                msg = "exited: %s (%s)" % (processname,
+                                           msg + "; expected")
+            elif es != -1:
+                msg = "exited: %s (%s)" % (processname,
+                                           msg + "; not expected")
+            else:
+                msg = "killed: %s (%s)" % (processname, msg)
             self.options.logger.info(msg)
             self.exitstatus = es
         self.reportstatusmsg = msg
@@ -448,7 +453,7 @@ class Subprocess:
             return ProcessStates.STOPPING
         elif self.system_stop:
             return ProcessStates.ERROR
-        if self.administrative_stop:
+        elif self.administrative_stop:
             return ProcessStates.STOPPED
         elif not self.pid and self.delay:
             return ProcessStates.STARTING
@@ -459,7 +464,7 @@ class Subprocess:
                 return ProcessStates.KILLED
             elif self.exitstatus is not None:
                 return ProcessStates.EXITED
-            elif not self.pidhistory:
+            elif not self.beenstarted:
                 return ProcessStates.NOTSTARTED
             else:
                 return ProcessStates.UNKNOWN
@@ -517,17 +522,18 @@ class Supervisor:
         processes.sort() # asc by priority
 
         for p in processes:
-            if not p.pid and not p.delay:
-                if not p.pidhistory:
+            state = p.get_state()
+            if state not in (ProcessStates.STOPPED, ProcessStates.ERROR,
+                             ProcessStates.RUNNING, ProcessStates.STOPPING,
+                             ProcessStates.STARTING):
+                if state == ProcessStates.NOTSTARTED:
                     case = p.config.autostart
                 else:
                     case = p.config.autorestart
-                if case:
-                    if not p.administrative_stop and not p.system_stop:
-                        self.options.logger.info('(Re)starting %s' %
-                                                 p.config.name)
-                        p.spawn()
 
+                if case:
+                    p.spawn()
+            
     def handle_procs_with_waitstatus(self):
         processes = self.processes.values()
         for proc in processes:
@@ -577,21 +583,28 @@ class Supervisor:
                 self.options.logger.debug('EINTR during reap')
             pid, sts = None, None
         if pid:
-            self.options.logger.info('child with pid %s was reaped' % pid)
+            name = '<unknown>'
+            process = self.options.pidhistory.get(pid)
+            if process:
+                name = process.config.name
+            self.options.logger.debug('reaped %s (pid %s)' % (name ,pid))
             self.setwaitstatus(pid, sts)
             self.reap() # keep reaping until no more kids to reap
         return pid, sts
 
     def setwaitstatus(self, pid, sts):
         self.options.logger.debug('setwaitstatus called')
-        for name in self.processes.keys():
-            proc = self.processes[name]
-            if proc.isoneofmypids(pid):
-                self.options.logger.debug('set wait status on %s' % name)
-                proc.finaloutput = _readfd(proc.stdoutfd)
-                proc.waitstatus = pid, sts
-                proc.killing = 0
-                proc.laststop = time.time()
+        proc = self.options.pidhistory.get(pid)
+        if proc is None:
+            # this should never happen
+            self.options.logger.critical('cannot set wait status on pid %s'
+                                         % pid)
+            return
+        self.options.logger.debug('set wait status on %s' % proc.config.name)
+        proc.finaloutput = _readfd(proc.stdoutfd)
+        proc.waitstatus = pid, sts
+        proc.killing = 0
+        proc.laststop = time.time()
 
     def cleanup_fds(self):
         # try to close any unused file descriptors to prevent leakage.
@@ -728,8 +741,9 @@ class Supervisor:
 
     def setsignals(self):
         signal.signal(signal.SIGTERM, self.sigexit)
-        signal.signal(signal.SIGHUP, self.sighup)
         signal.signal(signal.SIGINT, self.sigexit)
+        signal.signal(signal.SIGQUIT, self.sigexit)
+        signal.signal(signal.SIGHUP, self.sighup)
         signal.signal(signal.SIGCHLD, self.sigchild)
         signal.signal(signal.SIGUSR2, self.sigreopenlog)
 
@@ -891,6 +905,7 @@ class Supervisor:
 
             self.handle_procs_with_delay()
             self.reap()
+
             if self.mustreopen:
                 self.logreopen()
                 self.mustreopen = False
