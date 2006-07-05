@@ -1301,20 +1301,6 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(process3.spawned, True)
         self.assertEqual(process4.spawned, False)
 
-    def handle_procs_with_waitstatus(self):
-        options = DummyOptions()
-        pconfig1 = DummyPConfig('process1', 'process1', '/bin/process1')
-        process1 = DummyProcess(options, pconfig1)
-        pconfig2 = DummyPConfig('process2', 'process2', '/bin/process2')
-        process2 = DummyProcess(options, pconfig2)
-        process2.waitstatus = True
-        supervisord = self._makeOne(options)
-        supervisord.processes = {'killed': process1, 'error': process2}
-
-        supervisord.handle_procs_with_waitstatus()
-        self.assertEqual(process1.status_reported, False)
-        self.assertEqual(process2.status_reported, True)
-
     def test_stop_all(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig('process1', 'process1', '/bin/process1')
@@ -1330,6 +1316,37 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(process2.stop_called, True)
         
         
+    def test_handle_procs_with_waitstatus(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig('process1', 'process1', '/bin/process1')
+        process1 = DummyProcess(options, pconfig1)
+        pconfig2 = DummyPConfig('process2', 'process2', '/bin/process2')
+        process2 = DummyProcess(options, pconfig2)
+        process2.waitstatus = True
+        supervisord = self._makeOne(options)
+        supervisord.processes = {'killed': process1, 'error': process2}
+
+        supervisord.handle_procs_with_waitstatus()
+        self.assertEqual(process1.status_reported, False)
+        self.assertEqual(process2.status_reported, True)
+
+    def test_handle_procs_with_delay(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig('process1', 'process1', '/bin/process1')
+        process1 = DummyProcess(options, pconfig1)
+        process1.delay = time.time()
+        process1.killing = True
+        process1.pid = 1
+        pconfig2 = DummyPConfig('process2', 'process2', '/bin/process2')
+        process2 = DummyProcess(options, pconfig2)
+        supervisord = self._makeOne(options)
+        supervisord.processes = {'killed': process1, 'error': process2}
+
+        supervisord.handle_procs_with_delay()
+        self.assertEqual(process1.killed_with, signal.SIGKILL)
+        self.assertEqual(process2.killed_with, None)
+        
+
 class ControllerTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisorctl import Controller
@@ -1741,6 +1758,8 @@ class DummyProcess:
         self.spawned = False
         self.state = state
         self.error_at_clear = False
+        self.status_reported = False
+        self.killed_with = None
 
     def removelogs(self):
         if self.error_at_clear:
@@ -1754,6 +1773,9 @@ class DummyProcess:
         self.stop_called = True
         self.killing = False
         self.pid = 0
+
+    def kill(self, signal):
+        self.killed_with = signal
 
     def do_backoff(self):
         self.backoff_done = True
@@ -1805,8 +1827,6 @@ class DummyLogger:
 class DummyOptions:
 
     TRACE = 5
-    directory = None
-    waitpid_return = None, None
 
     def __init__(self):
         self.identifier = 'supervisor'
@@ -1822,6 +1842,21 @@ class DummyOptions:
         self.socket_map = {}
         self.mood = 1
         self.mustreopen = False
+        self.realizeargs = None
+        self.fds_cleaned_up = False
+        self.rlimit_set = False
+        self.setuid_called = False
+        self.httpserver_opened = False
+        self.signals_set = False
+        self.daemonized = False
+        self.make_logger_messages = None
+        self.autochildlogs_created = False
+        self.autochildlogdir_cleared = False
+        self.cleaned_up = False
+        self.pidfile_written = False
+        self.directory = None
+        self.waitpid_return = None, None
+        self.kills = {}
 
     def getLogger(self, *args):
         logger = DummyLogger()
@@ -1875,6 +1910,9 @@ class DummyOptions:
 
     def make_process(self, config):
         return DummyProcess(self, config)
+
+    def kill(self, pid, sig):
+        self.kills[pid] = sig
 
 class DummyClientOptions:
     def __init__(self):

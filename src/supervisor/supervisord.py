@@ -314,10 +314,11 @@ class Subprocess:
                 os._exit(127)
 
     def stop(self):
+        """ Administrative stop """
         self.administrative_stop = 1
+        self.reportstatusmsg = None
         # backoff needs to come before kill on MacOS, as there's
         # an apparent a race condition if it comes after
-        self.reportstatusmsg = None
         self.do_backoff()
         return self.kill(self.config.stopsignal)
 
@@ -516,12 +517,6 @@ class Supervisor:
                 if case:
                     p.spawn()
             
-    def handle_procs_with_waitstatus(self):
-        processes = self.processes.values()
-        for proc in processes:
-            if proc.waitstatus:
-                proc.reportstatus()
-
     def stop_all(self):
         processes = self.processes.values()
         processes.sort()
@@ -531,22 +526,29 @@ class Supervisor:
             if proc.pid:
                 proc.stop()
 
+    def handle_procs_with_waitstatus(self):
+        processes = self.processes.values()
+        for proc in processes:
+            if proc.waitstatus:
+                proc.reportstatus()
+
     def handle_procs_with_delay(self):
         delayprocs = []
         now = time.time()
         timeout = self.options.backofflimit
-        for name in self.processes.keys():
-            proc = self.processes[name]
-            if proc.delay:
-                delayprocs.append(proc)
-                timeout = max(0, min(timeout, proc.delay - now))
-                if timeout <= 0:
-                    proc.delay = 0
-                    if proc.killing and proc.pid:
-                        self.options.logger.info(
-                            'killing %r (%s) with SIGKILL' % (name, proc.pid))
-                        proc.do_backoff()
-                        proc.kill(signal.SIGKILL)
+        processes = self.processes.values()
+        delayprocs = [ proc for proc in processes if proc.delay ]
+        for proc in delayprocs:
+            time_left = proc.delay - now
+            time_left = max(0, min(timeout, time_left))
+            if time_left <= 0:
+                proc.delay = 0
+                if proc.killing and proc.pid:
+                    self.options.logger.info(
+                        'killing %r (%s) with SIGKILL' % (proc.config.name,
+                                                          proc.pid))
+                    proc.do_backoff()
+                    proc.kill(signal.SIGKILL)
         return delayprocs
 
     def reap(self):
@@ -627,6 +629,7 @@ class Supervisor:
                 if not self.stopping:
                     self.stop_all()
                     self.stopping = True
+
                 # reget the delay list after attempting to stop
                 delayprocs = self.handle_procs_with_delay()
                 if not delayprocs:
