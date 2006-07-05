@@ -224,6 +224,11 @@ class Controller(cmd.Cmd):
     def help_quit(self):
         self._output("quit\tExit the supervisor shell.")
 
+    do_exit = do_quit
+
+    def help_exit(self):
+        self._output("exit\tExit the supervisor shell.")
+
     def _interpretProcessInfo(self, info):
         result = {}
         result['name'] = info['name']
@@ -552,6 +557,7 @@ class Controller(cmd.Cmd):
     def help_open(self):
         self._output("open <url>\t\t\tConnect to a remote supervisord process.")
         self._output("\t\t\t(for UNIX domain socket, use unix:///socket/path)")
+
 
 def main(args=None, options=None):
     if options is None:
