@@ -7,9 +7,6 @@
 
 - Documentation:
 
-   - In nodaemon mode, child processes will be sent SIGINT when Ctrl-C
-     is pressed.
-
    - Error conditions when X-bit not set on command file.
 
    - SUPERVISOR_ENABLED envvar.
@@ -17,6 +14,8 @@
    - stopsignal can be TERM, HUP, INT, QUIT, KILL, USR1, or USR2
 
    - copy sample.conf to /etc/supervisord.conf
+
+- Move 'forever' and 'backofflimit' options into process config.
 
 - Unit test the http_client package.
 
