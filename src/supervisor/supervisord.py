@@ -750,7 +750,7 @@ class Supervisor:
 
     def sigchild(self, sig, frame):
         # do nothing here, we reap our children synchronously
-        self.options.logger.info('received %s' % signame(sig))
+        self.options.logger.debug('received %s' % signame(sig))
 
     def daemonize(self):
 
