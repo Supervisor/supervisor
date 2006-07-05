@@ -430,11 +430,9 @@ class ServerOptions(Options):
     pidfile = None
     passwdfile = None
     nodaemon = None
+    signal = None
     AUTOMATIC = []
     TRACE = 5
-    mood = 1 # 1: up, 0: restarting, -1: suicidal
-    stopping = False # set after we detect that we are handling a stop request
-    mustreopen = False # set after we detect we handled a logreopen signal
 
     
     def __init__(self):
@@ -800,6 +798,17 @@ class ServerOptions(Options):
         except os.error:
             pass
 
+    def setsignals(self):
+        signal.signal(signal.SIGTERM, self.sigreceiver)
+        signal.signal(signal.SIGINT, self.sigreceiver)
+        signal.signal(signal.SIGQUIT, self.sigreceiver)
+        signal.signal(signal.SIGHUP, self.sigreceiver)
+        signal.signal(signal.SIGCHLD, self.sigreceiver)
+        signal.signal(signal.SIGUSR2, self.sigreceiver)
+
+    def sigreceiver(self, sig, frame):
+        self.signal = sig
+
     def openhttpserver(self, supervisord):
         from http import make_http_server
         try:
@@ -814,33 +823,6 @@ class ServerOptions(Options):
                            port)
         except ValueError, why:
             self.usage(why[0])
-
-    def setsignals(self):
-        signal.signal(signal.SIGTERM, self.sigexit)
-        signal.signal(signal.SIGINT, self.sigexit)
-        signal.signal(signal.SIGQUIT, self.sigexit)
-        signal.signal(signal.SIGHUP, self.sighup)
-        signal.signal(signal.SIGCHLD, self.sigchild)
-        signal.signal(signal.SIGUSR2, self.sigreopenlog)
-
-    def sigexit(self, sig, frame):
-        self.mood = -1 # exiting
-        self.logger.critical('received %s indicating exit request' %
-                                     signame(sig))
-
-    def sighup(self, sig, frame):
-        self.mood = 0 # restarting
-        self.logger.critical('received %s indicating restart request' %
-                             signame(sig))
-
-    def sigreopenlog(self, sig, frame):
-        self.mustreopen = True
-        self.logger.info('received %s indicating log reopen request' %
-                         signame(sig))
-
-    def sigchild(self, sig, frame):
-        # do nothing here, we reap our children synchronously
-        self.logger.debug('received %s' % signame(sig))
 
     def create_autochildlogs(self):
         for program in self.programs:
@@ -938,6 +920,10 @@ class ServerOptions(Options):
         os.setuid(uid)
 
     def waitpid(self):
+        # need pthread_sigmask here to avoid concurrent sigchild, but
+        # Python doesn't offer it as it's not standard across UNIX versions.
+        # there is still a race condition here; we can get a sigchild while
+        # we're sitting in the waitpid call.
         try:
             pid, sts = os.waitpid(-1, os.WNOHANG)
         except os.error, why:
@@ -1334,7 +1320,6 @@ def decode_wait_status(sts):
     else:
         msg = "unknown termination cause 0x%04x" % sts
         return -1, msg
-
 
 _signames = None
 

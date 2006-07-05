@@ -18,7 +18,6 @@ import supervisord
 import datatypes
 import xmlrpc
 import http
-from options import ServerOptions
 from supervisord import ProcessStates
 from supervisord import SupervisorStates
 try:
@@ -32,7 +31,7 @@ DEBUG = 0
 
 import unittest
 
-class INIOptionTests(unittest.TestCase):
+class ServerOptionsTests(unittest.TestCase):
     def test_options(self):
         s = """[supervisord]
 http_port=127.0.0.1:8999 ; (default is to run no xmlrpc server)
@@ -79,6 +78,7 @@ exitcodes=0,1,127
 
         from StringIO import StringIO
         fp = StringIO(s)
+        from options import ServerOptions
         instance = ServerOptions(*[])
         instance.configfile = fp
         instance.realize()
@@ -899,8 +899,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.stdinfd, None)
         self.assertEqual(instance.stderrfd, None)
         self.assertEqual(instance.spawnerr, None)
-        self.assertEqual(instance.readbuffer, '')
-        self.assertEqual(instance.finaloutput, '')
+        self.assertEqual(instance.writebuffer, '')
 
     def test_removelogs(self):
         options = DummyOptions()
@@ -985,21 +984,13 @@ class SubprocessTests(unittest.TestCase):
         instance.log('foo')
         self.assertEqual(instance.childlog.data, ['foo'])
 
-    def test_log_stdout(self):
+    def test_log_writebuffer(self):
         # stdout goes to the process log and the main log
         options = DummyOptions()
         config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
         instance = self._makeOne(options, config)
-        instance.log_stdout('foo')
-        self.assertEqual(instance.childlog.data, ['foo'])
-        self.assertEqual(options.logger.data, [5, 'notthere output:\nfoo'])
-
-    def test_log_stderr(self):
-        # sterr goes to the process log and the main log
-        options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
-        instance = self._makeOne(options, config)
-        instance.log_stderr('foo')
+        instance.writebuffer = 'foo'
+        instance.log_writebuffer()
         self.assertEqual(instance.childlog.data, ['foo'])
         self.assertEqual(options.logger.data, [5, 'notthere output:\nfoo'])
 
@@ -1275,7 +1266,7 @@ class SupervisordTests(unittest.TestCase):
         options = DummyOptions()
         supervisord = self._makeOne(options)
         self.assertEqual(supervisord.get_state(), SupervisorStates.ACTIVE)
-        options.mood = -1
+        supervisord.mood = -1
         self.assertEqual(supervisord.get_state(), SupervisorStates.SHUTDOWN)
 
     def test_start_necessary(self):
@@ -1332,20 +1323,50 @@ class SupervisordTests(unittest.TestCase):
 
     def test_handle_procs_with_delay(self):
         options = DummyOptions()
+
         pconfig1 = DummyPConfig('process1', 'process1', '/bin/process1')
         process1 = DummyProcess(options, pconfig1)
         process1.delay = time.time()
         process1.killing = True
         process1.pid = 1
+
         pconfig2 = DummyPConfig('process2', 'process2', '/bin/process2')
         process2 = DummyProcess(options, pconfig2)
-        supervisord = self._makeOne(options)
-        supervisord.processes = {'killed': process1, 'error': process2}
+        process2.delay = time.time()
+        process2.killing = False
+        process2.pid = 0
 
-        supervisord.handle_procs_with_delay()
+        pconfig3 = DummyPConfig('process3', 'process3', '/bin/process3')
+        process3 = DummyProcess(options, pconfig3)
+
+        supervisord = self._makeOne(options)
+        supervisord.processes = { 'process1': process1, 'process2': process2,
+                                  'process3':process3 }
+
+        delayprocs = supervisord.handle_procs_with_delay()
         self.assertEqual(process1.killed_with, signal.SIGKILL)
         self.assertEqual(process2.killed_with, None)
+        self.assertEqual(process3.killed_with, None)
+        self.assertEqual(delayprocs, [process1, process2])
+
+    def test_reap(self):
+        options = DummyOptions()
+        options.waitpid_return = 1, 1
+        pconfig = DummyPConfig('process', 'process', '/bin/process1')
+        process = DummyProcess(options, pconfig)
+        process.drained = False
+        process.killing = 1
+        process.laststop = None
+        process.waitstatus = None, None
+        options.pidhistory = {1:process}
+        supervisord = self._makeOne(options)
         
+        supervisord.reap(once=True)
+        self.assertEqual(process.drained, True)
+        self.assertEqual(process.killing, 0)
+        self.assertNotEqual(process.laststop, None)
+        self.assertEqual(process.waitstatus, (1,1))
+        self.assertEqual(options.logger.data[0], 'reaped process (pid 1)')
 
 class ControllerTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -1741,16 +1762,12 @@ class DummyProcess:
     childlog = None # the current logger 
     spawnerr = None
     writebuffer = '' # buffer of characters to send to child process' stdin
-    readbuffer = ''  # buffer of characters written to child's stdout
-    finaloutput = '' # buffer of characters read from child's stdout right
-                     # before process reapage
     reportstatusmsg = None # message attached to instance during reportstatus()
     
     def __init__(self, options, config, state=ProcessStates.RUNNING):
         self.options = options
         self.config = config
         self.writebuffer = ''
-        self.readbuffer = ''
         self.childlog = DummyLogger()
         self.logsremoved = False
         self.stop_called = False
@@ -1760,6 +1777,9 @@ class DummyProcess:
         self.error_at_clear = False
         self.status_reported = False
         self.killed_with = None
+        self.drained = False
+        self.writebuffer = ''
+        self.writebuffer_logged = ''
 
     def removelogs(self):
         if self.error_at_clear:
@@ -1783,11 +1803,21 @@ class DummyProcess:
     def spawn(self):
         self.spawned = True
 
+    def drain(self):
+        self.drained = True
+
     def reportstatus(self):
         self.status_reported = True
 
     def __cmp__(self, other):
         return cmp(self.config.priority, other.config.priority)
+
+    def readable_fds(self):
+        return []
+
+    def log_writebuffer(self):
+        self.writebuffer_logged = self.writebuffer_logged + self.writebuffer
+        self.writebuffer = ''
 
 class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,
@@ -1857,6 +1887,7 @@ class DummyOptions:
         self.directory = None
         self.waitpid_return = None, None
         self.kills = {}
+        self.signal = None
 
     def getLogger(self, *args):
         logger = DummyLogger()
@@ -1881,11 +1912,11 @@ class DummyOptions:
     def openhttpserver(self, supervisord):
         self.httpserver_opened = True
 
-    def setsignals(self):
-        self.signals_set = True
-
     def daemonize(self):
         self.daemonized = True
+
+    def setsignals(self):
+        self.signals_set = True
 
     def get_socket_map(self):
         return self.socket_map
@@ -2097,7 +2128,7 @@ def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(SupervisordTests))
     suite.addTest(unittest.makeSuite(ControllerTests))
-    suite.addTest(unittest.makeSuite(INIOptionTests))
+    suite.addTest(unittest.makeSuite(ServerOptionsTests))
     suite.addTest(unittest.makeSuite(SupervisorNamespaceXMLRPCInterfaceTests))
     suite.addTest(unittest.makeSuite(MainXMLRPCInterfaceTests))
     suite.addTest(unittest.makeSuite(SystemNamespaceXMLRPCInterfaceTests))

@@ -59,6 +59,7 @@ from fcntl import F_SETFL, F_GETFL
 
 from options import ServerOptions
 from options import decode_wait_status
+from options import signame
 
 class ProcessStates:
     RUNNING = 0
@@ -105,9 +106,7 @@ class Subprocess:
     stdinfd = stderrfd = stdoutfd = None
     childlog = None # the current logger 
     spawnerr = None
-    readbuffer = ''  # buffer of characters written to child's stdout
-    finaloutput = '' # buffer of characters read from child's stdout right
-                     # before process reapage
+    writebuffer = '' # buffer of characters read from child's stdout/stderr
     reportstatusmsg = None # message attached to instance during reportstatus()
     
     def __init__(self, options, config):
@@ -117,7 +116,6 @@ class Subprocess:
         """
         self.options = options
         self.config = config
-        self.readbuffer = ""
         if config.logfile:
             self.childlog = options.getLogger(config.logfile, 10,
                                               '%(message)s',
@@ -135,6 +133,18 @@ class Subprocess:
             for handler in self.childlog.handlers:
                 handler.reopen()
 
+    def drain(self):
+        stdout = _readfd(self.stdoutfd)
+        stderr = _readfd(self.stderrfd)
+        self.writebuffer = stdout
+        if self.config.log_stderr:
+            self.writebuffer += stderr
+
+    def readable_fds(self):
+        if self.stdoutfd and self.stderrfd:
+            return self.stdoutfd, self.stderrfd
+        return []
+ 
     def get_execv_args(self):
         """Internal: turn a program name into a file name, using $PATH,
         make sure it exists """
@@ -317,8 +327,6 @@ class Subprocess:
         """ Administrative stop """
         self.administrative_stop = 1
         self.reportstatusmsg = None
-        # backoff needs to come before kill on MacOS, as there's
-        # an apparent a race condition if it comes after
         self.do_backoff()
         return self.kill(self.config.stopsignal)
 
@@ -433,13 +441,16 @@ class Subprocess:
             if self.childlog:
                 self.childlog.info(data)
 
-    def log_stdout(self, data):
+    def log_output(self, data):
         if data:
             self.log(data)
             msg = '%s output:\n%s' % (self.config.name, data)
             self.options.logger.log(self.options.TRACE, msg)
 
-    log_stderr = log_stdout
+    def log_writebuffer(self):
+        if self.writebuffer:
+            self.log_output(self.writebuffer)
+            self.writebuffer = ''
 
     def get_state(self):
         if self.killing:
@@ -463,8 +474,8 @@ class Subprocess:
                 return ProcessStates.UNKNOWN
 
 class Supervisor:
-
-    stopping = False
+    mood = 1 # 1: up, 0: restarting, -1: suicidal
+    stopping = False # set after we detect that we are handling a stop request
 
     def __init__(self, options):
         self.options = options
@@ -495,8 +506,122 @@ class Supervisor:
 
         self.run(test)
 
+    def run(self, test=False):
+        self.processes = {}
+        for program in self.options.programs:
+            name = program.name
+            self.processes[name] = self.options.make_process(program)
+        try:
+            self.options.write_pidfile()
+            self.options.openhttpserver(self)
+            self.options.setsignals()
+            if not self.options.nodaemon:
+                self.options.daemonize()
+            self.runforever(test)
+        finally:
+            self.options.cleanup()
+
+    def runforever(self, test=False):
+        timeout = .5
+
+        socket_map = self.options.get_socket_map()
+
+        while 1:
+            if self.mood > 0:
+                self.start_necessary()
+
+            self.handle_procs_with_waitstatus()
+
+            r, w, x = [], [], []
+
+            process_map = {}
+
+            # process output fds
+            for proc in self.processes.values():
+                readable_fds = proc.readable_fds()
+                for fd in readable_fds:
+                    r.append(fd)
+                    process_map[fd] = proc
+                proc.log_writebuffer()
+
+            # medusa i/o fds
+            for fd, dispatcher in socket_map.items():
+                if dispatcher.readable():
+                    r.append(fd)
+                if dispatcher.writable():
+                    w.append(fd)
+
+            if self.mood < 1:
+                if not self.stopping:
+                    self.stop_all()
+                    self.stopping = True
+
+                # if there are no delayed processes, it's OK to stop or reload
+                delayprocs = self.handle_procs_with_delay()
+                if not delayprocs:
+                    break # reload or stop
+
+            try:
+                r, w, x = select.select(r, w, x, timeout)
+            except select.error, err:
+                if err[0] == errno.EINTR:
+                    self.options.logger.log(self.options.TRACE,
+                                            'EINTR encountered in select')
+                else:
+                    raise
+                r = w = x = []
+
+            self.handle_procs_with_waitstatus()
+
+            for fd in r:
+                if process_map.has_key(fd):
+                    proc = process_map[fd]
+                    proc.drain()
+
+                if socket_map.has_key(fd):
+                    try:
+                        socket_map[fd].handle_read_event()
+                    except asyncore.ExitNow:
+                        raise
+                    except:
+                        socket_map[fd].handle_error()
+
+            for fd in w:
+                if socket_map.has_key(fd):
+                    try:
+                        socket_map[fd].handle_write_event()
+                    except asyncore.ExitNow:
+                        raise
+                    except:
+                        socket_map[fd].handle_error()
+
+            self.handle_procs_with_delay()
+            self.reap()
+
+            if self.options.signal:
+                # clear and handle a signal
+                sig, self.options.signal = self.options.signal, None
+                if sig in (signal.SIGTERM, signal.SIGINT, signal.SIGQUIT):
+                    self.options.logger.critical(
+                        'received %s indicating exit request' % signame(sig))
+                    self.mood = -1
+                elif sig == signal.SIGHUP:
+                    self.options.logger.critical(
+                        'received %s indicating restart request' % signame(sig))
+                    self.mood = 0
+                elif sig == signal.SIGUSR2:
+                    self.options.logger.info(
+                        'received %s indicating log reopen request' %
+                        signame(sig))
+                    self.logreopen()
+                else:
+                    self.options.logger.debug('received %s' % signame(sig))
+
+            if test:
+                break
+
     def get_state(self):
-        if self.options.mood <= 0:
+        if self.mood <= 0:
             return SupervisorStates.SHUTDOWN
         return SupervisorStates.ACTIVE
 
@@ -551,146 +676,20 @@ class Supervisor:
                     proc.kill(signal.SIGKILL)
         return delayprocs
 
-    def reap(self):
-        # need pthread_sigmask here to avoid concurrent sigchild, but
-        # Python doesn't offer it as it's not standard across UNIX versions.
-        # there is still a race condition here; we can get a sigchild while
-        # we're sitting in the waitpid call.
+    def reap(self, once=False):
         pid, sts = self.options.waitpid()
         if pid:
             name = '<unknown>'
             process = self.options.pidhistory.get(pid)
-            if process:
+            if process is not None:
                 name = process.config.name
-            self.options.logger.debug('reaped %s (pid %s)' % (name ,pid))
-            self.setwaitstatus(pid, sts)
-            self.reap() # keep reaping until no more kids to reap
-        return pid, sts
-
-    def setwaitstatus(self, pid, sts):
-        self.options.logger.debug('setwaitstatus called')
-        proc = self.options.pidhistory.get(pid)
-        if proc is None:
-            # this should never happen
-            self.options.logger.critical('cannot set wait status on pid %s'
-                                         % pid)
-            return
-        self.options.logger.debug('set wait status on %s' % proc.config.name)
-        
-        proc.finaloutput = _readfd(proc.stdoutfd)
-        proc.waitstatus = pid, sts
-        proc.killing = 0
-        proc.laststop = time.time()
-
-    def run(self, test=False):
-        self.processes = {}
-        for program in self.options.programs:
-            name = program.name
-            self.processes[name] = self.options.make_process(program)
-        try:
-            self.options.write_pidfile()
-            self.options.openhttpserver(self)
-            self.options.setsignals()
-            if not self.options.nodaemon:
-                self.options.daemonize()
-            self.runforever(test)
-        finally:
-            self.options.cleanup()
-
-    def runforever(self, test=False):
-        timeout = .5
-
-        socket_map = self.options.get_socket_map()
-
-        while 1:
-            if self.options.mood > 0:
-                self.start_necessary()
-
-            self.handle_procs_with_waitstatus()
-
-            r, w, x = [], [], []
-
-            all = self.processes.values()
-
-            stdoutfds = {}
-            stderrfds = {}
-            for proc in all:
-                if proc.stdoutfd:
-                    r.append(proc.stdoutfd)
-                    stdoutfds[proc.stdoutfd] = proc
-                if proc.stderrfd:
-                    r.append(proc.stderrfd)
-                    stderrfds[proc.stderrfd] = proc
-                if proc.finaloutput:
-                    proc.log_stdout(proc.finaloutput)
-                    proc.finaloutput = ''
-
-            if self.options.mood < 1:
-                if not self.stopping:
-                    self.stop_all()
-                    self.stopping = True
-
-                # reget the delay list after attempting to stop
-                delayprocs = self.handle_procs_with_delay()
-                if not delayprocs:
-                    break # reload or stop
-
-            for fd, dispatcher in socket_map.items():
-                if dispatcher.readable():
-                    r.append(fd)
-                if dispatcher.writable():
-                    w.append(fd)
-
-            try:
-                r, w, x = select.select(r, w, x, timeout)
-            except select.error, err:
-                if err[0] == errno.EINTR:
-                    self.options.logger.log(self.options.TRACE,
-                                            'EINTR encountered in select')
-                else:
-                    raise
-                r = w = x = []
-
-            self.handle_procs_with_waitstatus()
-
-            for fd in r:
-                stdoutproc = stdoutfds.get(fd)
-                stderrproc = stderrfds.get(fd)
-
-                if stdoutproc:
-                    data = _readfd(fd)
-                    stdoutproc.log_stdout(data)
-                if stderrproc:
-                    data = _readfd(fd)
-                    if stderrproc.config.log_stderr:
-                        stderrproc.log_stderr(data)
-
-                if socket_map.has_key(fd):
-                    try:
-                        socket_map[fd].handle_read_event()
-                    except asyncore.ExitNow:
-                        raise
-                    except:
-                        socket_map[fd].handle_error()
-
-            for fd in w:
-                if socket_map.has_key(fd):
-                    try:
-                        socket_map[fd].handle_write_event()
-                    except asyncore.ExitNow:
-                        raise
-                    except:
-                        socket_map[fd].handle_error()
-
-            self.handle_procs_with_delay()
-            self.reap()
-
-            if self.options.mustreopen:
-                self.logreopen()
-                self.options.mustreopen = False
-
-            if test:
-                break
+                process.drain()
+                process.waitstatus = pid, sts
+                process.killing = 0
+                process.laststop = time.time()
+            self.options.logger.debug('reaped %s (pid %s)' % (name, pid))
+            if not once:
+                self.reap() # keep reaping until no more kids to reap
 
     def logreopen(self):
         self.options.logger.info('supervisord logreopen')
@@ -732,12 +731,12 @@ def main(test=False):
         first = False
         if test:
             return d
-        if d.options.mood < 0:
+        if d.mood < 0:
             sys.exit(0)
         for proc in d.processes.values():
             proc.removelogs()
-        if d.httpserver:
-            d.httpserver.close()
+        if d.options.httpserver:
+            d.options.httpserver.close()
             
 
 if __name__ == "__main__":
