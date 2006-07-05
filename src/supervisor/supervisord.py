@@ -282,6 +282,7 @@ class Subprocess:
         else:
             # Child
             try:
+                os.setsid()
                 os.dup2(child_stdin, 0)
                 os.dup2(child_stdout, 1)
                 os.dup2(child_stderr, 2)
