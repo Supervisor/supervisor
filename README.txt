@@ -216,10 +216,10 @@ Configuration File '[supervisord]' Section Settings
   unlimited number of backups.  Default: 10.
 
   'loglevel' -- The logging level, dictating what is written to the
-  activity log.  One of 'info', 'warn' or 'debug'.  At log level
-  "debug", the supervisord log file will record the stderr/stdout
-  output of its child processes, which is useful for debugging.
-  Default: info.
+  activity log.  One of 'critical', 'error', 'warn', 'info', 'debug'
+  or 'trace'.  At log level 'trace', the supervisord log file will
+  record the stderr/stdout output of its child processes, which is
+  useful for debugging.  Default: info.
 
   'pidfile' -- The location in which supervisord keeps its pid file.
 
