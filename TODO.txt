@@ -20,8 +20,6 @@
 
 - Move 'forever' and 'backofflimit' options into process config.
 
-- Unit test the http_client package.
-
 - Unit tests for meld classes and ui server.
 
 - Tail main log.
