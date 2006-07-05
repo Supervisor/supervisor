@@ -115,8 +115,8 @@ exitcodes=0,1,127
         self.assertEqual(cat.uid, 0)
         self.assertEqual(cat.logfile, '/tmp/cat.log')
         self.assertEqual(cat.stopsignal, signal.SIGKILL)
-        self.assertEqual(cat.logfile_maxbytes, datatypes.byte_size('5MB'))
-        self.assertEqual(cat.logfile_backups, 1)
+        self.assertEqual(cat.logfile_maxbytes, datatypes.byte_size('50MB'))
+        self.assertEqual(cat.logfile_backups, 10)
         self.assertEqual(cat.exitcodes, [0,2])
 
         cat2 = options.programs[1]
@@ -140,8 +140,8 @@ exitcodes=0,1,127
         self.assertEqual(cat3.autorestart, True)
         self.assertEqual(cat3.uid, None)
         self.assertEqual(cat3.logfile, instance.AUTOMATIC)
-        self.assertEqual(cat3.logfile_maxbytes, datatypes.byte_size('5MB'))
-        self.assertEqual(cat3.logfile_backups, 1)
+        self.assertEqual(cat3.logfile_maxbytes, datatypes.byte_size('50MB'))
+        self.assertEqual(cat3.logfile_backups, 10)
         self.assertEqual(cat3.exitcodes, [0,1,127])
         
         self.assertEqual(cat2.stopsignal, signal.SIGTERM)
@@ -881,7 +881,7 @@ class SubprocessTests(unittest.TestCase):
         instance = self._makeOne(options, config)
         self.assertEqual(instance.options, options)
         self.assertEqual(instance.config, config)
-        self.assertEqual(instance.pidhistory, [])
+        self.assertEqual(instance.beenstarted, False)
         self.assertEqual(instance.childlog.args, (config.logfile, 10,
                                                   '%(message)s', 0, 0))
         self.assertEqual(instance.pid, 0)
@@ -917,26 +917,6 @@ class SubprocessTests(unittest.TestCase):
         instance.reopenlogs()
         self.assertEqual(instance.childlog.handlers[0].reopened, True)
 
-    def test_addpidtohistory(self):
-        options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
-        instance = self._makeOne(options, config)
-        self.assertEqual(instance.pidhistory, [])
-        instance.addpidtohistory(1)
-        self.assertEqual(instance.pidhistory, [1])
-        instance.addpidtohistory(2)
-        self.assertEqual(instance.pidhistory, [1, 2])
-        for x in range(3, 16):
-            instance.addpidtohistory(x)
-        self.assertEqual(instance.pidhistory, [6,7,8,9,10,11,12,13,14,15])
-
-    def test_isoneofmypids(self):
-        options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
-        instance = self._makeOne(options, config)
-        instance.pidhistory = [1]
-        self.failUnless(instance.isoneofmypids(1))
-
     def test_governor_system_stop(self):
         options = DummyOptions()
         config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
@@ -951,25 +931,25 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.delay, 0)
         self.assertEqual(instance.system_stop, 1)
         self.assertEqual(options.logger.data[0],
-                         "notthere: restarting too frequently; quit")
+                         "stopped: notthere (restarting too frequently)")
 
     def test_reportstatus(self):
         options = DummyOptions()
         config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
         instance = self._makeOne(options, config)
         instance.waitstatus = (123, 1) # pid, waitstatus
-        instance.pidhistory = [123]
+        instance.options.pidhistory[123] = instance
         instance.killing = 1
         instance.stdout = 'will be replaced'
         instance.reportstatus()
         self.assertEqual(instance.killing, 0)
         self.assertEqual(instance.pid, 0)
         self.assertEqual(instance.stdout, None)
-        self.assertEqual(options.logger.data[1], 'pid 123: terminated by '
-                         'SIGHUP')
+        self.assertEqual(options.logger.data[1], 'killed: notthere '
+                         '(terminated by SIGHUP)')
         self.assertEqual(instance.exitstatus, -1)
-        self.assertEqual(instance.reportstatusmsg, 'pid 123: terminated by '
-                         'SIGHUP')
+        self.assertEqual(instance.reportstatusmsg, 'killed: notthere '
+                         '(terminated by SIGHUP)')
 
     def test_do_backoff(self):
         options = DummyOptions()
@@ -1065,11 +1045,11 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.get_state(), ProcessStates.EXITED)
         
         instance = self._makeOne(options, config)
-        instance.pidhistory = []
+        instance.options.beenstarted = False
         self.assertEqual(instance.get_state(), ProcessStates.NOTSTARTED)
 
         instance = self._makeOne(options, config)
-        instance.pidhistory = [1]
+        instance.beenstarted = True
         self.assertEqual(instance.get_state(), ProcessStates.UNKNOWN)
 
     def test_get_execv_args_abs_missing(self):
@@ -1139,7 +1119,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr, "can't find command '/not/there'")
         self.assertEqual(options.logger.data[0],
-                         "can't find command '/not/there'")
+                         "spawnerr: can't find command '/not/there'")
         self.failUnless(instance.delay)
         self.failUnless(instance.backoff)
 
@@ -1151,7 +1131,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr, "command at '/' is a directory")
         self.assertEqual(options.logger.data[0],
-                         "command at '/' is a directory")
+                         "spawnerr: command at '/' is a directory")
         self.failUnless(instance.delay)
         self.failUnless(instance.backoff)
 
@@ -1164,7 +1144,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.spawnerr,
                          "command at '/etc/passwd' is not executable")
         self.assertEqual(options.logger.data[0],
-                         "command at '/etc/passwd' is not executable")
+                         "spawnerr: command at '/etc/passwd' is not executable")
         self.failUnless(instance.delay)
         self.failUnless(instance.backoff)
 
@@ -1179,7 +1159,8 @@ class SubprocessTests(unittest.TestCase):
             config = DummyPConfig('spew', executable)
             instance = self._makeOne(options, config)
             result = instance.spawn()
-            self.assert_(options.logger.data[0].startswith("spawned process"))
+            msg = options.logger.data[0]
+            self.failUnless(msg.startswith("spawned: 'spew' with pid"))
             self.failUnless(instance.stdin)
             self.failUnless(instance.stdout)
             self.failUnless(instance.stderr)
@@ -1669,7 +1650,6 @@ class DummyProcess:
     def __init__(self, options, config, state=ProcessStates.RUNNING):
         self.options = options
         self.config = config
-        self.pidhistory = []
         self.writebuffer = ''
         self.readbuffer = ''
         self.childlog = DummyLogger()
@@ -1746,6 +1726,7 @@ class DummyOptions:
         self.backofflimit = 10
         self.logfile = '/tmp/logfile'
         self.nocleanup = True
+        self.pidhistory = {}
 
     def getLogger(self, *args):
         logger = DummyLogger()

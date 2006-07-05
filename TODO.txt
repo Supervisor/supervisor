@@ -15,6 +15,9 @@
 
    - copy sample.conf to /etc/supervisord.conf
 
+- If a process dies with an expected exit code but keeps dying, it
+  will restart forever.
+
 - Move 'forever' and 'backofflimit' options into process config.
 
 - Unit test the http_client package.
