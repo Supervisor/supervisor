@@ -468,6 +468,7 @@ class Supervisor:
 
     mood = 1 # 1: up, 0: restarting, -1: suicidal
     stopping = False # set after we detect that we are handling a stop request
+    mustreopen = False # set after we detect we handled a logreopen signal
 
     def main(self, args=None, test=False, first=False):
         os.environ['SUPERVISOR_ENABLED'] = '1'
@@ -733,28 +734,23 @@ class Supervisor:
         signal.signal(signal.SIGUSR2, self.sigreopenlog)
 
     def sigexit(self, sig, frame):
-        self.options.logger.critical("supervisord stopping via %s" %
-                                     signame(sig))
         self.mood = -1 # exiting
+        self.options.logger.critical('received %s indicating exit request' %
+                                     signame(sig))
 
     def sighup(self, sig, frame):
-        self.options.logger.critical("supervisord reload via %s" %
-                                     signame(sig))
         self.mood = 0 # restarting
+        self.options.logger.critical('received %s indicating restart request' %
+                                     signame(sig))
 
     def sigreopenlog(self, sig, frame):
-        self.options.logger.info('supervisord log reopen via %s' %
+        self.mustreopen = True
+        self.options.logger.info('received %s indicating log reopen request' %
                                  signame(sig))
-        for handler in self.options.logger.handlers:
-            if hasattr(handler, 'reopen'):
-                handler.reopen()
-
-        for process in self.processes.values():
-            process.reopenlogs()
 
     def sigchild(self, sig, frame):
         # do nothing here, we reap our children synchronously
-        self.options.logger.info('received sigchild')
+        self.options.logger.info('received %s' % signame(sig))
 
     def daemonize(self):
 
@@ -895,10 +891,22 @@ class Supervisor:
 
             self.handle_procs_with_delay()
             self.reap()
+            if self.mustreopen:
+                self.logreopen()
+                self.mustreopen = False
 
             if test:
                 break
 
+    def logreopen(self):
+        self.options.logger.info('supervisord logreopen')
+        for handler in self.options.logger.handlers:
+            if hasattr(handler, 'reopen'):
+                handler.reopen()
+
+        for process in self.processes.values():
+            process.reopenlogs()
+        
 def _readfd(fd):
     try:
         data = os.read(fd, 2 << 16) # 128K
