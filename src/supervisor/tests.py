@@ -1743,13 +1743,12 @@ class DummyProcess:
     pipes = None
     childlog = None # the current logger 
     spawnerr = None
-    writebuffer = '' # buffer of characters to send to child process' stdin
+    logbuffer = '' # buffer of characters to send to child process' stdin
     reportstatusmsg = None # message attached to instance during reportstatus()
     
     def __init__(self, options, config, state=ProcessStates.RUNNING):
         self.options = options
         self.config = config
-        self.writebuffer = ''
         self.childlog = DummyLogger()
         self.logsremoved = False
         self.stop_called = False
@@ -1760,8 +1759,8 @@ class DummyProcess:
         self.status_reported = False
         self.killed_with = None
         self.drained = False
-        self.writebuffer = ''
-        self.writebuffer_logged = ''
+        self.logbuffer = ''
+        self.logged = ''
         self.pipes = {}
 
     def removelogs(self):
@@ -1802,8 +1801,8 @@ class DummyProcess:
         return []
 
     def log_output(self):
-        self.writebuffer_logged = self.writebuffer_logged + self.writebuffer
-        self.writebuffer = ''
+        self.logged = self.logged + self.logbuffer
+        self.logbuffer = ''
 
 class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,

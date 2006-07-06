@@ -221,12 +221,15 @@ class Subprocess:
                 fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | os.O_NDELAY)
             return pipes
         except OSError:
-            for fd in pipes.values():
-                try:
-                    os.close(fd)
-                except:
-                    pass
+            self.close_pipes(pipes)
             raise
+
+    def close_pipes(self, pipes):
+        for fd in pipes.values():
+            try:
+                os.close(fd)
+            except:
+                pass
 
     def record_spawnerr(self, msg):
         self.spawnerr = msg
@@ -270,7 +273,6 @@ class Subprocess:
                 msg = 'too many open files to spawn %r' % pname
             else:
                 msg = 'unknown error: %s' % str(why)
-
             self.record_spawnerr(msg)
             return
 
@@ -286,6 +288,7 @@ class Subprocess:
                 msg = 'unknown error: %s' % str(why)
 
             self.record_spawnerr(msg)
+            self.close_pipes(self.pipes)
             return
 
         if pid != 0:
