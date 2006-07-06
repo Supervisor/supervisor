@@ -933,67 +933,6 @@ class SubprocessTests(unittest.TestCase):
         instance.reopenlogs()
         self.assertEqual(instance.childlog.handlers[0].reopened, True)
 
-    def test_governor_system_stop(self):
-        options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
-        instance = self._makeOne(options, config)
-        options.backofflimit = 1
-        options.forever = False
-        instance.backoff = 1 # gt backofflimit
-        instance.laststart = time.time()
-        instance.delay = 1
-        instance.governor()
-        self.assertEqual(instance.backoff, 0)
-        self.assertEqual(instance.delay, 0)
-        self.assertEqual(instance.system_stop, 1)
-        self.assertEqual(options.logger.data[0],
-                         "stopped: notthere (restarting too frequently)")
-
-    def test_reportstatus(self):
-        options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
-        instance = self._makeOne(options, config)
-        instance.waitstatus = (123, 1) # pid, waitstatus
-        instance.options.pidhistory[123] = instance
-        instance.killing = 1
-        instance.pipes = 'will be replaced'
-        instance.reportstatus()
-        self.assertEqual(instance.killing, 0)
-        self.assertEqual(instance.pid, 0)
-        self.assertEqual(instance.pipes, {})
-        self.assertEqual(options.logger.data[1], 'killed: notthere '
-                         '(terminated by SIGHUP)')
-        self.assertEqual(instance.exitstatus, -1)
-        self.assertEqual(instance.reportstatusmsg, 'killed: notthere '
-                         '(terminated by SIGHUP)')
-
-    def test_do_backoff(self):
-        options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
-        instance = self._makeOne(options, config)
-        now = time.time()
-        instance.do_backoff()
-        self.failUnless(instance.delay >= now + options.backofflimit)
-
-    def test_cmp_bypriority(self):
-        options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo',
-                              priority=1)
-        instance = self._makeOne(options, config)
-
-        config = DummyPConfig('notthere1', '/notthere', logfile='/tmp/foo',
-                              priority=2)
-        instance1 = self._makeOne(options, config)
-
-        config = DummyPConfig('notthere2', '/notthere', logfile='/tmp/foo',
-                              priority=3)
-        instance2 = self._makeOne(options, config)
-
-        L = [instance2, instance, instance1]
-        L.sort()
-
-        self.assertEqual(L, [instance, instance1, instance2])
-
     def test_log_output(self):
         # stdout goes to the process log and the main log
         options = DummyOptions()
@@ -1004,46 +943,58 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.childlog.data, ['foo'])
         self.assertEqual(options.logger.data, [5, 'notthere output:\nfoo'])
 
-    def test_get_state(self):
+    def test_drain_stdout(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
-        from supervisord import ProcessStates
-
+        config = DummyPConfig('test', '/test')
         instance = self._makeOne(options, config)
-        instance.killing = True
-        self.assertEqual(instance.get_state(), ProcessStates.STOPPING)
+        instance.pipes['stdout'] = 'abc'
+        instance.drain_stdout()
+        self.assertEqual(instance.logbuffer, 'abc')
 
+    def test_drain_stderr(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
         instance = self._makeOne(options, config)
-        instance.delay = 1
-        self.assertEqual(instance.get_state(), ProcessStates.STARTING)
+        instance.pipes['stderr'] = 'abc'
+        instance.drain_stderr()
+        self.assertEqual(instance.logbuffer, '')
 
+        instance.config.log_stderr = True
+        instance.drain_stderr()
+        self.assertEqual(instance.logbuffer, 'abc')
+
+    def test_drain(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
         instance = self._makeOne(options, config)
-        instance.pid = 11
-        self.assertEqual(instance.get_state(), ProcessStates.RUNNING)
+        instance.config.log_stderr = True
+        instance.pipes['stdout'] = 'abc'
+        instance.pipes['stderr'] = 'def'
+        instance.drain()
+        self.assertEqual(instance.logbuffer, 'abcdef')
+
+        instance.logbuffer = ''
+        instance.config.log_stderr = False
+        instance.drain()
+        self.assertEqual(instance.logbuffer, 'abc')
         
+    def test_get_pipe_drains(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
         instance = self._makeOne(options, config)
-        instance.system_stop = True
-        self.assertEqual(instance.get_state(), ProcessStates.ERROR)
+        instance.config.log_stderr = True
+        instance.pipes['stdout'] = 'abc'
+        instance.pipes['stderr'] = 'def'
 
-        instance = self._makeOne(options, config)
-        instance.administrative_stop = True
-        self.assertEqual(instance.get_state(), ProcessStates.STOPPED)
-        
-        instance = self._makeOne(options, config)
-        instance.exitstatus = -1
-        self.assertEqual(instance.get_state(), ProcessStates.KILLED)
-        
-        instance = self._makeOne(options, config)
-        instance.exitstatus = 1
-        self.assertEqual(instance.get_state(), ProcessStates.EXITED)
-        
-        instance = self._makeOne(options, config)
-        instance.options.beenstarted = False
-        self.assertEqual(instance.get_state(), ProcessStates.NOTSTARTED)
+        drains = instance.get_pipe_drains()
+        self.assertEqual(len(drains), 2)
+        self.assertEqual(drains[0], ['abc', instance.drain_stdout])
+        self.assertEqual(drains[1], ['def', instance.drain_stderr])
 
-        instance = self._makeOne(options, config)
-        instance.beenstarted = True
-        self.assertEqual(instance.get_state(), ProcessStates.UNKNOWN)
+        instance.pipes = {}
+        drains = instance.get_pipe_drains()
+        self.assertEqual(drains, [])
+        
 
     def test_get_execv_args_abs_missing(self):
         options = DummyOptions()
@@ -1093,6 +1044,15 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(args[0], '/bin/sh')
         self.assertEqual(args[1], ['sh', 'foo'])
         self.assertEqual(len(args[2]), 10)
+
+    def test_record_spawnerr(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
+        instance = self._makeOne(options, config)
+        instance.record_spawnerr('foo')
+        self.assertEqual(instance.spawnerr, 'foo')
+        self.assertEqual(options.logger.data[0], 'spawnerr: foo')
+        self.failUnless(instance.delay)
 
     def test_spawn_already_running(self):
         options = DummyOptions()
@@ -1297,6 +1257,166 @@ class SubprocessTests(unittest.TestCase):
                 pass
             signal.signal(signal.SIGCHLD, signal.SIG_DFL)
 
+    def test_stop(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
+        instance = self._makeOne(options, config)
+        instance.pid = 11
+        instance.stop()
+        self.assertEqual(instance.administrative_stop, 1)
+        self.assertEqual(instance.reportstatusmsg, None)
+        self.failUnless(instance.delay)
+        self.assertEqual(options.logger.data[0], 'killing test (pid 11)')
+        self.assertEqual(instance.killing, 1)
+        self.assertEqual(options.kills[11], signal.SIGTERM)
+
+    def test_kill_nopid(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
+        instance = self._makeOne(options, config)
+        instance.kill(signal.SIGTERM)
+        self.assertEqual(options.logger.data[0],
+              'attempted to kill test with sig SIGTERM but it wasn\'t running')
+        self.assertEqual(instance.killing, 0)
+
+    def test_kill_error(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
+        options.kill_error = 1
+        instance = self._makeOne(options, config)
+        instance.pid = 11
+        instance.kill(signal.SIGTERM)
+        self.assertEqual(options.logger.data[0], 'killing test (pid 11)')
+        self.failUnless(options.logger.data[1].startswith(
+            'unknown problem killing test'))
+        self.assertEqual(instance.killing, 0)
+
+    def test_kill(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
+        instance = self._makeOne(options, config)
+        instance.pid = 11
+        instance.kill(signal.SIGTERM)
+        self.assertEqual(options.logger.data[0], 'killing test (pid 11)')
+        self.assertEqual(instance.killing, 1)
+        self.assertEqual(options.kills[11], signal.SIGTERM)
+
+    def test_governor_system_stop(self):
+        options = DummyOptions()
+        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
+        instance = self._makeOne(options, config)
+        options.backofflimit = 1
+        options.forever = False
+        instance.backoff = 1 # gt backofflimit
+        instance.laststart = time.time()
+        instance.delay = 1
+        instance.governor()
+        self.assertEqual(instance.backoff, 0)
+        self.assertEqual(instance.delay, 0)
+        self.assertEqual(instance.system_stop, 1)
+        self.assertEqual(options.logger.data[0],
+                         "stopped: notthere (restarting too frequently)")
+
+    def test_reportstatus(self):
+        options = DummyOptions()
+        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
+        instance = self._makeOne(options, config)
+        instance.waitstatus = (123, 1) # pid, waitstatus
+        instance.options.pidhistory[123] = instance
+        instance.killing = 1
+        instance.pipes = 'will be replaced'
+        instance.reportstatus()
+        self.assertEqual(instance.killing, 0)
+        self.assertEqual(instance.pid, 0)
+        self.assertEqual(instance.pipes, {})
+        self.assertEqual(options.logger.data[1], 'killed: notthere '
+                         '(terminated by SIGHUP)')
+        self.assertEqual(instance.exitstatus, -1)
+        self.assertEqual(instance.reportstatusmsg, 'killed: notthere '
+                         '(terminated by SIGHUP)')
+
+    def test_do_backoff(self):
+        options = DummyOptions()
+        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
+        instance = self._makeOne(options, config)
+        now = time.time()
+        instance.do_backoff()
+        self.failUnless(instance.delay >= now + options.backofflimit)
+
+    def test_set_uid_no_uid(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
+        instance = self._makeOne(options, config)
+        instance.set_uid()
+        self.assertEqual(options.privsdropped, None)
+
+    def test_set_uid(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test', uid=1)
+        instance = self._makeOne(options, config)
+        msg = instance.set_uid()
+        self.assertEqual(options.privsdropped, 1)
+        self.assertEqual(msg, None)
+
+    def test_cmp_bypriority(self):
+        options = DummyOptions()
+        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo',
+                              priority=1)
+        instance = self._makeOne(options, config)
+
+        config = DummyPConfig('notthere1', '/notthere', logfile='/tmp/foo',
+                              priority=2)
+        instance1 = self._makeOne(options, config)
+
+        config = DummyPConfig('notthere2', '/notthere', logfile='/tmp/foo',
+                              priority=3)
+        instance2 = self._makeOne(options, config)
+
+        L = [instance2, instance, instance1]
+        L.sort()
+
+        self.assertEqual(L, [instance, instance1, instance2])
+
+    def test_get_state(self):
+        options = DummyOptions()
+        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
+        from supervisord import ProcessStates
+
+        instance = self._makeOne(options, config)
+        instance.killing = True
+        self.assertEqual(instance.get_state(), ProcessStates.STOPPING)
+
+        instance = self._makeOne(options, config)
+        instance.delay = 1
+        self.assertEqual(instance.get_state(), ProcessStates.STARTING)
+
+        instance = self._makeOne(options, config)
+        instance.pid = 11
+        self.assertEqual(instance.get_state(), ProcessStates.RUNNING)
+        
+        instance = self._makeOne(options, config)
+        instance.system_stop = True
+        self.assertEqual(instance.get_state(), ProcessStates.ERROR)
+
+        instance = self._makeOne(options, config)
+        instance.administrative_stop = True
+        self.assertEqual(instance.get_state(), ProcessStates.STOPPED)
+        
+        instance = self._makeOne(options, config)
+        instance.exitstatus = -1
+        self.assertEqual(instance.get_state(), ProcessStates.KILLED)
+        
+        instance = self._makeOne(options, config)
+        instance.exitstatus = 1
+        self.assertEqual(instance.get_state(), ProcessStates.EXITED)
+        
+        instance = self._makeOne(options, config)
+        instance.options.beenstarted = False
+        self.assertEqual(instance.get_state(), ProcessStates.NOTSTARTED)
+
+        instance = self._makeOne(options, config)
+        instance.beenstarted = True
+        self.assertEqual(instance.get_state(), ProcessStates.UNKNOWN)
 
 class XMLRPCMarshallingTests(unittest.TestCase):
     def test_xmlrpc_marshal(self):
@@ -1945,7 +2065,8 @@ class DummyProcess:
 class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,
                  autorestart=True, uid=None, logfile=None, logfile_backups=0,
-                 logfile_maxbytes=0, stopsignal=signal.SIGTERM,
+                 logfile_maxbytes=0, log_stderr=False,
+                 stopsignal=signal.SIGTERM,
                  exitcodes=[0,2]):
         self.name = name
         self.command = command
@@ -1956,8 +2077,10 @@ class DummyPConfig:
         self.logfile = logfile
         self.logfile_backups = logfile_backups
         self.logfile_maxbytes = logfile_maxbytes
+        self.log_stderr = log_stderr
         self.stopsignal = stopsignal
         self.exitcodes = exitcodes
+        
 
 class DummyLogger:
     def __init__(self):
@@ -1983,6 +2106,7 @@ class DummyOptions:
     make_pipes_error = None
     fork_error = None
     execv_error = None
+    kill_error = None
     minfds = 5
 
     def __init__(self):
@@ -2080,6 +2204,8 @@ class DummyOptions:
         return DummyProcess(self, config)
 
     def kill(self, pid, sig):
+        if self.kill_error:
+            raise OSError(self.kill_error)
         self.kills[pid] = sig
 
     def stat(self, filename):
@@ -2138,6 +2264,10 @@ class DummyOptions:
         if self.setuid_msg:
             return self.setuid_msg
         self.privsdropped = uid
+
+    def readfd(self, fd):
+        return fd
+        
 
 class DummyClientOptions:
     def __init__(self):

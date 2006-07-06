@@ -138,25 +138,27 @@ class Subprocess:
             msg = '%s output:\n%s' % (self.config.name, data)
             self.options.logger.log(self.options.TRACE, msg)
 
-    def drain(self):
-        self.drain_stdout()
-        self.drain_stderr()
+    def drain_stdout(self, *ignored):
+        output = self.options.readfd(self.pipes['stdout'])
+        self.logbuffer += output
 
     def drain_stderr(self, *ignored):
         output = self.options.readfd(self.pipes['stderr'])
         if self.config.log_stderr:
             self.logbuffer += output
 
-    def drain_stdout(self, *ignored):
-        output = self.options.readfd(self.pipes['stdout'])
-        self.logbuffer += output
+    def drain(self):
+        self.drain_stdout()
+        self.drain_stderr()
 
     def get_pipe_drains(self):
         if not self.pipes:
             return []
 
-        return ( [ self.pipes['stderr'], self.drain_stderr],
-                 [self.pipes['stdout'], self.drain_stdout] )
+        return (
+            [ self.pipes['stdout'], self.drain_stdout],
+            [ self.pipes['stderr'], self.drain_stderr]
+            )
         
     def get_execv_args(self):
         """Internal: turn a program name into a file name, using $PATH,
@@ -311,9 +313,11 @@ class Subprocess:
         Return None if the signal was sent, or an error message string
         if an error occurred or if the subprocess is not running.
         """
-        self.options.logger.debug('kill called')
         if not self.pid:
-            return "no subprocess running"
+            msg = ("attempted to kill %s with sig %s but it wasn't running" %
+                   (self.config.name, signame(sig)))
+            self.options.logger.debug(msg)
+            return msg
         try:
             self.options.logger.debug('killing %s (pid %s)' % (self.config.name,
                                                                self.pid))
