@@ -156,7 +156,7 @@ class Subprocess:
         self.logbuffer += output
 
     def get_pipe_drains(self):
-        if not self.pipes['stderr'] or not self.pipes['stdout']:
+        if not self.pipes:
             return []
 
         return ( [ self.pipes['stderr'], self.drain_stderr],
