@@ -69,6 +69,8 @@ autorestart=true
 user=root
 logfile=/tmp/cat.log
 stopsignal=KILL
+stopwaitsecs=5
+startretrysecs=5
 
 [program:cat2]
 command=/bin/cat
@@ -118,9 +120,11 @@ exitcodes=0,1,127
         self.assertEqual(cat.priority, 1)
         self.assertEqual(cat.autostart, True)
         self.assertEqual(cat.autorestart, True)
+        self.assertEqual(cat.startretrysecs, 5)
         self.assertEqual(cat.uid, 0)
         self.assertEqual(cat.logfile, '/tmp/cat.log')
         self.assertEqual(cat.stopsignal, signal.SIGKILL)
+        self.assertEqual(cat.stopwaitsecs, 5)
         self.assertEqual(cat.logfile_maxbytes, datatypes.byte_size('50MB'))
         self.assertEqual(cat.logfile_backups, 10)
         self.assertEqual(cat.exitcodes, [0,2])
@@ -2065,7 +2069,7 @@ class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,
                  autorestart=True, uid=None, logfile=None, logfile_backups=0,
                  logfile_maxbytes=0, log_stderr=False,
-                 stopsignal=signal.SIGTERM,
+                 stopsignal=signal.SIGTERM, stopwaitsecs=10,
                  exitcodes=[0,2]):
         self.name = name
         self.command = command
@@ -2078,6 +2082,7 @@ class DummyPConfig:
         self.logfile_maxbytes = logfile_maxbytes
         self.log_stderr = log_stderr
         self.stopsignal = stopsignal
+        self.stopwaitsecs = stopwaitsecs
         self.exitcodes = exitcodes
         
 

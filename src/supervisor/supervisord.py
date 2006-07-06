@@ -98,7 +98,7 @@ class Subprocess:
     backoff = 0 # backoff counter (to backofflimit)
     pipes = None # mapping of pipe descriptor purpose to file descriptor
     childlog = None # the current logger 
-    logbuffer = '' # buffer of characters read from child's stdout/stderr
+    logbuffer = '' # buffer of characters read from child pipes
     reportstatusmsg = None # message attached to instance during reportstatus()
     waitstatus = None
     exitstatus = None
@@ -596,7 +596,6 @@ class Supervisor:
                 proc.reportstatus()
 
     def handle_procs_with_delay(self):
-        delayprocs = []
         now = time.time()
         timeout = self.options.backofflimit
         processes = self.processes.values()

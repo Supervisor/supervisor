@@ -689,6 +689,8 @@ class ServerOptions(Options):
             autostart = datatypes.boolean(autostart)
             autorestart = config.saneget(section, 'autorestart', 'true')
             autorestart = datatypes.boolean(autorestart)
+            startretrysecs = config.saneget(section, 'startretrysecs', 10)
+            startretrysecs = datatypes.integer(startretrysecs)
             uid = config.saneget(section, 'user', None)
             if uid is not None:
                 uid = datatypes.name_to_uid(uid)
@@ -706,6 +708,8 @@ class ServerOptions(Options):
             logfile_maxbytes = datatypes.integer(logfile_maxbytes)
             stopsignal = config.saneget(section, 'stopsignal', signal.SIGTERM)
             stopsignal = datatypes.signal(stopsignal)
+            stopwaitsecs = config.saneget(section, 'stopwaitsecs', 10)
+            stopwaitsecs = datatypes.integer(stopwaitsecs)
             exitcodes = config.saneget(section, 'exitcodes', '0,2')
             try:
                 exitcodes = datatypes.list_of_ints(exitcodes)
@@ -714,12 +718,16 @@ class ServerOptions(Options):
             log_stderr = config.saneget(section, 'log_stderr', 'false')
             log_stderr = datatypes.boolean(log_stderr)
             pconfig = ProcessConfig(name=name, command=command,
-                                    priority=priority, autostart=autostart,
-                                    autorestart=autorestart, uid=uid,
+                                    priority=priority,
+                                    autostart=autostart,
+                                    autorestart=autorestart,
+                                    startretrysecs=startretrysecs,
+                                    uid=uid,
                                     logfile=logfile,
                                     logfile_backups=logfile_backups,
                                     logfile_maxbytes=logfile_maxbytes,
                                     stopsignal=stopsignal,
+                                    stopwaitsecs=stopwaitsecs,
                                     exitcodes=exitcodes,
                                     log_stderr=log_stderr)
             programs.append(pconfig)
@@ -1219,18 +1227,21 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
 
 class ProcessConfig:
     def __init__(self, name, command, priority, autostart, autorestart,
-                 uid, logfile, logfile_backups, logfile_maxbytes, stopsignal,
-                 exitcodes, log_stderr):
+                 startretrysecs, uid, logfile, logfile_backups,
+                 logfile_maxbytes, stopsignal, stopwaitsecs, exitcodes,
+                 log_stderr):
         self.name = name
         self.command = command
         self.priority = priority
         self.autostart = autostart
         self.autorestart = autorestart
+        self.startretrysecs = startretrysecs
         self.uid = uid
         self.logfile = logfile
         self.logfile_backups = logfile_backups
         self.logfile_maxbytes = logfile_maxbytes
         self.stopsignal = stopsignal
+        self.stopwaitsecs = stopwaitsecs
         self.exitcodes = exitcodes
         self.log_stderr = log_stderr
 

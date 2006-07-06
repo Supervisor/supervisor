@@ -290,8 +290,10 @@ Configuration File '[program:x]' Section Settings
     priority=1
     autostart=true
     autorestart=true
+    startretrysecs=10
     exitcodes=0,2
-    stopsignal=INT
+    stopsignal=TERM
+    stopwaitsecs=10
     user=nobody
     log_stderr=false
     logfile=/tmp/programname.log
@@ -325,12 +327,23 @@ Configuration File '[program:x]' Section Settings
   those which aren't as a result of a program exit with an "expected"
   exit code.  Default: true.
 
+  'startretrysecs' -- The total number of seconds spent attempting to
+  continually retry startup of the program due to a startup failure.
+  After this number of seconds, supervisord gives up and puts the
+  process into an ERROR state.  Default: 10.
+
   'exitcodes' -- The list of 'expected' exit codes for this program.
   Default: 0,2.
 
   'stopsignal' -- The signal used to kill the program when a stop is
   requested.  This can be any of TERM, HUP, INT, QUIT, KILL, USR1, or
   USR2.  Default: TERM.
+
+  'stopwaitsecs' -- The number of seconds to wait for the program to
+  return a SIGCHILD to supervisord after the program has been sent a
+  stopsignal.  If this number of seconds elapses before supervisord
+  receives a SIGCHILD from the process, supervisord will attempt to
+  kill it with a final SIGKILL.  Default: 10.
 
   'user' -- If supervisord is running as root, this UNIX user account
   will be used as the account which runs the program.  If supervisord

@@ -9,12 +9,10 @@
 
 - Rewrite the delay/backoff stuff so humans can understand it.
 
-- Move 'forever' and 'backofflimit' options into process config.
+- Make 'startretrysecs' and 'stopwaitsecs' "real".
 
 - If a process dies with an expected exit code but keeps dying, it
   will restart forever.
-
-- Subprocess: left off before spawn_as_parent tests.
 
 - Unit tests for meld classes and ui server.
 
