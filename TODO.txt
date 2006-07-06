@@ -14,6 +14,8 @@
 - If a process dies with an expected exit code but keeps dying, it
   will restart forever.
 
+- Subprocess: left off before spawn_as_parent tests.
+
 - Unit tests for meld classes and ui server.
 
 - Tail main log.
