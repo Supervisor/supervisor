@@ -16,6 +16,10 @@ import urllib
 import pwd
 import grp
 import resource
+import stat
+
+from fcntl import fcntl
+from fcntl import F_SETFL, F_GETFL
 
 class FileHandler(logging.StreamHandler):
     """File handler which supports reopening of logs.
@@ -1024,6 +1028,95 @@ class ServerOptions(Options):
     def make_process(self, config):
         from supervisord import Subprocess
         return Subprocess(self, config)
+
+    def make_pipes(self):
+        """ Create pipes for parent to child stdin/stdout/stderr
+        communications.  Open fd in nonblocking mode so we can read them
+        in the mainloop without blocking """
+        pipes = {}
+        try:
+            pipes['child_stdin'], pipes['stdin'] = os.pipe()
+            pipes['stdout'], pipes['child_stdout'] = os.pipe()
+            pipes['stderr'], pipes['child_stderr'] = os.pipe()
+            for fd in (pipes['stdout'], pipes['stderr'], pipes['stdin']):
+                fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | os.O_NDELAY)
+            return pipes
+        except OSError:
+            self.close_pipes(pipes)
+            raise
+
+    def close_pipes(self, pipes):
+        for fd in pipes.values():
+            self.close_fd(fd)
+
+    def close_fd(self, fd):
+        try:
+            os.close(fd)
+        except:
+            pass
+
+    def fork(self):
+        return os.fork()
+
+    def dup2(self, frm, to):
+        return os.dup2(frm, to)
+
+    def setpgrp(self):
+        return os.setpgrp()
+
+    def stat(self, filename):
+        return os.stat(filename)
+
+    def write(self, fd, data):
+        return os.write(fd, data)
+
+    def execv(self, filename, argv):
+        return os.execv(filename, argv)
+
+    def _exit(self, code):
+        os._exit(code)
+
+    def get_path(self):
+        """Return a list corresponding to $PATH, or a default."""
+        path = ["/bin", "/usr/bin", "/usr/local/bin"]
+        if os.environ.has_key("PATH"):
+            p = os.environ["PATH"]
+            if p:
+                path = p.split(os.pathsep)
+        return path
+
+    def check_execv_args(self, filename, argv, st):
+        msg = None
+        
+        if st is None:
+            msg = "can't find command %r" % filename
+
+        elif stat.S_ISDIR(st[stat.ST_MODE]):
+            msg = "command at %r is a directory" % filename
+
+        elif not (stat.S_IMODE(st[stat.ST_MODE]) & 0111):
+            # not executable
+            msg = "command at %r is not executable" % filename
+
+        elif not os.access(filename, os.X_OK):
+            msg = "no permission to run command %r" % filename
+
+        return msg
+
+    def reopenlogs(self):
+        self.logger.info('supervisord logreopen')
+        for handler in self.logger.handlers:
+            if hasattr(handler, 'reopen'):
+                handler.reopen()
+
+    def readfd(self, fd):
+        try:
+            data = os.read(fd, 2 << 16) # 128K
+        except OSError, why:
+            if why[0] not in (errno.EWOULDBLOCK, errno.EBADF):
+                raise
+            data = ''
+        return data
 
 class ClientOptions(Options):
     positional_args_allowed = 1

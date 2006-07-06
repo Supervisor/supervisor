@@ -32,6 +32,13 @@ DEBUG = 0
 import unittest
 
 class ServerOptionsTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from options import ServerOptions
+        return ServerOptions
+
+    def _makeOne(self):
+        return self._getTargetClass()()
+        
     def test_options(self):
         s = """[supervisord]
 http_port=127.0.0.1:8999 ; (default is to run no xmlrpc server)
@@ -78,8 +85,7 @@ exitcodes=0,1,127
 
         from StringIO import StringIO
         fp = StringIO(s)
-        from options import ServerOptions
-        instance = ServerOptions(*[])
+        instance = self._makeOne()
         instance.configfile = fp
         instance.realize()
         options = instance.configroot.supervisord
@@ -178,6 +184,22 @@ exitcodes=0,1,127
             self.assertEqual(inst.args[0], 'FAILED')
         else:
             raise AssertionError("Didn't raise")
+
+    def test_check_execv_args_cant_find_command(self):
+        instance = self._makeOne()
+        result = instance.check_execv_args('/not/there', None, None)
+        self.assertEqual(result, "can't find command '/not/there'")
+
+    def test_check_execv_args_notexecutable(self):
+        instance = self._makeOne()
+        result = instance.check_execv_args('/etc/passwd', None,
+                                           os.stat('/etc/passwd'))
+        self.assertEqual(result, "command at '/etc/passwd' is not executable")
+
+    def test_check_execv_args_isdir(self):
+        instance = self._makeOne()
+        result = instance.check_execv_args('/', None, os.stat('/'))
+        self.assertEqual(result, "command at '/' is a directory")
 
 class TestBase(unittest.TestCase):
     def setUp(self):
@@ -1072,7 +1094,6 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(args[1], ['sh', 'foo'])
         self.assertEqual(len(args[2]), 10)
 
-        
     def test_spawn_already_running(self):
         options = DummyOptions()
         config = DummyPConfig('sh', '/bin/sh')
@@ -1082,44 +1103,147 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(options.logger.data[0], "process 'sh' already running")
 
-    def test_spawn_cant_find_command(self):
+    def test_spawn_fail_check_execv_args(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/not/there')
+        config = DummyPConfig('bad', '/bad/filename')
         instance = self._makeOne(options, config)
         result = instance.spawn()
         self.assertEqual(result, None)
-        self.assertEqual(instance.spawnerr, "can't find command '/not/there'")
-        self.assertEqual(options.logger.data[0],
-                         "spawnerr: can't find command '/not/there'")
+        self.assertEqual(instance.spawnerr, 'bad filename')
+        self.assertEqual(options.logger.data[0], "spawnerr: bad filename")
         self.failUnless(instance.delay)
         self.failUnless(instance.backoff)
 
-    def test_spawn_isdir(self):
+    def test_spawn_fail_make_pipes_emfile(self):
         options = DummyOptions()
-        config = DummyPConfig('dir', '/')
-        instance = self._makeOne(options, config)
-        result = instance.spawn()
-        self.assertEqual(result, None)
-        self.assertEqual(instance.spawnerr, "command at '/' is a directory")
-        self.assertEqual(options.logger.data[0],
-                         "spawnerr: command at '/' is a directory")
-        self.failUnless(instance.delay)
-        self.failUnless(instance.backoff)
-
-    def test_spawn_notexecutable(self):
-        options = DummyOptions()
-        config = DummyPConfig('dir', '/etc/passwd')
+        options.make_pipes_error = errno.EMFILE
+        config = DummyPConfig('good', '/good/filename')
         instance = self._makeOne(options, config)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr,
-                         "command at '/etc/passwd' is not executable")
+                         "too many open files to spawn 'good'")
         self.assertEqual(options.logger.data[0],
-                         "spawnerr: command at '/etc/passwd' is not executable")
+                         "spawnerr: too many open files to spawn 'good'")
         self.failUnless(instance.delay)
         self.failUnless(instance.backoff)
 
-    def test_spawn_and_kill(self):
+    def test_spawn_fail_make_pipes_other(self):
+        options = DummyOptions()
+        options.make_pipes_error = 1
+        config = DummyPConfig('good', '/good/filename')
+        instance = self._makeOne(options, config)
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
+        self.assertEqual(options.logger.data[0],
+                         "spawnerr: unknown error: EPERM")
+        self.failUnless(instance.delay)
+        self.failUnless(instance.backoff)
+
+    def test_spawn_fork_fail_eagain(self):
+        options = DummyOptions()
+        options.fork_error = errno.EAGAIN
+        config = DummyPConfig('good', '/good/filename')
+        instance = self._makeOne(options, config)
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(instance.spawnerr,
+                         "Too many processes in process table to spawn 'good'")
+        self.assertEqual(options.logger.data[0],
+             "spawnerr: Too many processes in process table to spawn 'good'")
+        self.assertEqual(len(options.pipes_closed), 6)
+        self.failUnless(instance.delay)
+        self.failUnless(instance.backoff)
+
+    def test_spawn_fork_fail_other(self):
+        options = DummyOptions()
+        options.fork_error = 1
+        config = DummyPConfig('good', '/good/filename')
+        instance = self._makeOne(options, config)
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
+        self.assertEqual(options.logger.data[0],
+                         "spawnerr: unknown error: EPERM")
+        self.assertEqual(len(options.pipes_closed), 6)
+        self.failUnless(instance.delay)
+        self.failUnless(instance.backoff)
+
+    def test_spawn_as_child_setuid_ok(self):
+        options = DummyOptions()
+        options.forkpid = 0
+        config = DummyPConfig('good', '/good/filename', uid=1)
+        instance = self._makeOne(options, config)
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(options.pipes_closed, None)
+        self.assertEqual(options.pgrp_set, True)
+        self.assertEqual(len(options.duped), 3)
+        self.assertEqual(len(options.fds_closed), options.minfds - 3)
+        self.assertEqual(options.written, {})
+        self.assertEqual(options.privsdropped, 1)
+        self.assertEqual(options.execv_args,
+                         ('/good/filename', ['/good/filename']) )
+        self.assertEqual(options._exitcode, 127)
+
+    def test_spawn_as_child_setuid_fail(self):
+        options = DummyOptions()
+        options.forkpid = 0
+        options.setuid_msg = 'screwed'
+        config = DummyPConfig('good', '/good/filename', uid=1)
+        instance = self._makeOne(options, config)
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(options.pipes_closed, None)
+        self.assertEqual(options.pgrp_set, True)
+        self.assertEqual(len(options.duped), 3)
+        self.assertEqual(len(options.fds_closed), options.minfds - 3)
+        self.assertEqual(options.written,
+             {2: ['good: error trying to setuid to 1!\n', 'good: screwed\n']})
+        self.assertEqual(options.privsdropped, None)
+        self.assertEqual(options.execv_args,
+                         ('/good/filename', ['/good/filename']) )
+        self.assertEqual(options._exitcode, 127)
+
+    def test_spawn_as_child_execv_fail_oserror(self):
+        options = DummyOptions()
+        options.forkpid = 0
+        options.execv_error = 1
+        config = DummyPConfig('good', '/good/filename')
+        instance = self._makeOne(options, config)
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(options.pipes_closed, None)
+        self.assertEqual(options.pgrp_set, True)
+        self.assertEqual(len(options.duped), 3)
+        self.assertEqual(len(options.fds_closed), options.minfds - 3)
+        self.assertEqual(options.written,
+                         {2: ["couldn't exec /good/filename: EPERM\n"]})
+        self.assertEqual(options.privsdropped, None)
+        self.assertEqual(options._exitcode, 127)
+
+    def test_spawn_as_child_execv_fail_runtime_error(self):
+        options = DummyOptions()
+        options.forkpid = 0
+        options.execv_error = 2
+        config = DummyPConfig('good', '/good/filename')
+        instance = self._makeOne(options, config)
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(options.pipes_closed, None)
+        self.assertEqual(options.pgrp_set, True)
+        self.assertEqual(len(options.duped), 3)
+        self.assertEqual(len(options.fds_closed), options.minfds - 3)
+        self.assertEqual(len(options.written), 1)
+        self.failUnless(options.written[2][0].startswith(
+         "couldn't exec /good/filename: exceptions.RuntimeError, 2: "
+         "file: test.py line:"))
+        self.assertEqual(options.privsdropped, None)
+        self.assertEqual(options._exitcode, 127)
+
+    def dont_test_spawn_and_kill(self):
+        # this is a functional test
         try:
             called = 0
             def foo(*args):
@@ -1842,6 +1966,10 @@ class DummyLogger:
 class DummyOptions:
 
     TRACE = 5
+    make_pipes_error = None
+    fork_error = None
+    execv_error = None
+    minfds = 5
 
     def __init__(self):
         self.identifier = 'supervisor'
@@ -1873,6 +2001,16 @@ class DummyOptions:
         self.waitpid_return = None, None
         self.kills = {}
         self.signal = None
+        self.pipes_closed = None
+        self.forkpid = 0
+        self.pgrp_set = None
+        self.duped = {}
+        self.written = {}
+        self.fds_closed = []
+        self._exitcode = None
+        self.execv_args = None
+        self.setuid_msg = None
+        self.privsdropped = None
 
     def getLogger(self, *args):
         logger = DummyLogger()
@@ -1929,6 +2067,63 @@ class DummyOptions:
 
     def kill(self, pid, sig):
         self.kills[pid] = sig
+
+    def stat(self, filename):
+        return os.stat(filename)
+
+    def get_path(self):
+        return ["/bin", "/usr/bin", "/usr/local/bin"]
+
+    def check_execv_args(self, filename, argv, st):
+        if filename == '/bad/filename':
+            return 'bad filename'
+        return None
+
+    def make_pipes(self):
+        if self.make_pipes_error:
+            raise OSError(self.make_pipes_error)
+        pipes = {}
+        pipes['child_stdin'], pipes['stdin'] = (3, 4)
+        pipes['stdout'], pipes['child_stdout'] = (5, 6)
+        pipes['stderr'], pipes['child_stderr'] = (7, 8)
+        return pipes
+
+    def fork(self):
+        if self.fork_error:
+            raise OSError(self.fork_error)
+        return self.forkpid
+
+    def close_fd(self, fd):
+        self.fds_closed.append(fd)
+
+    def close_pipes(self, pipes):
+        self.pipes_closed = pipes
+
+    def setpgrp(self):
+        self.pgrp_set = True
+
+    def dup2(self, frm, to):
+        self.duped[frm] = to
+
+    def write(self, fd, data):
+        old_data = self.written.setdefault(fd, [])
+        old_data.append(data)
+
+    def _exit(self, code):
+        self._exitcode = code
+
+    def execv(self, filename, argv):
+        if self.execv_error:
+            if self.execv_error == 1:
+                raise OSError(self.execv_error)
+            else:
+                raise RuntimeError(self.execv_error)
+        self.execv_args = (filename, argv)
+
+    def dropPrivileges(self, uid):
+        if self.setuid_msg:
+            return self.setuid_msg
+        self.privsdropped = uid
 
 class DummyClientOptions:
     def __init__(self):

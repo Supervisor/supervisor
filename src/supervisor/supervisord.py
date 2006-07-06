@@ -51,11 +51,7 @@ import signal
 import asyncore
 import traceback
 import StringIO
-import stat
 import shlex
-
-from fcntl import fcntl
-from fcntl import F_SETFL, F_GETFL
 
 from options import ServerOptions
 from options import decode_wait_status
@@ -147,12 +143,12 @@ class Subprocess:
         self.drain_stderr()
 
     def drain_stderr(self, *ignored):
-        output = _readfd(self.pipes['stderr'])
+        output = self.options.readfd(self.pipes['stderr'])
         if self.config.log_stderr:
             self.logbuffer += output
 
     def drain_stdout(self, *ignored):
-        output = _readfd(self.pipes['stdout'])
+        output = self.options.readfd(self.pipes['stdout'])
         self.logbuffer += output
 
     def get_pipe_drains(self):
@@ -172,64 +168,23 @@ class Subprocess:
         if "/" in program:
             filename = program
             try:
-                st = os.stat(filename)
+                st = self.options.stat(filename)
                 return filename, commandargs, st
             except OSError:
                 return filename, commandargs, None
             
         else:
-            path = get_path()
+            path = self.options.get_path()
             filename = None
             st = None
             for dir in path:
                 filename = os.path.join(dir, program)
                 try:
-                    st = os.stat(filename)
+                    st = self.options.stat(filename)
                     return filename, commandargs, st
                 except OSError:
                     continue
             return None, commandargs, None
-
-    def check_execv_args(self, filename, argv, st):
-        msg = None
-        
-        if st is None:
-            msg = "can't find command %r" % filename
-
-        elif stat.S_ISDIR(st[stat.ST_MODE]):
-            msg = "command at %r is a directory" % filename
-
-        elif not (stat.S_IMODE(st[stat.ST_MODE]) & 0111):
-            # not executable
-            msg = "command at %r is not executable" % filename
-
-        elif not os.access(filename, os.X_OK):
-            msg = "no permission to run command %r" % filename
-
-        return msg
-
-    def make_pipes(self):
-        """ Create pipes for parent to child stdin/stdout/stderr
-        communications.  Open fd in nonblocking mode so we can read them
-        in the mainloop without blocking """
-        pipes = {}
-        try:
-            pipes['child_stdin'], pipes['stdin'] = os.pipe()
-            pipes['stdout'], pipes['child_stdout'] = os.pipe()
-            pipes['stderr'], pipes['child_stderr'] = os.pipe()
-            for fd in (pipes['stdout'], pipes['stderr'], pipes['stdin']):
-                fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | os.O_NDELAY)
-            return pipes
-        except OSError:
-            self.close_pipes(pipes)
-            raise
-
-    def close_pipes(self, pipes):
-        for fd in pipes.values():
-            try:
-                os.close(fd)
-            except:
-                pass
 
     def record_spawnerr(self, msg):
         self.spawnerr = msg
@@ -258,7 +213,7 @@ class Subprocess:
         self.laststart = time.time()
 
         filename, argv, st = self.get_execv_args()
-        fail_msg = self.check_execv_args(filename, argv, st)
+        fail_msg = self.options.check_execv_args(filename, argv, st)
         if fail_msg is not None:
             self.record_spawnerr(fail_msg)
             return
@@ -266,37 +221,38 @@ class Subprocess:
         pname = self.config.name
 
         try:
-            pipes = self.make_pipes()
+            pipes = self.options.make_pipes()
         except OSError, why:
-            if why[0] == errno.EMFILE:
+            code = why[0]
+            if code == errno.EMFILE:
                 # too many file descriptors open
                 msg = 'too many open files to spawn %r' % pname
             else:
-                msg = 'unknown error: %s' % str(why)
+                msg = 'unknown error: %s' % errno.errorcode.get(code, code)
             self.record_spawnerr(msg)
             return
 
         self.pipes = pipes
 
         try:
-            pid = os.fork()
+            pid = self.options.fork()
         except OSError, why:
-            if why[0] == errno.EAGAIN:
+            code = why[0]
+            if code == errno.EAGAIN:
                 # process table full
-                msg  = 'Too many processes in process table for %r' % pname
+                msg  = 'Too many processes in process table to spawn %r' % pname
             else:
-                msg = 'unknown error: %s' % str(why)
+                msg = 'unknown error: %s' % errno.errorcode.get(code, code)
 
             self.record_spawnerr(msg)
-            self.close_pipes(self.pipes)
+            self.options.close_pipes(self.pipes)
             return
 
         if pid != 0:
             # Parent
             self.pid = pid
-            os.close(self.pipes['child_stdin'])
-            os.close(self.pipes['child_stdout'])
-            os.close(self.pipes['child_stderr'])
+            for fdname in ('child_stdin', 'child_stdout', 'child_stderr'):
+                self.options.close_fd(pipes[fdname])
             self.options.logger.info('spawned: %r with pid %s' % (pname, pid))
             self.spawnerr = None
             self.do_backoff()
@@ -314,30 +270,33 @@ class Subprocess:
                 # the terminal window running supervisord is pressed.
                 # Presumably it also prevents HUP, etc received by
                 # supervisord from being sent to children.
-                os.setpgrp()
-                os.dup2(pipes['child_stdin'], 0)
-                os.dup2(pipes['child_stdout'], 1)
-                os.dup2(pipes['child_stderr'], 2)
+                self.options.setpgrp()
+                self.options.dup2(pipes['child_stdin'], 0)
+                self.options.dup2(pipes['child_stdout'], 1)
+                self.options.dup2(pipes['child_stderr'], 2)
                 for i in range(3, self.options.minfds):
-                    try:
-                        os.close(i)
-                    except:
-                        pass
+                    self.options.close_fd(i)
+                # sending to fd 2 will put this output in the log(s)
+                msg = self.set_uid()
+                if msg:
+                    self.options.write(
+                        2, "%s: error trying to setuid to %s!\n" %
+                        (pname, self.config.uid)
+                        )
+                    self.options.write(2, "%s: %s\n" % (pname, msg))
                 try:
-                    # sending to fd 2 will put this output in the log(s)
-                    msg = self.set_uid()
-                    if msg:
-                        os.write(2, "%s: error trying to setuid to %s!\n" %
-                                 (pname, self.config.uid))
-                        os.write(2, "%s: %s\n" % (pname, msg))
-                    os.execv(filename, argv)
-                except OSError, err:
-                    os.write(2, "couldn't exec %s: %s\n" % (argv[0],
-                                                            err.strerror))
+                    self.options.execv(filename, argv)
+                except OSError, why:
+                    code = why[0]
+                    self.options.write(2, "couldn't exec %s: %s\n" % (
+                        argv[0], errno.errorcode.get(code, code)))
                 except:
-                    os.write(2, "couldn't exec %s\n" % argv[0])
+                    (file, fun, line), t,v,tbinfo = asyncore.compact_traceback()
+                    error = '%s, %s: file: %s line: %s' % (t, v, file, line)
+                    self.options.write(2, "couldn't exec %s: %s\n" % (filename,
+                                                                      error))
             finally:
-                os._exit(127)
+                self.options._exit(127)
 
     def stop(self):
         """ Administrative stop """
@@ -681,44 +640,17 @@ class Supervisor:
                 self.mood = 0
             elif sig == signal.SIGUSR2:
                 self.options.logger.info(
-                    'received %s indicating log reopen request' %
-                    signame(sig))
-                self.logreopen()
+                    'received %s indicating log reopen request' % signame(sig))
+                self.options.reopenlogs()
+                for process in self.processes.values():
+                    process.reopenlogs()
             else:
                 self.options.logger.debug('received %s' % signame(sig))
-        
-    def logreopen(self):
-        self.options.logger.info('supervisord logreopen')
-        for handler in self.options.logger.handlers:
-            if hasattr(handler, 'reopen'):
-                handler.reopen()
-
-        for process in self.processes.values():
-            process.reopenlogs()
         
     def get_state(self):
         if self.mood <= 0:
             return SupervisorStates.SHUTDOWN
         return SupervisorStates.ACTIVE
-
-
-def _readfd(fd):
-    try:
-        data = os.read(fd, 2 << 16) # 128K
-    except OSError, why:
-        if why[0] not in (errno.EWOULDBLOCK, errno.EBADF):
-            raise
-        data = ''
-    return data
-
-def get_path():
-    """Return a list corresponding to $PATH, or a default."""
-    path = ["/bin", "/usr/bin", "/usr/local/bin"]
-    if os.environ.has_key("PATH"):
-        p = os.environ["PATH"]
-        if p:
-            path = p.split(os.pathsep)
-    return path
 
 # Main program
 def main(test=False):
