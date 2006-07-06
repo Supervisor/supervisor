@@ -359,7 +359,7 @@ Configuration File '[program:x]' Section Settings
 
   'logfile' -- Keep process output as determined by log_stdout and
   log_stderr in this file.  NOTE: if both log_stderr and log_stdout
-  are true, the output from child stderr and stdout will be
+  are true, chunks of output from child stderr and stdout will be
   intermingled more or less randomly in the log.  If this is unset or
   set to 'AUTO', supervisor will automatically choose a file location.
   If this is set to 'NONE', supervisord will create no log file.  AUTO
