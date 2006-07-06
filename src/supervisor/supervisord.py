@@ -190,7 +190,7 @@ class Subprocess:
     def record_spawnerr(self, msg):
         self.spawnerr = msg
         self.options.logger.critical("spawnerr: %s" % msg)
-        self.do_backoff()
+        self.do_backoff(self.config.startretrysecs)
         self.governor()
 
     def spawn(self):
@@ -255,7 +255,7 @@ class Subprocess:
                 self.options.close_fd(pipes[fdname])
             self.options.logger.info('spawned: %r with pid %s' % (pname, pid))
             self.spawnerr = None
-            self.do_backoff()
+            self.do_backoff(self.config.startretrysecs)
             self.options.pidhistory[pid] = self
             return pid
         
@@ -302,7 +302,7 @@ class Subprocess:
         """ Administrative stop """
         self.administrative_stop = 1
         self.reportstatusmsg = None
-        self.do_backoff()
+        self.do_backoff(self.config.stopwaitsecs)
         return self.kill(self.config.stopsignal)
 
     def kill(self, sig):
@@ -399,8 +399,8 @@ class Subprocess:
             self.exitstatus = es
         self.reportstatusmsg = msg
 
-    def do_backoff(self):
-        self.delay = time.time() + self.options.backofflimit
+    def do_backoff(self, seconds):
+        self.delay = time.time() + seconds
 
     def set_uid(self):
         if self.config.uid is None:
@@ -611,7 +611,7 @@ class Supervisor:
                     self.options.logger.info(
                         'killing %r (%s) with SIGKILL' % (proc.config.name,
                                                           proc.pid))
-                    proc.do_backoff()
+                    proc.do_backoff(proc.config.stopwaitsecs)
                     proc.kill(signal.SIGKILL)
         return delayprocs
 

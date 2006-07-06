@@ -1344,8 +1344,8 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
         instance = self._makeOne(options, config)
         now = time.time()
-        instance.do_backoff()
-        self.failUnless(instance.delay >= now + options.backofflimit)
+        instance.do_backoff(3)
+        self.failUnless(instance.delay >= now + 3)
 
     def test_set_uid_no_uid(self):
         options = DummyOptions()
@@ -2012,7 +2012,7 @@ class DummyProcess:
         self.childlog = DummyLogger()
         self.logsremoved = False
         self.stop_called = False
-        self.backoff_done = False
+        self.backoff_secs = None
         self.spawned = False
         self.state = state
         self.error_at_clear = False
@@ -2039,8 +2039,8 @@ class DummyProcess:
     def kill(self, signal):
         self.killed_with = signal
 
-    def do_backoff(self):
-        self.backoff_done = True
+    def do_backoff(self, secs):
+        self.backoff_secs = secs
 
     def spawn(self):
         self.spawned = True
@@ -2066,7 +2066,8 @@ class DummyProcess:
 
 class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,
-                 autorestart=True, uid=None, logfile=None, logfile_backups=0,
+                 autorestart=True, startretrysecs=10,
+                 uid=None, logfile=None, logfile_backups=0,
                  logfile_maxbytes=0, log_stderr=False,
                  stopsignal=signal.SIGTERM, stopwaitsecs=10,
                  exitcodes=[0,2]):
@@ -2075,6 +2076,7 @@ class DummyPConfig:
         self.priority = priority
         self.autostart = autostart
         self.autorestart = autorestart
+        self.startretrysecs = startretrysecs
         self.uid = uid
         self.logfile = logfile
         self.logfile_backups = logfile_backups
