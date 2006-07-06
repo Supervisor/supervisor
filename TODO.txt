@@ -5,8 +5,6 @@
 
    - provide "restart all" functionality
 
-- Make logging of stdout optional on a per-process basis (but default yes).
-
 - Rewrite the delay/backoff stuff so humans can understand it.
 
 - Remove backofflimit.

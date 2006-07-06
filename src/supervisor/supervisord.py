@@ -139,7 +139,8 @@ class Subprocess:
 
     def drain_stdout(self, *ignored):
         output = self.options.readfd(self.pipes['stdout'])
-        self.logbuffer += output
+        if self.config.log_stdout:
+            self.logbuffer += output
 
     def drain_stderr(self, *ignored):
         output = self.options.readfd(self.pipes['stderr'])

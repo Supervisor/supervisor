@@ -295,6 +295,7 @@ Configuration File '[program:x]' Section Settings
     stopsignal=TERM
     stopwaitsecs=10
     user=nobody
+    log_stdout=true
     log_stderr=false
     logfile=/tmp/programname.log
     logfile_maxbytes=10MB
@@ -350,14 +351,20 @@ Configuration File '[program:x]' Section Settings
   is not running as root, this option has no effect.  Defaut: do not
   switch users.
 
-  'log_stderr' -- Send process stderr output to the process logfile
-  (intermingled with stdout output).  Default: false.
+  'log_stdout' -- Send process stdout output to the process logfile.
+  Default: true.
 
-  'logfile' -- Keep process stdout (and stderr if log_stderr is true)
-  in this file.  If this is unset or set to 'AUTO', supervisor will
-  automatically choose a file location.  Set this to NONE to create no
-  log file.  AUTO log files and their backups will be deleted when
-  supervisord restarts.  Default: AUTO.
+  'log_stderr' -- Send process stderr output to the process logfile.
+  Default: false.
+
+  'logfile' -- Keep process output as determined by log_stdout and
+  log_stderr in this file.  NOTE: if both log_stderr and log_stdout
+  are true, the output from child stderr and stdout will be
+  intermingled more or less randomly in the log.  If this is unset or
+  set to 'AUTO', supervisor will automatically choose a file location.
+  If this is set to 'NONE', supervisord will create no log file.  AUTO
+  log files and their backups will be deleted when supervisord
+  restarts.  Default: AUTO.
 
   'logfile_maxbytes' -- The maximum number of bytes that may be
   consumed by the process log file before it is rotated (suffix

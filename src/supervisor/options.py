@@ -715,6 +715,8 @@ class ServerOptions(Options):
                 exitcodes = datatypes.list_of_ints(exitcodes)
             except:
                 raise ValueError("exitcodes must be a list of ints e.g. 1,2")
+            log_stdout = config.saneget(section, 'log_stdout', 'true')
+            log_stdout = datatypes.boolean(log_stdout)
             log_stderr = config.saneget(section, 'log_stderr', 'false')
             log_stderr = datatypes.boolean(log_stderr)
             pconfig = ProcessConfig(name=name, command=command,
@@ -729,6 +731,7 @@ class ServerOptions(Options):
                                     stopsignal=stopsignal,
                                     stopwaitsecs=stopwaitsecs,
                                     exitcodes=exitcodes,
+                                    log_stdout=log_stdout,
                                     log_stderr=log_stderr)
             programs.append(pconfig)
 
@@ -1229,7 +1232,7 @@ class ProcessConfig:
     def __init__(self, name, command, priority, autostart, autorestart,
                  startretrysecs, uid, logfile, logfile_backups,
                  logfile_maxbytes, stopsignal, stopwaitsecs, exitcodes,
-                 log_stderr):
+                 log_stdout, log_stderr):
         self.name = name
         self.command = command
         self.priority = priority
@@ -1243,6 +1246,7 @@ class ProcessConfig:
         self.stopsignal = stopsignal
         self.stopwaitsecs = stopwaitsecs
         self.exitcodes = exitcodes
+        self.log_stdout = log_stdout
         self.log_stderr = log_stderr
 
     def __cmp__(self, other):

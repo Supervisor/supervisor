@@ -2068,7 +2068,7 @@ class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,
                  autorestart=True, startretrysecs=10,
                  uid=None, logfile=None, logfile_backups=0,
-                 logfile_maxbytes=0, log_stderr=False,
+                 logfile_maxbytes=0, log_stdout=True, log_stderr=False,
                  stopsignal=signal.SIGTERM, stopwaitsecs=10,
                  exitcodes=[0,2]):
         self.name = name
@@ -2081,6 +2081,7 @@ class DummyPConfig:
         self.logfile = logfile
         self.logfile_backups = logfile_backups
         self.logfile_maxbytes = logfile_maxbytes
+        self.log_stdout = log_stdout
         self.log_stderr = log_stderr
         self.stopsignal = stopsignal
         self.stopwaitsecs = stopwaitsecs
