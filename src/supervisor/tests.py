@@ -903,7 +903,7 @@ class SubprocessTests(unittest.TestCase):
         instance = self._makeOne(options, config)
         self.assertEqual(instance.options, options)
         self.assertEqual(instance.config, config)
-        self.assertEqual(instance.beenstarted, False)
+        self.assertEqual(instance.laststart, 0)
         self.assertEqual(instance.childlog.args, (config.logfile, 10,
                                                   '%(message)s', 0, 0))
         self.assertEqual(instance.pid, 0)
@@ -1411,11 +1411,11 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.get_state(), ProcessStates.EXITED)
         
         instance = self._makeOne(options, config)
-        instance.options.beenstarted = False
+        instance.options.laststart = 0
         self.assertEqual(instance.get_state(), ProcessStates.NOTSTARTED)
 
         instance = self._makeOne(options, config)
-        instance.beenstarted = True
+        instance.laststart = 1
         self.assertEqual(instance.get_state(), ProcessStates.UNKNOWN)
 
 class XMLRPCMarshallingTests(unittest.TestCase):
@@ -1988,7 +1988,6 @@ class TailFProducerTests(unittest.TestCase):
 class DummyProcess:
     # Initial state; overridden by instance variables
     pid = 0 # Subprocess pid; 0 when not running
-    beenstarted = False
     laststart = 0 # Last time the subprocess was started; 0 if never
     laststop = 0  # Last time the subprocess was stopped; 0 if never
     delay = 0 # If nonzero, delay starting or killing until this time

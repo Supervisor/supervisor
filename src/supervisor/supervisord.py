@@ -89,7 +89,6 @@ class Subprocess:
     # Initial state; overridden by instance variables
 
     pid = 0 # Subprocess pid; 0 when not running
-    beenstarted = False # true if has been started at least once
     laststart = 0 # Last time the subprocess was started; 0 if never
     laststop = 0  # Last time the subprocess was stopped; 0 if never
     delay = 0 # If nonzero, delay starting or killing until this time
@@ -204,7 +203,6 @@ class Subprocess:
             self.options.logger.critical(msg)
             return
 
-        self.beenstarted = True
         self.killing = 0
         self.spawnerr = None
         self.exitstatus = None
@@ -430,7 +428,7 @@ class Subprocess:
                 return ProcessStates.KILLED
             elif self.exitstatus is not None:
                 return ProcessStates.EXITED
-            elif not self.beenstarted:
+            elif not self.laststart:
                 return ProcessStates.NOTSTARTED
             else:
                 return ProcessStates.UNKNOWN
