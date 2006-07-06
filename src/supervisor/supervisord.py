@@ -374,7 +374,7 @@ class Subprocess:
         return None
 
     def governor(self):
-        # Back off if respawning too frequently
+        """ Back off if respawning too frequently """
         now = time.time()
         if not self.laststart:
             pass
