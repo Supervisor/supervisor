@@ -9,7 +9,7 @@
 
 - Rewrite the delay/backoff stuff so humans can understand it.
 
-- Make 'startretrysecs' and 'stopwaitsecs' "real".
+- Remove backofflimit.
 
 - If a process dies with an expected exit code but keeps dying, it
   will restart forever.
