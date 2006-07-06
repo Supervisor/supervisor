@@ -1242,6 +1242,20 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options._exitcode, 127)
 
+    def test_spawn_as_parent(self):
+        options = DummyOptions()
+        options.forkpid = 10
+        config = DummyPConfig('good', '/good/filename')
+        instance = self._makeOne(options, config)
+        result = instance.spawn()
+        self.assertEqual(result, 10)
+        self.assertEqual(options.pipes_closed, None)
+        self.assertEqual(len(options.fds_closed), 3)
+        self.assertEqual(options.logger.data[0], "spawned: 'good' with pid 10")
+        self.assertEqual(instance.spawnerr, None)
+        self.failUnless(instance.delay)
+        self.assertEqual(instance.options.pidhistory[10], instance)
+
     def dont_test_spawn_and_kill(self):
         # this is a functional test
         try:
