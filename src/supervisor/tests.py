@@ -892,14 +892,9 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.killing, 0)
         self.assertEqual(instance.backoff, 0)
         self.assertEqual(instance.waitstatus, None)
-        self.assertEqual(instance.stdout, None)
-        self.assertEqual(instance.stdin, None)
-        self.assertEqual(instance.stderr, None)
-        self.assertEqual(instance.stdoutfd, None)
-        self.assertEqual(instance.stdinfd, None)
-        self.assertEqual(instance.stderrfd, None)
+        self.assertEqual(instance.pipes, {})
         self.assertEqual(instance.spawnerr, None)
-        self.assertEqual(instance.writebuffer, '')
+        self.assertEqual(instance.logbuffer, '')
 
     def test_removelogs(self):
         options = DummyOptions()
@@ -939,11 +934,11 @@ class SubprocessTests(unittest.TestCase):
         instance.waitstatus = (123, 1) # pid, waitstatus
         instance.options.pidhistory[123] = instance
         instance.killing = 1
-        instance.stdout = 'will be replaced'
+        instance.pipes = 'will be replaced'
         instance.reportstatus()
         self.assertEqual(instance.killing, 0)
         self.assertEqual(instance.pid, 0)
-        self.assertEqual(instance.stdout, None)
+        self.assertEqual(instance.pipes, {})
         self.assertEqual(options.logger.data[1], 'killed: notthere '
                          '(terminated by SIGHUP)')
         self.assertEqual(instance.exitstatus, -1)
@@ -977,20 +972,13 @@ class SubprocessTests(unittest.TestCase):
 
         self.assertEqual(L, [instance, instance1, instance2])
 
-    def test_log(self):
-        options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
-        instance = self._makeOne(options, config)
-        instance.log('foo')
-        self.assertEqual(instance.childlog.data, ['foo'])
-
-    def test_log_writebuffer(self):
+    def test_log_output(self):
         # stdout goes to the process log and the main log
         options = DummyOptions()
         config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
         instance = self._makeOne(options, config)
-        instance.writebuffer = 'foo'
-        instance.log_writebuffer()
+        instance.logbuffer = 'foo'
+        instance.log_output()
         self.assertEqual(instance.childlog.data, ['foo'])
         self.assertEqual(options.logger.data, [5, 'notthere output:\nfoo'])
 
@@ -1144,12 +1132,7 @@ class SubprocessTests(unittest.TestCase):
             result = instance.spawn()
             msg = options.logger.data[0]
             self.failUnless(msg.startswith("spawned: 'spew' with pid"))
-            self.failUnless(instance.stdin)
-            self.failUnless(instance.stdout)
-            self.failUnless(instance.stderr)
-            self.failUnless(instance.stdinfd)
-            self.failUnless(instance.stdoutfd)
-            self.failUnless(instance.stderrfd)
+            self.assertEqual(len(instance.pipes), 6)
             self.failUnless(instance.pid)
             self.failUnlessEqual(instance.pid, result)
             origpid = instance.pid
@@ -1757,8 +1740,7 @@ class DummyProcess:
     backoff = 0 # backoff counter (to backofflimit)
     waitstatus = None
     exitstatus = None
-    stdin = stderr = stdout = None
-    stdinfd = stderrfd = stdoutfd = None
+    pipes = None
     childlog = None # the current logger 
     spawnerr = None
     writebuffer = '' # buffer of characters to send to child process' stdin
@@ -1780,6 +1762,7 @@ class DummyProcess:
         self.drained = False
         self.writebuffer = ''
         self.writebuffer_logged = ''
+        self.pipes = {}
 
     def removelogs(self):
         if self.error_at_clear:
@@ -1806,7 +1789,7 @@ class DummyProcess:
     def drain(self):
         self.drained = True
 
-    def fd_drains(self):
+    def get_pipe_drains(self):
         return []
 
     def reportstatus(self):
@@ -1818,7 +1801,7 @@ class DummyProcess:
     def readable_fds(self):
         return []
 
-    def log_writebuffer(self):
+    def log_output(self):
         self.writebuffer_logged = self.writebuffer_logged + self.writebuffer
         self.writebuffer = ''
 
