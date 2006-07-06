@@ -191,7 +191,7 @@ class Subprocess:
     def record_spawnerr(self, msg):
         self.spawnerr = msg
         self.options.logger.critical("spawnerr: %s" % msg)
-        self.do_backoff(self.config.startretrysecs)
+        self.do_backoff(self.config.startsecs)
         self.governor()
 
     def spawn(self):
@@ -256,7 +256,7 @@ class Subprocess:
                 self.options.close_fd(pipes[fdname])
             self.options.logger.info('spawned: %r with pid %s' % (pname, pid))
             self.spawnerr = None
-            self.do_backoff(self.config.startretrysecs)
+            self.do_backoff(self.config.startsecs)
             self.options.pidhistory[pid] = self
             return pid
         
@@ -339,8 +339,12 @@ class Subprocess:
         """ Back off if respawning too frequently """
         now = time.time()
         if not self.laststart:
-            pass
-        elif now - self.laststart < self.options.backofflimit:
+            # Reset the backoff timer
+            self.options.logger.debug(
+                'resetting backoff and delay for %s' % self.config.name)
+            self.backoff = 0
+            self.delay = 0
+        elif now - self.laststart < self.config.startsecs:
             # Exited rather quickly; slow down the restarts
             self.backoff = self.backoff + 1
             if self.backoff >= self.options.backofflimit:
@@ -360,12 +364,6 @@ class Subprocess:
                 self.config.name,
                 self.backoff))
             self.delay = now + self.backoff
-        else:
-            # Reset the backoff timer
-            self.options.logger.debug(
-                'resetting backoff and delay for %s' % self.config.name)
-            self.backoff = 0
-            self.delay = 0
 
     def reportstatus(self):
         self.options.logger.debug('reportstatus called')

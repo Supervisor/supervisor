@@ -233,9 +233,6 @@ Configuration File '[supervisord]' Section Settings
   'minprocs' -- The minimum nymber of process descriptors that must be
   available before supervisord will start successfully.  Default: 200.
 
-  'backofflimit' -- The number of times that supervisord will attempt
-  to restart a failing program before giving up.  Default: 3.
-
   'nocleanup' -- prevent supervisord from clearing old "AUTO" log
   files at startup time.  Default: false.
 
@@ -290,7 +287,8 @@ Configuration File '[program:x]' Section Settings
     priority=1
     autostart=true
     autorestart=true
-    startretrysecs=10
+    startsecs=10
+    startretries=3
     exitcodes=0,2
     stopsignal=TERM
     stopwaitsecs=10
@@ -314,27 +312,39 @@ Configuration File '[program:x]' Section Settings
   in them to pass to the program, e.g. ('/path/to/program/name -p "foo
   bar"').
 
-  'priority' -- the relative 'priority' of the program in the start
-  and shutdown ordering.  Lower priorities indicate programs that
-  start first and shut down last at startup and when aggregate
-  commands are used in various clients.  Higher priorities indicate
-  programs that start last and shut down first.  Default: 999.
+  'priority' -- the relative priority of the program in the start and
+  shutdown ordering.  Lower priorities indicate programs that start
+  first and shut down last at startup and when aggregate commands are
+  used in various clients (e.g. "start all"/"stop all").  Higher
+  priorities indicate programs that start last and shut down first.
+  Default: 999.
 
   'autostart' -- If true, this program will start automatically when
   supervisord is started.  Default: true.
 
   'autorestart' -- If true, when the program exits "unexpectedly",
   supervisor will restart it automatically.  "unexpected" exits are
-  those which aren't as a result of a program exit with an "expected"
-  exit code.  Default: true.
+  those which happen when the program exits with an "unexpected" exit
+  code (see 'exitcodes').  Default: true.
 
-  'startretrysecs' -- The total number of seconds spent attempting to
-  continually retry startup of the program due to a startup failure.
-  After this number of seconds, supervisord gives up and puts the
-  process into an ERROR state.  Default: 10.
+  'startsecs' -- The total number of seconds which supervisord will
+  spend attempting to restart a program which continually fails at
+  spawn time.  After this number of seconds of continued failure,
+  supervisord gives up and puts the process into an ERROR state.  This
+  limit may never be reached if the program fails more than
+  'startretries' times before 'startsecs' has elapsed.  Default: 10.
+
+  'startretries' -- The number of serial failure attempts that
+  supervisord will allow when attempting to start the program before
+  giving up and puting the process into an ERROR state.  This limit
+  may never be reached if the program requires more than 'startsecs'
+  seconds to retry this number of times.  Default: 3.
 
   'exitcodes' -- The list of 'expected' exit codes for this program.
-  Default: 0,2.
+  A program is considered 'failed' (and will be restarted, if
+  autorestart is set true) if it exits with an exit code which is not
+  in this list and a stop of the program has not been explicitly
+  requested.  Default: 0,2.
 
   'stopsignal' -- The signal used to kill the program when a stop is
   requested.  This can be any of TERM, HUP, INT, QUIT, KILL, USR1, or
@@ -376,14 +386,6 @@ Configuration File '[program:x]' Section Settings
   from process log file rotation.  Set this to 0 to indicate an
   unlimited number of backups.  Default: 10.
 
-Signals
-
-  Killing supervisord with SIGHUP will stop all processes, reload the
-  configuration from the config file, and restart all processes.
-
-  Killing supervisord with SIGUSR2 will rotate the supervisord and
-  child stdout log files.
-
 Examples of Program Configurations
 
   Postgres 8.14::
@@ -411,6 +413,40 @@ Examples of Program Configurations
 
     [program:slapd]
     command=/path/to/slapd -f /path/to/slapd.conf -h ldap://0.0.0.0:8888
+
+Process States
+
+  A process controlled by supervisord will be in one of the below
+  states at any given time.  You may see these state names in various
+  user interface elements.
+
+  RUNNING  (0)  -- The process is running.
+
+  STOPPING (1) -- The process is stopping due to a stop request.
+
+  STOPPED  (2) -- The process has been stopped due to a stop request.
+
+  KILLED = (3) -- The process was killed by a signal and the signal was
+                  unhandled by the process.
+
+  NOTSTARTED (4) -- The process has not yet been started during the
+                    lifetime of supervisord.
+
+  EXITED  (5) -- The process exited with an exit code.
+
+  STARTING  (6) -- The process is starting due to a start request.
+
+  ERROR  (7) -- The process could not be started due to a spawn error.
+
+  UNKNOWN  (10) -- The process is in an unknown state.
+
+Signals
+
+  Killing supervisord with SIGHUP will stop all processes, reload the
+  configuration from the config file, and restart all processes.
+
+  Killing supervisord with SIGUSR2 will rotate the supervisord and
+  child log files.
 
 Access Control
 

@@ -689,8 +689,8 @@ class ServerOptions(Options):
             autostart = datatypes.boolean(autostart)
             autorestart = config.saneget(section, 'autorestart', 'true')
             autorestart = datatypes.boolean(autorestart)
-            startretrysecs = config.saneget(section, 'startretrysecs', 10)
-            startretrysecs = datatypes.integer(startretrysecs)
+            startsecs = config.saneget(section, 'startsecs', 10)
+            startsecs = datatypes.integer(startsecs)
             uid = config.saneget(section, 'user', None)
             if uid is not None:
                 uid = datatypes.name_to_uid(uid)
@@ -723,7 +723,7 @@ class ServerOptions(Options):
                                     priority=priority,
                                     autostart=autostart,
                                     autorestart=autorestart,
-                                    startretrysecs=startretrysecs,
+                                    startsecs=startsecs,
                                     uid=uid,
                                     logfile=logfile,
                                     logfile_backups=logfile_backups,
@@ -1230,7 +1230,7 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
 
 class ProcessConfig:
     def __init__(self, name, command, priority, autostart, autorestart,
-                 startretrysecs, uid, logfile, logfile_backups,
+                 startsecs, uid, logfile, logfile_backups,
                  logfile_maxbytes, stopsignal, stopwaitsecs, exitcodes,
                  log_stdout, log_stderr):
         self.name = name
@@ -1238,7 +1238,7 @@ class ProcessConfig:
         self.priority = priority
         self.autostart = autostart
         self.autorestart = autorestart
-        self.startretrysecs = startretrysecs
+        self.startsecs = startsecs
         self.uid = uid
         self.logfile = logfile
         self.logfile_backups = logfile_backups

@@ -70,7 +70,7 @@ user=root
 logfile=/tmp/cat.log
 stopsignal=KILL
 stopwaitsecs=5
-startretrysecs=5
+startsecs=5
 
 [program:cat2]
 command=/bin/cat
@@ -120,7 +120,7 @@ exitcodes=0,1,127
         self.assertEqual(cat.priority, 1)
         self.assertEqual(cat.autostart, True)
         self.assertEqual(cat.autorestart, True)
-        self.assertEqual(cat.startretrysecs, 5)
+        self.assertEqual(cat.startsecs, 5)
         self.assertEqual(cat.uid, 0)
         self.assertEqual(cat.logfile, '/tmp/cat.log')
         self.assertEqual(cat.stopsignal, signal.SIGKILL)
@@ -1053,6 +1053,7 @@ class SubprocessTests(unittest.TestCase):
         options = DummyOptions()
         config = DummyPConfig('test', '/test')
         instance = self._makeOne(options, config)
+        instance.laststart = 100
         instance.record_spawnerr('foo')
         self.assertEqual(instance.spawnerr, 'foo')
         self.assertEqual(options.logger.data[0], 'spawnerr: foo')
@@ -2066,7 +2067,7 @@ class DummyProcess:
 
 class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,
-                 autorestart=True, startretrysecs=10,
+                 autorestart=True, startsecs=10,
                  uid=None, logfile=None, logfile_backups=0,
                  logfile_maxbytes=0, log_stdout=True, log_stderr=False,
                  stopsignal=signal.SIGTERM, stopwaitsecs=10,
@@ -2076,7 +2077,7 @@ class DummyPConfig:
         self.priority = priority
         self.autostart = autostart
         self.autorestart = autorestart
-        self.startretrysecs = startretrysecs
+        self.startsecs = startsecs
         self.uid = uid
         self.logfile = logfile
         self.logfile_backups = logfile_backups

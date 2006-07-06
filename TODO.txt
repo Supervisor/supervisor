@@ -5,6 +5,8 @@
 
    - provide "restart all" functionality
 
+- Move 'forever' to process config.
+
 - Rewrite the delay/backoff stuff so humans can understand it.
 
 - Remove backofflimit.
