@@ -1540,10 +1540,9 @@ class SupervisordTests(unittest.TestCase):
     def test_stop_all(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig('process1', 'process1', '/bin/process1')
-        process1 = DummyProcess(options, pconfig1)
+        process1 = DummyProcess(options, pconfig1, state=ProcessStates.STOPPED)
         pconfig2 = DummyPConfig('process2', 'process2', '/bin/process2')
-        process2 = DummyProcess(options, pconfig2)
-        process2.pid = 1
+        process2 = DummyProcess(options, pconfig2, state=ProcessStates.RUNNING)
         supervisord = self._makeOne(options)
         supervisord.processes = {'killed': process1, 'error': process2}
 

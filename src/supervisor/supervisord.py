@@ -584,9 +584,11 @@ class Supervisor:
         processes = self.processes.values()
         processes.sort()
         processes.reverse() # stop in desc priority order
-        
+
         for proc in processes:
-            if proc.pid:
+            # only stop running or starting processes
+            if proc.get_state() in (ProcessStates.STARTING,
+                                    ProcessStates.RUNNING):
                 proc.stop()
 
     def handle_procs_with_waitstatus(self):
@@ -621,6 +623,7 @@ class Supervisor:
             if process is not None:
                 name = process.config.name
                 process.drain()
+                process.log_output()
                 process.waitstatus = pid, sts
                 process.killing = 0
                 process.laststop = time.time()
