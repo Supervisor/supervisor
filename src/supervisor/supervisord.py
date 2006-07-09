@@ -500,7 +500,11 @@ class Supervisor:
                 # if there are no delayed processes (we're done killing
                 # everything), it's OK to stop or reload
                 delayprocs = self.get_delay_processes()
-                if not delayprocs:
+                if delayprocs:
+                    names = [ p.config.name for p in delayprocs]
+                    namestr = ', '.join(names)
+                    self.options.logger.info('waiting for %s to die' % namestr)
+                else:
                     break
 
             try:
