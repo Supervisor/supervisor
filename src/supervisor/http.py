@@ -11,6 +11,7 @@ import string
 import socket
 import errno
 import pwd
+import urllib
 
 NOT_DONE_YET = []
 
@@ -232,6 +233,85 @@ class deferring_http_request(http_server.http_request):
                         bytes
                         )
                 )
+
+    def cgi_environment(self):
+        env = {}
+
+        # maps request some headers to environment variables.
+        # (those that don't start with 'HTTP_')
+        header2env= {'content-length'    : 'CONTENT_LENGTH',
+                     'content-type'      : 'CONTENT_TYPE',
+                     'connection'        : 'CONNECTION_TYPE'} 
+
+        workdir = os.getcwd()
+        (path, params, query, fragment) = self.split_uri()
+
+        if params:
+            path = path + params # undo medusa bug!
+
+        while path and path[0] == '/':
+            path = path[1:]
+        if '%' in path:
+            path = unquote(path)
+        if query:
+            query = query[1:]
+
+        server = self.channel.server
+        env['REQUEST_METHOD'] = self.command.upper()
+        env['SERVER_PORT'] = str(server.port)
+        env['SERVER_NAME'] = server.server_name
+        env['SERVER_SOFTWARE'] = server.SERVER_IDENT
+        env['SERVER_PROTOCOL'] = "HTTP/" + self.version
+        env['channel.creation_time'] = self.channel.creation_time
+        env['SCRIPT_NAME'] = ''
+        env['PATH_INFO'] = '/' + path
+        env['PATH_TRANSLATED'] = os.path.normpath(os.path.join(
+                workdir, env['PATH_INFO']))
+        if query:
+            env['QUERY_STRING'] = query
+        env['GATEWAY_INTERFACE'] = 'CGI/1.1'
+        env['REMOTE_ADDR'] = self.channel.addr[0]
+
+        for header in self.header:
+            key,value=header.split(":",1)
+            key=key.lower()
+            value=value.strip()
+            if header2env.has_key(key) and value:
+                env[header2env.get(key)]=value
+            else:
+                key='HTTP_%s' % ("_".join(key.split( "-"))).upper()
+                if value and not env.has_key(key):
+                    env[key]=value
+        return env
+
+    def get_server_url(self):
+        """ Functionality that medusa's http request doesn't have; set an
+        attribute named 'server_url' on the request based on the Host: header
+        """
+        default_port={'http': '80', 'https': '443'}
+        environ = self.cgi_environment()
+        if (environ.get('HTTPS') in ('on', 'ON') or
+            environ.get('SERVER_PORT_SECURE') == "1"):
+            # XXX this will currently never be true
+            protocol = 'https'
+        else:
+            protocol = 'http'
+
+        if environ.has_key('HTTP_HOST'):
+            host = environ['HTTP_HOST'].strip()
+            hostname, port = urllib.splitport(host)
+        else:
+            hostname = environ['SERVER_NAME'].strip()
+            port = environ['SERVER_PORT']
+
+        if (port is None or default_port[protocol] == port):
+            host = hostname
+        else:
+            host = hostname + ':' + port
+        server_url = '%s://%s' % (protocol, host)
+        if server_url[-1:]=='/':
+            server_url=server_url[:-1]
+        return server_url
 
 class deferring_http_channel(http_server.http_channel):
 
