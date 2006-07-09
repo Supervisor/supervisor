@@ -1114,7 +1114,7 @@ class ServerOptions(Options):
         try:
             data = os.read(fd, 2 << 16) # 128K
         except OSError, why:
-            if why[0] not in (errno.EWOULDBLOCK, errno.EBADF):
+            if why[0] not in (errno.EWOULDBLOCK, errno.EBADF, errno.EINTR):
                 raise
             data = ''
         return data
