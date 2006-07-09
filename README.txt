@@ -68,7 +68,7 @@ Supported Platforms
   5, Ubuntu 6), Mac OS X (10.4), and Solaris (10 for Intel).  It has
   been reported to work on FreeBSD.
 
-  Supervisor requires Python 2.4 or better.
+  Supervisor requires Python 2.3 or better.
 
 Installing
 
