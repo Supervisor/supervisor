@@ -123,6 +123,7 @@ class StatusView(MeldView):
             return 'statusnominal'
 
     def handle_query(self, query):
+        from supervisord import ProcessStates
         message = None
         supervisord = self.context.supervisord
 
@@ -137,6 +138,29 @@ class StatusView(MeldView):
             t = time.ctime()
             if action == 'refresh':
                 message = 'Page refreshed at %s' % t
+
+            if action in ('stopall', 'restartall'):
+                supervisord.stop_all()
+
+                processes = supervisord.processes.values()
+                while 1:
+                    running = [ p for p in processes if
+                                p.get_state() in (ProcessStates.RUNNING,
+                                                  ProcessStates.STOPPING) ]
+                    if running:
+                        # XXX busywait
+                        supervisord.give_up()
+                        supervisord.kill_undead()
+                        supervisord.reap()
+                        supervisord.handle_signal()
+                        time.sleep(.01)
+                    else:
+                        break
+                message = 'All stopped at %s' % t
+                if action == 'restartall':
+                    for process in processes:
+                        process.spawn()
+                    message = 'All restarting at %s' % t
 
             elif processname:
                 process = supervisord.processes.get(processname)
@@ -154,6 +178,8 @@ class StatusView(MeldView):
                                 supervisord.give_up()
                                 supervisord.kill_undead()
                                 supervisord.reap()
+                                supervisord.handle_signal()
+                                time.sleep(.01)
                             process.spawn()
                             message = 'Restarted %s at %s' % (processname, t)
                         else:
@@ -165,6 +191,7 @@ class StatusView(MeldView):
                         supervisord.give_up()
                         supervisord.kill_undead()
                         supervisord.reap()
+                        supervisord.handle_signal()
                         message = 'Started %s at %s' % (processname, t)
                     if action == 'clearlog':
                         process.removelogs()

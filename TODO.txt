@@ -3,15 +3,21 @@
    - present status in addition to state (e.g. spawnerr, etc, same as
      supervisorctl)
 
-   - provide "restart all" functionality
+- Rewrite RPC stuff: use ProcessStates rather than direct attribute
+  access, rename methods to lower.
 
 - Unit tests for meld classes and ui server.
 
+- Use HTTP_HOST for generated URL names in web.py.
+
 - Unit tests for log rotation.
+
+- Better remote explanation when kill_undead needs to happen from
+  supervisorctl (long blockage).
 
 - Command-line arg tests.
 
-- supervisorctl command history
+- Log logtail requests.
 
 - stop logging all RPC requests in info mode when we ship
 
