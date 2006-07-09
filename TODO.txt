@@ -5,13 +5,11 @@
 
    - provide "restart all" functionality
 
-- Long shutdown time.
-
 - Unit tests for meld classes and ui server.
 
 - Tail main log.
 
-- Test log rotation.
+- Unit tests for log rotation.
 
 - Command-line arg tests.
 

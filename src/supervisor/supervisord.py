@@ -50,6 +50,7 @@ import asyncore
 import traceback
 import StringIO
 import shlex
+import logging
 
 from options import ServerOptions
 from options import decode_wait_status
@@ -108,10 +109,16 @@ class Subprocess:
         self.config = config
         self.pipes = {}
         if config.logfile:
-            self.childlog = options.getLogger(config.logfile, 10,
+            backups = config.logfile_backups
+            maxbytes = config.logfile_maxbytes
+            # using "not not maxbytes" below is an optimization.  If
+            # maxbytes is zero, it means we're not using rotation.  The
+            # rotating logger is more expensive than the normal one.
+            self.childlog = options.getLogger(config.logfile, logging.INFO,
                                               '%(message)s',
-                                              config.logfile_backups,
-                                              config.logfile_maxbytes)
+                                              rotating=not not maxbytes,
+                                              maxbytes=maxbytes,
+                                              backups=backups)
 
     def removelogs(self):
         if self.childlog:

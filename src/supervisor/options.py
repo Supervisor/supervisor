@@ -104,19 +104,19 @@ class RotatingRawFileHandler(RawFileHandler):
         self.maxBytes = maxBytes
         self.backupCount = backupCount
 
-        def emit(self, record):
-            """
-            Emit a record.
-            
-            Output the record to the file, catering for rollover as described
-            in doRollover().
-            """
-            try:
-                if self.shouldRollover(record):
-                    self.doRollover()
-                RawFileHandler.emit(self, record)
-            except:
-                self.handleError(record)
+    def emit(self, record):
+        """
+        Emit a record.
+
+        Output the record to the file, catering for rollover as described
+        in doRollover().
+        """
+        try:
+            if self.shouldRollover(record):
+                self.doRollover()
+            RawFileHandler.emit(self, record)
+        except:
+            self.handleError(record)
 
     def doRollover(self):
         """
@@ -693,9 +693,9 @@ class ServerOptions(Options):
             logfile_backups = config.saneget(section, 'logfile_backups', 10)
             logfile_backups = datatypes.integer(logfile_backups)
             logfile_maxbytes = config.saneget(section, 'logfile_maxbytes',
-                                              datatypes.byte_size('50MB'))
-            logfile_maxbytes = datatypes.integer(logfile_maxbytes)
-            stopsignal = config.saneget(section, 'stopsignal', signal.SIGTERM)
+                                              '50MB')
+            logfile_maxbytes = datatypes.byte_size(logfile_maxbytes)
+            stopsignal = config.saneget(section, 'stopsignal', 'TERM')
             stopsignal = datatypes.signal(stopsignal)
             stopwaitsecs = config.saneget(section, 'stopwaitsecs', 10)
             stopwaitsecs = datatypes.integer(stopwaitsecs)
