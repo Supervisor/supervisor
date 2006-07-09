@@ -902,8 +902,9 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.options, options)
         self.assertEqual(instance.config, config)
         self.assertEqual(instance.laststart, 0)
-        self.assertEqual(instance.childlog.args, (config.logfile, 10,
-                                                  '%(message)s', 0, 0))
+        self.assertEqual(instance.childlog.args, (
+            ('/tmp/temp123.log', 20, '%(message)s'),
+            {'rotating': False, 'backups': 0, 'maxbytes': 0}))
         self.assertEqual(instance.pid, 0)
         self.assertEqual(instance.laststart, 0)
         self.assertEqual(instance.laststop, 0)
@@ -2225,10 +2226,10 @@ class DummyOptions:
         self.privsdropped = None
         self.logs_reopened = False
 
-    def getLogger(self, *args):
+    def getLogger(self, *args, **kw):
         logger = DummyLogger()
         logger.handlers = [DummyLogger()]
-        logger.args = args
+        logger.args = args, kw
         return logger
 
     def realize(self, args):
