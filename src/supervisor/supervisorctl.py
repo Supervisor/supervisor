@@ -162,6 +162,7 @@ class Controller(cmd.Cmd):
             handler.get(url)
             asyncore.loop()
         except KeyboardInterrupt:
+            handler.close()
             self._output('')
             return
 
