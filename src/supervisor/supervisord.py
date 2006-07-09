@@ -150,10 +150,10 @@ class Subprocess:
         if not self.pipes:
             return []
 
-        return (
-            [ self.pipes['stdout'], self.drain_stdout],
-            [ self.pipes['stderr'], self.drain_stderr]
-            )
+        drains = ( [ self.pipes['stdout'], self.drain_stdout],
+                   [ self.pipes['stderr'], self.drain_stderr] )
+
+        return drains
         
     def get_execv_args(self):
         """Internal: turn a program name into a file name, using $PATH,
@@ -270,7 +270,7 @@ class Subprocess:
                 self.options.dup2(self.pipes['child_stderr'], 2)
                 for i in range(3, self.options.minfds):
                     self.options.close_fd(i)
-                # sending to fd 2 will put this output in the log(s)
+                # sending to fd 1 will put this output in the log(s)
                 msg = self.set_uid()
                 if msg:
                     self.options.write(
@@ -460,7 +460,7 @@ class Supervisor:
             self.options.cleanup()
 
     def runforever(self, test=False):
-        timeout = .5
+        timeout = 1
 
         socket_map = self.options.get_socket_map()
 
