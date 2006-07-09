@@ -373,11 +373,9 @@ class Subprocess:
         processname = self.config.name
 
         if es in self.config.exitcodes and not self.killing:
-            msg = "exited: %s (%s)" % (processname,
-                                       msg + "; expected")
+            msg = "exited: %s (%s)" % (processname, msg + "; expected")
         elif es != -1:
-            msg = "exited: %s (%s)" % (processname,
-                                       msg + "; not expected")
+            msg = "exited: %s (%s)" % (processname, msg + "; not expected")
         else:
             msg = "killed: %s (%s)" % (processname, msg)
         self.options.logger.info(msg)
