@@ -340,7 +340,8 @@ class SupervisorNamespaceRPCInterface:
         callbacks = []
 
         for process in processes:
-            if process.get_state() != ProcessStates.RUNNING:
+            if process.get_state() not in (ProcessStates.RUNNING,
+                                           ProcessStates.BACKOFF):
                 # only start nonrunning processes
                 try:
                     callbacks.append((process.config.name,
@@ -505,7 +506,6 @@ class SupervisorNamespaceRPCInterface:
         state = process.get_state()
         spawnerr = process.spawnerr or ''
         exitstatus = process.exitstatus or 0
-        reportstatusmsg = process.reportstatusmsg or ''
 
         return {
             'name':name,
@@ -515,7 +515,6 @@ class SupervisorNamespaceRPCInterface:
             'state':state,
             'spawnerr':spawnerr,
             'exitstatus':exitstatus,
-            'reportstatusmsg':reportstatusmsg,
             'logfile':process.config.logfile,
             'pid':process.pid
             }

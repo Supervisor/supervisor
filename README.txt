@@ -236,9 +236,6 @@ Configuration File '[supervisord]' Section Settings
   'nocleanup' -- prevent supervisord from clearing old "AUTO" log
   files at startup time.  Default: false.
 
-  'forever' -- keep attempting to restart failing programs forever.
-  Default: false.
-
   'http_username' -- the username required for authentication to our
   HTTP server.  Default: none.
 
@@ -288,7 +285,7 @@ Configuration File '[program:x]' Section Settings
     autostart=true
     autorestart=true
     startsecs=10
-    startretries=3
+    startretries=999
     exitcodes=0,2
     stopsignal=TERM
     stopwaitsecs=10
@@ -303,8 +300,8 @@ Configuration File '[program:x]' Section Settings
   program.  'programname' is a descriptive name (arbitrary) used to
   describe the program being run.
 
-  'command=/path/to/programname' -- the command that will be run when
-  this program is started.  The command can be either absolute,
+  'command' -- the command that will be run when this program is
+  started.  The command can be either absolute,
   e.g. ('/path/to/programname') or relative ('programname').  If it is
   relative, the PATH will be searched for the executable.  Programs
   can accept arguments, e.g. ('/path/to/program foo bar').  The
@@ -327,18 +324,16 @@ Configuration File '[program:x]' Section Settings
   those which happen when the program exits with an "unexpected" exit
   code (see 'exitcodes').  Default: true.
 
-  'startsecs' -- The total number of seconds which supervisord will
-  spend attempting to restart a program which continually fails at
-  spawn time.  After this number of seconds of continued failure,
-  supervisord gives up and puts the process into an ERROR state.  This
-  limit may never be reached if the program fails more than
-  'startretries' times before 'startsecs' has elapsed.  Default: 10.
+  'startsecs' -- The total number of seconds which the program needs
+  to stay running after a startup to consider the start successful.
+  If the program does not stay up for this many seconds after it is
+  started, even if it exits with an "expected" exit code, the startup
+  will be considered a failure.  Set to 0 to indicate that the program
+  needn't stay running for any particular amount of time.  Default: 1.
 
   'startretries' -- The number of serial failure attempts that
   supervisord will allow when attempting to start the program before
-  giving up and puting the process into an ERROR state.  This limit
-  may never be reached if the program requires more than 'startsecs'
-  seconds to retry this number of times.  Default: 3.
+  giving up and puting the process into an ERROR state. Default: 3.
 
   'exitcodes' -- The list of 'expected' exit codes for this program.
   A program is considered 'failed' (and will be restarted, if
@@ -369,12 +364,12 @@ Configuration File '[program:x]' Section Settings
 
   'logfile' -- Keep process output as determined by log_stdout and
   log_stderr in this file.  NOTE: if both log_stderr and log_stdout
-  are true, chunks of output from child stderr and stdout will be
-  intermingled more or less randomly in the log.  If this is unset or
-  set to 'AUTO', supervisor will automatically choose a file location.
-  If this is set to 'NONE', supervisord will create no log file.  AUTO
-  log files and their backups will be deleted when supervisord
-  restarts.  Default: AUTO.
+  are true, chunks of output from the process' stderr and stdout will
+  be intermingled more or less randomly in the log.  If 'logfile' is
+  unset or set to 'AUTO', supervisor will automatically choose a file
+  location.  If this is set to 'NONE', supervisord will create no log
+  file.  AUTO log files and their backups will be deleted when
+  supervisord restarts.  Default: AUTO.
 
   'logfile_maxbytes' -- The maximum number of bytes that may be
   consumed by the process log file before it is rotated (suffix
@@ -420,25 +415,63 @@ Process States
   states at any given time.  You may see these state names in various
   user interface elements.
 
-  RUNNING  (0)  -- The process is running.
+  STOPPED (0) -- The process has been stopped due to a stop request or
+                 has never been started.
 
-  STOPPING (1) -- The process is stopping due to a stop request.
+  STARTING  (10) -- The process is starting due to a start request.
 
-  STOPPED  (2) -- The process has been stopped due to a stop request.
+  RUNNING  (20)  -- The process is running.
 
-  KILLED = (3) -- The process was killed by a signal and the signal was
-                  unhandled by the process.
+  BACKOFF (30) -- The process is waiting to restart after a nonfatal error.
 
-  NOTSTARTED (4) -- The process has not yet been started during the
-                    lifetime of supervisord.
+  STOPPING (40) -- The process is stopping due to a stop request.
 
-  EXITED  (5) -- The process exited with an exit code.
+  EXITED  (100) -- The process exited with an expected exit code.
 
-  STARTING  (6) -- The process is starting due to a start request.
+  FATAL  (200) -- The process could not be started successfully.
 
-  ERROR  (7) -- The process could not be started due to a spawn error.
+  UNKNOWN  (1000) -- The process is in an unknown state (programming error).
 
-  UNKNOWN  (10) -- The process is in an unknown state.
+  Process progress through these states as per the following directed
+  graph::
+
+                           STOPPED
+                           ^     |
+                          /      |
+                    STOPPING     |
+                     ^           V
+                     |       STARTING <-----> BACKOFF
+                     |      /        \
+                     |     V          V
+                     \-- RUNNING    FATAL
+                           |
+                           V
+                         EXITED
+
+  A process is in the STOPPED state if it has been stopped
+  adminstratively or if it has never been started.
+
+  When an autorestarting process is in the BACKOFF state, it will be
+  automatically restarted by supervisord.  It will switch between
+  STARTING and BACKOFF states until it becomes evident that it cannot
+  be started because the number of startretries has exceeded the
+  maximum, at which point it will transition to the FATAL state.  Each
+  start retry will take progressively more time.
+
+  An autorestarted process will never be automtatically restarted if
+  it ends up in the FATAL state (it must be manually restarted from
+  this state).
+
+  A process transitions into the STOPPING state via an administrative
+  stop request, and will then end up in the STOPPED state.
+
+  A process that cannot be stopped successfully will stay in the
+  STOPPING state forever.  This situation should never be reached
+  during normal operations as it implies that the process did not
+  respond to a final SIGKILL, which is "impossible" under UNIX.
+
+  Terminal states are "STOPPED", "FATAL", "EXITED", and "UNKNOWN".
+  All other states are transitional.
 
 Signals
 

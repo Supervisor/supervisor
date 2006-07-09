@@ -49,7 +49,8 @@ import datetime
 import urlparse
 
 from options import ClientOptions
-import supervisord
+from supervisord import ProcessStates
+from supervisord import getProcessStateDescription
 import xmlrpc
 
 class Controller(cmd.Cmd):
@@ -236,7 +237,7 @@ class Controller(cmd.Cmd):
 
         state = info['state']
 
-        if state == supervisord.ProcessStates.RUNNING:
+        if state == ProcessStates.RUNNING:
             start = info['start']
             now = info['now']
             start_dt = datetime.datetime(*time.gmtime(start)[:6])
@@ -244,25 +245,24 @@ class Controller(cmd.Cmd):
             uptime = now_dt - start_dt
             desc = 'pid %s, uptime %s' % (info['pid'], uptime)
 
-        elif state == supervisord.ProcessStates.ERROR:
+        elif state in (ProcessStates.FATAL, ProcessStates.BACKOFF):
             desc = info['spawnerr']
             if not desc:
                 desc = 'unknown error (try "tail %s")' % info['name']
 
-        elif state in (supervisord.ProcessStates.STOPPED,
-                       supervisord.ProcessStates.KILLED,
-                       supervisord.ProcessStates.EXITED):
-            stop = info['stop']
-            stop_dt = datetime.datetime(*time.gmtime(stop)[:7])
-            desc = stop_dt.strftime('%b %d %I:%M %p')
-            desc += ' (%s)' % info['reportstatusmsg']
-            
+        elif state in (ProcessStates.STOPPED, ProcessStates.EXITED):
+            if info['start']:
+                stop = info['stop']
+                stop_dt = datetime.datetime(*time.localtime(stop)[:7])
+                desc = stop_dt.strftime('%b %d %I:%M %p')
+            else:
+                desc = 'Not started'
 
         else:
             desc = ''
 
         result['desc'] = desc
-        result['state'] = supervisord.getProcessStateDescription(state)
+        result['state'] = getProcessStateDescription(state)
         return result
 
     def do_status(self, arg):

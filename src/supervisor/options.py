@@ -444,12 +444,8 @@ class ServerOptions(Options):
         self.configroot = Dummy()
         self.configroot.supervisord = Dummy()
         
-        self.add("backofflimit", "supervisord.backofflimit",
-                 "b:", "backofflimit=", int, default=3)
         self.add("nodaemon", "supervisord.nodaemon", "n", "nodaemon", flag=1,
                  default=0)
-        self.add("forever", "supervisord.forever", "f", "forever",
-                 flag=1, default=0)
         self.add("user", "supervisord.user", "u:", "user=")
         self.add("umask", "supervisord.umask", "m:", "umask=",
                  datatypes.octal_type, default='022')
@@ -584,15 +580,6 @@ class ServerOptions(Options):
             directory = datatypes.existing_directory(directory)
             section.directory = directory
 
-        backofflimit = config.getdefault('backofflimit', 3)
-        try:
-            limit = datatypes.integer(backofflimit)
-        except:
-            raise ValueError("backofflimit is not an integer: %s"
-                             % backofflimit)
-        section.backofflimit = limit
-        forever = config.getdefault('forever', 'false')
-        section.forever = datatypes.boolean(forever)
         user = config.getdefault('user', None)
         section.user = user
 
@@ -689,8 +676,10 @@ class ServerOptions(Options):
             autostart = datatypes.boolean(autostart)
             autorestart = config.saneget(section, 'autorestart', 'true')
             autorestart = datatypes.boolean(autorestart)
-            startsecs = config.saneget(section, 'startsecs', 10)
+            startsecs = config.saneget(section, 'startsecs', 1)
             startsecs = datatypes.integer(startsecs)
+            startretries = config.saneget(section, 'startretries', 3)
+            startretries = datatypes.integer(startretries)
             uid = config.saneget(section, 'user', None)
             if uid is not None:
                 uid = datatypes.name_to_uid(uid)
@@ -724,6 +713,7 @@ class ServerOptions(Options):
                                     autostart=autostart,
                                     autorestart=autorestart,
                                     startsecs=startsecs,
+                                    startretries=startretries,
                                     uid=uid,
                                     logfile=logfile,
                                     logfile_backups=logfile_backups,
@@ -830,7 +820,7 @@ class ServerOptions(Options):
             self.httpserver = make_http_server(self, supervisord)
         except socket.error, why:
             if why[0] == errno.EADDRINUSE:
-                port = str(self.options.http_port.address)
+                port = str(self.http_port.address)
                 self.usage('Another program is already listening on '
                            'the port that our HTTP server is '
                            'configured to use (%s).  Shut this program '
@@ -1230,7 +1220,7 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
 
 class ProcessConfig:
     def __init__(self, name, command, priority, autostart, autorestart,
-                 startsecs, uid, logfile, logfile_backups,
+                 startsecs, startretries, uid, logfile, logfile_backups,
                  logfile_maxbytes, stopsignal, stopwaitsecs, exitcodes,
                  log_stdout, log_stderr):
         self.name = name
@@ -1239,6 +1229,7 @@ class ProcessConfig:
         self.autostart = autostart
         self.autorestart = autorestart
         self.startsecs = startsecs
+        self.startretries = startretries
         self.uid = uid
         self.logfile = logfile
         self.logfile_backups = logfile_backups

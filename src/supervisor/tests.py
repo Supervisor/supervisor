@@ -46,7 +46,6 @@ http_username=chrism     ; (default is no username (open system))
 http_password=foo        ; (default is no password (open system))
 directory=%(tempdir)s     ; (default is not to cd during daemonization)
 backofflimit=10            ; (default 3)
-forever=false              ; (default false)
 user=root                  ; (default is current user, required if root)
 umask=022                  ; (default 022)
 logfile=supervisord.log    ; (default supervisord.log)
@@ -71,6 +70,7 @@ logfile=/tmp/cat.log
 stopsignal=KILL
 stopwaitsecs=5
 startsecs=5
+startretries=10
 
 [program:cat2]
 command=/bin/cat
@@ -93,8 +93,6 @@ exitcodes=0,1,127
         options = instance.configroot.supervisord
         import socket
         self.assertEqual(options.directory, tempfile.gettempdir())
-        self.assertEqual(options.backofflimit, 10)
-        self.assertEqual(options.forever, False)
         self.assertEqual(options.umask, 022)
         self.assertEqual(options.logfile, 'supervisord.log')
         self.assertEqual(options.logfile_maxbytes, 1000 * 1024 * 1024)
@@ -121,6 +119,7 @@ exitcodes=0,1,127
         self.assertEqual(cat.autostart, True)
         self.assertEqual(cat.autorestart, True)
         self.assertEqual(cat.startsecs, 5)
+        self.assertEqual(cat.startretries, 10)
         self.assertEqual(cat.uid, 0)
         self.assertEqual(cat.logfile, '/tmp/cat.log')
         self.assertEqual(cat.stopsignal, signal.SIGKILL)
@@ -160,8 +159,6 @@ exitcodes=0,1,127
         self.assertEqual(instance.uid, 0)
         self.assertEqual(instance.gid, 0)
         self.assertEqual(instance.directory, '/tmp')
-        self.assertEqual(instance.backofflimit, 10)
-        self.assertEqual(instance.forever, False)
         self.assertEqual(instance.umask, 022)
         self.assertEqual(instance.logfile, os.path.join(here,'supervisord.log'))
         self.assertEqual(instance.logfile_maxbytes, 1000 * 1024 * 1024)
@@ -464,8 +461,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         options = DummyOptions()
         config = DummyPConfig('foo', '/bin/foo', priority=1)
         config2 = DummyPConfig('foo2', '/bin/foo2', priority=2)
-        process = DummyProcess(options, config, ProcessStates.NOTSTARTED)
-        process2 = DummyProcess(options, config2, ProcessStates.NOTSTARTED)
+        process = DummyProcess(options, config, ProcessStates.STOPPED)
+        process2 = DummyProcess(options, config2, ProcessStates.STOPPED)
         supervisord = DummySupervisor({'foo':process, 'foo2':process2})
         interface = self._makeOne(supervisord)
         callback = interface.startAllProcesses()
@@ -555,7 +552,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         data = interface.getProcessInfo('foo')
 
         self.assertEqual(interface.update_text, 'getProcessInfo')
-        self.assertEqual(data['reportstatusmsg'], '')
         self.assertEqual(data['logfile'], '/tmp/fleeb.bar')
         self.assertEqual(data['name'], 'foo')
         self.assertEqual(data['pid'], 111)
@@ -593,7 +589,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(len(info), 2)
 
         p1info = info[0]
-        self.assertEqual(p1info['reportstatusmsg'], 'foo')
         self.assertEqual(p1info['logfile'], '/tmp/process1.log')
         self.assertEqual(p1info['name'], 'process1')
         self.assertEqual(p1info['pid'], 111)
@@ -604,7 +599,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(p1info['spawnerr'], '')
 
         p2info = info[1]
-        self.assertEqual(p2info['reportstatusmsg'], 'bar')
         self.assertEqual(p2info['logfile'], '/tmp/process2.log')
         self.assertEqual(p2info['name'], 'process2')
         self.assertEqual(p2info['pid'], 222)
@@ -917,7 +911,6 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.administrative_stop, 0)
         self.assertEqual(instance.killing, 0)
         self.assertEqual(instance.backoff, 0)
-        self.assertEqual(instance.waitstatus, None)
         self.assertEqual(instance.pipes, {})
         self.assertEqual(instance.spawnerr, None)
         self.assertEqual(instance.logbuffer, '')
@@ -1053,10 +1046,10 @@ class SubprocessTests(unittest.TestCase):
         options = DummyOptions()
         config = DummyPConfig('test', '/test')
         instance = self._makeOne(options, config)
-        instance.laststart = 100
         instance.record_spawnerr('foo')
         self.assertEqual(instance.spawnerr, 'foo')
         self.assertEqual(options.logger.data[0], 'spawnerr: foo')
+        self.assertEqual(instance.backoff, 1)
         self.failUnless(instance.delay)
 
     def test_spawn_already_running(self):
@@ -1165,7 +1158,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         self.assertEqual(options.written,
-             {2: ['good: error trying to setuid to 1!\n', 'good: screwed\n']})
+             {1: ['good: error trying to setuid to 1!\n', 'good: screwed\n']})
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options.execv_args,
                          ('/good/filename', ['/good/filename']) )
@@ -1184,7 +1177,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         self.assertEqual(options.written,
-                         {2: ["couldn't exec /good/filename: EPERM\n"]})
+                         {1: ["couldn't exec /good/filename: EPERM\n"]})
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options._exitcode, 127)
 
@@ -1201,7 +1194,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         self.assertEqual(len(options.written), 1)
-        self.failUnless(options.written[2][0].startswith(
+        self.failUnless(options.written[1][0].startswith(
          "couldn't exec /good/filename: exceptions.RuntimeError, 2: "
          "file: test.py line:"))
         self.assertEqual(options.privsdropped, None)
@@ -1269,7 +1262,6 @@ class SubprocessTests(unittest.TestCase):
         instance.pid = 11
         instance.stop()
         self.assertEqual(instance.administrative_stop, 1)
-        self.assertEqual(instance.reportstatusmsg, None)
         self.failUnless(instance.delay)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11)')
         self.assertEqual(instance.killing, 1)
@@ -1306,47 +1298,21 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.killing, 1)
         self.assertEqual(options.kills[11], signal.SIGTERM)
 
-    def test_governor_system_stop(self):
-        options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
-        instance = self._makeOne(options, config)
-        options.backofflimit = 1
-        options.forever = False
-        instance.backoff = 1 # gt backofflimit
-        instance.laststart = time.time()
-        instance.delay = 1
-        instance.governor()
-        self.assertEqual(instance.backoff, 0)
-        self.assertEqual(instance.delay, 0)
-        self.assertEqual(instance.system_stop, 1)
-        self.assertEqual(options.logger.data[0],
-                         "stopped: notthere (restarting too frequently)")
-
-    def test_reportstatus(self):
+    def test_finish(self):
         options = DummyOptions()
         config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
         instance = self._makeOne(options, config)
         instance.waitstatus = (123, 1) # pid, waitstatus
         instance.options.pidhistory[123] = instance
         instance.killing = 1
-        instance.pipes = 'will be replaced'
-        instance.reportstatus()
+        instance.pipes = {'stdout':'','stderr':''}
+        instance.finish(123, 1)
         self.assertEqual(instance.killing, 0)
         self.assertEqual(instance.pid, 0)
         self.assertEqual(instance.pipes, {})
-        self.assertEqual(options.logger.data[1], 'killed: notthere '
+        self.assertEqual(options.logger.data[0], 'killed: notthere '
                          '(terminated by SIGHUP)')
         self.assertEqual(instance.exitstatus, -1)
-        self.assertEqual(instance.reportstatusmsg, 'killed: notthere '
-                         '(terminated by SIGHUP)')
-
-    def test_do_backoff(self):
-        options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
-        instance = self._makeOne(options, config)
-        now = time.time()
-        instance.do_backoff(3)
-        self.failUnless(instance.delay >= now + 3)
 
     def test_set_uid_no_uid(self):
         options = DummyOptions()
@@ -1392,32 +1358,32 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.get_state(), ProcessStates.STOPPING)
 
         instance = self._makeOne(options, config)
+        instance.laststart = 1
         instance.delay = 1
         self.assertEqual(instance.get_state(), ProcessStates.STARTING)
 
         instance = self._makeOne(options, config)
+        instance.laststart = 1
         instance.pid = 11
         self.assertEqual(instance.get_state(), ProcessStates.RUNNING)
         
         instance = self._makeOne(options, config)
         instance.system_stop = True
-        self.assertEqual(instance.get_state(), ProcessStates.ERROR)
+        self.assertEqual(instance.get_state(), ProcessStates.FATAL)
 
         instance = self._makeOne(options, config)
         instance.administrative_stop = True
         self.assertEqual(instance.get_state(), ProcessStates.STOPPED)
         
         instance = self._makeOne(options, config)
-        instance.exitstatus = -1
-        self.assertEqual(instance.get_state(), ProcessStates.KILLED)
-        
-        instance = self._makeOne(options, config)
+        instance.laststart = 1
         instance.exitstatus = 1
         self.assertEqual(instance.get_state(), ProcessStates.EXITED)
-        
+
         instance = self._makeOne(options, config)
-        instance.options.laststart = 0
-        self.assertEqual(instance.get_state(), ProcessStates.NOTSTARTED)
+        instance.laststart = 1
+        instance.backoff = 1
+        self.assertEqual(instance.get_state(), ProcessStates.BACKOFF)
 
         instance = self._makeOne(options, config)
         instance.laststart = 1
@@ -1519,24 +1485,31 @@ class SupervisordTests(unittest.TestCase):
         from supervisord import ProcessStates
         options = DummyOptions()
         pconfig1 = DummyPConfig('killed', 'killed', '/bin/killed')
-        process1 = DummyProcess(options, pconfig1, ProcessStates.KILLED)
+        process1 = DummyProcess(options, pconfig1, ProcessStates.EXITED)
         pconfig2 = DummyPConfig('error', 'error', '/bin/error')
-        process2 = DummyProcess(options, pconfig2, ProcessStates.ERROR)
+        process2 = DummyProcess(options, pconfig2, ProcessStates.FATAL)
         pconfig3 = DummyPConfig('notstarted', 'notstarted', '/bin/notstarted',
                                 autostart=True)
-        process3 = DummyProcess(options, pconfig3, ProcessStates.NOTSTARTED)
+        process3 = DummyProcess(options, pconfig3, ProcessStates.STOPPED)
         pconfig4 = DummyPConfig('wontstart', 'wonstart', '/bin/wontstart',
-                                autostart=False)
-        process4 = DummyProcess(options, pconfig4, ProcessStates.NOTSTARTED)
+                                autostart=True)
+        process4 = DummyProcess(options, pconfig4, ProcessStates.BACKOFF)
+        pconfig5 = DummyPConfig('backingoff', 'backingoff', '/bin/backingoff',
+                                autostart=True)
+        process5 = DummyProcess(options, pconfig5, ProcessStates.BACKOFF)
+        now = time.time()
+        process5.delay = now + 1000
 
         supervisord = self._makeOne(options)
         supervisord.processes = {'killed': process1, 'error': process2,
-                                 'notstarted':process3, 'wontstart':process4}
+                                 'notstarted':process3, 'wontstart':process4,
+                                 'backingoff':process5}
         supervisord.start_necessary()
         self.assertEqual(process1.spawned, True)
         self.assertEqual(process2.spawned, False)
         self.assertEqual(process3.spawned, True)
-        self.assertEqual(process4.spawned, False)
+        self.assertEqual(process4.spawned, True)
+        self.assertEqual(process5.spawned, False)
 
     def test_stop_all(self):
         options = DummyOptions()
@@ -1544,55 +1517,91 @@ class SupervisordTests(unittest.TestCase):
         process1 = DummyProcess(options, pconfig1, state=ProcessStates.STOPPED)
         pconfig2 = DummyPConfig('process2', 'process2', '/bin/process2')
         process2 = DummyProcess(options, pconfig2, state=ProcessStates.RUNNING)
+        pconfig3 = DummyPConfig('process3', 'process3', '/bin/process3')
+        process3 = DummyProcess(options, pconfig3, state=ProcessStates.BACKOFF)
+        pconfig4 = DummyPConfig('process4', 'process4', '/bin/process4')
+        process4 = DummyProcess(options, pconfig4, state=ProcessStates.STARTING)
         supervisord = self._makeOne(options)
-        supervisord.processes = {'killed': process1, 'error': process2}
+        supervisord.processes = {'process1': process1, 'process2': process2,
+                                 'process3':process3, 'process4':process4}
 
         supervisord.stop_all()
         self.assertEqual(process1.stop_called, False)
         self.assertEqual(process2.stop_called, True)
+        self.assertEqual(process1.backoff, 0)
+        self.assertEqual(process2.backoff, 0)
+        self.assertEqual(process3.backoff, 1000)
+        self.assertEqual(process4.backoff, 1000)
         
-        
-    def test_handle_procs_with_waitstatus(self):
-        options = DummyOptions()
-        pconfig1 = DummyPConfig('process1', 'process1', '/bin/process1')
-        process1 = DummyProcess(options, pconfig1)
-        pconfig2 = DummyPConfig('process2', 'process2', '/bin/process2')
-        process2 = DummyProcess(options, pconfig2)
-        process2.waitstatus = True
-        supervisord = self._makeOne(options)
-        supervisord.processes = {'killed': process1, 'error': process2}
-
-        supervisord.handle_procs_with_waitstatus()
-        self.assertEqual(process1.status_reported, False)
-        self.assertEqual(process2.status_reported, True)
-
-    def test_handle_procs_with_delay(self):
+    def test_give_up(self):
         options = DummyOptions()
 
         pconfig1 = DummyPConfig('process1', 'process1', '/bin/process1')
-        process1 = DummyProcess(options, pconfig1)
-        process1.delay = time.time()
-        process1.killing = True
-        process1.pid = 1
+        process1 = DummyProcess(options, pconfig1, state=ProcessStates.BACKOFF)
+        process1.backoff = 10000
+        process1.delay = 1
+        process1.system_stop = 0
 
         pconfig2 = DummyPConfig('process2', 'process2', '/bin/process2')
-        process2 = DummyProcess(options, pconfig2)
-        process2.delay = time.time()
-        process2.killing = False
-        process2.pid = 0
+        process2 = DummyProcess(options, pconfig2, state=ProcessStates.BACKOFF)
+        process2.backoff = 1
+        process2.delay = 1
+        process2.system_stop = 0
 
         pconfig3 = DummyPConfig('process3', 'process3', '/bin/process3')
-        process3 = DummyProcess(options, pconfig3)
+        process3 = DummyProcess(options, pconfig3, state=ProcessStates.RUNNING)
+        process3.delay = 5
 
         supervisord = self._makeOne(options)
         supervisord.processes = { 'process1': process1, 'process2': process2,
                                   'process3':process3 }
 
-        delayprocs = supervisord.handle_procs_with_delay()
+        supervisord.give_up()
+        self.assertEqual(process1.backoff, 0)
+        self.assertEqual(process1.delay, 0)
+        self.assertEqual(process1.system_stop, 1)
+        self.assertEqual(process2.backoff, 1)
+        self.assertEqual(process2.delay, 1)
+        self.assertEqual(process2.system_stop, 0)
+        self.assertEqual(process3.delay, 0)
+
+    def test_get_undead(self):
+        options = DummyOptions()
+
+        pconfig1 = DummyPConfig('process1', 'process1', '/bin/process1')
+        process1 = DummyProcess(options, pconfig1, state=ProcessStates.STOPPING)
+        process1.delay = time.time() - 1
+
+        pconfig2 = DummyPConfig('process2', 'process2', '/bin/process2')
+        process2 = DummyProcess(options, pconfig2, state=ProcessStates.STOPPING)
+        process2.delay = time.time() + 1000
+
+        pconfig3 = DummyPConfig('process3', 'process3', '/bin/process3')
+        process3 = DummyProcess(options, pconfig3, state=ProcessStates.RUNNING)
+
+        supervisord = self._makeOne(options)
+        supervisord.processes = { 'process1': process1, 'process2': process2,
+                                  'process3':process3 }
+
+        undead = supervisord.get_undead()
+        self.assertEqual(undead, [process1])
+
+    def test_kill_undead(self):
+        options = DummyOptions()
+
+        pconfig1 = DummyPConfig('process1', 'process1', '/bin/process1')
+        process1 = DummyProcess(options, pconfig1, state=ProcessStates.STOPPING)
+        process1.delay = time.time() - 1
+
+        pconfig2 = DummyPConfig('process2', 'process2', '/bin/process2')
+        process2 = DummyProcess(options, pconfig2, state=ProcessStates.STOPPING)
+        process2.delay = time.time() + 1000
+
+        supervisord = self._makeOne(options)
+        supervisord.processes = { 'process1': process1, 'process2': process2}
+
+        supervisord.kill_undead()
         self.assertEqual(process1.killed_with, signal.SIGKILL)
-        self.assertEqual(process2.killed_with, None)
-        self.assertEqual(process3.killed_with, None)
-        self.assertEqual(delayprocs, [process1, process2])
 
     def test_reap(self):
         options = DummyOptions()
@@ -1607,11 +1616,68 @@ class SupervisordTests(unittest.TestCase):
         supervisord = self._makeOne(options)
         
         supervisord.reap(once=True)
-        self.assertEqual(process.drained, True)
-        self.assertEqual(process.killing, 0)
-        self.assertNotEqual(process.laststop, None)
-        self.assertEqual(process.waitstatus, (1,1))
-        self.assertEqual(options.logger.data[0], 'reaped process (pid 1)')
+        self.assertEqual(process.finished, (1,1))
+
+    def test_handle_sigterm(self):
+        options = DummyOptions()
+        options.signal = signal.SIGTERM
+        supervisord = self._makeOne(options)
+        supervisord.handle_signal()
+        self.assertEqual(supervisord.mood, -1)
+        self.assertEqual(options.logger.data[0],
+                         'received SIGTERM indicating exit request')
+
+    def test_handle_sigint(self):
+        options = DummyOptions()
+        options.signal = signal.SIGINT
+        supervisord = self._makeOne(options)
+        supervisord.handle_signal()
+        self.assertEqual(supervisord.mood, -1)
+        self.assertEqual(options.logger.data[0],
+                         'received SIGINT indicating exit request')
+
+    def test_handle_sigquit(self):
+        options = DummyOptions()
+        options.signal = signal.SIGQUIT
+        supervisord = self._makeOne(options)
+        supervisord.handle_signal()
+        self.assertEqual(supervisord.mood, -1)
+        self.assertEqual(options.logger.data[0],
+                         'received SIGQUIT indicating exit request')
+
+    def test_handle_sighup(self):
+        options = DummyOptions()
+        options.signal = signal.SIGHUP
+        supervisord = self._makeOne(options)
+        supervisord.handle_signal()
+        self.assertEqual(supervisord.mood, 0)
+        self.assertEqual(options.logger.data[0],
+                         'received SIGHUP indicating restart request')
+
+    def test_handle_sigusr2(self):
+        options = DummyOptions()
+        options.signal = signal.SIGUSR2
+        pconfig1 = DummyPConfig('process1', 'process1', '/bin/process1')
+        process1 = DummyProcess(options, pconfig1, state=ProcessStates.STOPPING)
+        process1.delay = time.time() - 1
+        supervisord = self._makeOne(options)
+        supervisord.processes = {'process1':process1}
+        supervisord.handle_signal()
+        self.assertEqual(supervisord.mood, 1)
+        self.assertEqual(options.logs_reopened, True)
+        self.assertEqual(process1.logs_reopened, True)
+        self.assertEqual(options.logger.data[0],
+                         'received SIGUSR2 indicating log reopen request')
+
+    def test_handle_unknown_signal(self):
+        options = DummyOptions()
+        options.signal = signal.SIGUSR1
+        supervisord = self._makeOne(options)
+        supervisord.handle_signal()
+        self.assertEqual(supervisord.mood, 1)
+        self.assertEqual(options.logger.data[0],
+                         'received SIGUSR1 indicating nothing')
+        
 
 class ControllerTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -1697,8 +1763,8 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(result, None)
         expected = """\
 foo            RUNNING    pid 11, uptime 0:01:40
-bar            ERROR      screwed
-baz            STOPPED    Jun 26 11:42 PM (OK)
+bar            FATAL      screwed
+baz            STOPPED    Jun 26 07:42 PM
 """
         self.assertEqual(controller.stdout.getvalue(), expected)
 
@@ -1957,8 +2023,8 @@ baz            STOPPED    Jun 26 11:42 PM (OK)
         self.assertEqual(result, None)
         self.assertEqual(controller.stdout.getvalue(), """\
 foo            RUNNING    pid 11, uptime 0:01:40
-bar            ERROR      screwed
-baz            STOPPED    Jun 26 11:42 PM (OK)
+bar            FATAL      screwed
+baz            STOPPED    Jun 26 07:42 PM
 """)
         
 class TailFProducerTests(unittest.TestCase):
@@ -2005,7 +2071,6 @@ class DummyProcess:
     childlog = None # the current logger 
     spawnerr = None
     logbuffer = '' # buffer of characters to send to child process' stdin
-    reportstatusmsg = None # message attached to instance during reportstatus()
     
     def __init__(self, options, config, state=ProcessStates.RUNNING):
         self.options = options
@@ -2017,12 +2082,16 @@ class DummyProcess:
         self.spawned = False
         self.state = state
         self.error_at_clear = False
-        self.status_reported = False
         self.killed_with = None
         self.drained = False
         self.logbuffer = ''
         self.logged = ''
         self.pipes = {}
+        self.finished = None
+        self.logs_reopened = False
+
+    def reopenlogs(self):
+        self.logs_reopened = True
 
     def removelogs(self):
         if self.error_at_clear:
@@ -2040,9 +2109,6 @@ class DummyProcess:
     def kill(self, signal):
         self.killed_with = signal
 
-    def do_backoff(self, secs):
-        self.backoff_secs = secs
-
     def spawn(self):
         self.spawned = True
 
@@ -2051,9 +2117,6 @@ class DummyProcess:
 
     def get_pipe_drains(self):
         return []
-
-    def reportstatus(self):
-        self.status_reported = True
 
     def __cmp__(self, other):
         return cmp(self.config.priority, other.config.priority)
@@ -2065,9 +2128,12 @@ class DummyProcess:
         self.logged = self.logged + self.logbuffer
         self.logbuffer = ''
 
+    def finish(self, pid, sts):
+        self.finished = pid, sts
+
 class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,
-                 autorestart=True, startsecs=10,
+                 autorestart=True, startsecs=10, startretries=999,
                  uid=None, logfile=None, logfile_backups=0,
                  logfile_maxbytes=0, log_stdout=True, log_stderr=False,
                  stopsignal=signal.SIGTERM, stopwaitsecs=10,
@@ -2078,6 +2144,7 @@ class DummyPConfig:
         self.autostart = autostart
         self.autorestart = autorestart
         self.startsecs = startsecs
+        self.startretries = startretries
         self.uid = uid
         self.logfile = logfile
         self.logfile_backups = logfile_backups
@@ -2156,6 +2223,7 @@ class DummyOptions:
         self.execv_args = None
         self.setuid_msg = None
         self.privsdropped = None
+        self.logs_reopened = False
 
     def getLogger(self, *args):
         logger = DummyLogger()
@@ -2274,6 +2342,9 @@ class DummyOptions:
 
     def readfd(self, fd):
         return fd
+
+    def reopenlogs(self):
+        self.logs_reopened = True
         
 
 class DummyClientOptions:
@@ -2316,7 +2387,7 @@ class DummySupervisorRPCNamespace:
             {
             'name':'bar',
             'pid':12,
-            'state':ProcessStates.ERROR,
+            'state':ProcessStates.FATAL,
             'start':_NOW - 100,
             'stop':_NOW - 50,
             'spawnerr':'screwed',

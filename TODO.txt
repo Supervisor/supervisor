@@ -5,15 +5,6 @@
 
    - provide "restart all" functionality
 
-- Move 'forever' to process config.
-
-- Rewrite the delay/backoff stuff so humans can understand it.
-
-- Remove backofflimit.
-
-- If a process dies with an expected exit code but keeps dying, it
-  will restart forever.
-
 - Long shutdown time.
 
 - Unit tests for meld classes and ui server.

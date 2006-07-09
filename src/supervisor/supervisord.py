@@ -18,9 +18,7 @@ Usage: %s [options]
 
 Options:
 -c/--configuration URL -- configuration file or URL
--b/--backofflimit SECONDS -- set backoff limit to SECONDS (default 3)
 -n/--nodaemon -- run in the foreground (same as 'nodaemon true' in config file)
--f/--forever -- try to restart processes forever when they die (default no)
 -h/--help -- print this usage message and exit
 -u/--user USER -- run supervisord as this user (or numeric uid)
 -m/--umask UMASK -- use this umask for daemon subprocess (default is 022)
@@ -58,15 +56,14 @@ from options import decode_wait_status
 from options import signame
 
 class ProcessStates:
-    RUNNING = 0
-    STOPPING = 1
-    STOPPED = 2
-    KILLED = 3
-    NOTSTARTED = 4
-    EXITED = 5
-    STARTING = 6
-    ERROR = 7
-    UNKNOWN = 10
+    STOPPED = 0
+    STARTING = 10
+    RUNNING = 20
+    BACKOFF = 30
+    STOPPING = 40
+    EXITED = 100
+    FATAL = 200
+    UNKNOWN = 1000
 
 def getProcessStateDescription(code):
     for statename in ProcessStates.__dict__:
@@ -95,14 +92,12 @@ class Subprocess:
     administrative_stop = 0 # true if the process has been stopped by an admin
     system_stop = 0 # true if the process has been stopped by the system
     killing = 0 # flag determining whether we are trying to kill this proc
-    backoff = 0 # backoff counter (to backofflimit)
+    backoff = 0 # backoff counter (to startsecs)
     pipes = None # mapping of pipe descriptor purpose to file descriptor
     childlog = None # the current logger 
     logbuffer = '' # buffer of characters read from child pipes
-    reportstatusmsg = None # message attached to instance during reportstatus()
-    waitstatus = None
-    exitstatus = None
-    spawnerr = None
+    exitstatus = None # status attached to dead process by finsh()
+    spawnerr = None # error message attached by spawn() if any
     
     def __init__(self, options, config):
         """Constructor.
@@ -189,18 +184,21 @@ class Subprocess:
             return None, commandargs, None
 
     def record_spawnerr(self, msg):
+        now = time.time()
         self.spawnerr = msg
         self.options.logger.critical("spawnerr: %s" % msg)
-        self.do_backoff(self.config.startsecs)
-        self.governor()
+        self.backoff = self.backoff + 1
+        self.delay = now + self.backoff
 
     def spawn(self):
         """Start the subprocess.  It must not be running already.
 
         Return the process id.  If the fork() call fails, return 0.
         """
+        pname = self.config.name
+
         if self.pid:
-            msg = 'process %r already running' % self.config.name
+            msg = 'process %r already running' % pname
             self.options.logger.critical(msg)
             return
 
@@ -209,7 +207,6 @@ class Subprocess:
         self.exitstatus = None
         self.system_stop = 0
         self.administrative_stop = 0
-        self.reportstatusmsg = None
         
         self.laststart = time.time()
 
@@ -219,10 +216,8 @@ class Subprocess:
             self.record_spawnerr(fail_msg)
             return
 
-        pname = self.config.name
-
         try:
-            pipes = self.options.make_pipes()
+            self.pipes = self.options.make_pipes()
         except OSError, why:
             code = why[0]
             if code == errno.EMFILE:
@@ -232,8 +227,6 @@ class Subprocess:
                 msg = 'unknown error: %s' % errno.errorcode.get(code, code)
             self.record_spawnerr(msg)
             return
-
-        self.pipes = pipes
 
         try:
             pid = self.options.fork()
@@ -253,10 +246,10 @@ class Subprocess:
             # Parent
             self.pid = pid
             for fdname in ('child_stdin', 'child_stdout', 'child_stderr'):
-                self.options.close_fd(pipes[fdname])
+                self.options.close_fd(self.pipes[fdname])
             self.options.logger.info('spawned: %r with pid %s' % (pname, pid))
             self.spawnerr = None
-            self.do_backoff(self.config.startsecs)
+            self.delay = time.time() + self.config.startsecs
             self.options.pidhistory[pid] = self
             return pid
         
@@ -272,29 +265,29 @@ class Subprocess:
                 # Presumably it also prevents HUP, etc received by
                 # supervisord from being sent to children.
                 self.options.setpgrp()
-                self.options.dup2(pipes['child_stdin'], 0)
-                self.options.dup2(pipes['child_stdout'], 1)
-                self.options.dup2(pipes['child_stderr'], 2)
+                self.options.dup2(self.pipes['child_stdin'], 0)
+                self.options.dup2(self.pipes['child_stdout'], 1)
+                self.options.dup2(self.pipes['child_stderr'], 2)
                 for i in range(3, self.options.minfds):
                     self.options.close_fd(i)
                 # sending to fd 2 will put this output in the log(s)
                 msg = self.set_uid()
                 if msg:
                     self.options.write(
-                        2, "%s: error trying to setuid to %s!\n" %
+                        1, "%s: error trying to setuid to %s!\n" %
                         (pname, self.config.uid)
                         )
-                    self.options.write(2, "%s: %s\n" % (pname, msg))
+                    self.options.write(1, "%s: %s\n" % (pname, msg))
                 try:
                     self.options.execv(filename, argv)
                 except OSError, why:
                     code = why[0]
-                    self.options.write(2, "couldn't exec %s: %s\n" % (
+                    self.options.write(1, "couldn't exec %s: %s\n" % (
                         argv[0], errno.errorcode.get(code, code)))
                 except:
                     (file, fun, line), t,v,tbinfo = asyncore.compact_traceback()
                     error = '%s, %s: file: %s line: %s' % (t, v, file, line)
-                    self.options.write(2, "couldn't exec %s: %s\n" % (filename,
+                    self.options.write(1, "couldn't exec %s: %s\n" % (filename,
                                                                       error))
             finally:
                 self.options._exit(127)
@@ -302,8 +295,6 @@ class Subprocess:
     def stop(self):
         """ Administrative stop """
         self.administrative_stop = 1
-        self.reportstatusmsg = None
-        self.do_backoff(self.config.stopwaitsecs)
         return self.kill(self.config.stopsignal)
 
     def kill(self, sig):
@@ -312,6 +303,7 @@ class Subprocess:
         Return None if the signal was sent, or an error message string
         if an error occurred or if the subprocess is not running.
         """
+        now = time.time()
         if not self.pid:
             msg = ("attempted to kill %s with sig %s but it wasn't running" %
                    (self.config.name, signame(sig)))
@@ -321,85 +313,68 @@ class Subprocess:
             self.options.logger.debug('killing %s (pid %s)' % (self.config.name,
                                                                self.pid))
             self.killing = 1
+            self.delay = now + self.config.stopwaitsecs
             self.options.kill(self.pid, sig)
         except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
             tb = io.getvalue()
-            msg = 'unknown problem killing %s (%s):%s' % (
-                self.config.name, self.pid, tb)
+            msg = 'unknown problem killing %s (%s):%s' % (self.config.name,
+                                                          self.pid, tb)
             self.options.logger.critical(msg)
             self.pid = 0
             self.killing = 0
+            self.delay = 0
             return msg
             
         return None
 
-    def governor(self):
-        """ Back off if respawning too frequently """
-        now = time.time()
-        if not self.laststart:
-            # Reset the backoff timer
-            self.options.logger.debug(
-                'resetting backoff and delay for %s' % self.config.name)
-            self.backoff = 0
-            self.delay = 0
-        elif now - self.laststart < self.config.startsecs:
-            # Exited rather quickly; slow down the restarts
-            self.backoff = self.backoff + 1
-            if self.backoff >= self.options.backofflimit:
-                if self.options.forever:
-                    self.backoff = self.options.backofflimit
-                else:
-                    self.options.logger.critical(
-                        "stopped: %s (restarting too frequently)" % (
-                        self.config.name))
-                    # stop trying
-                    self.system_stop = 1
-                    self.backoff = 0
-                    self.delay = 0
-                    return
-            self.options.logger.info(
-                "backoff: %s (avoid rapid restarts %s)" % (
-                self.config.name,
-                self.backoff))
-            self.delay = now + self.backoff
+    def finish(self, pid, sts):
+        """ The process was reaped and we need to report and manage its state
+        """
+        self.drain()
+        self.log_output()
 
-    def reportstatus(self):
-        self.options.logger.debug('reportstatus called')
-        pid, sts = self.waitstatus
-        self.waitstatus = None
         es, msg = decode_wait_status(sts)
-        process = self.options.pidhistory.get(pid)
 
-        if process is not self:
-            msg = "stopped: unknown " + msg
-            self.options.logger.warn(msg)
+        now = time.time()
+        self.laststop = now
+
+        tooquickly = now - self.laststart < self.config.startsecs
+        badexit = not es in self.config.exitcodes
+
+        if self.killing:
+            # we've been expecting to reap this
+            self.killing = 0
+            self.delay = 0
+        elif tooquickly or badexit:
+            # the program did not stay up long enough or exited with
+            # an unexpected exit code
+            self.backoff = self.backoff + 1
+            self.delay = now + self.backoff
+            if tooquickly:
+                self.spawnerr = (
+                    'Exited too quickly (process log may have details)')
+            elif badexit:
+                self.spawnerr = 'Bad exit code %s' % es
         else:
-            if self.killing:
-                self.killing = 0
-                self.delay = 0
-            elif not es in self.config.exitcodes:
-                self.governor()
+            self.delay = 0
+            self.backoff = 0
 
-            self.pid = 0
-            self.pipes = {}
-            processname = process.config.name
+        self.pid = 0
+        self.pipes = {}
+        processname = self.config.name
 
-            if es in self.config.exitcodes and not self.killing:
-                msg = "exited: %s (%s)" % (processname,
-                                           msg + "; expected")
-            elif es != -1:
-                msg = "exited: %s (%s)" % (processname,
-                                           msg + "; not expected")
-            else:
-                msg = "killed: %s (%s)" % (processname, msg)
-            self.options.logger.info(msg)
-            self.exitstatus = es
-        self.reportstatusmsg = msg
-
-    def do_backoff(self, seconds):
-        self.delay = time.time() + seconds
+        if es in self.config.exitcodes and not self.killing:
+            msg = "exited: %s (%s)" % (processname,
+                                       msg + "; expected")
+        elif es != -1:
+            msg = "exited: %s (%s)" % (processname,
+                                       msg + "; not expected")
+        else:
+            msg = "killed: %s (%s)" % (processname, msg)
+        self.options.logger.info(msg)
+        self.exitstatus = es
 
     def set_uid(self):
         if self.config.uid is None:
@@ -411,24 +386,28 @@ class Subprocess:
         # sort by priority
         return cmp(self.config.priority, other.config.priority)
 
+    def __repr__(self):
+        return '<Subprocess at %s with name %s in state %s>' % (
+            id(self),
+            self.config.name,
+            getProcessStateDescription(self.get_state()))
+
     def get_state(self):
         if self.killing:
             return ProcessStates.STOPPING
         elif self.system_stop:
-            return ProcessStates.ERROR
-        elif self.administrative_stop:
+            return ProcessStates.FATAL
+        elif self.administrative_stop or not self.laststart:
             return ProcessStates.STOPPED
+        elif self.backoff:
+            return ProcessStates.BACKOFF
         elif not self.pid and self.delay:
             return ProcessStates.STARTING
         elif self.pid:
             return ProcessStates.RUNNING
         else:
-            if self.exitstatus == -1:
-                return ProcessStates.KILLED
-            elif self.exitstatus is not None:
+            if self.exitstatus is not None:
                 return ProcessStates.EXITED
-            elif not self.laststart:
-                return ProcessStates.NOTSTARTED
             else:
                 return ProcessStates.UNKNOWN
 
@@ -489,8 +468,6 @@ class Supervisor:
             if self.mood > 0:
                 self.start_necessary()
 
-            self.handle_procs_with_waitstatus()
-
             r, w, x = [], [], []
 
             process_map = {}
@@ -517,7 +494,8 @@ class Supervisor:
 
                 # if there are no delayed processes (we're done killing
                 # everything), it's OK to stop or reload
-                if not self.handle_procs_with_delay():
+                delayprocs = self.get_delay_processes()
+                if not delayprocs:
                     break
 
             try:
@@ -529,8 +507,6 @@ class Supervisor:
                 else:
                     raise
                 r = w = x = []
-
-            self.handle_procs_with_waitstatus()
 
             for fd in r:
                 if process_map.has_key(fd):
@@ -555,7 +531,8 @@ class Supervisor:
                     except:
                         socket_map[fd].handle_error()
 
-            self.handle_procs_with_delay()
+            self.give_up()
+            self.kill_undead()
             self.reap()
             self.handle_signal()
 
@@ -565,18 +542,18 @@ class Supervisor:
     def start_necessary(self):
         processes = self.processes.values()
         processes.sort() # asc by priority
+        now = time.time()
 
         for p in processes:
             state = p.get_state()
-            if state not in (ProcessStates.STOPPED, ProcessStates.ERROR,
-                             ProcessStates.RUNNING, ProcessStates.STOPPING,
-                             ProcessStates.STARTING):
-                if state == ProcessStates.NOTSTARTED:
-                    case = p.config.autostart
-                else:
-                    case = p.config.autorestart
-
-                if case:
+            if state == ProcessStates.STOPPED and not p.laststart:
+                if p.config.autostart:
+                    p.spawn()
+            elif state == ProcessStates.EXITED:
+                if p.config.autorestart:
+                    p.spawn()
+            elif state == ProcessStates.BACKOFF:
+                if now > p.delay:
                     p.spawn()
             
     def stop_all(self):
@@ -586,47 +563,63 @@ class Supervisor:
 
         for proc in processes:
             # only stop running or starting processes
-            if proc.get_state() in (ProcessStates.STARTING,
-                                    ProcessStates.RUNNING):
+            state = proc.get_state()
+            if state == ProcessStates.RUNNING:
                 proc.stop()
+            elif state in (ProcessStates.STARTING, ProcessStates.BACKOFF):
+                # put it into backoff
+                proc.backoff = proc.config.startretries + 1
 
-    def handle_procs_with_waitstatus(self):
+    def give_up(self):
+        now = time.time()
         processes = self.processes.values()
         for proc in processes:
-            if proc.waitstatus:
-                proc.reportstatus()
+            if proc.get_state() == ProcessStates.BACKOFF:
+                if proc.backoff > proc.config.startretries:
+                    proc.backoff = 0
+                    proc.delay = 0
+                    proc.system_stop = 1
+            elif proc.get_state() == ProcessStates.RUNNING:
+                if proc.delay < now:
+                    proc.delay = 0
 
-    def handle_procs_with_delay(self):
+    def get_delay_processes(self):
+        """ Processes which are starting or stopping """
+        return [ x for x in self.processes.values() if x.delay ]
+
+    def get_undead(self):
+        """ Processes which we've attempted to stop but which haven't responded
+        to a kill request within a given amount of time (stopwaitsecs) """
         now = time.time()
-        timeout = self.options.backofflimit
         processes = self.processes.values()
-        delayprocs = [ proc for proc in processes if proc.delay ]
-        for proc in delayprocs:
-            time_left = proc.delay - now
-            time_left = max(0, min(timeout, time_left))
-            if time_left <= 0:
-                proc.delay = 0
-                if proc.killing and proc.pid:
-                    self.options.logger.info(
-                        'killing %r (%s) with SIGKILL' % (proc.config.name,
-                                                          proc.pid))
-                    proc.do_backoff(proc.config.stopwaitsecs)
-                    proc.kill(signal.SIGKILL)
-        return delayprocs
+        undead = []
+
+        for proc in processes:
+            if proc.get_state() == ProcessStates.STOPPING:
+                time_left = proc.delay - now
+                if time_left <= 0:
+                    undead.append(proc)
+        return undead
+
+    def kill_undead(self):
+        for undead in self.get_undead():
+            # kill processes which are taking too long to stop with a final
+            # sigkill.  if this doesn't kill it, the process will be stuck
+            # in the STOPPING state forever.
+            self.options.logger.critical(
+                'killing %r (%s) with SIGKILL' % (undead.config.name,
+                                                  undead.pid))
+            undead.kill(signal.SIGKILL)
 
     def reap(self, once=False):
         pid, sts = self.options.waitpid()
         if pid:
-            name = '<unknown>'
-            process = self.options.pidhistory.get(pid)
-            if process is not None:
+            process = self.options.pidhistory.get(pid, None)
+            if process is None:
+                self.options.logger.critical('reaped unknown pid %s)' % pid)
+            else:
                 name = process.config.name
-                process.drain()
-                process.log_output()
-                process.waitstatus = pid, sts
-                process.killing = 0
-                process.laststop = time.time()
-            self.options.logger.debug('reaped %s (pid %s)' % (name, pid))
+                process.finish(pid, sts)
             if not once:
                 self.reap() # keep reaping until no more kids to reap
 
@@ -648,7 +641,8 @@ class Supervisor:
                 for process in self.processes.values():
                     process.reopenlogs()
             else:
-                self.options.logger.debug('received %s' % signame(sig))
+                self.options.logger.debug(
+                    'received %s indicating nothing' % signame(sig))
         
     def get_state(self):
         if self.mood <= 0:

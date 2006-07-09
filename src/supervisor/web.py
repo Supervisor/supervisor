@@ -106,9 +106,8 @@ class StatusView(MeldView):
         }
         if state == ProcessStates.RUNNING:
             actions = [restart, stop, clearlog, tailf]
-        elif state in (ProcessStates.STOPPED, ProcessStates.KILLED,
-                       ProcessStates.NOTSTARTED, ProcessStates.EXITED,
-                       ProcessStates.ERROR):
+        elif state in (ProcessStates.STOPPED, ProcessStates.EXITED,
+                       ProcessStates.FATAL):
             actions = [start, None, clearlog, tailf]
         else:
             actions = [None, None, clearlog, tailf]
@@ -118,7 +117,7 @@ class StatusView(MeldView):
         from supervisord import ProcessStates
         if state == ProcessStates.RUNNING:
             return 'statusrunning'
-        elif state in (ProcessStates.KILLED, ProcessStates.ERROR):
+        elif state in (ProcessStates.FATAL, ProcessStates.BACKOFF):
             return 'statuserror'
         else:
             return 'statusnominal'
@@ -151,9 +150,10 @@ class StatusView(MeldView):
                         msg = process.stop()
                         if not msg:
                             # XXX busywait
-                            while not process.reportstatusmsg:
+                            while not process.finishmsg:
+                                supervisord.give_up()
+                                supervisord.kill_undead_processes()
                                 supervisord.reap()
-                                supervisord.handle_procs_with_waitstatus()
                             process.spawn()
                             message = 'Restarted %s at %s' % (processname, t)
                         else:
@@ -163,8 +163,9 @@ class StatusView(MeldView):
                         print "process pid", process.pid
                         # XXX busywait
                         time.sleep(.5)
+                        supervisord.give_up()
+                        supervisord.kill_undead_processes()
                         supervisord.reap()
-                        supervisord.handle_procs_with_waitstatus()
                         message = 'Started %s at %s' % (processname, t)
                     if action == 'clearlog':
                         process.removelogs()
