@@ -7,8 +7,6 @@
 
 - Unit tests for meld classes and ui server.
 
-- Tail main log.
-
 - Unit tests for log rotation.
 
 - Command-line arg tests.
