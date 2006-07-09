@@ -150,9 +150,9 @@ class StatusView(MeldView):
                         msg = process.stop()
                         if not msg:
                             # XXX busywait
-                            while not process.finishmsg:
+                            while process.pid:
                                 supervisord.give_up()
-                                supervisord.kill_undead_processes()
+                                supervisord.kill_undead()
                                 supervisord.reap()
                             process.spawn()
                             message = 'Restarted %s at %s' % (processname, t)
@@ -160,11 +160,10 @@ class StatusView(MeldView):
                             message = msg
                     if action == 'start':
                         process.spawn()
-                        print "process pid", process.pid
                         # XXX busywait
                         time.sleep(.5)
                         supervisord.give_up()
-                        supervisord.kill_undead_processes()
+                        supervisord.kill_undead()
                         supervisord.reap()
                         message = 'Started %s at %s' % (processname, t)
                     if action == 'clearlog':
