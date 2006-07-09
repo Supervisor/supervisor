@@ -399,10 +399,12 @@ Examples of Program Configurations
     [program:zope1]
     command=/path/to/instance/home/bin/runzope
     priority=2
+    log_stderr=true
 
     [program:zope2]
     command=/path/to/another/instance/home/bin/runzope
     priority=2
+    log_stderr=true
 
   OpenLDAP slapd::
 
