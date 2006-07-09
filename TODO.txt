@@ -13,13 +13,9 @@
 
 - Command-line arg tests.
 
-- supervisorctl one-shot tests.
-
 - supervisorctl command history
 
 - stop logging all RPC requests in info mode when we ship
 
 - Test on Linux.
-
-- Retest under 2.3.
 
