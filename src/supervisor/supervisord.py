@@ -581,14 +581,17 @@ class Supervisor:
         now = time.time()
         processes = self.processes.values()
         for proc in processes:
-            if proc.get_state() == ProcessStates.BACKOFF:
+            state = proc.get_state()
+            if state == ProcessStates.BACKOFF:
                 if proc.backoff > proc.config.startretries:
                     proc.backoff = 0
                     proc.delay = 0
                     proc.system_stop = 1
-            elif proc.get_state() == ProcessStates.RUNNING:
+            elif state == ProcessStates.RUNNING:
                 if proc.delay < now:
                     proc.delay = 0
+            elif state == ProcessStates.FATAL:
+                proc.delay = 0
 
     def get_delay_processes(self):
         """ Processes which are starting or stopping """
