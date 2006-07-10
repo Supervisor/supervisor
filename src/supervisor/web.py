@@ -4,6 +4,7 @@ import cgi
 import meld3
 import time
 import traceback
+import urllib
 from options import readFile
 from medusa import default_handler
 from medusa import producers
@@ -44,14 +45,22 @@ class DeferredWebProducer:
             self.request.error(500)
 
     def sendresponse(self, response):
-        body = response.get('body', '')
-        content_type = response.get('content_type', 'text/html')
-        self.request['Content-Type'] = content_type
-        self.request['Content-Length'] = len(body)
 
         headers = response.get('headers', [])
         for header in headers:
             self.request[header] = headers[header]
+
+        if headers.get('Location'):
+            self.request['Content-Type'] = 'text/html'
+            self.request['Content-Length'] = 0
+            self.request.error(301)
+            return
+
+        body = response.get('body', '')
+        content_type = response.get('content_type', 'text/html')
+        self.request['Content-Type'] = content_type
+        self.request['Content-Length'] = len(body)
+            
 
         self.request.push(body)
 
@@ -246,16 +255,9 @@ class StatusView(MeldView):
         else:
             return 'statusnominal'
 
-    def make_callback(self, query):
+    def make_callback(self, processname, action):
         message = None
         supervisord = self.context.supervisord
-
-        while query.startswith('?'):
-            query = query[1:]
-
-        params = cgi.parse_qs(query)
-        processname = params.get('processname',[None])[0]
-        action = params.get('action', [None])[0]
 
         # the rpc interface code is already written to deal properly in a
         # deferred world, so just use it
@@ -353,19 +355,32 @@ class StatusView(MeldView):
     
     def render(self):
         request = self.context.request
+        response = self.context.response
         path, params, query, fragment = request.split_uri()
 
-        message = None
-
         if query:
+            while query.startswith('?'):
+                query = query[1:]
+
+        qparams = cgi.parse_qs(query or '')
+        processname = qparams.get('processname',[None])[0]
+        action = qparams.get('action', [None])[0]
+        message = qparams.get('message', [None])[0]
+
+        if action:
             if not self.callback:
-                self.callback = self.make_callback(query)
+                self.callback = self.make_callback(processname, action)
                 return NOT_DONE_YET
 
             else:
                 message =  self.callback()
                 if message is NOT_DONE_YET:
                     return NOT_DONE_YET
+                if message is not None:
+                    server_url = request.get_server_url()
+                    location = server_url + '?message=%s' % urllib.quote(
+                        message)
+                    response['headers']['Location'] = location
 
         supervisord = self.context.supervisord
         rpcinterface = xmlrpc.RPCInterface(supervisord)
@@ -391,30 +406,34 @@ class StatusView(MeldView):
             statusarea = root.findmeld('statusmessage')
             statusarea.attrib['class'] = 'statusmessage'
             statusarea.content(message)
-            
-        iterator = root.findmeld('tr').repeat(data)
-        for element, item in iterator:
-            status_text = element.findmeld('status_text')
-            status_text.content(item['status'])
-            status_text.attrib['class'] = self.css_class_for_state(
-                item['state'])
-            info_text = element.findmeld('info_text')
-            info_text.content(item['description'])
-            anchor = element.findmeld('name_anchor')
-            processname = item['name']
-            anchor.attributes(href='tail.html?processname=%s' % processname)
-            anchor.content(processname)
-            actions = item['actions']
-            actionitem_td = element.findmeld('actionitem_td')
-            for element, actionitem in actionitem_td.repeat(actions):
-                if actionitem is None:
-                    element.content('&nbsp;', structure=True)
-                else:
-                    anchor = element.findmeld('actionitem_anchor')
-                    anchor.attributes(href=actionitem['href'])
-                    anchor.content(actionitem['name'])
-                    if actionitem['target']:
-                        anchor.attributes(target=actionitem['target'])
+
+        if data:
+            iterator = root.findmeld('tr').repeat(data)
+            for element, item in iterator:
+                status_text = element.findmeld('status_text')
+                status_text.content(item['status'])
+                status_text.attrib['class'] = self.css_class_for_state(
+                    item['state'])
+                info_text = element.findmeld('info_text')
+                info_text.content(item['description'])
+                anchor = element.findmeld('name_anchor')
+                processname = item['name']
+                anchor.attributes(href='tail.html?processname=%s' % processname)
+                anchor.content(processname)
+                actions = item['actions']
+                actionitem_td = element.findmeld('actionitem_td')
+                for element, actionitem in actionitem_td.repeat(actions):
+                    if actionitem is None:
+                        element.content('&nbsp;', structure=True)
+                    else:
+                        anchor = element.findmeld('actionitem_anchor')
+                        anchor.attributes(href=actionitem['href'])
+                        anchor.content(actionitem['name'])
+                        if actionitem['target']:
+                            anchor.attributes(target=actionitem['target'])
+        else:
+            table = root.findmeld('statustable')
+            table.replace('No programs to manage')
 
         return root.write_xhtmlstring()
 
