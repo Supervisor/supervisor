@@ -501,10 +501,6 @@ class SupervisorNamespaceRPCInterface:
         return killall # deferred
 
     def _interpretProcessInfo(self, info):
-        result = {}
-        result['name'] = info['name']
-        pid = info['pid']
-
         state = info['state']
 
         if state == ProcessStates.RUNNING:
