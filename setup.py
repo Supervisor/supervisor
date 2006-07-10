@@ -15,7 +15,7 @@ from distutils.core import setup
 
 setup(
     name = 'supervisor',
-    version = "0.1",
+    version = "2.0",
     description = ".",
     author = "Chris McDonough",
     author_email = "chrism@plope.com",
