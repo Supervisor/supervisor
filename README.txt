@@ -78,9 +78,18 @@ Installing
   and start supervisord and point it at the configuration file via the
   -c flag, e.g. "python supervisord.py -c /path/to/sample/conf".
 
+  I make reference below to a "$BINDIR" when explaining how to run
+  supervisord and supervisorctl.  This is the "bindir" directory that
+  your Python installation has been configured with.  For example, for
+  an installation of Python installed via "./configure
+  --prefix=/usr/local/python; make; make install", $BINDIR would be
+  "/usr/local/python/bin".  Python interpreters on different platforms
+  use different $BINDIRs.  Look at the output of "setup.py install" if
+  you can't figure out where yours is.
+  
 Running Supervisord
 
-  To start supervisord, run $PYDIR/bin/supervisord.  The resulting
+  To start supervisord, run $BINDIR/supervisord.  The resulting
   process will daemonize itself and detach from the terminal.  It
   keeps an operations log at "/tmp/supervisor.log" by default.
 
@@ -95,7 +104,7 @@ Running Supervisord
 
 Running Supervisorctl
 
-  To start supervisorctl, run $PYDIR/bin/supervisorctl.  A shell will
+  To start supervisorctl, run $BINDIR/supervisorctl.  A shell will
   be presented that will allow you to control the processes that are
   currently managed by supervisord.  Type "help" at the prompt to get
   information about the supported commands.
