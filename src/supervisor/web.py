@@ -1,18 +1,133 @@
 import os
+import re
 import cgi
 import meld3
 import time
+import traceback
 from options import readFile
 from medusa import default_handler
-from medusa.http_server import http_date
 from medusa import producers
+from medusa.http_server import http_date
+from medusa.http_server import get_header
+from medusa import producers
+from supervisord import ProcessStates
+from http import NOT_DONE_YET
+
+class DeferredWebProducer:
+    """ A medusa producer that implements a deferred callback; requires
+    a subclass of asynchat.async_chat that handles NOT_DONE_YET sentinel """
+    CONNECTION = re.compile ('Connection: (.*)', re.IGNORECASE)
+
+    def __init__(self, request, callback):
+        self.callback = callback
+        self.request = request
+        self.finished = False
+        self.delay = float(callback.delay)
+
+    def more(self):
+        if self.finished:
+            return ''
+        try:
+            response = self.callback()
+            if response is NOT_DONE_YET:
+                return NOT_DONE_YET
+                
+            self.finished = True
+
+            return self.sendresponse(response)
+
+        except:
+            # report unexpected exception back to server
+            traceback.print_exc()
+            self.finished = True
+            self.request.error(500)
+
+    def sendresponse(self, response):
+        body = response.get('body', '')
+        content_type = response.get('content_type', 'text/html')
+        self.request['Content-Type'] = content_type
+        self.request['Content-Length'] = len(body)
+
+        headers = response.get('headers', [])
+        for header in headers:
+            self.request[header] = headers[header]
+
+        self.request.push(body)
+
+        connection = get_header(self.CONNECTION, self.request.header)
+
+        close_it = 0
+        wrap_in_chunking = 0
+
+        if self.request.version == '1.0':
+            if connection == 'keep-alive':
+                if not self.request.has_key('Content-Length'):
+                    close_it = 1
+                else:
+                    self.request['Connection'] = 'Keep-Alive'
+            else:
+                close_it = 1
+        elif self.request.version == '1.1':
+            if connection == 'close':
+                close_it = 1
+            elif not self.request.has_key ('Content-Length'):
+                if self.request.has_key ('Transfer-Encoding'):
+                    if not self.request['Transfer-Encoding'] == 'chunked':
+                        close_it = 1
+                elif self.request.use_chunked:
+                    self.request['Transfer-Encoding'] = 'chunked'
+                    wrap_in_chunking = 1
+                else:
+                    close_it = 1
+        elif self.request.version is None:
+            close_it = 1
+
+        outgoing_header = producers.simple_producer (
+            self.request.build_reply_header())
+
+        if close_it:
+            self.request['Connection'] = 'close'
+
+        if wrap_in_chunking:
+            outgoing_producer = producers.chunked_producer (
+                    producers.composite_producer (self.request.outgoing)
+                    )
+            # prepend the header
+            outgoing_producer = producers.composite_producer(
+                [outgoing_header, outgoing_producer]
+                )
+        else:
+            # prepend the header
+            self.request.outgoing.insert(0, outgoing_header)
+            outgoing_producer = producers.composite_producer (
+                self.request.outgoing)
+
+        # apply a few final transformations to the output
+        self.request.channel.push_with_producer (
+                # globbing gives us large packets
+                producers.globbing_producer (
+                        # hooking lets us log the number of bytes sent
+                        producers.hooked_producer (
+                                outgoing_producer,
+                                self.request.log
+                                )
+                        )
+                )
+
+        self.request.channel.current_request = None
+
+        if close_it:
+            self.request.channel.close_when_done()
 
 class ViewContext:
     def __init__(self, **kw):
         self.__dict__.update(kw)
 
 class MeldView:
+
     content_type = 'text/html'
+    delay = .5
+
     def __init__(self, context):
         self.context = context
         template = self.context.template
@@ -20,6 +135,20 @@ class MeldView:
             here = os.path.abspath(os.path.dirname(__file__))
             template = os.path.join(here, template)
         self.root = meld3.parse_xml(template)
+
+    def __call__(self):
+        body = self.render()
+        if body is NOT_DONE_YET:
+            return NOT_DONE_YET
+
+        response = self.context.response
+        headers = response['headers']
+        headers['Content-Type'] = self.content_type
+        headers['Pragma'] = 'no-cache'
+        headers['Cache-Control'] = 'no-cache'
+        headers['Expires'] = http_date.build_http_date(0)
+        response['body'] = body
+        return response
 
     def clone(self):
         return self.root.clone()
@@ -77,7 +206,6 @@ class TailView(MeldView):
 class StatusView(MeldView):
     def actions_for_process(self, process):
         state = process.get_state()
-        from supervisord import ProcessStates
         processname = process.config.name
         start = {
         'name':'Start',
@@ -113,8 +241,11 @@ class StatusView(MeldView):
             actions = [None, None, clearlog, tailf]
         return actions
 
+    def make_rpc_interface(self, supervisord):
+        from xmlrpc import SupervisorNamespaceRPCInterface
+        return SupervisorNamespaceRPCInterface(supervisord)
+
     def css_class_for_state(self, state):
-        from supervisord import ProcessStates
         if state == ProcessStates.RUNNING:
             return 'statusrunning'
         elif state in (ProcessStates.FATAL, ProcessStates.BACKOFF):
@@ -123,7 +254,6 @@ class StatusView(MeldView):
             return 'statusnominal'
 
     def handle_query(self, query):
-        from supervisord import ProcessStates
         message = None
         supervisord = self.context.supervisord
 
@@ -263,6 +393,7 @@ VIEWS = {
            },
     }
 
+
 class supervisor_ui_handler(default_handler.default_handler):
     IDENT = 'Supervisor Web UI HTTP Request Handler'
 
@@ -270,11 +401,7 @@ class supervisor_ui_handler(default_handler.default_handler):
         self.supervisord = supervisord
         default_handler.default_handler.__init__(self, filesystem)
 
-    def handle_request(self, request):
-        if request.command not in self.valid_commands:
-            request.error (400) # bad request
-            return
-
+    def get_view(self, request):
         path, params, query, fragment = request.split_uri()
 
         if '%' in path:
@@ -288,23 +415,26 @@ class supervisor_ui_handler(default_handler.default_handler):
             path = 'index.html'
 
         viewdata = VIEWS.get(path)
+        return viewdata
 
-        if viewdata is not None:
-            context = ViewContext(template=viewdata['template'],
-                                  request=request,
-                                  supervisord=self.supervisord)
-            view = viewdata['view'](context)
-            rendering = view.render()
-            request['Last-Modified'] = http_date.build_http_date(time.time())
-            request['Content-Type'] = view.content_type
-            request['Pragma'] = 'no-cache'
-            request['Cache-Control'] = 'no-cache'
-            request['Expires'] = http_date.build_http_date(0)
-            request['Content-Length'] = len(rendering)
-            if request.command == 'GET':
-                request.push(producers.simple_producer(rendering))
-                request.done()
-                return
+    def handle_request(self, request):
+        if self.get_view(request):
+            self.continue_request('', request)
+        else:
+            return default_handler.default_handler.handle_request(self, request)
 
-        return default_handler.default_handler.handle_request(self, request)
+    def continue_request(self, data, request):
+        viewdata = self.get_view(request)
+        response = {}
+        response['headers'] = {}
+
+        viewclass = viewdata['view']
+        viewtemplate = viewdata['template']
+        context = ViewContext(template=viewtemplate,
+                              request=request,
+                              response=response,
+                              supervisord=self.supervisord)
+        view = viewclass(context)
+        pushproducer = request.channel.push_with_producer
+        pushproducer(DeferredWebProducer(request, view))
 
