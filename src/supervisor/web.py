@@ -12,6 +12,7 @@ from medusa.http_server import get_header
 from medusa import producers
 from supervisord import ProcessStates
 from http import NOT_DONE_YET
+import xmlrpc
 
 class DeferredWebProducer:
     """ A medusa producer that implements a deferred callback; requires
@@ -135,6 +136,7 @@ class MeldView:
             here = os.path.abspath(os.path.dirname(__file__))
             template = os.path.join(here, template)
         self.root = meld3.parse_xml(template)
+        self.callback = None
 
     def __call__(self):
         body = self.render()
@@ -176,16 +178,15 @@ class TailView(MeldView):
             if not processname:
                 tail = 'No process name found'
             else:
-                process = supervisord.processes.get(processname)
-                if process is None:
-                    tail = 'No such process %s' % processname
-                else:
-                    try:
-                        data = readFile(process.config.logfile, -1024, 0)
-                    except ValueError, e:
-                        tail = e.args[0]
+                rpcinterface = xmlrpc.SupervisorNamespaceRPCInterface(
+                    supervisord)
+                try:
+                    data = rpcinterface.readProcessLog(processname, -1024, 0)
+                except xmlrpc.RPCError, e:
+                    if e.code == xmlrpc.Faults.NO_FILE:
+                        tail = 'No file for %s' % processname
                     else:
-                        tail = data
+                        raise
 
         root = self.clone()
 
@@ -253,7 +254,7 @@ class StatusView(MeldView):
         else:
             return 'statusnominal'
 
-    def handle_query(self, query):
+    def make_callback(self, query):
         message = None
         supervisord = self.context.supervisord
 
@@ -264,80 +265,107 @@ class StatusView(MeldView):
         processname = params.get('processname',[None])[0]
         action = params.get('action', [None])[0]
 
+        rpcinterface = xmlrpc.RPCInterface(supervisord)
+
         if action:
-            t = time.ctime()
+
             if action == 'refresh':
-                message = 'Page refreshed at %s' % t
+                def donothing():
+                    message = 'Page refreshed at %s' % time.ctime()
+                    return message
+                donothing.delay = 0
+                return donothing
 
-            if action in ('stopall', 'restartall'):
-                supervisord.stop_all()
-
-                processes = supervisord.processes.values()
-                while 1:
-                    running = [ p for p in processes if
-                                p.get_state() in (ProcessStates.RUNNING,
-                                                  ProcessStates.STOPPING) ]
-                    if running:
-                        # XXX busywait
-                        supervisord.give_up()
-                        supervisord.kill_undead()
-                        supervisord.reap()
-                        supervisord.handle_signal()
-                        time.sleep(.01)
+            elif action == 'stopall':
+                callback = rpcinterface.supervisor.stopAllProcesses()
+                def stopall():
+                    if callback() is NOT_DONE_YET:
+                        return NOT_DONE_YET
                     else:
-                        break
-                message = 'All stopped at %s' % t
-                if action == 'restartall':
-                    for process in processes:
-                        process.spawn()
-                    message = 'All restarting at %s' % t
+                        return 'All stopped at %s' % time.ctime()
+                stopall.delay = 0.05
+                return stopall
+
+            elif action == 'restartall':
+                callback = rpcinterface.system.multicall(
+                    [ {'methodName':'supervisor.stopAllProcesses'},
+                      {'methodName':'supervisor.startAllProcesses'} ] )
+                def restartall():
+                    if callback() is NOT_DONE_YET:
+                        return NOT_DONE_YET
+                    return 'All restarted at %s' % time.ctime()
+                restartall.delay = .05
+                return restartall
 
             elif processname:
-                process = supervisord.processes.get(processname)
-                if process is None:
-                    message = 'No such process %s at %s' % (processname, t)
-                else:
-                    if action == 'stop':
-                        process.stop()
-                        message = 'Stopped %s at %s' % (processname, t)
-                    if action == 'restart':
-                        msg = process.stop()
-                        if not msg:
-                            # XXX busywait
-                            while process.pid:
-                                supervisord.give_up()
-                                supervisord.kill_undead()
-                                supervisord.reap()
-                                supervisord.handle_signal()
-                                time.sleep(.01)
-                            process.spawn()
-                            message = 'Restarted %s at %s' % (processname, t)
-                        else:
-                            message = msg
-                    if action == 'start':
-                        process.spawn()
-                        # XXX busywait
-                        time.sleep(.5)
-                        supervisord.give_up()
-                        supervisord.kill_undead()
-                        supervisord.reap()
-                        supervisord.handle_signal()
-                        message = 'Started %s at %s' % (processname, t)
-                    if action == 'clearlog':
-                        process.removelogs()
-                        message = 'Cleared log of %s at %s' % (processname, t)
+                if not supervisord.processes.get(processname):
+                    def wrong():
+                        return 'No such process named %s' % processname
+                    wrong.delay = 0
+                    return wrong
+                
+                elif action == 'stop':
+                    callback = rpcinterface.supervisor.stopProcess(processname)
+                    def stopprocess():
+                        result = callback()
+                        if result is NOT_DONE_YET:
+                            return NOT_DONE_YET
+                        return 'Process %s stopped' % processname
+                    stopprocess.delay = 0.2
+                    return stopprocess
 
-        return message
+                elif action == 'restart':
+                    callback = rpcinterface.system.multicall(
+                        [ {'methodName':'supervisor.stopProcess',
+                           'params': [processname]},
+                          {'methodName':'supervisor.startProcess',
+                           'params': [processname]},
+                          ]
+                        )
+                    def restartprocess():
+                        if callback() is NOT_DONE_YET:
+                            return NOT_DONE_YET
+                        return 'Process %s restarted' % processname
+                    restartprocess.delay = 0.05
+                    return restartprocess
+
+                elif action == 'start':
+                    callback = rpcinterface.supervisor.startProcess(processname)
+                    def startprocess():
+                        if callback() is NOT_DONE_YET:
+                            return NOT_DONE_YET
+                        return 'Process %s started' % processname
+                    startprocess.delay = 0.05
+                    return startprocess
+                
+                elif action == 'clearlog':
+                    callback = rpcinterface.supervisor.clearProcessLog(
+                        processname)
+                    def clearlog():
+                        return 'Log for %s cleared' % processname
+                    clearlog.delay = 0.05
+                    return clearlog
+
+        raise ValueError(action)
     
     def render(self):
-        supervisord = self.context.supervisord
         request = self.context.request
-        message = None
         path, params, query, fragment = request.split_uri()
 
+        message = None
+
         if query:
-            message = self.handle_query(query)
-        
+            if not self.callback:
+                self.callback = self.make_callback(query)
+                return NOT_DONE_YET
+
+            else:
+                message =  self.callback()
+                if message is NOT_DONE_YET:
+                    return NOT_DONE_YET
+
+        supervisord = self.context.supervisord
+
         processnames = supervisord.processes.keys()
         processnames.sort()
         data = []

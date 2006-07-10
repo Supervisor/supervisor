@@ -1,15 +1,18 @@
 - Web interface:
 
-   - present status in addition to state (e.g. spawnerr, etc, same as
-     supervisorctl)
+   - Present status in addition to state (e.g. spawnerr, etc, same as
+     supervisorctl).
 
-   - Use HTTP_HOST for generated URL names in web.py, use POST requests
-     and deferreds.
+   - Support/use POST requests.
+
+   - Redirect whenever an action causes the URL to be unreloadable.
+  
+   - Unit tests for meld classes and ui server.
+
+   - Figure out why restart all and restart a single process doesn't.
 
 - Rewrite RPC stuff: use ProcessStates rather than direct attribute
   access, rename methods.
-
-- Unit tests for meld classes and ui server.
 
 - Unit tests for log rotation.
 
