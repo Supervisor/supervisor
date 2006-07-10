@@ -6,6 +6,8 @@
 
    - Meta-refresh on tail page.
 
+- Elementtree dependency.
+
 - Unit tests for log rotation.
 
 - Command-line arg tests.
