@@ -1,12 +1,10 @@
 - Web interface:
 
-   - Support/use POST requests.
+   - Support POST requests.
 
-   - Redirect whenever an action causes the URL to be unreloadable.
-  
    - Unit tests for meld classes and ui server.
 
-- Better tests for _interpretProcessStatus in rpc module.
+   - Meta-refresh on tail page.
 
 - Unit tests for log rotation.
 

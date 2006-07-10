@@ -536,6 +536,65 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(process.stop_called, True)
         self.assertEqual(process2.stop_called, True)
 
+    def test__interpretProcessInfo(self):
+        supervisord = DummySupervisor({})
+        interface = self._makeOne(supervisord)
+        from supervisord import ProcessStates
+        running = {'name':'running',
+                   'pid':1,
+                   'state':ProcessStates.RUNNING,
+                   'start':_NOW -100,
+                   'stop':_NOW -1,
+                   'now':_NOW}
+        
+        description = interface._interpretProcessInfo(running)
+        self.assertEqual(description, 'pid 1, uptime 0:01:40')
+
+        fatal = {'name':'fatal',
+                 'pid':2,
+                 'state':ProcessStates.FATAL,
+                 'start':_NOW -100,
+                 'stop':_NOW -1,
+                 'now':_NOW,
+                 'spawnerr':'Hosed'}
+                 
+        description = interface._interpretProcessInfo(fatal)
+        self.assertEqual(description, 'Hosed')
+
+        fatal2 = {'name':'fatal',
+                  'pid':2,
+                  'state':ProcessStates.FATAL,
+                  'start':_NOW -100,
+                  'stop':_NOW -1,
+                  'now':_NOW,
+                  'spawnerr':'',}
+                 
+        description = interface._interpretProcessInfo(fatal2)
+        self.assertEqual(description, 'unknown error (try "tail fatal")')
+        
+        stopped = {'name':'stopped',
+                   'pid':3,
+                   'state':ProcessStates.STOPPED,
+                   'start':_NOW -100,
+                   'stop':_NOW -1,
+                   'now':_NOW,
+                   'spawnerr':'',}
+
+        description = interface._interpretProcessInfo(stopped)
+        self.assertEqual(description, 'Jun 26 07:42 PM')
+        
+        stopped2 = {'name':'stopped',
+                   'pid':3,
+                   'state':ProcessStates.STOPPED,
+                   'start':0,
+                   'stop':_NOW -1,
+                   'now':_NOW,
+                   'spawnerr':'',}
+
+        description = interface._interpretProcessInfo(stopped2)
+        self.assertEqual(description, 'Not started')
+                   
+
     def test_getProcessInfo(self):
         from supervisord import ProcessStates
 
