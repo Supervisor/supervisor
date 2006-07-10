@@ -6,13 +6,13 @@
   
    - Unit tests for meld classes and ui server.
 
+- Better tests for _interpretProcessStatus in rpc module.
+
 - Unit tests for log rotation.
 
 - Command-line arg tests.
 
 - Log logtail requests.
-
-- Stop logging all RPC requests in info mode when we ship.
 
 - Test on Linux.
 
