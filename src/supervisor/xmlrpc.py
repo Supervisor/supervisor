@@ -292,7 +292,7 @@ class SupervisorNamespaceRPCInterface:
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
 
-        if process.pid:
+        if process.get_state() == ProcessStates.RUNNING:
             raise RPCError(Faults.ALREADY_STARTED, name)
 
         process.spawn()
@@ -311,8 +311,8 @@ class SupervisorNamespaceRPCInterface:
             runtime = (t - start)
             if not done and runtime < milliseconds:
                 return NOT_DONE_YET
-            pid = processes[name].pid
-            if pid:
+            state = process.get_state()
+            if state == ProcessStates.RUNNING:
                 return True
             raise RPCError(Faults.ABNORMAL_TERMINATION, name)
 
@@ -339,23 +339,29 @@ class SupervisorNamespaceRPCInterface:
         results = []
         callbacks = []
 
-        for process in processes:
-            if process.get_state() not in (ProcessStates.RUNNING,
-                                           ProcessStates.BACKOFF):
-                # only start nonrunning processes
-                try:
-                    callbacks.append((process.config.name,
-                              self.startProcess(process.config.name, timeout)))
-                except RPCError, e:
-                    results.append({'name':process.config.name, 'status':e.code,
-                                    'description':e.text})
-                    continue
-
         def startall(done=False): # done arg is for unit testing
+            if not callbacks:
+
+                for process in processes:
+                    if process.get_state() not in (ProcessStates.RUNNING,
+                                                   ProcessStates.BACKOFF):
+                        # only start nonrunning processes
+                        try:
+                            callbacks.append((
+                                process.config.name,
+                                self.startProcess(process.config.name,
+                                                  timeout)))
+                        except RPCError, e:
+                            results.append({'name':process.config.name,
+                                            'status':e.code,
+                                            'description':e.text})
+                            continue
+
             if not callbacks:
                 return results
 
             name, callback = callbacks.pop(0)
+
             try:
                 value = callback(done)
             except RPCError, e:
@@ -402,12 +408,13 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.NOT_RUNNING)
 
         def killit():
-            if process.killing:
-                return NOT_DONE_YET
-            elif process.pid:
+            if process.get_state() == ProcessStates.RUNNING:
                 msg = process.stop()
                 if msg is not None:
                     raise RPCError(Faults.FAILED, name)
+                return NOT_DONE_YET
+            elif process.get_state() not in (ProcessStates.STOPPED,
+                                             ProcessStates.EXITED):
                 return NOT_DONE_YET
             else:
                 return True
@@ -429,18 +436,21 @@ class SupervisorNamespaceRPCInterface:
         callbacks = []
         results = []
 
-        for process in processes:
-            if process.get_state() == ProcessStates.RUNNING:
-                # only stop running processes
-                try:
-                    callbacks.append((process.config.name,
-                                      self.stopProcess(process.config.name)))
-                except RPCError, e:
-                    results.append({'name':name, 'status':e.code,
-                                    'description':e.text})
-                    continue
-
         def killall():
+            if not callbacks:
+
+                for process in processes:
+                    if process.get_state() == ProcessStates.RUNNING:
+                        # only stop running processes
+                        try:
+                            callbacks.append(
+                                (process.config.name,
+                                 self.stopProcess(process.config.name)))
+                        except RPCError, e:
+                            results.append({'name':name, 'status':e.code,
+                                            'description':e.text})
+                            continue
+
             if not callbacks:
                 return results
 

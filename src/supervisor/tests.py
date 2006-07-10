@@ -413,7 +413,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_startProcess_spawnerr(self):
         options = DummyOptions()
         config = DummyPConfig('foo', '/bin/foo', autostart=False)
-        process = DummyProcess(options, config)
+        process = DummyProcess(options, config, ProcessStates.STOPPED)
         process.spawnerr = 'abc'
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
@@ -424,7 +424,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_startProcess(self):
         options = DummyOptions()
         config = DummyPConfig('foo', '/bin/foo', autostart=False)
-        process = DummyProcess(options, config)
+        process = DummyProcess(options, config, state=ProcessStates.STOPPED)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
         callback = interface.startProcess('foo')
@@ -438,13 +438,13 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_startProcess_abnormal_term(self):
         options = DummyOptions()
         config = DummyPConfig('foo', '/bin/foo', autostart=False)
-        process = DummyProcess(options, config)
+        process = DummyProcess(options, config, ProcessStates.STOPPED)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
         callback = interface.startProcess('foo')
         self.assertEqual(process.spawned, True)
         self.assertEqual(interface.update_text, 'startProcess')
-        process.pid = 0
+        process.state = ProcessStates.BACKOFF
         self._assertRPCError(xmlrpc.Faults.ABNORMAL_TERMINATION,
                              callback, True)
     
@@ -466,8 +466,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = DummySupervisor({'foo':process, 'foo2':process2})
         interface = self._makeOne(supervisord)
         callback = interface.startAllProcesses()
-        process.pid = 1234
-        process2.pid = 12345
+        #process.pid = 1234
+        #process2.pid = 12345
         # first process
         from http import NOT_DONE_YET
         self.assertEqual(callback(done=True), NOT_DONE_YET)
@@ -494,7 +494,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_stopProcess(self):
         options = DummyOptions()
         config = DummyPConfig('foo', '/bin/foo')
-        process = DummyProcess(options, config)
+        process = DummyProcess(options, config, ProcessStates.RUNNING)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
         callback = interface.stopProcess('foo')
@@ -503,10 +503,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(process.backoff, 0)
         self.assertEqual(process.delay, 0)
         self.assertEqual(process.killing, 0)
-        process.killing = 1
+        process.state = ProcessStates.STOPPING
         self.assertEqual(callback(), http.NOT_DONE_YET)
-        process.killing = 0
-        process.pid = 0
+        process.state = ProcessStates.STOPPED
         self.assertEqual(callback(), True)
         self.assertEqual(len(supervisord.processes), 1)
         self.assertEqual(interface.update_text, 'stopProcess')
@@ -516,13 +515,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         options = DummyOptions()
         config = DummyPConfig('foo', '/bin/foo')
         config2 = DummyPConfig('foo2', '/bin/foo2')
-        process = DummyProcess(options, config)
-        process2 = DummyProcess(options, config2)
+        process = DummyProcess(options, config, ProcessStates.RUNNING)
+        process2 = DummyProcess(options, config2, ProcessStates.RUNNING)
         supervisord = DummySupervisor({'foo':process, 'foo2':process2})
         interface = self._makeOne(supervisord)
-        process.pid = process2.pid = 1234
         callback = interface.stopAllProcesses()
-        self.assertEqual(interface.update_text, 'stopProcess')
+        self.assertEqual(interface.update_text, 'stopAllProcesses')
         value = http.NOT_DONE_YET
         while 1:
             value = callback()
@@ -2105,13 +2103,14 @@ class DummyProcess:
     def stop(self):
         self.stop_called = True
         self.killing = False
-        self.pid = 0
+        self.state = ProcessStates.STOPPED
 
     def kill(self, signal):
         self.killed_with = signal
 
     def spawn(self):
         self.spawned = True
+        self.state = ProcessStates.RUNNING
 
     def drain(self):
         self.drained = True

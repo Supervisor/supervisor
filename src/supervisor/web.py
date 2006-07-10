@@ -156,14 +156,6 @@ class MeldView:
         return self.root.clone()
 
 class TailView(MeldView):
-    def handle_query(self, query):
-        while query.startswith('?'):
-            query = query[1:]
-
-        params = cgi.parse_qs(query)
-        processname = params.get('processname',[None])[0]
-        return processname
-
     def render(self):
         supervisord = self.context.supervisord
         request = self.context.request
@@ -174,7 +166,11 @@ class TailView(MeldView):
             tail = 'No process name found'
             processname = None
         else:
-            processname = self.handle_query(query)
+            while query.startswith('?'):
+                query = query[1:]
+            params = cgi.parse_qs(query)
+            processname = params.get('processname',[None])[0]
+
             if not processname:
                 tail = 'No process name found'
             else:
@@ -242,10 +238,6 @@ class StatusView(MeldView):
             actions = [None, None, clearlog, tailf]
         return actions
 
-    def make_rpc_interface(self, supervisord):
-        from xmlrpc import SupervisorNamespaceRPCInterface
-        return SupervisorNamespaceRPCInterface(supervisord)
-
     def css_class_for_state(self, state):
         if state == ProcessStates.RUNNING:
             return 'statusrunning'
@@ -265,6 +257,8 @@ class StatusView(MeldView):
         processname = params.get('processname',[None])[0]
         action = params.get('action', [None])[0]
 
+        # the rpc interface code is already written to deal properly in a
+        # deferred world, so just use it
         rpcinterface = xmlrpc.RPCInterface(supervisord)
 
         if action:
@@ -273,7 +267,7 @@ class StatusView(MeldView):
                 def donothing():
                     message = 'Page refreshed at %s' % time.ctime()
                     return message
-                donothing.delay = 0
+                donothing.delay = 0.05
                 return donothing
 
             elif action == 'stopall':
@@ -291,17 +285,18 @@ class StatusView(MeldView):
                     [ {'methodName':'supervisor.stopAllProcesses'},
                       {'methodName':'supervisor.startAllProcesses'} ] )
                 def restartall():
-                    if callback() is NOT_DONE_YET:
+                    result = callback()
+                    if result is NOT_DONE_YET:
                         return NOT_DONE_YET
                     return 'All restarted at %s' % time.ctime()
-                restartall.delay = .05
+                restartall.delay = 0.05
                 return restartall
 
             elif processname:
                 if not supervisord.processes.get(processname):
                     def wrong():
                         return 'No such process named %s' % processname
-                    wrong.delay = 0
+                    wrong.delay = 0.05
                     return wrong
                 
                 elif action == 'stop':
@@ -311,7 +306,7 @@ class StatusView(MeldView):
                         if result is NOT_DONE_YET:
                             return NOT_DONE_YET
                         return 'Process %s stopped' % processname
-                    stopprocess.delay = 0.2
+                    stopprocess.delay = 0.05
                     return stopprocess
 
                 elif action == 'restart':
@@ -433,7 +428,7 @@ class supervisor_ui_handler(default_handler.default_handler):
         path, params, query, fragment = request.split_uri()
 
         if '%' in path:
-            path = cgi.unquote (path)
+            path = cgi.unquote(path)
 
         # strip off all leading slashes
         while path and path[0] == '/':
@@ -446,13 +441,13 @@ class supervisor_ui_handler(default_handler.default_handler):
         return viewdata
 
     def handle_request(self, request):
-        if self.get_view(request):
-            self.continue_request('', request)
+        viewdata = self.get_view(request)
+        if viewdata:
+            self.do_view_request(viewdata, request)
         else:
             return default_handler.default_handler.handle_request(self, request)
 
-    def continue_request(self, data, request):
-        viewdata = self.get_view(request)
+    def do_view_request(self, viewdata, request):
         response = {}
         response['headers'] = {}
 

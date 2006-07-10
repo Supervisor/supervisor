@@ -9,8 +9,6 @@
   
    - Unit tests for meld classes and ui server.
 
-   - Figure out why restart all and restart a single process doesn't.
-
 - Rewrite RPC stuff: use ProcessStates rather than direct attribute
   access, rename methods.
 
