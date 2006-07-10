@@ -252,7 +252,7 @@ class deferring_http_request(http_server.http_request):
         while path and path[0] == '/':
             path = path[1:]
         if '%' in path:
-            path = unquote(path)
+            path = http_server.unquote(path)
         if query:
             query = query[1:]
 
@@ -371,7 +371,6 @@ class deferring_http_channel(http_server.http_channel):
         """ We only override this to use 'deferring_http_request' class
         instead of the normal http_request class; it sucks to need to override
         this """
-        
         if self.current_request:
             self.current_request.found_terminator()
         else:
