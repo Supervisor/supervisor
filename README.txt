@@ -285,7 +285,7 @@ Configuration File '[program:x]' Section Settings
     autostart=true
     autorestart=true
     startsecs=10
-    startretries=999
+    startretries=3
     exitcodes=0,2
     stopsignal=TERM
     stopwaitsecs=10
