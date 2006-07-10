@@ -544,7 +544,7 @@ class SupervisorNamespaceRPCInterface:
         return output
 
     def readProcessLog(self, name, offset, length):
-        """ Read length bytes from processName's log starting at offset
+        """ Read length bytes from name's log starting at offset
 
         @param string name The name of the process
         @param int offset         offset to start reading from.
@@ -569,7 +569,7 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(getattr(Faults, why))
 
     def clearProcessLog(self, name):
-        """ Clear the log for processName and reopen it
+        """ Clear the log for name and reopen it
 
         @param string name   The name of the process
         @return boolean result      Always True unless error
@@ -626,15 +626,6 @@ class SupervisorNamespaceRPCInterface:
         clearall.rpcinterface = self
         return clearall # deferred
 
-    def _rotateMainLog(self):
-        """ Rotate the main supervisord log (for debugging/testing) """
-        self._update('_rotateMainLog')
-        
-        for handler in self.supervisord.options.logger.handlers:
-            if hasattr(handler, 'doRollover'):
-                handler.doRollover()
-        return True
-        
 class SystemNamespaceRPCInterface:
     def __init__(self, namespaces):
         self.namespaces = {}

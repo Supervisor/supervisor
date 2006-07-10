@@ -9,9 +9,6 @@
   
    - Unit tests for meld classes and ui server.
 
-- Rewrite RPC stuff: use ProcessStates rather than direct attribute
-  access, rename methods.
-
 - Unit tests for log rotation.
 
 - Better remote explanation when kill_undead needs to happen from
