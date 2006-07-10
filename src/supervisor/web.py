@@ -177,7 +177,7 @@ class TailView(MeldView):
                 rpcinterface = xmlrpc.SupervisorNamespaceRPCInterface(
                     supervisord)
                 try:
-                    data = rpcinterface.readProcessLog(processname, -1024, 0)
+                    tail = rpcinterface.readProcessLog(processname, -1024, 0)
                 except xmlrpc.RPCError, e:
                     if e.code == xmlrpc.Faults.NO_FILE:
                         tail = 'No file for %s' % processname
@@ -325,7 +325,15 @@ class StatusView(MeldView):
                     return restartprocess
 
                 elif action == 'start':
-                    callback = rpcinterface.supervisor.startProcess(processname)
+                    try:
+                        callback = rpcinterface.supervisor.startProcess(
+                            processname)
+                    except xmlrpc.RPCError, e:
+                        if e.code == xmlrpc.Faults.SPAWN_ERROR:
+                            def spawnerr():
+                                return 'Process %s spawn error' % processname
+                            spawnerr.delay = 0.05
+                            return spawnerr
                     def startprocess():
                         if callback() is NOT_DONE_YET:
                             return NOT_DONE_YET
