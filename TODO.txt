@@ -3,12 +3,13 @@
    - present status in addition to state (e.g. spawnerr, etc, same as
      supervisorctl)
 
+   - Use HTTP_HOST for generated URL names in web.py, use POST requests
+     and deferreds.
+
 - Rewrite RPC stuff: use ProcessStates rather than direct attribute
-  access, rename methods to lower.
+  access, rename methods.
 
 - Unit tests for meld classes and ui server.
-
-- Use HTTP_HOST for generated URL names in web.py.
 
 - Unit tests for log rotation.
 
@@ -19,7 +20,7 @@
 
 - Log logtail requests.
 
-- stop logging all RPC requests in info mode when we ship
+- Stop logging all RPC requests in info mode when we ship
 
 - Test on Linux.
 
