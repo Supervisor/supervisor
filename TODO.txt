@@ -6,6 +6,8 @@
 
    - Meta-refresh on tail page.
 
+- Expat error on Jens' system running slapd as root after reload.
+
 - Elementtree dependency.
 
 - Unit tests for log rotation.
