@@ -556,8 +556,10 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(data['start'], 10)
         self.assertEqual(data['stop'], 11)
         self.assertEqual(data['state'], ProcessStates.RUNNING)
+        self.assertEqual(data['statename'], 'RUNNING')
         self.assertEqual(data['exitstatus'], 0)
         self.assertEqual(data['spawnerr'], '')
+        self.failUnless(data['description'].startswith('pid 111'))
 
     def test_getAllProcessInfo(self):
         from supervisord import ProcessStates
@@ -567,14 +569,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                                 logfile='/tmp/process1.log')
         p2config = DummyPConfig('process2', '/bin/process2', priority=2,
                                 logfile='/tmp/process2.log')
-        process1 = DummyProcess(options, p1config)
-        process1.reportstatusmsg = 'foo'
+        process1 = DummyProcess(options, p1config, ProcessStates.RUNNING)
         process1.pid = 111
         process1.laststart = 10
         process1.laststop = 11
-        process2 = DummyProcess(options, p2config)
-        process2.reportstatusmsg = 'bar'
-        process2.pid = 222
+        process2 = DummyProcess(options, p2config, ProcessStates.STOPPED)
+        process2.pid = 0
         process2.laststart = 20
         process2.laststop = 11
         supervisord = DummySupervisor({'process1':process1,
@@ -593,18 +593,22 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(p1info['start'], 10)
         self.assertEqual(p1info['stop'], 11)
         self.assertEqual(p1info['state'], ProcessStates.RUNNING)
+        self.assertEqual(p1info['statename'], 'RUNNING')
         self.assertEqual(p1info['exitstatus'], 0)
         self.assertEqual(p1info['spawnerr'], '')
+        self.failUnless(p1info['description'].startswith('pid 111'))
 
         p2info = info[1]
         self.assertEqual(p2info['logfile'], '/tmp/process2.log')
         self.assertEqual(p2info['name'], 'process2')
-        self.assertEqual(p2info['pid'], 222)
+        self.assertEqual(p2info['pid'], 0)
         self.assertEqual(p2info['start'], 20)
         self.assertEqual(p2info['stop'], 11)
-        self.assertEqual(p2info['state'], ProcessStates.RUNNING)
+        self.assertEqual(p2info['state'], ProcessStates.STOPPED)
+        self.assertEqual(p2info['statename'], 'STOPPED')
         self.assertEqual(p2info['exitstatus'], 0)
         self.assertEqual(p2info['spawnerr'], '')
+        self.assertEqual(p2info['description'], 'Dec 31 07:00 PM')
 
     def test_readProcessLog_unreadable(self):
         options = DummyOptions()
@@ -1751,7 +1755,7 @@ class ControllerTests(unittest.TestCase):
         controller.stdout = StringIO()
         result = controller.do_status('foo')
         self.assertEqual(result, None)
-        expected = "foo            RUNNING    pid 11, uptime 0:01:40\n"
+        expected = "foo            RUNNING    foo description\n"
         self.assertEqual(controller.stdout.getvalue(), expected)
 
     def test_status_allprocesses(self):
@@ -1761,9 +1765,9 @@ class ControllerTests(unittest.TestCase):
         result = controller.do_status('')
         self.assertEqual(result, None)
         expected = """\
-foo            RUNNING    pid 11, uptime 0:01:40
-bar            FATAL      screwed
-baz            STOPPED    Jun 26 07:42 PM
+foo            RUNNING    foo description
+bar            FATAL      bar description
+baz            STOPPED    baz description
 """
         self.assertEqual(controller.stdout.getvalue(), expected)
 
@@ -2021,9 +2025,9 @@ baz            STOPPED    Jun 26 07:42 PM
         result = controller.do_open('http://localhost:9002')
         self.assertEqual(result, None)
         self.assertEqual(controller.stdout.getvalue(), """\
-foo            RUNNING    pid 11, uptime 0:01:40
-bar            FATAL      screwed
-baz            STOPPED    Jun 26 07:42 PM
+foo            RUNNING    foo description
+bar            FATAL      bar description
+baz            STOPPED    baz description
 """)
         
 class TailFProducerTests(unittest.TestCase):
@@ -2378,31 +2382,34 @@ class DummySupervisorRPCNamespace:
             'name':'foo',
             'pid':11,
             'state':ProcessStates.RUNNING,
+            'statename':'RUNNING',
             'start':_NOW - 100,
             'stop':0,
             'spawnerr':'',
-            'reportstatusmsg':'',
             'now':_NOW,
+            'description':'foo description',
              },
             {
             'name':'bar',
             'pid':12,
             'state':ProcessStates.FATAL,
+            'statename':'FATAL',
             'start':_NOW - 100,
             'stop':_NOW - 50,
             'spawnerr':'screwed',
-            'reportstatusmsg':'statusmsg',
             'now':_NOW,
+            'description':'bar description',
              },
             {
             'name':'baz',
             'pid':12,
             'state':ProcessStates.STOPPED,
+            'statename':'STOPPED',
             'start':_NOW - 100,
             'stop':_NOW - 25,
             'spawnerr':'',
-            'reportstatusmsg':'OK',
             'now':_NOW,
+            'description':'baz description',
              },
             ]
                 
@@ -2412,11 +2419,12 @@ class DummySupervisorRPCNamespace:
             'name':'foo',
             'pid':11,
             'state':ProcessStates.RUNNING,
+            'statename':'RUNNING',
             'start':_NOW - 100,
             'stop':0,
             'spawnerr':'',
-            'reportstatusmsg':'',
             'now':_NOW,
+            'description':'foo description',
              }
 
     def startProcess(self, name):

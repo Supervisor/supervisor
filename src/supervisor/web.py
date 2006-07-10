@@ -368,19 +368,22 @@ class StatusView(MeldView):
                     return NOT_DONE_YET
 
         supervisord = self.context.supervisord
+        rpcinterface = xmlrpc.RPCInterface(supervisord)
 
         processnames = supervisord.processes.keys()
         processnames.sort()
         data = []
         for processname in processnames:
-            process = supervisord.processes[processname]
-            state = process.get_state()
-            from supervisord import getProcessStateDescription
-            statedesc = getProcessStateDescription(state)
-            actions = self.actions_for_process(process)
-            data.append({'status':statedesc, 'name':processname,
-                         'actions':actions,
-                         'state':state})
+            actions = self.actions_for_process(
+                supervisord.processes[processname])
+            info = rpcinterface.supervisor.getProcessInfo(processname)
+            data.append({
+                'status':info['statename'],
+                'name':processname,
+                'actions':actions,
+                'state':info['state'],
+                'description':info['description'],
+                })
         
         root = self.clone()
 
@@ -395,6 +398,8 @@ class StatusView(MeldView):
             status_text.content(item['status'])
             status_text.attrib['class'] = self.css_class_for_state(
                 item['state'])
+            info_text = element.findmeld('info_text')
+            info_text.content(item['description'])
             anchor = element.findmeld('name_anchor')
             processname = item['name']
             anchor.attributes(href='tail.html?processname=%s' % processname)

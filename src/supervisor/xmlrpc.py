@@ -1,13 +1,6 @@
 import xmlrpclib
 import os
-from supervisord import ProcessStates
-from supervisord import SupervisorStates
-from supervisord import getSupervisorStateDescription
-import signal
-import time
-from medusa.xmlrpc_handler import xmlrpc_handler
-from medusa.http_server import get_header
-from medusa import producers
+import datetime
 import sys
 import types
 import re
@@ -15,6 +8,16 @@ import traceback
 import StringIO
 import tempfile
 import errno
+import signal
+import time
+
+from supervisord import ProcessStates
+from supervisord import SupervisorStates
+from supervisord import getSupervisorStateDescription
+from supervisord import getProcessStateDescription
+from medusa.xmlrpc_handler import xmlrpc_handler
+from medusa.http_server import get_header
+from medusa import producers
 
 from http import NOT_DONE_YET
 from options import readFile
@@ -497,6 +500,39 @@ class SupervisorNamespaceRPCInterface:
         killall.rpcinterface = self
         return killall # deferred
 
+    def _interpretProcessInfo(self, info):
+        result = {}
+        result['name'] = info['name']
+        pid = info['pid']
+
+        state = info['state']
+
+        if state == ProcessStates.RUNNING:
+            start = info['start']
+            now = info['now']
+            start_dt = datetime.datetime(*time.gmtime(start)[:6])
+            now_dt = datetime.datetime(*time.gmtime(now)[:6])
+            uptime = now_dt - start_dt
+            desc = 'pid %s, uptime %s' % (info['pid'], uptime)
+
+        elif state in (ProcessStates.FATAL, ProcessStates.BACKOFF):
+            desc = info['spawnerr']
+            if not desc:
+                desc = 'unknown error (try "tail %s")' % info['name']
+
+        elif state in (ProcessStates.STOPPED, ProcessStates.EXITED):
+            if info['start']:
+                stop = info['stop']
+                stop_dt = datetime.datetime(*time.localtime(stop)[:7])
+                desc = stop_dt.strftime('%b %d %I:%M %p')
+            else:
+                desc = 'Not started'
+
+        else:
+            desc = ''
+
+        return desc
+
     def getProcessInfo(self, name):
         """ Get info about a process named name
 
@@ -517,17 +553,22 @@ class SupervisorNamespaceRPCInterface:
         spawnerr = process.spawnerr or ''
         exitstatus = process.exitstatus or 0
 
-        return {
+        info = {
             'name':name,
             'start':start,
             'stop':stop,
             'now':now,
             'state':state,
+            'statename':getProcessStateDescription(state),
             'spawnerr':spawnerr,
             'exitstatus':exitstatus,
             'logfile':process.config.logfile,
             'pid':process.pid
             }
+        
+        description = self._interpretProcessInfo(info)
+        info['description'] = description
+        return info
 
     def getAllProcessInfo(self):
         """ Get info about all processes

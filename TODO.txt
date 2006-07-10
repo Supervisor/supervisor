@@ -1,8 +1,5 @@
 - Web interface:
 
-   - Present status in addition to state (e.g. spawnerr, etc, same as
-     supervisorctl).
-
    - Support/use POST requests.
 
    - Redirect whenever an action causes the URL to be unreloadable.
@@ -11,14 +8,11 @@
 
 - Unit tests for log rotation.
 
-- Better remote explanation when kill_undead needs to happen from
-  supervisorctl (long blockage).
-
 - Command-line arg tests.
 
 - Log logtail requests.
 
-- Stop logging all RPC requests in info mode when we ship
+- Stop logging all RPC requests in info mode when we ship.
 
 - Test on Linux.
 
