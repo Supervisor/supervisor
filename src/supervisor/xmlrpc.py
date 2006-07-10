@@ -788,11 +788,10 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
             params, method = xmlrpclib.loads(data)
 
             try:
-                # 5 is 'trace' level
-                logger.log(5, 'XML-RPC method called: %s()' % method)
+                logger.debug('XML-RPC method called: %s()' % method)
                 value = self.call(method, params)
-                logger.log(5, 'XML-RPC method %s() returned successfully' %
-                            method)
+                logger.debug('XML-RPC method %s() returned successfully' %
+                             method)
             except RPCError, err:
                 # turn RPCError reported by method into a Fault instance
                 value = xmlrpclib.Fault(err.code, err.text)
