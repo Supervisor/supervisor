@@ -20,6 +20,22 @@
 
 <form meld:id="form" action="index.html" method="POST">
 
+<div style="margin-top: 10px;">
+
+<a href="index.html?action=refresh">
+   <input type="button" value=" Refresh " name="refresh" />
+</a>
+
+<a href="index.html?action=restartall">
+   <input type="button" value=" Restart All " name="restartall" />
+</a>
+
+<a href="index.html?action=stopall">
+   <input type="button" value=" Stop All " name="stopall" />
+</a>
+
+</div>
+
 <table width="800" border="0" meld:id="statustable">
   <th width="130" class="tableheader">State</th>
   <th width="200" class="tableheader">Description</th>
@@ -48,22 +64,6 @@
     </tr>
   </tbody>
 </table>
-
-<div style="margin-top: 10px;">
-
-<a href="index.html?action=refresh">
-   <input type="button" value=" Refresh " name="refresh" />
-</a>
-
-<a href="index.html?action=restartall">
-   <input type="button" value=" Restart All " name="restartall" />
-</a>
-
-<a href="index.html?action=stopall">
-   <input type="button" value=" Stop All " name="stopall" />
-</a>
-
-</div>
 
 </form>
 
