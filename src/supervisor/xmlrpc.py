@@ -295,33 +295,39 @@ class SupervisorNamespaceRPCInterface:
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
 
-        if process.get_state() == ProcessStates.RUNNING:
-            raise RPCError(Faults.ALREADY_STARTED, name)
+        started = []
 
-        process.spawn()
+        def startit():
+            if not started:
 
-        if process.spawnerr:
-            raise RPCError(Faults.SPAWN_ERROR, name)
+                if process.get_state() == ProcessStates.RUNNING:
+                    raise RPCError(Faults.ALREADY_STARTED, name)
 
-        if not timeout:
-            timeout = 0
-        
-        milliseconds = timeout / 1000.0
-        start = time.time()
+                process.spawn()
 
-        def check_still_running(done=False): # done arg is only for unit testing
+                if process.spawnerr:
+                    raise RPCError(Faults.SPAWN_ERROR, name)
+
+                # we use a list here to fake out lexical scoping;
+                # using a direct assignment to 'started' in the
+                # function appears to not work (symptom: 2nd or 3rd
+                # call through, it forgets about 'started', claiming
+                # it's undeclared).
+                started.append(time.time())
+                
             t = time.time()
-            runtime = (t - start)
-            if not done and runtime < milliseconds:
+            runtime = (t - started[0])
+            milliseconds = timeout / 1000.0
+            if runtime < milliseconds:
                 return NOT_DONE_YET
             state = process.get_state()
             if state == ProcessStates.RUNNING:
                 return True
             raise RPCError(Faults.ABNORMAL_TERMINATION, name)
 
-        check_still_running.delay = milliseconds
-        check_still_running.rpcinterface = self
-        return check_still_running # deferred
+        startit.delay = 0.05
+        startit.rpcinterface = self
+        return startit # deferred
 
     def startAllProcesses(self, timeout=500):
         """ Start all processes listed in the configuration file
@@ -342,7 +348,7 @@ class SupervisorNamespaceRPCInterface:
         results = []
         callbacks = []
 
-        def startall(done=False): # done arg is for unit testing
+        def startall():
             if not callbacks:
 
                 for process in processes:
@@ -366,7 +372,7 @@ class SupervisorNamespaceRPCInterface:
             name, callback = callbacks.pop(0)
 
             try:
-                value = callback(done)
+                value = callback()
             except RPCError, e:
                 results.append({'name':name, 'status':e.code,
                                 'description':e.text})
@@ -407,10 +413,15 @@ class SupervisorNamespaceRPCInterface:
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
 
-        if process.get_state() != ProcessStates.RUNNING:
-            raise RPCError(Faults.NOT_RUNNING)
+        stopped = []
 
         def killit():
+            if not stopped:
+                if process.get_state() != ProcessStates.RUNNING:
+                    raise RPCError(Faults.NOT_RUNNING)
+                # use a mutable for lexical scoping; see startProcess
+                stopped.append(1)
+            
             if process.get_state() == ProcessStates.RUNNING:
                 msg = process.stop()
                 if msg is not None:

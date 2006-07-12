@@ -400,8 +400,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process.pid = 10
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
+        callback = interface.startProcess('foo')
         self._assertRPCError(xmlrpc.Faults.ALREADY_STARTED,
-                             interface.startProcess,'foo')
+                             callback)
 
     def test_startProcess_badname(self):
         supervisord = DummySupervisor()
@@ -417,9 +418,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process.spawnerr = 'abc'
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
-        self._assertRPCError(xmlrpc.Faults.SPAWN_ERROR,
-                             interface.startProcess,
-                             'foo')
+        callback = interface.startProcess('foo')
+        self._assertRPCError(xmlrpc.Faults.SPAWN_ERROR, callback)
 
     def test_startProcess(self):
         options = DummyOptions()
@@ -427,13 +427,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = DummyProcess(options, config, state=ProcessStates.STOPPED)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
-        callback = interface.startProcess('foo')
+        callback = interface.startProcess('foo', 100) # milliseconds
+        self.assertEqual(callback(), http.NOT_DONE_YET)
         self.assertEqual(process.spawned, True)
         self.assertEqual(interface.update_text, 'startProcess')
-        self.assertEqual(callback(), http.NOT_DONE_YET)
-
-        process.pid = 1234
-        self.assertEqual(callback(done=True), True)
+        time.sleep(.1) # 100 milliseconds
+        self.assertEqual(callback(), True)
 
     def test_startProcess_abnormal_term(self):
         options = DummyOptions()
@@ -441,12 +440,14 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = DummyProcess(options, config, ProcessStates.STOPPED)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
-        callback = interface.startProcess('foo')
+        callback = interface.startProcess('foo', 100) # milliseconds
+        result = callback()
+        time.sleep(.1)
         self.assertEqual(process.spawned, True)
         self.assertEqual(interface.update_text, 'startProcess')
         process.state = ProcessStates.BACKOFF
         self._assertRPCError(xmlrpc.Faults.ABNORMAL_TERMINATION,
-                             callback, True)
+                             callback)
     
     def test_startProcess_badtimeout(self):
         options = DummyOptions()
@@ -465,20 +466,34 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process2 = DummyProcess(options, config2, ProcessStates.STOPPED)
         supervisord = DummySupervisor({'foo':process, 'foo2':process2})
         interface = self._makeOne(supervisord)
-        callback = interface.startAllProcesses()
-        #process.pid = 1234
-        #process2.pid = 12345
-        # first process
+        callback = interface.startAllProcesses(200) # milliseconds
         from http import NOT_DONE_YET
-        self.assertEqual(callback(done=True), NOT_DONE_YET)
-        # second process
-        self.assertEqual(
-            callback(done=True),
-            [
-            {'name':'foo', 'status': 80, 'description': 'OK'},
-            {'name':'foo2', 'status': 80, 'description': 'OK'},
-            ]
-            )
+        from xmlrpc import Faults
+
+        # create callbacks in startall()
+        self.assertEqual(callback(), NOT_DONE_YET)
+        # start first process
+        self.assertEqual(callback(), NOT_DONE_YET)
+        # start second process
+        self.assertEqual(callback(), NOT_DONE_YET)
+
+        # wait for timeout 1
+        time.sleep(.2)
+        result = callback()
+        # wait for timeout 2
+        time.sleep(.2)
+
+        result = callback()
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]['name'], 'foo2')
+        self.assertEqual(result[0]['status'],  Faults.SUCCESS)
+        self.assertEqual(result[0]['description'], 'OK')
+
+        self.assertEqual(result[1]['name'], 'foo')
+        self.assertEqual(result[1]['status'],  Faults.SUCCESS)
+        self.assertEqual(result[1]['description'], 'OK')
+
         self.assertEqual(interface.update_text, 'startProcess')
 
         self.assertEqual(process.spawned, True)
@@ -503,9 +518,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(process.backoff, 0)
         self.assertEqual(process.delay, 0)
         self.assertEqual(process.killing, 0)
-        process.state = ProcessStates.STOPPING
         self.assertEqual(callback(), http.NOT_DONE_YET)
-        process.state = ProcessStates.STOPPED
+        self.assertEqual(process.state, ProcessStates.STOPPED)
         self.assertEqual(callback(), True)
         self.assertEqual(len(supervisord.processes), 1)
         self.assertEqual(interface.update_text, 'stopProcess')
