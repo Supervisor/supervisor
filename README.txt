@@ -4,12 +4,6 @@ History
 
   7/3/2006: updated for version 2.0
 
-Changes
-
-  2.0: fundamental rewrite based on 1.0.6, use distutils (only) for
-  installation, use ConfigParser rather than ZConfig, use HTTP for
-  wire protocol, web interface.
-
 Introduction
 
   The supervisor is a client/server system that allows its users to
