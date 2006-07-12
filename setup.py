@@ -16,7 +16,7 @@ from distutils.core import setup
 setup(
     name = 'supervisor',
     version = "2.0",
-    description = ".",
+    description = "A system for controlling process state under UNIX",
     author = "Chris McDonough",
     author_email = "chrism@plope.com",
     maintainer = "Chris McDonough",
