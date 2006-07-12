@@ -8,6 +8,8 @@
 
 - Expat error on Jens' system running slapd as root after reload.
 
+- Restart of single lone process (cat) doesn't (FF).
+
 - Elementtree dependency.
 
 - Unit tests for log rotation.

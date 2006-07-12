@@ -6,7 +6,7 @@ History
 
 Changes
 
-  2.0: substantial rewrite based on 1.0.6, use ConfigParser rather
+  2.0: fundamental rewrite based on 1.0.6, use ConfigParser rather
   than ZConfig, use HTTP for wire protocol, web interface.
 
 Introduction
@@ -66,8 +66,9 @@ Supported Platforms
 
   Supervisor has been tested and is known to run on Linux (Fedora Core
   5, Ubuntu 6), Mac OS X (10.4), and Solaris (10 for Intel) and
-  FreeBSD 6.1.  It will likely work fine on most UNIX systems.  It
-  will not run at all under any version of Windows.
+  FreeBSD 6.1.  It will likely work fine on most UNIX systems.
+
+  Supervisor will not run at all under any version of Windows.
 
   Supervisor requires Python 2.3 or better.
 
@@ -490,8 +491,8 @@ Signals
   Killing supervisord with SIGHUP will stop all processes, reload the
   configuration from the config file, and restart all processes.
 
-  Killing supervisord with SIGUSR2 will rotate the supervisord and
-  child log files.
+  Killing supervisord with SIGUSR2 will close and reopen the
+  supervisord activity log and child log files.
 
 Access Control
 
@@ -527,15 +528,15 @@ Other Notes
   process/thread which is created by supervisord.  Instead, a
   "special" thread/process is created by these kinds of programs which
   is responsible for handling signals.  This is problematic, because
-  supervisord can only kill a pid which it creates itself.
-  Fortunately, these programs typically write a pidfile which is meant
-  to be read in order to kill the proces.  To service a workaround for
-  this case, a special "pidproxy" program can handle startup of these
-  kinds of processes.  The pidproxy program is a small shim that
-  starts a process, and upon the receipt of a signal, sends the signal
-  to the pid provided in a pidfile.  A sample supervisord
-  configuration program entry for a pidproxy-enabled program is
-  provided here:
+  supervisord can only kill a pid which it creates itself, not any
+  child thread or process of the program it creates.  Fortunately,
+  these programs typically write a pidfile which is meant to be read
+  in order to kill the process.  As a workaround for this case, a
+  special "pidproxy" program can handle startup of these kinds of
+  processes.  The pidproxy program is a small shim that starts a
+  process, and upon the receipt of a signal, sends the signal to the
+  pid provided in a pidfile.  A sample supervisord configuration
+  program entry for a pidproxy-enabled program is provided here:
 
    [program:mysql]
    command=/path/to/pidproxy /path/to/pidfile /path/to/mysqld_safe
@@ -546,14 +547,18 @@ Other Notes
 FAQ
 
   My program never starts and supervisor doesn't indicate any error:
-  Make sure the "x" bit is set on the executable file you're using the
-  command against.
+  Make sure the "x" bit is set on the executable file you're using in
+  the command= line.
 
   How can I tell if my program is running under supervisor? Supervisor
   and its subprocesses share an environment variable
   "SUPERVISOR_ENABLED".  When a process is run under supervisor, your
   program can check for the presence of this variable to determine
   whether it is running under supervisor (new in 2.0).
+
+Reporting Bugs
+
+  Please report bugs at http://www.plope.com/software/collector .
 
 Author Information
 

@@ -1,4 +1,10 @@
-Supervisor and meld3 are Copyright (c) 2006, Chris McDonough.
+Supervisor and meld3 are Copyright (c) 2006, Chris McDonough,
+Agendaless Consulting.  http://www.agendaless.com
+
+medusa was (is?) Copyright (c) Sam Rushing.
 
 ElementTree is Copyright (c) 1999-2005 by Secret Labs AB, Copyright
 (c) 1999-2005 by Fredrik Lundh
+
+http_client.py code Copyright (c) by Daniel Krech, http://eikeon.com/.
+
