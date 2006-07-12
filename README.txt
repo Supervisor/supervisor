@@ -191,8 +191,9 @@ Components
 
       print server.system.methodHelp('supervisor.shutdown')
 
-    Supervisor's XML-RPC interface also supports the nascent
-    "XML-RPC multicall API":http://www.xmlrpc.com/discuss/msgReader$1208 .
+    Supervisor's XML-RPC interface also supports the nascent XML-RPC
+    multicall API described at
+    http://www.xmlrpc.com/discuss/msgReader$1208.
 
 Configuration File '[supervisord]' Section Settings
 
@@ -538,7 +539,7 @@ Other Notes
   processes.  The pidproxy program is a small shim that starts a
   process, and upon the receipt of a signal, sends the signal to the
   pid provided in a pidfile.  A sample supervisord configuration
-  program entry for a pidproxy-enabled program is provided here:
+  program entry for a pidproxy-enabled program is provided here::
 
    [program:mysql]
    command=/path/to/pidproxy /path/to/pidfile /path/to/mysqld_safe
