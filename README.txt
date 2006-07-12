@@ -65,8 +65,9 @@ Introduction
 Supported Platforms
 
   Supervisor has been tested and is known to run on Linux (Fedora Core
-  5, Ubuntu 6), Mac OS X (10.4), and Solaris (10 for Intel).  It has
-  been reported to work on FreeBSD.
+  5, Ubuntu 6), Mac OS X (10.4), and Solaris (10 for Intel) and
+  FreeBSD 6.1.  It will likely work fine on most UNIX systems.  It
+  will not run at all under any version of Windows.
 
   Supervisor requires Python 2.3 or better.
 
