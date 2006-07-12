@@ -161,7 +161,8 @@ Components
     supervisorctl may be accessed via a browser if you start
     supervisord against an internet socket.  Visit the server URL
     (e.g. http://localhost:9001/) to view and control process status
-    through the web interface.
+    through the web interface after changing the configuration file's
+    'http_port' parameter appropriately.
 
   XML-RPC Interface
 
