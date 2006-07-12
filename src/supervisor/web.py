@@ -320,7 +320,8 @@ class StatusView(MeldView):
                           ]
                         )
                     def restartprocess():
-                        if callback() is NOT_DONE_YET:
+                        result = callback()
+                        if result is NOT_DONE_YET:
                             return NOT_DONE_YET
                         return 'Process %s restarted' % processname
                     restartprocess.delay = 0.05
