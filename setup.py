@@ -13,10 +13,32 @@ if not maj[0] >= '2' and minor[0] >= '3':
 
 from distutils.core import setup
 
+
+DESC = """\
+Supervisor is a client/server system that allows its users to
+control a number of processes on UNIX-like operating systems. """
+
+CLASSIFIERS = [
+    'Development Status :: 4 - Beta',
+    'Environment :: No Input/Output (Daemon)',
+    'Intended Audience :: System Administrators',
+    'License :: OSI Approved :: Zope Public License',
+    'Natural Language :: English',
+    'Operating System :: POSIX',
+    'Topic :: System :: Boot',
+    'Topic :: System :: Systems Administration',
+    ]
+
+
 dist = setup(
     name = 'supervisor',
-    version = "2.0",
+    version = "2.0b1",
+    license = 'ZPL/BSD (see LICENSES.txt)',
+    url = 'http://www.plope.com/software',
     description = "A system for controlling process state under UNIX",
+    long_description= DESC,
+    platform = 'UNIX',
+    classifiers = CLASSIFIERS,
     author = "Chris McDonough",
     author_email = "chrism@plope.com",
     maintainer = "Chris McDonough",
