@@ -6,8 +6,9 @@ History
 
 Changes
 
-  2.0: fundamental rewrite based on 1.0.6, use ConfigParser rather
-  than ZConfig, use HTTP for wire protocol, web interface.
+  2.0: fundamental rewrite based on 1.0.6, use distutils (only) for
+  installation, use ConfigParser rather than ZConfig, use HTTP for
+  wire protocol, web interface.
 
 Introduction
 
@@ -37,7 +38,7 @@ Introduction
      a very limited form of access to the machine, essentially
      allowing users to see process status and control
      supervisord-controlled subprocesses by emitting "stop", "start",
-     and "restart" commands from a simple shell.
+     and "restart" commands from a simple shell or web UI.
 
    - Users often need to control processes on many machines.
      Supervisor provides a simple, secure, and uniform mechanism for
@@ -78,7 +79,9 @@ Installing
   /etc/supervisord.conf and modify to your liking.  If you'd rather
   not put the supervisord.conf file in /etc, you can place it anywhere
   and start supervisord and point it at the configuration file via the
-  -c flag, e.g. "python supervisord.py -c /path/to/sample/conf".
+  -c flag, e.g. "python supervisord.py -c /path/to/sample/conf" or, if
+  you use the shell script named "supervisord", "supervisord -c
+  /path/to/sample.conf".
 
   I make reference below to a "$BINDIR" when explaining how to run
   supervisord and supervisorctl.  This is the "bindir" directory that
@@ -95,11 +98,15 @@ Running Supervisord
   process will daemonize itself and detach from the terminal.  It
   keeps an operations log at "/tmp/supervisor.log" by default.
 
+  You can start supervisord in the foreground by passing the "-n" flag
+  on its command line.  This is useful to debug startup problems.
+
   To change the set of programs controlled by supervisord, edit the
-  supervisord.conf file and HUP or restart the supervisord process.
-  This file has several example program definitions.  Controlled
-  programs should themselves not be daemons, as supervisord assumes it
-  is responsible for daemonizing its subprocesses.
+  supervisord.conf file and kill -HUP or otherwise restart the
+  supervisord process.  This file has several example program
+  definitions.  Controlled programs should themselves not be daemons,
+  as supervisord assumes it is responsible for daemonizing its
+  subprocesses.
 
   Supervisord accepts a number of command-line overrides.  Type
   'supervisord -h' for an overview.
@@ -134,8 +141,8 @@ Components
     The server process uses a configuration file.  This is typically
     located in "/etc/supervisord.conf".  This configuration file is an
     "Windows-INI" style config file.  It is important to keep this
-    file "secure" because it may contain unencrypted usernames and
-    passwords.
+    file secure via proper filesystem permissions because it may
+    contain unencrypted usernames and passwords.
 
   Supervisorctl
 
@@ -151,8 +158,8 @@ Components
     socket or an Internet socket.  The server can assert that the user
     of a client should present authentication credentials before it
     allows him to perform commands.  The client process may use the
-    same configuration file as the server (any configuration file with
-    a [supervisorctl] section in it will work).
+    same configuration file as the server; any configuration file with
+    a [supervisorctl] section in it will work.
 
   Web Server
 
