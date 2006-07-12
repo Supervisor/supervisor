@@ -1,48 +1,25 @@
-help = """supervisord -- run a set of applications as daemons.
-
-Usage: %s [options]
-
-Options:
--c/--configuration URL -- configuration file or URL
--b/--backofflimit SECONDS -- set backoff limit to SECONDS (default 3)
--n/--nodaemon -- run in the foreground (same as 'nodaemon true' in config file)
--f/--forever -- try to restart processes forever when they die (default no)
--h/--help -- print this usage message and exit
--u/--user USER -- run supervisord as this user (or numeric uid)
--m/--umask UMASK -- use this umask for daemon subprocess (default is 022)
--x/--exitcodes LIST -- list of fatal exit codes (default "0,2")
--d/--directory DIRECTORY -- directory to chdir to when daemonized
--l/--logfile FILENAME -- use FILENAME as logfile path
--y/--logfile_maxbytes BYTES -- use BYTES to limit the max size of logfile
--z/--logfile_backups NUM -- number of backups to keep when max bytes reached
--e/--loglevel LEVEL -- use LEVEL as log level (debug,info,warn,error,critical)
--j/--pidfile FILENAME -- write a pid file for the daemon process to FILENAME
--s/--socketname SOCKET -- Unix/INET socket name for command line client
-    (default "/tmp/supervisordsock").  INET sockets must be spec'd in the form
-    "host:port".  UNIX domain sockets must be spec'd by absolute path.
--p/--socketmode MODE -- UNIX socket file mode bits (default is 700)
--o/--socketowner OWNER -- UNIX socket file owner/group (e.g. chrism.users)
--i/--identifier STR -- identifier used for this instance of supervisord
--q/--childlogdir DIRECTORY -- the log directory for child process logs
--k/--nocleanup --  prevent the process from performing cleanup (removal of
-                   orphaned child log files, etc.) at startup.
--w/--xmlrpc_port SOCKET -- the host&port XML-RPC server should listen on
--g/--xmlrpc_username STR -- the username for XML-RPC auth
--r/--xmlrpc_password STR -- the password for XML-RPC auth
--a/--minfds NUM -- the minimum number of file descriptors for start success
---minprocs NUM  -- the minimum number of processes available for start success
-"""
-
 import ConfigParser
+import asyncore
+import socket
 import getopt
 import os
+import sys
 import datatypes
 import logging
-import sys
 import tempfile
-import socket
 import errno
 import signal
+import re
+import xmlrpclib
+import httplib
+import urllib
+import pwd
+import grp
+import resource
+import stat
+
+from fcntl import fcntl
+from fcntl import F_SETFL, F_GETFL
 
 class FileHandler(logging.StreamHandler):
     """File handler which supports reopening of logs.
@@ -57,7 +34,10 @@ class FileHandler(logging.StreamHandler):
         self.mode = mode
 
     def close(self):
-        self.stream.close()
+        try:
+            self.stream.close()
+        except IOError:
+            pass
 
     def reopen(self):
         self.close()
@@ -124,19 +104,19 @@ class RotatingRawFileHandler(RawFileHandler):
         self.maxBytes = maxBytes
         self.backupCount = backupCount
 
-        def emit(self, record):
-            """
-            Emit a record.
-            
-            Output the record to the file, catering for rollover as described
-            in doRollover().
-            """
-            try:
-                if self.shouldRollover(record):
-                    self.doRollover()
-                RawFileHandler.emit(self, record)
-            except:
-                self.handleError(record)
+    def emit(self, record):
+        """
+        Emit a record.
+
+        Output the record to the file, catering for rollover as described
+        in doRollover().
+        """
+        try:
+            if self.shouldRollover(record):
+                self.doRollover()
+            RawFileHandler.emit(self, record)
+        except:
+            self.handleError(record)
 
     def doRollover(self):
         """
@@ -193,7 +173,6 @@ class Dummy:
 class Options:
 
     uid = gid = None
-    doc = help
 
     progname = sys.argv[0]
     configfile = None
@@ -220,9 +199,10 @@ class Options:
 
         Occurrences of "%s" in are replaced by self.progname.
         """
+        help = self.doc
         if help.find("%s") > 0:
-            doc = help.replace("%s", self.progname)
-        print doc,
+            help = help.replace("%s", self.progname)
+        print help,
         sys.exit(0)
 
     def usage(self, msg):
@@ -365,7 +345,7 @@ class Options:
             progname = sys.argv[0]
         if doc is None:
             import __main__
-            doc = doc
+            doc = __main__.__doc__
         self.progname = progname
         self.doc = doc
 
@@ -454,27 +434,18 @@ class ServerOptions(Options):
     pidfile = None
     passwdfile = None
     nodaemon = None
-    prompt = None
+    signal = None
+    AUTOMATIC = []
+    TRACE = 5
+
     
     def __init__(self):
         Options.__init__(self)
         self.configroot = Dummy()
         self.configroot.supervisord = Dummy()
         
-        self.add("backofflimit", "supervisord.backofflimit",
-                 "b:", "backofflimit=", int, default=3)
         self.add("nodaemon", "supervisord.nodaemon", "n", "nodaemon", flag=1,
                  default=0)
-        self.add("forever", "supervisord.forever", "f", "forever",
-                 flag=1, default=0)
-        self.add("sockname", "supervisord.sockname", "s:", "socketname=",
-                 datatypes.SocketAddress, default=None)
-	self.add("sockchmod", "supervisord.sockchmod", "p:", "socketmode=",
-		 datatypes.octal_type, default=0700)
-	self.add("sockchown", "supervisord.sockchown", "o:", "socketowner=",
-		 datatypes.dot_separated_user_group)
-        self.add("exitcodes", "supervisord.exitcodes", "x:", "exitcodes=",
-                 datatypes.list_of_ints, default=[0, 2])
         self.add("user", "supervisord.user", "u:", "user=")
         self.add("umask", "supervisord.umask", "m:", "umask=",
                  datatypes.octal_type, default='022')
@@ -495,18 +466,23 @@ class ServerOptions(Options):
                  datatypes.existing_dirpath, default="supervisor")
         self.add("childlogdir", "supervisord.childlogdir", "q:", "childlogdir=",
                  datatypes.existing_directory, default=tempfile.gettempdir())
-        self.add("xmlrpc_port", "supervisord.xmlrpc_port", "w:", "xmlrpc_port=",
+        self.add("http_port", "supervisord.http_port", "w:", "http_port=",
                  datatypes.SocketAddress, default=None)
-        self.add("xmlrpc_username", "supervisord.xmlrpc_username", "g:",
-                 "xmlrpc_username=", str, default=None)
-        self.add("xmlrpc_password", "supervisord.xmlrpc_password", "r:",
-                 "xmlrpc_password=", str, default=None)
+        self.add("http_username", "supervisord.http_username", "g:",
+                 "http_username=", str, default=None)
+        self.add("http_password", "supervisord.http_password", "r:",
+                 "http_password=", str, default=None)
         self.add("minfds", "supervisord.minfds",
                  "a:", "minfds=", int, default=1024)
         self.add("minprocs", "supervisord.minprocs",
                  "", "minprocs=", int, default=200)
         self.add("nocleanup", "supervisord.nocleanup",
                  "k", "nocleanup", flag=1, default=0)
+	self.add("sockchmod", "supervisord.sockchmod", "p:", "socket-mode=",
+		 datatypes.octal_type, default=0700)
+	self.add("sockchown", "supervisord.sockchown", "o:", "socket-owner=",
+		 datatypes.dot_separated_user_group)
+        self.pidhistory = {}
 
     def getLogger(self, filename, level, fmt, rotating=False,
                   maxbytes=0, backups=0):
@@ -521,7 +497,7 @@ class ServerOptions(Options):
         # then realize() thinks it has already seen the option.  If no
         # -c is used, realize() will call this method to try to locate
         # a configuration file.
-        config = '/etc/xsupervisord.conf'
+        config = '/etc/supervisord.conf'
         if not os.path.exists(config):
             self.usage('No config file found at default path "%s"; create '
                        'this file or use the -c option to specify a config '
@@ -530,69 +506,54 @@ class ServerOptions(Options):
 
     def realize(self, *arg, **kw):
         Options.realize(self, *arg, **kw)
-        import socket
 
         # Additional checking of user option; set uid and gid
         if self.user is not None:
-            import pwd
 	    uid = datatypes.name_to_uid(self.user)
             if uid is None:
                 self.usage("No such user %s" % self.user)
             self.uid = uid
             self.gid = datatypes.gid_for_uid(uid)
 
-        self.sockuid = None
-        self.sockgid = None
-
-	if self.sockchown:
-	    # Convert chown stuff to uid/gid
-            user, group = datatypes.dot_separated_user_group(self.sockchown)
-            uid = datatypes.name_to_uid(user)
-            if uid is None:
-                self.usage("No such sockchown user %s" % user)
-            if group is None:
-                gid = datatypes.gid_for_uid(uid)
-            else:
-                gid = datatypes.name_to_gid(group)
-                if gid is None:
-                    self.usage("No such sockchown group %s" % group)
-            self.sockuid = uid
-            self.sockgid = gid
-
-        if self.sockname:
-            self.sockfamily = self.sockname.family
-            self.sockname   = self.sockname.address
-            if self.sockfamily == socket.AF_UNIX:
-                # Convert socket name to absolute path
-                self.sockname = os.path.abspath(self.sockname)
-        else:
-            self.sockfamily = None
-
-        if not self.sockchmod:
-            self.sockchmod = 0700
-
         if not self.logfile:
             logfile = os.path.abspath(self.configroot.supervisord.logfile)
         else:
             logfile = os.path.abspath(self.logfile)
+
         self.logfile = logfile
 
         if not self.loglevel:
             self.loglevel = self.configroot.supervisord.loglevel
-
-        if not self.prompt:
-            self.prompt = self.configroot.supervisord.prompt
 
         if not self.pidfile:
             self.pidfile = os.path.abspath(self.configroot.supervisord.pidfile)
         else:
             self.pidfile = os.path.abspath(self.pidfile)
 
-        self.noauth = True
-        self.passwdfile = None
+        self.programs = self.configroot.supervisord.programs
+
+        if not self.sockchown:
+            self.sockchown = self.configroot.supervisord.sockchown
+
+        self.identifier = self.configroot.supervisord.identifier
 
         if self.nodaemon:
             self.daemon = False
+
+    def convert_sockchown(self, sockchown):
+        # Convert chown stuff to uid/gid
+        user = sockchown[0]
+        group = sockchown[1]
+        uid = datatypes.name_to_uid(user)
+        if uid is None:
+            self.usage("No such sockchown user %s" % user)
+        if group is None:
+            gid = datatypes.gid_for_uid(uid)
+        else:
+            gid = datatypes.name_to_gid(group)
+            if gid is None:
+                self.usage("No such sockchown group %s" % group)
+        return uid, gid
 
     def read_config(self, fp):
         section = self.configroot.supervisord
@@ -612,18 +573,6 @@ class ServerOptions(Options):
         minprocs = config.getdefault('minprocs', 200)
         section.minprocs = datatypes.integer(minprocs)
         
-        sockname = config.getdefault('socketname', None)
-        if sockname:
-            section.sockname = datatypes.SocketAddress(sockname)
-        else:
-            section.sockname = None
-
-        sockchmod = config.getdefault('socketmode', '0700')
-        section.sockchmod  = datatypes.octal_type(sockchmod)
-
-        sockchown = config.getdefault('socketowner', None)
-        section.sockchown = sockchown
-
         directory = config.getdefault('directory', None)
         if directory is None:
             section.directory = None
@@ -631,28 +580,11 @@ class ServerOptions(Options):
             directory = datatypes.existing_directory(directory)
             section.directory = directory
 
-        backofflimit = config.getdefault('backofflimit', 3)
-        try:
-            limit = datatypes.integer(backofflimit)
-        except:
-            raise ValueError("backofflimit is not an integer: %s"
-                             % backofflimit)
-        section.backofflimit = limit
-        forever = config.getdefault('forever', 'false')
-        section.forever = datatypes.boolean(forever)
-        exitcodes = config.getdefault('exitcodes', '0,2')
-        try:
-            section.exitcodes = datatypes.list_of_ints(exitcodes)
-        except:
-            raise ValueError("exitcodes must be a list of ints e.g. 1,2")
         user = config.getdefault('user', None)
         section.user = user
 
         umask = datatypes.octal_type(config.getdefault('umask', '022'))
         section.umask = umask
-
-        prompt = config.getdefault('prompt', 'supervisor')
-        section.prompt = prompt
 
         logfile = config.getdefault('logfile', 'supervisord.log')
         logfile = datatypes.existing_dirpath(logfile)
@@ -674,9 +606,6 @@ class ServerOptions(Options):
         pidfile = datatypes.existing_dirpath(pidfile)
         section.pidfile = pidfile
 
-        section.noauth = True # no SRP auth here
-        section.passwdfile = None # no SRP auth here
-
         identifier = config.getdefault('identifier', 'supervisor')
         section.identifier = identifier
 
@@ -687,26 +616,45 @@ class ServerOptions(Options):
         childlogdir = datatypes.existing_directory(childlogdir)
         section.childlogdir = childlogdir
 
-        xmlrpc_port = config.getdefault('xmlrpc_port', None)
-        if xmlrpc_port is None:
-            section.xmlrpc_port = None
+        http_port = config.getdefault('http_port', None)
+        if http_port is None:
+            section.http_port = None
         else:
-            section.xmlrpc_port = datatypes.SocketAddress(xmlrpc_port)
+            section.http_port = datatypes.SocketAddress(http_port)
 
-        xmlrpc_password = config.getdefault('xmlrpc_password', None)
-        xmlrpc_username = config.getdefault('xmlrpc_username', None)
-        if xmlrpc_password or xmlrpc_username:
-            if xmlrpc_password is None:
-                raise ValueError('Must specify xmlrpc_password if '
-                                 'xmlrpc_username is specified')
-            if xmlrpc_username is None:
-                raise ValueError('Must specify xmlrpc_username if '
-                                 'xmlrpc_password is specified')
-        section.xmlrpc_password = xmlrpc_password
-        section.xmlrpc_username = xmlrpc_username
+        http_password = config.getdefault('http_password', None)
+        http_username = config.getdefault('http_username', None)
+        if http_password or http_username:
+            if http_password is None:
+                raise ValueError('Must specify http_password if '
+                                 'http_username is specified')
+            if http_username is None:
+                raise ValueError('Must specify http_username if '
+                                 'http_password is specified')
+        section.http_password = http_password
+        section.http_username = http_username
 
         nocleanup = config.getdefault('nocleanup', 'false')
         section.nocleanup = datatypes.boolean(nocleanup)
+
+        sockchown = config.getdefault('sockchown', None)
+        if sockchown is None:
+            section.sockchown = (-1, -1)
+        else:
+            try:
+                section.sockchown = datatypes.dot_separated_user_group(
+                    sockchown)
+            except ValueError:
+                raise ValueError('Invalid sockchown value %s' % sockchown)
+
+        sockchmod = config.getdefault('sockchmod', None)
+        if sockchmod is None:
+            section.sockchmod = 0700
+        else:
+            try:
+                section.sockchmod = datatypes.octal_type(sockchmod)
+            except (TypeError, ValueError):
+                raise ValueError('Invalid sockchmod value %s' % sockchmod)
 
         section.programs = self.programs_from_config(config)
         return section
@@ -728,22 +676,448 @@ class ServerOptions(Options):
             autostart = datatypes.boolean(autostart)
             autorestart = config.saneget(section, 'autorestart', 'true')
             autorestart = datatypes.boolean(autorestart)
+            startsecs = config.saneget(section, 'startsecs', 1)
+            startsecs = datatypes.integer(startsecs)
+            startretries = config.saneget(section, 'startretries', 3)
+            startretries = datatypes.integer(startretries)
             uid = config.saneget(section, 'user', None)
             if uid is not None:
                 uid = datatypes.name_to_uid(uid)
             logfile = config.saneget(section, 'logfile', None)
-            if logfile is not None:
+            if logfile in ('NONE', 'OFF'):
+                logfile = None
+            elif logfile in (None, 'AUTO'):
+                logfile = self.AUTOMATIC
+            else:
                 logfile = datatypes.existing_dirpath(logfile)
-            stopsignal = config.saneget(section, 'stopsignal', signal.SIGTERM)
+            logfile_backups = config.saneget(section, 'logfile_backups', 10)
+            logfile_backups = datatypes.integer(logfile_backups)
+            logfile_maxbytes = config.saneget(section, 'logfile_maxbytes',
+                                              '50MB')
+            logfile_maxbytes = datatypes.byte_size(logfile_maxbytes)
+            stopsignal = config.saneget(section, 'stopsignal', 'TERM')
             stopsignal = datatypes.signal(stopsignal)
+            stopwaitsecs = config.saneget(section, 'stopwaitsecs', 10)
+            stopwaitsecs = datatypes.integer(stopwaitsecs)
+            exitcodes = config.saneget(section, 'exitcodes', '0,2')
+            try:
+                exitcodes = datatypes.list_of_ints(exitcodes)
+            except:
+                raise ValueError("exitcodes must be a list of ints e.g. 1,2")
+            log_stdout = config.saneget(section, 'log_stdout', 'true')
+            log_stdout = datatypes.boolean(log_stdout)
+            log_stderr = config.saneget(section, 'log_stderr', 'false')
+            log_stderr = datatypes.boolean(log_stderr)
             pconfig = ProcessConfig(name=name, command=command,
-                                    priority=priority, autostart=autostart,
-                                    autorestart=autorestart, uid=uid,
-                                    logfile=logfile, stopsignal=stopsignal)
+                                    priority=priority,
+                                    autostart=autostart,
+                                    autorestart=autorestart,
+                                    startsecs=startsecs,
+                                    startretries=startretries,
+                                    uid=uid,
+                                    logfile=logfile,
+                                    logfile_backups=logfile_backups,
+                                    logfile_maxbytes=logfile_maxbytes,
+                                    stopsignal=stopsignal,
+                                    stopwaitsecs=stopwaitsecs,
+                                    exitcodes=exitcodes,
+                                    log_stdout=log_stdout,
+                                    log_stderr=log_stderr)
             programs.append(pconfig)
 
         programs.sort() # asc by priority
         return programs
+
+    def daemonize(self):
+        # To daemonize, we need to become the leader of our own session
+        # (process) group.  If we do not, signals sent to our
+        # parent process will also be sent to us.   This might be bad because
+        # signals such as SIGINT can be sent to our parent process during
+        # normal (uninteresting) operations such as when we press Ctrl-C in the
+        # parent terminal window to escape from a logtail command.
+        # To disassociate ourselves from our parent's session group we use
+        # os.setsid.  It means "set session id", which has the effect of
+        # disassociating a process from is current session and process group
+        # and setting itself up as a new session leader.
+        #
+        # Unfortunately we cannot call setsid if we're already a session group
+        # leader, so we use "fork" to make a copy of ourselves that is
+        # guaranteed to not be a session group leader.
+        #
+        # We also change directories, set stderr and stdout to null, and
+        # change our umask.
+        #
+        # This explanation was (gratefully) garnered from
+        # http://www.hawklord.uklinux.net/system/daemons/d3.htm
+
+        pid = os.fork()
+        if pid != 0:
+            # Parent
+            self.logger.debug("supervisord forked; parent exiting")
+            os._exit(0)
+        # Child
+        self.logger.info("daemonizing the process")
+        if self.directory:
+            try:
+                os.chdir(self.directory)
+            except os.error, err:
+                self.logger.warn("can't chdir into %r: %s"
+                                 % (self.directory, err))
+            else:
+                self.logger.info("set current directory: %r"
+                                 % self.directory)
+        os.close(0)
+        sys.stdin = sys.__stdin__ = open("/dev/null")
+        os.close(1)
+        sys.stdout = sys.__stdout__ = open("/dev/null", "w")
+        os.close(2)
+        sys.stderr = sys.__stderr__ = open("/dev/null", "w")
+        os.setsid()
+        os.umask(self.umask)
+        # XXX Stevens, in his Advanced Unix book, section 13.3 (page
+        # 417) recommends calling umask(0) and closing unused
+        # file descriptors.  In his Network Programming book, he
+        # additionally recommends ignoring SIGHUP and forking again
+        # after the setsid() call, for obscure SVR4 reasons.
+
+    def write_pidfile(self):
+        pid = os.getpid()
+        try:
+            f = open(self.pidfile, 'w')
+            f.write('%s\n' % pid)
+            f.close()
+        except (IOError, os.error):
+            self.logger.critical('could not write pidfile %s' % self.pidfile)
+        else:
+            self.logger.info('supervisord started with pid %s' % pid)
+                
+    def cleanup(self):
+        try:
+            if self.http_port is not None:
+                if self.http_port.family == socket.AF_UNIX:
+                    os.unlink(self.http_port.address)
+        except os.error:
+            pass
+        try:
+            os.unlink(self.pidfile)
+        except os.error:
+            pass
+
+    def setsignals(self):
+        signal.signal(signal.SIGTERM, self.sigreceiver)
+        signal.signal(signal.SIGINT, self.sigreceiver)
+        signal.signal(signal.SIGQUIT, self.sigreceiver)
+        signal.signal(signal.SIGHUP, self.sigreceiver)
+        signal.signal(signal.SIGCHLD, self.sigreceiver)
+        signal.signal(signal.SIGUSR2, self.sigreceiver)
+
+    def sigreceiver(self, sig, frame):
+        self.signal = sig
+
+    def openhttpserver(self, supervisord):
+        from http import make_http_server
+        try:
+            self.httpserver = make_http_server(self, supervisord)
+        except socket.error, why:
+            if why[0] == errno.EADDRINUSE:
+                port = str(self.http_port.address)
+                self.usage('Another program is already listening on '
+                           'the port that our HTTP server is '
+                           'configured to use (%s).  Shut this program '
+                           'down first before starting supervisord. ' %
+                           port)
+        except ValueError, why:
+            self.usage(why[0])
+
+    def create_autochildlogs(self):
+        for program in self.programs:
+            if program.logfile is self.AUTOMATIC:
+                # temporary logfile which is erased at start time
+                prefix='%s---%s-' % (program.name, self.identifier)
+                fd, logfile = tempfile.mkstemp(
+                    suffix='.log',
+                    prefix=prefix,
+                    dir=self.childlogdir)
+                os.close(fd)
+                program.logfile = logfile
+
+    def clear_autochildlogdir(self):
+        # must be called after realize()
+        childlogdir = self.childlogdir
+        fnre = re.compile(r'.+?---%s-\S+\.log\.{0,1}\d{0,4}' % self.identifier)
+        try:
+            filenames = os.listdir(childlogdir)
+        except (IOError, OSError):
+            self.logger.info('Could not clear childlog dir')
+            return
+        
+        for filename in filenames:
+            if fnre.match(filename):
+                pathname = os.path.join(childlogdir, filename)
+                try:
+                    os.remove(pathname)
+                except (os.error, IOError):
+                    self.logger.info('Failed to clean up %r' % pathname)
+
+    def get_socket_map(self):
+        return asyncore.socket_map
+
+    def cleanup_fds(self):
+        # try to close any unused file descriptors to prevent leakage.
+        # we start at the "highest" descriptor in the asyncore socket map
+        # because this might be called remotely and we don't want to close
+        # the internet channel during this call.
+        asyncore_fds = asyncore.socket_map.keys()
+        start = 5
+        if asyncore_fds:
+            start = max(asyncore_fds) + 1
+        for x in range(start, self.minfds):
+            try:
+                os.close(x)
+            except:
+                pass
+
+    def kill(self, pid, signal):
+        os.kill(pid, signal)
+
+    def set_uid(self):
+        if self.uid is None:
+            if os.getuid() == 0:
+                return 'Supervisor running as root (no user in config file)'
+            return None
+        msg = self.dropPrivileges(self.uid)
+        if msg is None:
+            return 'Set uid to user %s' % self.uid
+        return msg
+
+    def dropPrivileges(self, user):
+        # Drop root privileges if we have them
+        if user is None:
+            return "No used specified to setuid to!"
+        if os.getuid() != 0:
+            return "Can't drop privilege as nonroot user"
+        try:
+            uid = int(user)
+        except ValueError:
+            try:
+                pwrec = pwd.getpwnam(user)
+            except KeyError:
+                return "Can't find username %r" % user
+            uid = pwrec[2]
+        else:
+            try:
+                pwrec = pwd.getpwuid(uid)
+            except KeyError:
+                return "Can't find uid %r" % uid
+        if hasattr(os, 'setgroups'):
+            user = pwrec[0]
+            groups = [grprec[2] for grprec in grp.getgrall() if user in
+                      grprec[3]]
+            try:
+                os.setgroups(groups)
+            except OSError:
+                return 'Could not set groups of effective user'
+        gid = pwrec[3]
+        try:
+            os.setgid(gid)
+        except OSError:
+            return 'Could not set group id of effective user'
+        os.setuid(uid)
+
+    def waitpid(self):
+        # need pthread_sigmask here to avoid concurrent sigchild, but
+        # Python doesn't offer it as it's not standard across UNIX versions.
+        # there is still a race condition here; we can get a sigchild while
+        # we're sitting in the waitpid call.
+        try:
+            pid, sts = os.waitpid(-1, os.WNOHANG)
+        except os.error, why:
+            err = why[0]
+            if err not in (errno.ECHILD, errno.EINTR):
+                self.logger.info(
+                    'waitpid error; a process may not be cleaned up properly')
+            if err == errno.EINTR:
+                self.logger.debug('EINTR during reap')
+            pid, sts = None, None
+        return pid, sts
+
+    def set_rlimits(self):
+        limits = []
+        if hasattr(resource, 'RLIMIT_NOFILE'):
+            limits.append(
+                {
+                'msg':('The minimum number of file descriptors required '
+                       'to run this process is %(min)s as per the "minfds" '
+                       'command-line argument or config file setting. '
+                       'The current environment will only allow you '
+                       'to open %(hard)s file descriptors.  Either raise '
+                       'the number of usable file descriptors in your '
+                       'environment (see README.txt) or lower the '
+                       'minfds setting in the config file to allow '
+                       'the process to start.'),
+                'min':self.minfds,
+                'resource':resource.RLIMIT_NOFILE,
+                'name':'RLIMIT_NOFILE',
+                })
+        if hasattr(resource, 'RLIMIT_NPROC'):
+            limits.append(
+                {
+                'msg':('The minimum number of available processes required '
+                       'to run this program is %(min)s as per the "minprocs" '
+                       'command-line argument or config file setting. '
+                       'The current environment will only allow you '
+                       'to open %(hard)s processes.  Either raise '
+                       'the number of usable processes in your '
+                       'environment (see README.txt) or lower the '
+                       'minprocs setting in the config file to allow '
+                       'the program to start.'),
+                'min':self.minprocs,
+                'resource':resource.RLIMIT_NPROC,
+                'name':'RLIMIT_NPROC',
+                })
+
+        msgs = []
+            
+        for limit in limits:
+
+            min = limit['min']
+            res = limit['resource']
+            msg = limit['msg']
+            name = limit['name']
+
+            soft, hard = resource.getrlimit(res)
+            
+            if (soft < min) and (soft != -1): # -1 means unlimited 
+                if (hard < min) and (hard != -1):
+                    self.usage(msg % locals())
+
+                try:
+                    resource.setrlimit(res, (min, hard))
+                    msgs.append('Increased %(name)s limit to %(min)s' %
+                                locals())
+                except (resource.error, ValueError):
+                    self.usage(msg % locals())
+        return msgs
+
+    def make_logger(self, critical_messages, info_messages):
+        # must be called after realize() and after supervisor does setuid()
+        format =  '%(asctime)s %(levelname)s %(message)s\n'
+        logging.addLevelName(logging.CRITICAL, 'CRIT')
+        logging.addLevelName(logging.DEBUG, 'DEBG')
+        logging.addLevelName(logging.INFO, 'INFO')
+        logging.addLevelName(logging.WARN, 'WARN')
+        logging.addLevelName(logging.ERROR, 'ERRO')
+        logging.addLevelName(self.TRACE, 'TRAC')
+        self.logger = self.getLogger(
+            self.logfile,
+            self.loglevel,
+            format,
+            rotating=True,
+            maxbytes=self.logfile_maxbytes,
+            backups=self.logfile_backups,
+            )
+        if self.nodaemon:
+            stdout_handler = RawStreamHandler(sys.stdout)
+            formatter = logging.Formatter(format)
+            stdout_handler.setFormatter(formatter)
+            self.logger.addHandler(stdout_handler)
+        for msg in critical_messages:
+            self.logger.critical(msg)
+        for msg in info_messages:
+            self.logger.info(msg)
+
+    def make_process(self, config):
+        from supervisord import Subprocess
+        return Subprocess(self, config)
+
+    def make_pipes(self):
+        """ Create pipes for parent to child stdin/stdout/stderr
+        communications.  Open fd in nonblocking mode so we can read them
+        in the mainloop without blocking """
+        pipes = {}
+        try:
+            pipes['child_stdin'], pipes['stdin'] = os.pipe()
+            pipes['stdout'], pipes['child_stdout'] = os.pipe()
+            pipes['stderr'], pipes['child_stderr'] = os.pipe()
+            for fd in (pipes['stdout'], pipes['stderr'], pipes['stdin']):
+                fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | os.O_NDELAY)
+            return pipes
+        except OSError:
+            self.close_pipes(pipes)
+            raise
+
+    def close_pipes(self, pipes):
+        for fd in pipes.values():
+            self.close_fd(fd)
+
+    def close_fd(self, fd):
+        try:
+            os.close(fd)
+        except:
+            pass
+
+    def fork(self):
+        return os.fork()
+
+    def dup2(self, frm, to):
+        return os.dup2(frm, to)
+
+    def setpgrp(self):
+        return os.setpgrp()
+
+    def stat(self, filename):
+        return os.stat(filename)
+
+    def write(self, fd, data):
+        return os.write(fd, data)
+
+    def execv(self, filename, argv):
+        return os.execv(filename, argv)
+
+    def _exit(self, code):
+        os._exit(code)
+
+    def get_path(self):
+        """Return a list corresponding to $PATH, or a default."""
+        path = ["/bin", "/usr/bin", "/usr/local/bin"]
+        if os.environ.has_key("PATH"):
+            p = os.environ["PATH"]
+            if p:
+                path = p.split(os.pathsep)
+        return path
+
+    def check_execv_args(self, filename, argv, st):
+        msg = None
+        
+        if st is None:
+            msg = "can't find command %r" % filename
+
+        elif stat.S_ISDIR(st[stat.ST_MODE]):
+            msg = "command at %r is a directory" % filename
+
+        elif not (stat.S_IMODE(st[stat.ST_MODE]) & 0111):
+            # not executable
+            msg = "command at %r is not executable" % filename
+
+        elif not os.access(filename, os.X_OK):
+            msg = "no permission to run command %r" % filename
+
+        return msg
+
+    def reopenlogs(self):
+        self.logger.info('supervisord logreopen')
+        for handler in self.logger.handlers:
+            if hasattr(handler, 'reopen'):
+                handler.reopen()
+
+    def readfd(self, fd):
+        try:
+            data = os.read(fd, 2 << 16) # 128K
+        except OSError, why:
+            if why[0] not in (errno.EWOULDBLOCK, errno.EBADF, errno.EINTR):
+                raise
+            data = ''
+        return data
 
 class ClientOptions(Options):
     positional_args_allowed = 1
@@ -775,13 +1149,14 @@ class ClientOptions(Options):
         self.add("password", "supervisorctl.password", "p:", "password=")
 
     def realize(self, *arg, **kw):
+        os.environ['SUPERVISOR_ENABLED'] = '1'
         Options.realize(self, *arg, **kw)
         if not self.args:
             self.interactive = 1
 
     def default_configfile(self):
         """Return the name of the default config file, or None."""
-        config = '/etc/xsupervisord.conf'
+        config = '/etc/supervisord.conf'
         if not os.path.exists(config):
             self.usage('No config file found at default path "%s"; create '
                        'this file or use the -c option to specify a config '
@@ -809,6 +1184,18 @@ class ClientOptions(Options):
         
         return section
 
+    def getServerProxy(self):
+        # mostly put here for unit testing
+        return xmlrpclib.ServerProxy(
+            # dumbass ServerProxy won't allow us to pass in a non-HTTP url,
+            # so we fake the url we pass into it and always use the transport's
+            # 'serverurl' to figure out what to attach to
+            'http://127.0.0.1',
+            transport = BasicAuthTransport(self.username,
+                                           self.password,
+                                           self.serverurl)
+            )
+
 _marker = []
 
 class UnhosedConfigParser(ConfigParser.RawConfigParser):
@@ -833,16 +1220,227 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
 
 class ProcessConfig:
     def __init__(self, name, command, priority, autostart, autorestart,
-                 uid, logfile, stopsignal):
+                 startsecs, startretries, uid, logfile, logfile_backups,
+                 logfile_maxbytes, stopsignal, stopwaitsecs, exitcodes,
+                 log_stdout, log_stderr):
         self.name = name
         self.command = command
         self.priority = priority
         self.autostart = autostart
         self.autorestart = autorestart
+        self.startsecs = startsecs
+        self.startretries = startretries
         self.uid = uid
         self.logfile = logfile
+        self.logfile_backups = logfile_backups
+        self.logfile_maxbytes = logfile_maxbytes
         self.stopsignal = stopsignal
+        self.stopwaitsecs = stopwaitsecs
+        self.exitcodes = exitcodes
+        self.log_stdout = log_stdout
+        self.log_stderr = log_stderr
 
     def __cmp__(self, other):
         return cmp(self.priority, other.priority)
     
+class BasicAuthTransport(xmlrpclib.Transport):
+    """ A transport that understands basic auth and UNIX domain socket
+    URLs """
+    def __init__(self, username=None, password=None, serverurl=None):
+        self.username = username
+        self.password = password
+        self.verbose = False
+        self.serverurl = serverurl
+
+    def request(self, host, handler, request_body, verbose=False):
+        # issue XML-RPC request
+
+        h = self.make_connection(host)
+        if verbose:
+            h.set_debuglevel(1)
+
+        h.putrequest("POST", handler)
+
+        # required by HTTP/1.1
+        h.putheader("Host", host)
+
+        # required by XML-RPC
+        h.putheader("User-Agent", self.user_agent)
+        h.putheader("Content-Type", "text/xml")
+        h.putheader("Content-Length", str(len(request_body)))
+
+        # basic auth
+        if self.username is not None and self.password is not None:
+            unencoded = "%s:%s" % (self.username, self.password)
+            encoded = unencoded.encode('base64')
+            encoded = encoded.replace('\012', '')
+            h.putheader("Authorization", "Basic %s" % encoded)
+
+        h.endheaders()
+
+        if request_body:
+            h.send(request_body)
+
+        errcode, errmsg, headers = h.getreply()
+
+        if errcode != 200:
+            raise xmlrpclib.ProtocolError(
+                host + handler,
+                errcode, errmsg,
+                headers
+                )
+
+        return self.parse_response(h.getfile())
+
+    def make_connection(self, host):
+        serverurl = self.serverurl
+        if not serverurl.startswith('http'):
+            if serverurl.startswith('unix://'):
+                serverurl = serverurl[7:]
+            http = UnixStreamHTTP(serverurl)
+            return http
+        else:            
+            type, uri = urllib.splittype(serverurl)
+            host, path = urllib.splithost(uri)
+            hostpath = host+path
+            return xmlrpclib.Transport.make_connection(self, hostpath)
+            
+class UnixStreamHTTPConnection(httplib.HTTPConnection):
+    def connect(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        # we abuse the host parameter as the socketname
+        self.sock.connect(self.host)
+
+class UnixStreamHTTP(httplib.HTTP):
+    _connection_class = UnixStreamHTTPConnection
+
+def readFile(filename, offset, length):
+    """ Read length bytes from the file named by filename starting at
+    offset """
+
+    absoffset = abs(offset)
+    abslength = abs(length)
+
+    try:
+        f = open(filename, 'rb')
+        if absoffset != offset:
+            # negative offset returns offset bytes from tail of the file
+            if length:
+                raise ValueError('BAD_ARGUMENTS')
+            f.seek(0, 2)
+            sz = f.tell()
+            pos = int(sz - absoffset)
+            if pos < 0:
+                pos = 0
+            f.seek(pos)
+            data = f.read(absoffset)
+        else:
+            if abslength != length:
+                raise ValueError('BAD_ARGUMENTS')
+            if length == 0:
+                f.seek(offset)
+                data = f.read()
+            else:
+                sz = f.seek(offset)
+                data = f.read(length)
+    except (os.error, IOError):
+        raise ValueError('FAILED')
+
+    return data
+
+def gettags(comment):
+    """ Parse documentation strings into JavaDoc-like tokens """
+
+    tags = []
+
+    tag = None
+    datatype = None
+    name = None
+    tag_lineno = lineno = 0
+    tag_text = []
+
+    for line in comment.split('\n'):
+        line = line.strip()
+        if line.startswith("@"):
+            tags.append((tag_lineno, tag, datatype, name, '\n'.join(tag_text)))
+            parts = line.split(None, 3)
+            if len(parts) == 1:
+                datatype = ''
+                name = ''
+                tag_text = []
+            elif len(parts) == 2:
+                datatype = parts[1]
+                name = ''
+                tag_text = []
+            elif len(parts) == 3:
+                datatype = parts[1]
+                name = parts[2]
+                tag_text = []
+            elif len(parts) == 4:
+                datatype = parts[1]
+                name = parts[2]
+                tag_text = [parts[3].lstrip()]
+            tag = parts[0][1:]
+            tag_lineno = lineno
+        else:
+            if line:
+                tag_text.append(line)
+        lineno = lineno + 1
+
+    tags.append((tag_lineno, tag, datatype, name, '\n'.join(tag_text)))
+
+    return tags
+
+
+# Helpers for dealing with signals and exit status
+
+def decode_wait_status(sts):
+    """Decode the status returned by wait() or waitpid().
+
+    Return a tuple (exitstatus, message) where exitstatus is the exit
+    status, or -1 if the process was killed by a signal; and message
+    is a message telling what happened.  It is the caller's
+    responsibility to display the message.
+    """
+    if os.WIFEXITED(sts):
+        es = os.WEXITSTATUS(sts) & 0xffff
+        msg = "exit status %s" % es
+        return es, msg
+    elif os.WIFSIGNALED(sts):
+        sig = os.WTERMSIG(sts)
+        msg = "terminated by %s" % signame(sig)
+        if hasattr(os, "WCOREDUMP"):
+            iscore = os.WCOREDUMP(sts)
+        else:
+            iscore = sts & 0x80
+        if iscore:
+            msg += " (core dumped)"
+        return -1, msg
+    else:
+        msg = "unknown termination cause 0x%04x" % sts
+        return -1, msg
+
+_signames = None
+
+def signame(sig):
+    """Return a symbolic name for a signal.
+
+    Return "signal NNN" if there is no corresponding SIG name in the
+    signal module.
+    """
+
+    if _signames is None:
+        _init_signames()
+    return _signames.get(sig) or "signal %d" % sig
+
+def _init_signames():
+    global _signames
+    d = {}
+    for k, v in signal.__dict__.items():
+        k_startswith = getattr(k, "startswith", None)
+        if k_startswith is None:
+            continue
+        if k_startswith("SIG") and not k_startswith("SIG_"):
+            d[v] = k
+    _signames = d
+

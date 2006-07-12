@@ -1,14 +1,6 @@
 import xmlrpclib
 import os
-from supervisord import ProcessStates
-from supervisord import SupervisorStates
-from supervisord import getSupervisorStateDescription
-import doctags
-import signal
-import time
-from medusa.xmlrpc_handler import xmlrpc_handler
-from medusa.http_server import get_header
-from medusa import producers
+import datetime
 import sys
 import types
 import re
@@ -16,43 +8,50 @@ import traceback
 import StringIO
 import tempfile
 import errno
+import signal
+import time
+
+from supervisord import ProcessStates
+from supervisord import SupervisorStates
+from supervisord import getSupervisorStateDescription
+from supervisord import getProcessStateDescription
+from medusa.xmlrpc_handler import xmlrpc_handler
+from medusa.http_server import get_header
+from medusa import producers
+
 from http import NOT_DONE_YET
+from options import readFile
+from options import gettags
 
 RPC_VERSION  = 1.0
 
-FAULTS = {
-    'SUPER_READ_NO_FILE':1000,
-    'SUPER_READ_BAD_ARGUMENTS':1001,
-    'SUPER_CLEAR_FAILED':1010,
-    'SUPER_CLEAR_NO_FILE':1011,
-    'START_BAD_NAME':2002,
-    'START_ABNORMAL_TERMINATION':2003,
-    'START_SPAWN_ERROR':2004,
-    'START_ALREADY_STARTED':2006,
-    'STOP_BAD_NAME':2010,
-    'STOP_UNSUCCESSFUL':2011,
-    'STOP_NOT_RUNNING':2012,
-    'INFO_BAD_NAME':2020,
-    'READ_BAD_NAME':2040,
-    'READ_BAD_ARGUMENTS':2041,
-    'READ_NO_FILE':2042,
-    'CLEAR_BAD_NAME':2050,
-    'CLEAR_FAILED':2051,
-    'UNKNOWN_METHOD':1,
-    'INCORRECT_PARAMETERS':2,
-    'SIGNATURE_UNSUPPORTED':4,
-    'SHUTDOWN_STATE':6,
-    }
+class Faults:
+    UNKNOWN_METHOD = 1
+    INCORRECT_PARAMETERS = 2
+    BAD_ARGUMENTS = 3
+    SIGNATURE_UNSUPPORTED = 4
+    SHUTDOWN_STATE = 6
+    BAD_NAME = 10
+    NO_FILE = 20
+    FAILED = 30
+    ABNORMAL_TERMINATION = 40
+    SPAWN_ERROR = 50
+    ALREADY_STARTED = 60
+    NOT_RUNNING = 70
+    SUCCESS = 80
 
-RFAULTS = dict([(v, k) for k, v in FAULTS.items()])
+def getFaultDescription(code):
+    for faultname in Faults.__dict__:
+        if getattr(Faults, faultname) == code:
+            return faultname
+    return 'UNKNOWN'
 
 class RPCError(Exception):
-    def __init__(self, text, code=None):
-        self.text = text
-        if code is None:
-            self.code = FAULTS[text]
-        else:
-            self.code = code
+    def __init__(self, code, extra=None):
+        self.code = code
+        self.text = getFaultDescription(code)
+        if extra is not None:
+            self.text = '%s: %s' % (self.text, extra)
 
 class DeferredXMLRPCResponse:
     """ A medusa producer that implements a deferred callback; requires
@@ -171,10 +170,6 @@ class SupervisorNamespaceRPCInterface:
 
     def __init__(self, supervisord):
         self.supervisord = supervisord
-        self.cache = {}
-        self._update('__init__')
-        if not self.supervisord.options.nocleanup:
-            self._clear_childlogdir()
 
     def _update(self, text):
         self.update_text = text # for unit tests, mainly
@@ -182,60 +177,7 @@ class SupervisorNamespaceRPCInterface:
         state = self.supervisord.get_state()
 
         if state == SupervisorStates.SHUTDOWN:
-            raise RPCError('SHUTDOWN_STATE')
-
-    def _clear_childlogdir(self):
-        options = self.supervisord.options
-        childlogdir = options.childlogdir
-        fnre = re.compile(r'.+?---\d{1,11}-%s-\S+?\.xlog' % options.identifier)
-        try:
-            filenames = os.listdir(childlogdir)
-        except (IOError, OSError):
-            options.logger.info('Could not clear childlog dir')
-            return
-        
-        for filename in filenames:
-            if fnre.match(filename):
-                pathname = os.path.join(childlogdir, filename)
-                try:
-                    os.remove(pathname)
-                except (os.error, IOError):
-                    options.logger.info('Failed to clean up %r' % pathname)
-
-    def _readFile(self, filename, offset, length):
-        """ Read length bytes from the file named by filename starting at
-        offset """
-
-        absoffset = abs(offset)
-        abslength = abs(length)
-
-        try:
-            f = open(filename, 'rb')
-            if absoffset != offset:
-                # negative offset returns offset bytes from tail of the file
-                if length:
-                    raise ValueError('BAD_ARGUMENTS')
-                f.seek(0, 2)
-                sz = f.tell()
-                pos = int(sz - absoffset)
-                f.seek(pos)
-                data = f.read(absoffset)
-            else:
-                if abslength != length:
-                    raise ValueError('BAD_ARGUMENTS')
-                if length == 0:
-                    f.seek(offset)
-                    data = f.read()
-                else:
-                    sz = f.seek(offset)
-                    data = f.read(length)
-        except (os.error, IOError):
-            # XXX don't set fatal state, bad offset or length
-            # shouldn't cause fatal
-            #msg = 'FATAL: failed reading log file %r' % filename
-            raise ValueError('FAILED')
-
-        return data
+            raise RPCError(Faults.SHUTDOWN_STATE)
 
     # RPC API methods
 
@@ -282,13 +224,13 @@ class SupervisorNamespaceRPCInterface:
         logfile = self.supervisord.options.logfile
 
         if logfile is None or not os.path.exists(logfile):
-            raise RPCError('SUPER_READ_NO_FILE')
+            raise RPCError(Faults.NO_FILE)
 
         try:
-            return self._readFile(logfile, offset, length)
+            return readFile(logfile, offset, length)
         except ValueError, inst:
             why = inst.args[0]
-            raise RPCError('SUPER_READ_' + why)
+            raise RPCError(getattr(Faults, why))
 
     def clearLog(self):
         """ Clear the main log.
@@ -299,12 +241,12 @@ class SupervisorNamespaceRPCInterface:
 
         logfile = self.supervisord.options.logfile
         if  logfile is None or not os.path.exists(logfile):
-            raise RPCError('SUPER_CLEAR_NO_FILE')
+            raise RPCError(Faults.NO_FILE)
 
         try:
             os.remove(logfile) # there is a race condition here, but ignore it.
         except (os.error, IOError):
-            raise RPCError('SUPER_CLEAR_FAILED')
+            raise RPCError(Faults.FAILED)
 
         for handler in self.supervisord.options.logger.handlers:
             if hasattr(handler, 'reopen'):
@@ -317,9 +259,7 @@ class SupervisorNamespaceRPCInterface:
 
         @return boolean result always returns True unless error
         """
-        # we don't want to call _update here.
-        if self.supervisord.get_state() == SupervisorStates.SHUTDOWN:
-            raise RPCError('SHUTDOWN_STATE')
+        self._update('shutdown')
         
         self.supervisord.mood = -1
         return True
@@ -329,8 +269,7 @@ class SupervisorNamespaceRPCInterface:
 
         @return boolean result  always return True unless error
         """
-        if self.supervisord.get_state() == SupervisorStates.SHUTDOWN:
-            raise RPCError('SHUTDOWN_STATE')
+        self._update('restart')
         
         self.supervisord.mood = 0
         return True
@@ -348,72 +287,108 @@ class SupervisorNamespaceRPCInterface:
         processes = self.supervisord.processes
         process = processes.get(name)
 
+        try:
+            timeout = int(timeout)
+        except:
+            raise RPCError(Faults.BAD_ARGUMENTS, 'timeout: %s' % timeout)
+
         if process is None:
-            raise RPCError('START_BAD_NAME')
+            raise RPCError(Faults.BAD_NAME, name)
 
-        if process.pid:
-            raise RPCError('START_ALREADY_STARTED')
+        started = []
 
-        process.spawn()
+        def startit():
+            if not started:
 
-        if process.spawnerr:
-            raise RPCError('START_SPAWN_ERROR')
+                if process.get_state() == ProcessStates.RUNNING:
+                    raise RPCError(Faults.ALREADY_STARTED, name)
 
-        if not timeout:
-            return True
-        
-        milliseconds = timeout / 1000.0
-        start = time.time()
+                process.spawn()
 
-        def check_still_running(done=False): # done arg is only for unit testing
+                if process.spawnerr:
+                    raise RPCError(Faults.SPAWN_ERROR, name)
+
+                # we use a list here to fake out lexical scoping;
+                # using a direct assignment to 'started' in the
+                # function appears to not work (symptom: 2nd or 3rd
+                # call through, it forgets about 'started', claiming
+                # it's undeclared).
+                started.append(time.time())
+                
             t = time.time()
-            runtime = (t - start)
-            if not done and runtime < milliseconds:
+            runtime = (t - started[0])
+            milliseconds = timeout / 1000.0
+            if runtime < milliseconds:
                 return NOT_DONE_YET
-            pid = processes[name].pid
-            if pid:
+            state = process.get_state()
+            if state == ProcessStates.RUNNING:
                 return True
-            raise RPCError('START_ABNORMAL_TERMINATION')
+            raise RPCError(Faults.ABNORMAL_TERMINATION, name)
 
-        check_still_running.delay = milliseconds
-        check_still_running.rpcinterface = self
-        return check_still_running # deferred
+        startit.delay = 0.05
+        startit.rpcinterface = self
+        return startit # deferred
 
     def startAllProcesses(self, timeout=500):
         """ Start all processes listed in the configuration file
 
         @param int timeout Number of milliseconds to wait for each process start
-        @return boolean result     Always true unless error
+        @return struct result     A structure containing start statuses
         """
         self._update('startAllProcesses')
 
-        processes = self.supervisord.processes
+        try:
+            timeout = int(timeout)
+        except:
+            raise RPCError(Faults.BAD_ARGUMENTS, 'timeout: %s' % timeout)
 
+        processes = self.supervisord.processes.values()
+        processes.sort() # asc by priority
+
+        results = []
         callbacks = []
-        processnames = processes.keys()
-        processnames.sort()
 
-        for processname in processnames:
-            process = processes[processname]
-            if process.get_state() != ProcessStates.RUNNING:
-                # only start nonrunning processes
-                callbacks.append(self.startProcess(processname, timeout))
-
-        def startall(done=False): # done arg is for unit testing
+        def startall():
             if not callbacks:
-                return True
 
-            callback = callbacks.pop(0)
-            value = callback(done)
+                for process in processes:
+                    if process.get_state() not in (ProcessStates.RUNNING,
+                                                   ProcessStates.BACKOFF):
+                        # only start nonrunning processes
+                        try:
+                            callbacks.append((
+                                process.config.name,
+                                self.startProcess(process.config.name,
+                                                  timeout)))
+                        except RPCError, e:
+                            results.append({'name':process.config.name,
+                                            'status':e.code,
+                                            'description':e.text})
+                            continue
+
+            if not callbacks:
+                return results
+
+            name, callback = callbacks.pop(0)
+
+            try:
+                value = callback()
+            except RPCError, e:
+                results.append({'name':name, 'status':e.code,
+                                'description':e.text})
+                return NOT_DONE_YET
             
             if value is NOT_DONE_YET:
                 # push it back into the queue; it will finish eventually
-                callbacks.append(callback)
+                callbacks.append((name,callback))
+            else:
+                results.append({'name':name, 'status':Faults.SUCCESS,
+                                'description':'OK'})
 
             if callbacks:
                 return NOT_DONE_YET
 
-            return True
+            return results
 
         # XXX the above implementation has a weakness inasmuch as the
         # first call into each individual process callback will always
@@ -436,18 +411,24 @@ class SupervisorNamespaceRPCInterface:
 
         process = self.supervisord.processes.get(name)
         if process is None:
-            raise RPCError('STOP_BAD_NAME')
+            raise RPCError(Faults.BAD_NAME, name)
 
-        if process.get_state() != ProcessStates.RUNNING:
-            raise RPCEror('STOP_NOT_RUNNING')
+        stopped = []
 
         def killit():
-            if process.killing:
-                return NOT_DONE_YET
-            elif process.pid:
+            if not stopped:
+                if process.get_state() != ProcessStates.RUNNING:
+                    raise RPCError(Faults.NOT_RUNNING)
+                # use a mutable for lexical scoping; see startProcess
+                stopped.append(1)
+            
+            if process.get_state() == ProcessStates.RUNNING:
                 msg = process.stop()
                 if msg is not None:
-                    raise RPCError('STOP_UNSUCCESSFUL')
+                    raise RPCError(Faults.FAILED, name)
+                return NOT_DONE_YET
+            elif process.get_state() not in (ProcessStates.STOPPED,
+                                             ProcessStates.EXITED):
                 return NOT_DONE_YET
             else:
                 return True
@@ -462,37 +443,50 @@ class SupervisorNamespaceRPCInterface:
         @return boolean result Always return true unless error.
         """
         self._update('stopAllProcesses')
-        processes = self.supervisord.processes
+        processes = self.supervisord.processes.values()
+        processes.sort()
+        processes.reverse() # stop in reverse priority order
 
         callbacks = []
-        processnames = processes.keys()
-        processnames.sort()
-
-        for processname in processnames:
-            process = processes[processname]
-            if process.pid:
-                # only stop running processes
-                callbacks.append(self.stopProcess(processname))
+        results = []
 
         def killall():
             if not callbacks:
-                return True
 
-            callback = callbacks.pop(0)
+                for process in processes:
+                    if process.get_state() == ProcessStates.RUNNING:
+                        # only stop running processes
+                        try:
+                            callbacks.append(
+                                (process.config.name,
+                                 self.stopProcess(process.config.name)))
+                        except RPCError, e:
+                            results.append({'name':name, 'status':e.code,
+                                            'description':e.text})
+                            continue
+
+            if not callbacks:
+                return results
+
+            name, callback = callbacks.pop(0)
             try:
                 value = callback()
-            except RPCError, inst:
-                if inst.text == 'STOP_UNSUCCESSFUL':
-                    raise RPCError('STOP_ALL_UNSUCCESSFUL')
+            except RPCError, e:
+                results.append({'name':name, 'status':e.code,
+                                'description':e.text})
+                return NOT_DONE_YET
             
             if value is NOT_DONE_YET:
                 # push it back into the queue; it will finish eventually
-                callbacks.append(callback)
+                callbacks.append((name, callback))
+            else:
+                results.append({'name':name, 'status':Faults.SUCCESS,
+                                'description':'OK'})
 
             if callbacks:
                 return NOT_DONE_YET
 
-            return True
+            return results
 
         # XXX the above implementation has a weakness inasmuch as the
         # first call into each individual process callback will always
@@ -517,6 +511,35 @@ class SupervisorNamespaceRPCInterface:
         killall.rpcinterface = self
         return killall # deferred
 
+    def _interpretProcessInfo(self, info):
+        state = info['state']
+
+        if state == ProcessStates.RUNNING:
+            start = info['start']
+            now = info['now']
+            start_dt = datetime.datetime(*time.gmtime(start)[:6])
+            now_dt = datetime.datetime(*time.gmtime(now)[:6])
+            uptime = now_dt - start_dt
+            desc = 'pid %s, uptime %s' % (info['pid'], uptime)
+
+        elif state in (ProcessStates.FATAL, ProcessStates.BACKOFF):
+            desc = info['spawnerr']
+            if not desc:
+                desc = 'unknown error (try "tail %s")' % info['name']
+
+        elif state in (ProcessStates.STOPPED, ProcessStates.EXITED):
+            if info['start']:
+                stop = info['stop']
+                stop_dt = datetime.datetime(*time.localtime(stop)[:7])
+                desc = stop_dt.strftime('%b %d %I:%M %p')
+            else:
+                desc = 'Not started'
+
+        else:
+            desc = ''
+
+        return desc
+
     def getProcessInfo(self, name):
         """ Get info about a process named name
 
@@ -527,7 +550,7 @@ class SupervisorNamespaceRPCInterface:
         
         process = self.supervisord.processes.get(name)
         if process is None:
-            raise RPCError('INFO_BAD_NAME')
+            raise RPCError(Faults.BAD_NAME, name)
 
         start = int(process.laststart)
         stop = int(process.laststop)
@@ -536,20 +559,23 @@ class SupervisorNamespaceRPCInterface:
         state = process.get_state()
         spawnerr = process.spawnerr or ''
         exitstatus = process.exitstatus or 0
-        reportstatusmsg = process.reportstatusmsg or ''
 
-        return {
+        info = {
             'name':name,
             'start':start,
             'stop':stop,
             'now':now,
             'state':state,
+            'statename':getProcessStateDescription(state),
             'spawnerr':spawnerr,
             'exitstatus':exitstatus,
-            'reportstatusmsg':reportstatusmsg,
             'logfile':process.config.logfile,
             'pid':process.pid
             }
+        
+        description = self._interpretProcessInfo(info)
+        info['description'] = description
+        return info
 
     def getAllProcessInfo(self):
         """ Get info about all processes
@@ -565,64 +591,89 @@ class SupervisorNamespaceRPCInterface:
             output.append(self.getProcessInfo(processname))
         return output
 
-    def readProcessLog(self, processName, offset, length):
-        """ Read length bytes from processName's log starting at offset
+    def readProcessLog(self, name, offset, length):
+        """ Read length bytes from name's log starting at offset
 
-        @param string processName The name of the process
+        @param string name The name of the process
         @param int offset         offset to start reading from.
         @param int length         number of bytes to read from the log.
         @return string result     Bytes of log
         """
         self._update('readProcessLog')
 
-        process = self.supervisord.processes.get(processName)
+        process = self.supervisord.processes.get(name)
         if process is None:
-            raise RPCError('READ_BAD_NAME')
+            raise RPCError(Faults.BAD_NAME, name)
 
         logfile = process.config.logfile
 
         if logfile is None or not os.path.exists(logfile):
-            # XXX problematic: processes that don't start won't have a log
-            # file and we probably don't want to go into fatal state if we try
-            # to read the log of a process that did not start.
-            raise RPCError('READ_NO_FILE')
+            raise RPCError(Faults.NO_FILE, logfile)
 
         try:
-            return self._readFile(logfile, offset, length)
+            return readFile(logfile, offset, length)
         except ValueError, inst:
             why = inst.args[0]
-            raise RPCError('READ_' + why)
+            raise RPCError(getattr(Faults, why))
 
-    def clearProcessLog(self, processName):
-        """ Clear the log for processName and reopen it
+    def clearProcessLog(self, name):
+        """ Clear the log for name and reopen it
 
-        @param string processName   The name of the process
+        @param string name   The name of the process
         @return boolean result      Always True unless error
         """
         self._update('clearProcessLog')
 
-        process = self.supervisord.processes.get(processName)
+        process = self.supervisord.processes.get(name)
         if process is None:
-            raise RPCError('CLEAR_BAD_NAME')
+            raise RPCError(Faults.BAD_NAME, name)
 
         try:
             # implies a reopen
             process.removelogs()
         except (IOError, os.error):
-            msg = 'FATAL: failed clearing log file %r' % logfile
-            raise RPCError('CLEAR_FAILED')
+            raise RPCError(Faults.FAILED, name)
 
         return True
 
-    def _rotateMainLog(self):
-        """ Rotate the main supervisord log (for debugging/testing) """
-        self._update('_rotateMainLog')
+    def clearAllProcessLogs(self):
+        """ Clear all process log files
+
+        @return boolean result      Always return true
+        """
+        self._update('clearAllProcessLogs')
+        results  = []
+        callbacks = []
+
+        processnames = self.supervisord.processes.keys()
+        processnames.sort()
         
-        for handler in self.supervisord.options.logger.handlers:
-            if hasattr(handler, 'doRollover'):
-                handler.doRollover()
-        return True
+        for processname in processnames:
+            callbacks.append((processname, self.clearProcessLog))
+
+        def clearall():
+            if not callbacks:
+                return results
+
+            name, callback = callbacks.pop(0)
+            try:
+                callback(name)
+            except RPCError, e:
+                results.append({'name':name, 'status':e.code,
+                                'description':e.text})
+            else:
+                results.append({'name':name, 'status':Faults.SUCCESS,
+                                'description':'OK'})
+            
+            if callbacks:
+                return NOT_DONE_YET
+
+            return results
         
+        clearall.delay = 0.05
+        clearall.rpcinterface = self
+        return clearall # deferred
+
 class SystemNamespaceRPCInterface:
     def __init__(self, namespaces):
         self.namespaces = {}
@@ -665,7 +716,7 @@ class SystemNamespaceRPCInterface:
         for methodname in methods.keys():
             if methodname == name:
                 return methods[methodname]
-        raise RPCError('SIGNATURE_UNSUPPORTED')
+        raise RPCError(Faults.SIGNATURE_UNSUPPORTED)
     
     def methodSignature(self, name):
         """ Return an array describing the method signature in the
@@ -682,16 +733,16 @@ class SystemNamespaceRPCInterface:
             if method == name:
                 rtype = None
                 ptypes = []
-                parsed = doctags.gettags(methods[method])
+                parsed = gettags(methods[method])
                 for thing in parsed:
                     if thing[1] == 'return': # tag name
                         rtype = thing[2] # datatype
                     elif thing[1] == 'param': # tag name
                         ptypes.append(thing[2]) # datatype
                 if rtype is None:
-                    raise RPCError('SIGNATURE_UNSUPPORTED')
+                    raise RPCError(Faults.SIGNATURE_UNSUPPORTED)
                 return [rtype] + ptypes
-        raise RPCError('SIGNATURE_UNSUPPORTED')
+        raise RPCError(Faults.SIGNATURE_UNSUPPORTED)
 
     def multicall(self, calls):
         """Process an array of calls, and return an array of
@@ -714,7 +765,8 @@ class SystemNamespaceRPCInterface:
                 if name == 'system.multicall':
                     # Recursive system.multicall forbidden
                     error = 'INCORRECT_PARAMETERS'
-                    raise xmlrpclib.Fault(FAULTS[error], error)
+                    raise xmlrpclib.Fault(Faults.INCORRECT_PARAMETERS,
+                                          error)
                 root = AttrDict(self.namespaces)
                 value = traverse(root, name, params)
             except RPCError, inst:
@@ -785,11 +837,10 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
             params, method = xmlrpclib.loads(data)
 
             try:
-                # 5 is 'trace' level
-                logger.log(5, 'XML-RPC method called: %s()' % method)
+                logger.debug('XML-RPC method called: %s()' % method)
                 value = self.call(method, params)
-                logger.log(5, 'XML-RPC method %s() returned successfully' %
-                            method)
+                logger.debug('XML-RPC method %s() returned successfully' %
+                             method)
             except RPCError, err:
                 # turn RPCError reported by method into a Fault instance
                 value = xmlrpclib.Fault(err.code, err.text)
@@ -828,15 +879,16 @@ def traverse(ob, method, params):
     path = method.split('.')
     for name in path:
         if name.startswith('_'):
-            # security (don't allow things like _readFile to be called
-            # remotely)
-            raise RPCError('UNKNOWN_METHOD')
+            # security (don't allow things that start with an underscore to
+            # be called remotely)
+            raise RPCError(Faults.UNKNOWN_METHOD)
         ob = getattr(ob, name, None)
         if ob is None:
-            raise RPCError('UNKNOWN_METHOD')
+            raise RPCError(Faults.UNKNOWN_METHOD)
 
     try:
         return ob(*params)
     except TypeError:
-        raise RPCError('INCORRECT_PARAMETERS')
+        raise RPCError(Faults.INCORRECT_PARAMETERS)
+
 

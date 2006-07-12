@@ -1,0 +1,7 @@
+2.0
+
+  - fundamental rewrite based on 1.0.6, use distutils (only) for
+    installation, use ConfigParser rather than ZConfig, use HTTP for
+    wire protocol, web interface, less lies in supervisorctl.
+
+

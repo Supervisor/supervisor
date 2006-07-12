@@ -12,6 +12,32 @@
 # FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
+"""supervisord -- run a set of applications as daemons.
+
+Usage: %s [options]
+
+Options:
+-c/--configuration URL -- configuration file or URL
+-n/--nodaemon -- run in the foreground (same as 'nodaemon true' in config file)
+-h/--help -- print this usage message and exit
+-u/--user USER -- run supervisord as this user (or numeric uid)
+-m/--umask UMASK -- use this umask for daemon subprocess (default is 022)
+-d/--directory DIRECTORY -- directory to chdir to when daemonized
+-l/--logfile FILENAME -- use FILENAME as logfile path
+-y/--logfile_maxbytes BYTES -- use BYTES to limit the max size of logfile
+-z/--logfile_backups NUM -- number of backups to keep when max bytes reached
+-e/--loglevel LEVEL -- use LEVEL as log level (debug,info,warn,error,critical)
+-j/--pidfile FILENAME -- write a pid file for the daemon process to FILENAME
+-i/--identifier STR -- identifier used for this instance of supervisord
+-q/--childlogdir DIRECTORY -- the log directory for child process logs
+-k/--nocleanup --  prevent the process from performing cleanup (removal of
+                   orphaned child log files, etc.) at startup.
+-w/--http_port SOCKET -- the host/port that the HTTP server should listen on
+-g/--http_username STR -- the username for HTTP auth
+-r/--http_password STR -- the password for HTTP auth
+-a/--minfds NUM -- the minimum number of file descriptors for start success
+--minprocs NUM  -- the minimum number of processes available for start success
+"""
 
 import os
 import sys
@@ -20,29 +46,25 @@ import errno
 import socket
 import select
 import signal
-import pwd
-import grp
 import asyncore
 import traceback
 import StringIO
-import resource
-import stat
-
-from fcntl import fcntl
-from fcntl import F_SETFL, F_GETFL
+import shlex
+import logging
 
 from options import ServerOptions
+from options import decode_wait_status
+from options import signame
 
 class ProcessStates:
-    RUNNING = 0
-    STOPPING = 1
-    STOPPED = 2
-    KILLED = 3
-    NOTSTARTED = 4
-    EXITED = 5
-    STARTING = 6
-    ERROR = 7
-    UNKNOWN = 10
+    STOPPED = 0
+    STARTING = 10
+    RUNNING = 20
+    BACKOFF = 30
+    STOPPING = 40
+    EXITED = 100
+    FATAL = 200
+    UNKNOWN = 1000
 
 def getProcessStateDescription(code):
     for statename in ProcessStates.__dict__:
@@ -63,6 +85,7 @@ class Subprocess:
     """A class to manage a subprocess."""
 
     # Initial state; overridden by instance variables
+
     pid = 0 # Subprocess pid; 0 when not running
     laststart = 0 # Last time the subprocess was started; 0 if never
     laststop = 0  # Last time the subprocess was stopped; 0 if never
@@ -70,17 +93,12 @@ class Subprocess:
     administrative_stop = 0 # true if the process has been stopped by an admin
     system_stop = 0 # true if the process has been stopped by the system
     killing = 0 # flag determining whether we are trying to kill this proc
-    backoff = 0 # backoff counter (to backofflimit)
-    waitstatus = None
-    exitstatus = None
-    stdin = stderr = stdout = None
-    stdinfd = stderrfd = stdoutfd = None
+    backoff = 0 # backoff counter (to startsecs)
+    pipes = None # mapping of pipe descriptor purpose to file descriptor
     childlog = None # the current logger 
-    spawnerr = None
-    readbuffer = ''  # buffer of characters written to child's stdout
-    finaloutput = '' # buffer of characters read from child's stdout right
-                     # before process reapage
-    reportstatusmsg = None # message attached to instance during reportstatus()
+    logbuffer = '' # buffer of characters read from child pipes
+    exitstatus = None # status attached to dead process by finsh()
+    spawnerr = None # error message attached by spawn() if any
     
     def __init__(self, options, config):
         """Constructor.
@@ -89,10 +107,18 @@ class Subprocess:
         """
         self.options = options
         self.config = config
-        self.pidhistory = []
-        self.readbuffer = ""
+        self.pipes = {}
         if config.logfile:
-            self.childlog = options.getLogger(config.logfile, 10,'%(message)s')
+            backups = config.logfile_backups
+            maxbytes = config.logfile_maxbytes
+            # using "not not maxbytes" below is an optimization.  If
+            # maxbytes is zero, it means we're not using rotation.  The
+            # rotating logger is more expensive than the normal one.
+            self.childlog = options.getLogger(config.logfile, logging.INFO,
+                                              '%(message)s',
+                                              rotating=not not maxbytes,
+                                              maxbytes=maxbytes,
+                                              backups=backups)
 
     def removelogs(self):
         if self.childlog:
@@ -105,174 +131,177 @@ class Subprocess:
             for handler in self.childlog.handlers:
                 handler.reopen()
 
+    def log_output(self):
+        if self.logbuffer:
+            data, self.logbuffer = self.logbuffer, ''
+            if self.childlog:
+                self.childlog.info(data)
+            msg = '%s output:\n%s' % (self.config.name, data)
+            self.options.logger.log(self.options.TRACE, msg)
+
+    def drain_stdout(self, *ignored):
+        output = self.options.readfd(self.pipes['stdout'])
+        if self.config.log_stdout:
+            self.logbuffer += output
+
+    def drain_stderr(self, *ignored):
+        output = self.options.readfd(self.pipes['stderr'])
+        if self.config.log_stderr:
+            self.logbuffer += output
+
+    def drain(self):
+        self.drain_stdout()
+        self.drain_stderr()
+
+    def get_pipe_drains(self):
+        if not self.pipes:
+            return []
+
+        drains = ( [ self.pipes['stdout'], self.drain_stdout],
+                   [ self.pipes['stderr'], self.drain_stderr] )
+
+        return drains
+        
     def get_execv_args(self):
         """Internal: turn a program name into a file name, using $PATH,
         make sure it exists """
-        commandargs = self.config.command.split()
+        commandargs = shlex.split(self.config.command)
 
         program = commandargs[0]
 
         if "/" in program:
             filename = program
             try:
-                st = os.stat(filename)
+                st = self.options.stat(filename)
                 return filename, commandargs, st
-            except os.error:
+            except OSError:
                 return filename, commandargs, None
             
         else:
-            path = get_path()
+            path = self.options.get_path()
             filename = None
             st = None
             for dir in path:
                 filename = os.path.join(dir, program)
                 try:
-                    st = os.stat(filename)
+                    st = self.options.stat(filename)
                     return filename, commandargs, st
-                except os.error:
+                except OSError:
                     continue
             return None, commandargs, None
 
     def record_spawnerr(self, msg):
+        now = time.time()
         self.spawnerr = msg
-        self.options.logger.critical(msg)
-        self.do_backoff()
-        self.governor()
+        self.options.logger.critical("spawnerr: %s" % msg)
+        self.backoff = self.backoff + 1
+        self.delay = now + self.backoff
 
     def spawn(self):
         """Start the subprocess.  It must not be running already.
 
         Return the process id.  If the fork() call fails, return 0.
         """
+        pname = self.config.name
+
         if self.pid:
-            msg = 'process %r already running' % self.config.name
+            msg = 'process %r already running' % pname
             self.options.logger.critical(msg)
             return
 
         self.killing = 0
         self.spawnerr = None
         self.exitstatus = None
+        self.system_stop = 0
+        self.administrative_stop = 0
         
         self.laststart = time.time()
 
         filename, argv, st = self.get_execv_args()
-
-        if st is None:
-            msg = "can't find command %r" % filename
-            self.record_spawnerr(msg)
+        fail_msg = self.options.check_execv_args(filename, argv, st)
+        if fail_msg is not None:
+            self.record_spawnerr(fail_msg)
             return
-
-        if stat.S_ISDIR(st[stat.ST_MODE]):
-            msg = "command at %r is a directory" % filename
-            self.record_spawnerr(msg)
-            return
-
-        mode = stat.S_IMODE(st[stat.ST_MODE])
-        if not (mode & 0111):
-            # not executable
-            msg = "command at %r is not executable" % filename
-            self.record_spawnerr(msg)
-            return
-
-        if not os.access(filename, os.X_OK):
-            msg = "no permission to run command %r" % filename
-            self.record_spawnerr(msg)
-            return
-
-        stdin = stdout = stderr = None
-        child_stdin = child_stdout = child_stderr = None
 
         try:
-            child_stdin, stdin = os.pipe()
-            stdout, child_stdout = os.pipe()
-            stderr, child_stderr = os.pipe()
-            # use unbuffered (0) buffering for stdin
-            self.stdin = os.fdopen(stdin, 'w', 0)
-            # use default (-1) for stderr, stdout
-            self.stdout = os.fdopen(stdout, 'r', -1)
-            self.stderr = os.fdopen(stderr, 'r', -1)
-            # open stderr, stdout in nonblocking mode so we can tail them
-            # in the mainloop without blocking
-            fcntl(stdout, F_SETFL, fcntl(stdout, F_GETFL) | os.O_NDELAY)
-            fcntl(stderr, F_SETFL, fcntl(stderr, F_GETFL) | os.O_NDELAY)
-            fcntl(stdin, F_SETFL, fcntl(stdin, F_GETFL) | os.O_NDELAY)
-            self.stdinfd = stdin
-            self.stdoutfd = stdout
-            self.stderrfd = stderr
+            self.pipes = self.options.make_pipes()
         except OSError, why:
-            for fd in (child_stdin, stdin, stdout, child_stdout, stderr,
-                       child_stderr):
-                if fd is not None:
-                    try:
-                        os.close(fd)
-                    except:
-                        pass
-            
-            if why[0] == errno.EMFILE:
+            code = why[0]
+            if code == errno.EMFILE:
                 # too many file descriptors open
-                msg = 'too many open files to spawn %r' % self.config.name
+                msg = 'too many open files to spawn %r' % pname
             else:
-                msg = 'unknown error: %s' % str(why)
-
+                msg = 'unknown error: %s' % errno.errorcode.get(code, code)
             self.record_spawnerr(msg)
             return
 
         try:
-            pid = os.fork()
-        except os.error, why:
-            if why[0] == errno.EAGAIN:
+            pid = self.options.fork()
+        except OSError, why:
+            code = why[0]
+            if code == errno.EAGAIN:
                 # process table full
-                msg  = 'Too many processes in process table for %r' % (
-                    self.config.name)
+                msg  = 'Too many processes in process table to spawn %r' % pname
             else:
-                msg = 'unknown error: %s' % str(why)
+                msg = 'unknown error: %s' % errno.errorcode.get(code, code)
 
             self.record_spawnerr(msg)
+            self.options.close_pipes(self.pipes)
             return
 
         if pid != 0:
             # Parent
             self.pid = pid
-            os.close(child_stdin)
-            os.close(child_stdout)
-            os.close(child_stderr)
-            self.options.logger.info('spawned process %r with pid %s' % (
-                self.config.name, pid))
+            for fdname in ('child_stdin', 'child_stdout', 'child_stderr'):
+                self.options.close_fd(self.pipes[fdname])
+            self.options.logger.info('spawned: %r with pid %s' % (pname, pid))
             self.spawnerr = None
+            self.delay = time.time() + self.config.startsecs
+            self.options.pidhistory[pid] = self
             return pid
         
         else:
             # Child
             try:
-                os.dup2(child_stdin, 0)
-                os.dup2(child_stdout, 1)
-                os.dup2(child_stderr, 2)
+                # prevent child from receiving signals sent to the
+                # parent by calling os.setpgrp to create a new process
+                # group for the child; this prevents, for instance,
+                # the case of child processes being sent a SIGINT when
+                # running supervisor in foreground mode and Ctrl-C in
+                # the terminal window running supervisord is pressed.
+                # Presumably it also prevents HUP, etc received by
+                # supervisord from being sent to children.
+                self.options.setpgrp()
+                self.options.dup2(self.pipes['child_stdin'], 0)
+                self.options.dup2(self.pipes['child_stdout'], 1)
+                self.options.dup2(self.pipes['child_stderr'], 2)
                 for i in range(3, self.options.minfds):
-                    try:
-                        os.close(i)
-                    except:
-                        pass
+                    self.options.close_fd(i)
+                # sending to fd 1 will put this output in the log(s)
+                msg = self.set_uid()
+                if msg:
+                    self.options.write(
+                        1, "%s: error trying to setuid to %s!\n" %
+                        (pname, self.config.uid)
+                        )
+                    self.options.write(1, "%s: %s\n" % (pname, msg))
                 try:
-                    # sending to fd 2 will put this output in the log(s)
-                    msg = self.set_uid()
-                    if msg:
-                        os.write(2, "%s: error trying to setuid to %s!\n" %
-                                 (self.config.name, self.config.uid))
-                        os.write(2, "%s: %s\n" % (self.config.name, msg))
-                    os.execv(filename, argv)
-                except OSError, err:
-                    os.write(2, "couldn't exec %s: %s\n" % (argv[0],
-                                                            err.strerror))
+                    self.options.execv(filename, argv)
+                except OSError, why:
+                    code = why[0]
+                    self.options.write(1, "couldn't exec %s: %s\n" % (
+                        argv[0], errno.errorcode.get(code, code)))
                 except:
-                    os.write(2, "couldn't exec %s\n" % argv[0])
+                    (file, fun, line), t,v,tbinfo = asyncore.compact_traceback()
+                    error = '%s, %s: file: %s line: %s' % (t, v, file, line)
+                    self.options.write(1, "couldn't exec %s: %s\n" % (filename,
+                                                                      error))
             finally:
-                os._exit(127)
+                self.options._exit(127)
 
     def stop(self):
+        """ Administrative stop """
         self.administrative_stop = 1
-        # backoff needs to come before kill on MacOS, as there's
-        # an apparent a race condition if it comes after
-        self.do_backoff()
         return self.kill(self.config.stopsignal)
 
     def kill(self, sig):
@@ -281,548 +310,218 @@ class Subprocess:
         Return None if the signal was sent, or an error message string
         if an error occurred or if the subprocess is not running.
         """
-        self.options.logger.debug('kill called')
+        now = time.time()
         if not self.pid:
-            return "no subprocess running"
+            msg = ("attempted to kill %s with sig %s but it wasn't running" %
+                   (self.config.name, signame(sig)))
+            self.options.logger.debug(msg)
+            return msg
         try:
-            self.options.logger.info('killing %s (%s)' % (self.config.name,
-                                                          self.pid))
+            self.options.logger.debug('killing %s (pid %s)' % (self.config.name,
+                                                               self.pid))
             self.killing = 1
-            os.kill(self.pid, sig)
-            self.addpidtohistory(self.pid)
+            self.delay = now + self.config.stopwaitsecs
+            self.options.kill(self.pid, sig)
         except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
             tb = io.getvalue()
-            msg = 'unknown problem killing %s (%s):%s' % (
-                self.config.name, self.pid, tb)
+            msg = 'unknown problem killing %s (%s):%s' % (self.config.name,
+                                                          self.pid, tb)
             self.options.logger.critical(msg)
             self.pid = 0
+            self.killing = 0
+            self.delay = 0
             return msg
             
         return None
 
-    def addpidtohistory(self, pid):
-        self.pidhistory.append(pid)
-        if len(self.pidhistory) > 10: # max pid history to keep around is 10
-            self.pidhistory.pop(0)
+    def finish(self, pid, sts):
+        """ The process was reaped and we need to report and manage its state
+        """
+        self.drain()
+        self.log_output()
 
-    def isoneofmypids(self, pid):
-        if pid == self.pid:
-            return True
-        return pid in self.pidhistory
-
-    def governor(self):
-        # Back off if respawning too frequently
-        now = time.time()
-        if not self.laststart:
-            pass
-        elif now - self.laststart < self.options.backofflimit:
-            # Exited rather quickly; slow down the restarts
-            self.backoff += 1
-            if self.backoff >= self.options.backofflimit:
-                if self.options.forever:
-                    self.backoff = self.options.backofflimit
-                else:
-                    self.options.logger.critical(
-                        "%s: restarting too frequently; quit" % (
-                        self.config.name))
-                    # stop trying
-                    self.system_stop = 1
-                    return
-            self.options.logger.info(
-                "%s: sleep %s to avoid rapid restarts" % (self.config.name,
-                                                          self.backoff))
-            self.delay = now + self.backoff
-        else:
-            # Reset the backoff timer
-            self.options.logger.debug(
-                'resetting backoff and delay for %s' % self.config.name)
-            self.backoff = 0
-            self.delay = 0
-
-    def reportstatus(self):
-        self.options.logger.debug('reportstatus called')
-        pid, sts = self.waitstatus
-        self.waitstatus = None
         es, msg = decode_wait_status(sts)
-        msg = "pid %d: " % pid + msg
-        if not self.isoneofmypids(pid):
-            msg = "unknown " + msg
-            self.options.logger.warn(msg)
+
+        now = time.time()
+        self.laststop = now
+
+        tooquickly = now - self.laststart < self.config.startsecs
+        badexit = not es in self.config.exitcodes
+
+        if self.killing:
+            # we've been expecting to reap this
+            self.killing = 0
+            self.delay = 0
+        elif tooquickly or badexit:
+            # the program did not stay up long enough or exited with
+            # an unexpected exit code
+            self.backoff = self.backoff + 1
+            self.delay = now + self.backoff
+            if tooquickly:
+                self.spawnerr = (
+                    'Exited too quickly (process log may have details)')
+            elif badexit:
+                self.spawnerr = 'Bad exit code %s' % es
         else:
-            if self.killing:
-                self.killing = 0
-                self.delay = 0
-            else:
-                self.governor()
-            if self.pid:
-                self.addpidtohistory(self.pid)
-            self.pid = 0
-            
-            self.stdoutfd = self.stderrfd  = self.stdinfd = None
-            self.stdout = self.stderr = self.stdin = None
+            self.delay = 0
+            self.backoff = 0
 
-            if es in self.options.exitcodes and not self.killing:
-                msg = msg + "; OK"
-                self.options.logger.info(msg)
-            self.options.logger.info(msg)
-            self.exitstatus = es
-        self.reportstatusmsg = msg
+        self.pid = 0
+        self.pipes = {}
+        processname = self.config.name
 
-    def do_backoff(self):
-        self.delay = time.time() + self.options.backofflimit
+        if es in self.config.exitcodes and not self.killing:
+            msg = "exited: %s (%s)" % (processname, msg + "; expected")
+        elif es != -1:
+            msg = "exited: %s (%s)" % (processname, msg + "; not expected")
+        else:
+            msg = "killed: %s (%s)" % (processname, msg)
+        self.options.logger.info(msg)
+        self.exitstatus = es
 
     def set_uid(self):
         if self.config.uid is None:
             return
-        msg = dropPrivileges(self.config.uid)
+        msg = self.options.dropPrivileges(self.config.uid)
         return msg
 
     def __cmp__(self, other):
         # sort by priority
         return cmp(self.config.priority, other.config.priority)
 
-    def log(self, data):
-        if data:
-            if self.childlog:
-                self.childlog.info(data)
-
-    def trace(self, data):
-        # 'trace' level logging to main log file
-        msg = '%s output:\n%s' % (self.config.name, data)
-        self.options.logger.log(5, msg)
-
-    def log_stdout(self, data):
-        if data:
-            self.log(data)
-            self.trace(data)
-
-    log_stderr = log_stdout
+    def __repr__(self):
+        return '<Subprocess at %s with name %s in state %s>' % (
+            id(self),
+            self.config.name,
+            getProcessStateDescription(self.get_state()))
 
     def get_state(self):
         if self.killing:
             return ProcessStates.STOPPING
+        elif self.system_stop:
+            return ProcessStates.FATAL
+        elif self.administrative_stop or not self.laststart:
+            return ProcessStates.STOPPED
+        elif self.backoff:
+            return ProcessStates.BACKOFF
         elif not self.pid and self.delay:
             return ProcessStates.STARTING
         elif self.pid:
             return ProcessStates.RUNNING
         else:
-            if self.system_stop:
-                return ProcessStates.ERROR
-            elif self.administrative_stop:
-                return ProcessStates.STOPPED
-            elif self.exitstatus == -1:
-                return ProcessStates.KILLED
-            elif self.exitstatus is not None:
+            if self.exitstatus is not None:
                 return ProcessStates.EXITED
-            elif not self.pidhistory:
-                return ProcessStates.NOTSTARTED
             else:
                 return ProcessStates.UNKNOWN
 
 class Supervisor:
-
     mood = 1 # 1: up, 0: restarting, -1: suicidal
     stopping = False # set after we detect that we are handling a stop request
 
+    def __init__(self, options):
+        self.options = options
+
     def main(self, args=None, test=False, first=False):
-        self.options = ServerOptions()
         self.options.realize(args)
-        self.cleanup_fds()
-        held_messages = []
-        setuid_msg = self.set_uid()
+        self.options.cleanup_fds()
+        info_messages = []
+        critical_messages = []
+        setuid_msg = self.options.set_uid()
         if setuid_msg:
-            held_messages.append(setuid_msg)
+            critical_messages.append(setuid_msg)
         if first:
-            rlimit_messages = self.set_rlimits()
-            held_messages.extend(rlimit_messages)
+            rlimit_messages = self.options.set_rlimits()
+            info_messages.extend(rlimit_messages)
+
+        # this sets the options.logger object
         # delay logger instantiation until after setuid
-        format =  '%(asctime)s %(levelname)s %(message)s\n'
+        self.options.make_logger(critical_messages, info_messages)
 
-        self.options.logger = self.options.getLogger(
-            self.options.logfile,
-            self.options.loglevel,
-            format,
-            rotating=True,
-            maxbytes=self.options.logfile_maxbytes,
-            backups=self.options.logfile_backups,
-            )
-        if self.options.nodaemon:
-            from options import RawStreamHandler
-            from logging import Formatter
-            stdout_handler = RawStreamHandler(sys.stdout)
-            formatter = Formatter(format)
-            stdout_handler.setFormatter(formatter)
-            self.options.logger.addHandler(stdout_handler)
-        for msg in held_messages:
-            self.options.logger.info(msg)
-            
+        if not self.options.nocleanup:
+            # clean up old automatic logs
+            self.options.clear_autochildlogdir()
+
+        # delay "automatic" child log creation until after setuid because
+        # we want to use mkstemp, which needs to create the file eagerly
+        self.options.create_autochildlogs()
+
         self.run(test)
-
-    def get_state(self):
-        if self.mood <= 0:
-            return SupervisorStates.SHUTDOWN
-        return SupervisorStates.ACTIVE
-
-    def start_necessary(self):
-        processes = self.processes.values()
-        processes.sort() # asc by priority
-
-        for p in processes:
-            if not p.pid and not p.delay:
-                if not p.pidhistory:
-                    case = p.config.autostart
-                else:
-                    case = p.config.autorestart
-                if case:
-                    if not p.administrative_stop and not p.system_stop:
-                        self.options.logger.info('(Re)starting %s' %
-                                                 p.config.name)
-                        p.spawn()
-                        if p.pid:
-                            p.do_backoff()
-
-    def handle_procs_with_waitstatus(self):
-        processes = self.processes.values()
-        for proc in processes:
-            if proc.waitstatus:
-                proc.reportstatus()
-
-    def stop_all(self):
-        processes = self.processes.values()
-        processes.sort()
-        processes.reverse() # stop in desc priority order
-        
-        for proc in processes:
-            if proc.pid:
-                proc.stop()
-
-    def handle_procs_with_delay(self):
-        delayprocs = []
-        now = time.time()
-        timeout = self.options.backofflimit
-        for name in self.processes.keys():
-            proc = self.processes[name]
-            if proc.delay:
-                delayprocs.append(proc)
-                timeout = max(0, min(timeout, proc.delay - now))
-                if timeout <= 0:
-                    proc.delay = 0
-                    if proc.killing and proc.pid:
-                        self.options.logger.info(
-                            'killing %r (%s) with SIGKILL' % (name, proc.pid))
-                        proc.do_backoff()
-                        proc.kill(signal.SIGKILL)
-        return delayprocs
-
-    def reap(self):
-        # need pthread_sigmask here to avoid concurrent sigchild, but
-        # Python doesn't offer it as it's not standard across UNIX versions.
-        # there is still a race condition here; we can get a sigchild while
-        # we're sitting in the waitpid call.
-        try:
-            pid, sts = os.waitpid(-1, os.WNOHANG)
-        except os.error, why:
-            err = why[0]
-            if err not in (errno.ECHILD, errno.EINTR):
-                self.options.logger.info(
-                    'waitpid error; a process may not be cleaned up properly')
-            if err == errno.EINTR:
-                self.options.logger.debug('EINTR during reap')
-            pid, sts = None, None
-        if pid:
-            self.options.logger.info('child with pid %s was reaped' % pid)
-            self.setwaitstatus(pid, sts)
-            self.reap() # keep reaping until no more kids to reap
-        return pid, sts
-
-    def setwaitstatus(self, pid, sts):
-        self.options.logger.debug('setwaitstatus called')
-        for name in self.processes.keys():
-            proc = self.processes[name]
-            if proc.isoneofmypids(pid):
-                self.options.logger.debug('set wait status on %s' % name)
-                proc.finaloutput = _readfd(proc.stdoutfd)
-                proc.waitstatus = pid, sts
-                proc.killing = 0
-                proc.laststop = time.time()
-
-    def cleanup_fds(self):
-        # try to close any unused file descriptors to prevent leakage.
-        # we start at the "highest" descriptor in the asyncore socket map
-        # because this might be called remotely and we don't want to close
-        # the internet channel during this call.
-        asyncore_fds = asyncore.socket_map.keys()
-        start = 5
-        if asyncore_fds:
-            start = max(asyncore_fds) + 1
-        for x in range(start, self.options.minfds):
-            try:
-                os.close(x)
-            except:
-                pass
-
-    def set_uid(self):
-        if self.options.uid is None:
-            if os.getuid() == 0:
-                self.options.usage('supervisord may not be run as the root '
-                                   'user without a "user" setting in the '
-                                   'configuration file')
-            return
-        return dropPrivileges(self.options.uid)
-
-    def set_rlimits(self):
-        limits = []
-        if hasattr(resource, 'RLIMIT_NOFILE'):
-            limits.append(
-                {
-                'msg':('The minimum number of file descriptors required '
-                       'to run this process is %(min)s as per the "minfds" '
-                       'command-line argument or config file setting. '
-                       'The current environment will only allow you '
-                       'to open %(hard)s file descriptors.  Either raise '
-                       'the number of usable file descriptors in your '
-                       'environment (see README.txt) or lower the '
-                       'minfds setting in the config file to allow '
-                       'the process to start.'),
-                'min':self.options.minfds,
-                'resource':resource.RLIMIT_NOFILE,
-                'name':'RLIMIT_NOFILE',
-                })
-        if hasattr(resource, 'RLIMIT_NPROC'):
-            limits.append(
-                {
-                'msg':('The minimum number of available processes required '
-                       'to run this program is %(min)s as per the "minprocs" '
-                       'command-line argument or config file setting. '
-                       'The current environment will only allow you '
-                       'to open %(hard)s processes.  Either raise '
-                       'the number of usable processes in your '
-                       'environment (see README.txt) or lower the '
-                       'minprocs setting in the config file to allow '
-                       'the program to start.'),
-                'min':self.options.minprocs,
-                'resource':resource.RLIMIT_NPROC,
-                'name':'RLIMIT_NPROC',
-                })
-
-        msgs = []
-            
-        for limit in limits:
-
-            min = limit['min']
-            res = limit['resource']
-            msg = limit['msg']
-            name = limit['name']
-
-            soft, hard = resource.getrlimit(res)
-            
-            if (soft < min) and (soft != -1): # -1 means unlimited 
-                if (hard < min) and (hard != -1):
-                    self.options.usage(msg % locals())
-
-                try:
-                    resource.setrlimit(res, (min, hard))
-                    msgs.append('Increased %(name)s limit to %(min)s' %
-                                locals())
-                except (resource.error, ValueError):
-                    self.options.usage(msg % locals())
-        return msgs
 
     def run(self, test=False):
         self.processes = {}
         for program in self.options.programs:
             name = program.name
-            self.processes[name] = Subprocess(options, program)
-        self.opensocketserver()
-        self.openhttpserver()
+            self.processes[name] = self.options.make_process(program)
         try:
-            self.setsignals()
+            self.options.write_pidfile()
+            self.options.openhttpserver(self)
+            self.options.setsignals()
             if not self.options.nodaemon:
-                self.daemonize()
-            pid = os.getpid()
-            f = open(self.options.pidfile, 'w')
-            f.write('%s\n' % pid)
-            f.close()
-            self.options.logger.info('supervisord started with pid %s' % pid)
+                self.options.daemonize()
             self.runforever(test)
         finally:
-            try:
-                if self.options.sockfamily == socket.AF_UNIX:
-                    os.unlink(self.options.sockname)
-            except os.error:
-                pass
-            try:
-                os.unlink(self.options.pidfile)
-            except os.error:
-                pass
-
-    def openhttpserver(self):
-        from http import makeHTTPServer
-        try:
-            self.httpserver = makeHTTPServer(self)
-        except socket.error, why:
-            if why[0] == errno.EADDRINUSE:
-                port = str(self.options.xmlrpc_port.address)
-                self.options.usage('Another program is listening on the port '
-                                   'used for XML-RPC communications with '
-                                   'remote clients (%s).  Shut this program '
-                                   'down first before starting supervisord. ' %
-                                   port)
-
-
-    def opensocketserver(self):
-        from socketserver import makeCommandLineServer
-        self.socketserver = makeCommandLineServer(self)
-
-    def setsignals(self):
-        signal.signal(signal.SIGTERM, self.sigexit)
-        signal.signal(signal.SIGHUP, self.sighup)
-        signal.signal(signal.SIGINT, self.sigexit)
-        signal.signal(signal.SIGCHLD, self.sigchild)
-        signal.signal(signal.SIGUSR2, self.sigreopenlog)
-
-    def sigexit(self, sig, frame):
-        self.options.logger.critical("supervisord stopping via %s" %
-                                     signame(sig))
-        self.mood = -1 # exiting
-
-    def sighup(self, sig, frame):
-        self.options.logger.critical("supervisord reload via %s" %
-                                     signame(sig))
-        self.mood = 0 # restarting
-
-    def sigreopenlog(self, sig, frame):
-        self.options.logger.info('supervisord log reopen via %s' %
-                                 signame(sig))
-        for handler in self.options.logger.handlers:
-            if hasattr(handler, 'reopen'):
-                handler.reopen()
-
-    def sigchild(self, sig, frame):
-        # do nothing here, we reap our children synchronously
-        self.options.logger.info('received sigchild')
-
-    def daemonize(self):
-
-        # To daemonize, we need to become the leader of our own session
-        # (process) group.  If we do not, signals sent to our
-        # parent process will also be sent to us.   This might be bad because
-        # signals such as SIGINT can be sent to our parent process during
-        # normal (uninteresting) operations such as when we press Ctrl-C in the
-        # parent terminal window to escape from a logtail command.
-        # To disassociate ourselves from our parent's session group we use
-        # os.setsid.  It means "set session id", which has the effect of
-        # disassociating a process from is current session and process group
-        # and setting itself up as a new session leader.
-        #
-        # Unfortunately we cannot call setsid if we're already a session group
-        # leader, so we use "fork" to make a copy of ourselves that is
-        # guaranteed to not be a session group leader.
-        #
-        # We also change directories, set stderr and stdout to null, and
-        # change our umask.
-        #
-        # This explanation was (gratefully) garnered from
-        # http://www.hawklord.uklinux.net/system/daemons/d3.htm
-
-        pid = os.fork()
-        if pid != 0:
-            # Parent
-            self.options.logger.debug("supervisord forked; parent exiting")
-            os._exit(0)
-        # Child
-        self.options.logger.info("daemonizing the process")
-        if self.options.directory:
-            try:
-                os.chdir(self.options.directory)
-            except os.error, err:
-                self.options.logger.warn("can't chdir into %r: %s"
-                                         % (self.options.directory, err))
-            else:
-                self.options.logger.info("set current directory: %r"
-                                         % self.options.directory)
-        os.close(0)
-        sys.stdin = sys.__stdin__ = open("/dev/null")
-        os.close(1)
-        sys.stdout = sys.__stdout__ = open("/dev/null", "w")
-        os.close(2)
-        sys.stderr = sys.__stderr__ = open("/dev/null", "w")
-        os.setsid()
-        os.umask(self.options.umask)
-        # XXX Stevens, in his Advanced Unix book, section 13.3 (page
-        # 417) recommends calling umask(0) and closing unused
-        # file descriptors.  In his Network Programming book, he
-        # additionally recommends ignoring SIGHUP and forking again
-        # after the setsid() call, for obscure SVR4 reasons.
+            self.options.cleanup()
 
     def runforever(self, test=False):
-        timeout = .5
+        timeout = 1
 
-        socket_map = asyncore.socket_map
+        socket_map = self.options.get_socket_map()
 
         while 1:
             if self.mood > 0:
                 self.start_necessary()
 
-            self.handle_procs_with_waitstatus()
-
             r, w, x = [], [], []
 
-            all = self.processes.values()
+            process_map = {}
 
-            stdoutfds = {}
-            stderrfds = {}
-            for proc in all:
-                if proc.stdoutfd:
-                    r.append(proc.stdoutfd)
-                    stdoutfds[proc.stdoutfd] = proc
-                if proc.stderrfd:
-                    r.append(proc.stderrfd)
-                    stderrfds[proc.stderrfd] = proc
-                if proc.finaloutput:
-                    proc.log_stdout(proc.finaloutput)
-                    proc.finaloutput = ''
+            # process output fds
+            for proc in self.processes.values():
+                proc.log_output()
+                drains = proc.get_pipe_drains()
+                for fd, drain in drains:
+                    r.append(fd)
+                    process_map[fd] = drain
 
-            if self.mood < 1:
-                if not self.stopping:
-                    self.stop_all()
-                    self.stopping = True
-                # reget the delay list after attempting to stop
-                delayprocs = self.handle_procs_with_delay()
-                if not delayprocs:
-                    break # reload or stop
-
+            # medusa i/o fds
             for fd, dispatcher in socket_map.items():
                 if dispatcher.readable():
                     r.append(fd)
                 if dispatcher.writable():
                     w.append(fd)
 
+            if self.mood < 1:
+                if not self.stopping:
+                    self.stop_all()
+                    self.stopping = True
+
+                # if there are no delayed processes (we're done killing
+                # everything), it's OK to stop or reload
+                delayprocs = self.get_delay_processes()
+                if delayprocs:
+                    names = [ p.config.name for p in delayprocs]
+                    namestr = ', '.join(names)
+                    self.options.logger.info('waiting for %s to die' % namestr)
+                else:
+                    break
+
             try:
                 r, w, x = select.select(r, w, x, timeout)
             except select.error, err:
                 if err[0] == errno.EINTR:
-                    #trace
-                    self.options.logger.log(5,'EINTR encountered in select')
+                    self.options.logger.log(self.options.TRACE,
+                                            'EINTR encountered in select')
                 else:
                     raise
                 r = w = x = []
 
-            self.handle_procs_with_waitstatus()
-
             for fd in r:
-                stdoutproc = stdoutfds.get(fd)
-                stderrproc = stderrfds.get(fd)
-
-                if stdoutproc:
-                    data = _readfd(fd)
-                    stdoutproc.log_stdout(data)
-                if stderrproc:
-                    # we intermingle stdout and stderr in the child log
-                    data = _readfd(fd)
-                    stderrproc.log_stderr(data)
+                if process_map.has_key(fd):
+                    drain = process_map[fd]
+                    # drain the file descriptor
+                    drain(fd)
 
                 if socket_map.has_key(fd):
                     try:
@@ -841,114 +540,126 @@ class Supervisor:
                     except:
                         socket_map[fd].handle_error()
 
-            self.handle_procs_with_delay()
+            self.give_up()
+            self.kill_undead()
             self.reap()
+            self.handle_signal()
 
             if test:
                 break
 
-def _readfd(fd):
-    try:
-        data = os.read(fd, 2 << 16) # 128K
-    except OSError, why:
-        if why[0] not in (errno.EWOULDBLOCK, errno.EBADF):
-            raise
-        data = ''
-    return data
+    def start_necessary(self):
+        processes = self.processes.values()
+        processes.sort() # asc by priority
+        now = time.time()
 
-# Helpers for dealing with signals and exit status
+        for p in processes:
+            state = p.get_state()
+            if state == ProcessStates.STOPPED and not p.laststart:
+                if p.config.autostart:
+                    p.spawn()
+            elif state == ProcessStates.EXITED:
+                if p.config.autorestart:
+                    p.spawn()
+            elif state == ProcessStates.BACKOFF:
+                if now > p.delay:
+                    p.spawn()
+            
+    def stop_all(self):
+        processes = self.processes.values()
+        processes.sort()
+        processes.reverse() # stop in desc priority order
 
-def decode_wait_status(sts):
-    """Decode the status returned by wait() or waitpid().
+        for proc in processes:
+            # only stop running or starting processes
+            state = proc.get_state()
+            if state == ProcessStates.RUNNING:
+                proc.stop()
+            elif state in (ProcessStates.STARTING, ProcessStates.BACKOFF):
+                # put it into backoff
+                proc.backoff = proc.config.startretries + 1
 
-    Return a tuple (exitstatus, message) where exitstatus is the exit
-    status, or -1 if the process was killed by a signal; and message
-    is a message telling what happened.  It is the caller's
-    responsibility to display the message.
-    """
-    if os.WIFEXITED(sts):
-        es = os.WEXITSTATUS(sts) & 0xffff
-        msg = "exit status %s" % es
-        return es, msg
-    elif os.WIFSIGNALED(sts):
-        sig = os.WTERMSIG(sts)
-        msg = "terminated by %s" % signame(sig)
-        if hasattr(os, "WCOREDUMP"):
-            iscore = os.WCOREDUMP(sts)
-        else:
-            iscore = sts & 0x80
-        if iscore:
-            msg += " (core dumped)"
-        return -1, msg
-    else:
-        msg = "unknown termination cause 0x%04x" % sts
-        return -1, msg
+    def give_up(self):
+        now = time.time()
+        processes = self.processes.values()
+        for proc in processes:
+            state = proc.get_state()
+            if state == ProcessStates.BACKOFF:
+                if proc.backoff > proc.config.startretries:
+                    proc.backoff = 0
+                    proc.delay = 0
+                    proc.system_stop = 1
+            elif state == ProcessStates.RUNNING:
+                if proc.delay < now:
+                    proc.delay = 0
+            elif state == ProcessStates.FATAL:
+                proc.delay = 0
 
-_signames = None
+    def get_delay_processes(self):
+        """ Processes which are starting or stopping """
+        return [ x for x in self.processes.values() if x.delay ]
 
-def signame(sig):
-    """Return a symbolic name for a signal.
+    def get_undead(self):
+        """ Processes which we've attempted to stop but which haven't responded
+        to a kill request within a given amount of time (stopwaitsecs) """
+        now = time.time()
+        processes = self.processes.values()
+        undead = []
 
-    Return "signal NNN" if there is no corresponding SIG name in the
-    signal module.
-    """
+        for proc in processes:
+            if proc.get_state() == ProcessStates.STOPPING:
+                time_left = proc.delay - now
+                if time_left <= 0:
+                    undead.append(proc)
+        return undead
 
-    if _signames is None:
-        _init_signames()
-    return _signames.get(sig) or "signal %d" % sig
+    def kill_undead(self):
+        for undead in self.get_undead():
+            # kill processes which are taking too long to stop with a final
+            # sigkill.  if this doesn't kill it, the process will be stuck
+            # in the STOPPING state forever.
+            self.options.logger.critical(
+                'killing %r (%s) with SIGKILL' % (undead.config.name,
+                                                  undead.pid))
+            undead.kill(signal.SIGKILL)
 
-def _init_signames():
-    global _signames
-    d = {}
-    for k, v in signal.__dict__.items():
-        k_startswith = getattr(k, "startswith", None)
-        if k_startswith is None:
-            continue
-        if k_startswith("SIG") and not k_startswith("SIG_"):
-            d[v] = k
-    _signames = d
+    def reap(self, once=False):
+        pid, sts = self.options.waitpid()
+        if pid:
+            process = self.options.pidhistory.get(pid, None)
+            if process is None:
+                self.options.logger.critical('reaped unknown pid %s)' % pid)
+            else:
+                name = process.config.name
+                process.finish(pid, sts)
+            if not once:
+                self.reap() # keep reaping until no more kids to reap
 
-def get_path():
-    """Return a list corresponding to $PATH, or a default."""
-    path = ["/bin", "/usr/bin", "/usr/local/bin"]
-    if os.environ.has_key("PATH"):
-        p = os.environ["PATH"]
-        if p:
-            path = p.split(os.pathsep)
-    return path
-
-def dropPrivileges(user):
-    # Drop root privileges if we have them
-    if user is None:
-        return "No used specified to setuid to!"
-    if os.getuid() != 0:
-        return "Can't drop privilege as nonroot user"
-    try:
-        uid = int(user)
-    except ValueError:
-        try:
-            pwrec = pwd.getpwnam(user)
-        except KeyError:
-            return "Can't find username %r" % user
-        uid = pwrec[2]
-    else:
-        try:
-            pwrec = pwd.getpwuid(uid)
-        except KeyError:
-            return "Can't find uid %r" % uid
-    if hasattr(os, 'setgroups'):
-        user = pwrec[0]
-        groups = [grprec[2] for grprec in grp.getgrall() if user in grprec[3]]
-        try:
-            os.setgroups(groups)
-        except OSError:
-            return 'Could not set groups of effective user'
-    gid = pwrec[3]
-    try:
-        os.setgid(gid)
-    except OSError:
-        return 'Could not set group id of effective user'
-    os.setuid(uid)
+    def handle_signal(self):
+        if self.options.signal:
+            sig, self.options.signal = self.options.signal, None
+            if sig in (signal.SIGTERM, signal.SIGINT, signal.SIGQUIT):
+                self.options.logger.critical(
+                    'received %s indicating exit request' % signame(sig))
+                self.mood = -1
+            elif sig == signal.SIGHUP:
+                self.options.logger.critical(
+                    'received %s indicating restart request' % signame(sig))
+                self.mood = 0
+            elif sig == signal.SIGUSR2:
+                self.options.logger.info(
+                    'received %s indicating log reopen request' % signame(sig))
+                self.options.reopenlogs()
+                for process in self.processes.values():
+                    process.reopenlogs()
+            else:
+                self.options.logger.debug(
+                    'received %s indicating nothing' % signame(sig))
+        
+    def get_state(self):
+        if self.mood <= 0:
+            return SupervisorStates.SHUTDOWN
+        return SupervisorStates.ACTIVE
 
 # Main program
 def main(test=False):
@@ -957,7 +668,8 @@ def main(test=False):
     while 1:
         # if we hup, restart by making a new Supervisor()
         # the test argument just makes it possible to unit test this code
-        d = Supervisor()
+        options = ServerOptions()
+        d = Supervisor(options)
         d.main(None, test, first)
         first = False
         if test:
@@ -966,8 +678,8 @@ def main(test=False):
             sys.exit(0)
         for proc in d.processes.values():
             proc.removelogs()
-        if d.httpserver:
-            d.httpserver.close()
+        if d.options.httpserver:
+            d.options.httpserver.close()
             
 
 if __name__ == "__main__":

@@ -1,12 +1,17 @@
 from medusa import http_date
 from medusa import http_server
 from medusa import producers
+from medusa import filesys
 import asyncore
 import os
 import stat
 import time
 import sys
 import string
+import socket
+import errno
+import pwd
+import urllib
 
 NOT_DONE_YET = []
 
@@ -209,26 +214,127 @@ class deferring_http_request(http_server.http_request):
         if close_it:
             self.channel.close_when_done()
 
+    def log (self, bytes):
+        """ We need to override this because UNIX domain sockets return
+        an empty string for the addr rather than a (host, port) combination """
+        if self.channel.addr:
+            host = self.channel.addr[0]
+            port = self.channel.addr[1]
+        else:
+            host = 'localhost'
+            port = 0
+        self.channel.server.logger.log (
+                host,
+                '%d - - [%s] "%s" %d %d\n' % (
+                        port,
+                        self.log_date_string (time.time()),
+                        self.request,
+                        self.reply_code,
+                        bytes
+                        )
+                )
+
+    def cgi_environment(self):
+        env = {}
+
+        # maps request some headers to environment variables.
+        # (those that don't start with 'HTTP_')
+        header2env= {'content-length'    : 'CONTENT_LENGTH',
+                     'content-type'      : 'CONTENT_TYPE',
+                     'connection'        : 'CONNECTION_TYPE'} 
+
+        workdir = os.getcwd()
+        (path, params, query, fragment) = self.split_uri()
+
+        if params:
+            path = path + params # undo medusa bug!
+
+        while path and path[0] == '/':
+            path = path[1:]
+        if '%' in path:
+            path = http_server.unquote(path)
+        if query:
+            query = query[1:]
+
+        server = self.channel.server
+        env['REQUEST_METHOD'] = self.command.upper()
+        env['SERVER_PORT'] = str(server.port)
+        env['SERVER_NAME'] = server.server_name
+        env['SERVER_SOFTWARE'] = server.SERVER_IDENT
+        env['SERVER_PROTOCOL'] = "HTTP/" + self.version
+        env['channel.creation_time'] = self.channel.creation_time
+        env['SCRIPT_NAME'] = ''
+        env['PATH_INFO'] = '/' + path
+        env['PATH_TRANSLATED'] = os.path.normpath(os.path.join(
+                workdir, env['PATH_INFO']))
+        if query:
+            env['QUERY_STRING'] = query
+        env['GATEWAY_INTERFACE'] = 'CGI/1.1'
+        env['REMOTE_ADDR'] = self.channel.addr[0]
+
+        for header in self.header:
+            key,value=header.split(":",1)
+            key=key.lower()
+            value=value.strip()
+            if header2env.has_key(key) and value:
+                env[header2env.get(key)]=value
+            else:
+                key='HTTP_%s' % ("_".join(key.split( "-"))).upper()
+                if value and not env.has_key(key):
+                    env[key]=value
+        return env
+
+    def get_server_url(self):
+        """ Functionality that medusa's http request doesn't have; set an
+        attribute named 'server_url' on the request based on the Host: header
+        """
+        default_port={'http': '80', 'https': '443'}
+        environ = self.cgi_environment()
+        if (environ.get('HTTPS') in ('on', 'ON') or
+            environ.get('SERVER_PORT_SECURE') == "1"):
+            # XXX this will currently never be true
+            protocol = 'https'
+        else:
+            protocol = 'http'
+
+        if environ.has_key('HTTP_HOST'):
+            host = environ['HTTP_HOST'].strip()
+            hostname, port = urllib.splitport(host)
+        else:
+            hostname = environ['SERVER_NAME'].strip()
+            port = environ['SERVER_PORT']
+
+        if (port is None or default_port[protocol] == port):
+            host = hostname
+        else:
+            host = hostname + ':' + port
+        server_url = '%s://%s' % (protocol, host)
+        if server_url[-1:]=='/':
+            server_url=server_url[:-1]
+        return server_url
 
 class deferring_http_channel(http_server.http_channel):
 
-    # use a 4096-byte buffer size instead of the default 65536-byte buffer in
+    # use a 4906-byte buffer size instead of the default 65536-byte buffer in
     # order to spew tail -f output faster (speculative)
-    ac_out_buffer_size = 1<<12 
-
+    ac_out_buffer_size = 4096
+    
     delay = False
-    last_writable_check = time.time()
+    writable_check = time.time()
 
     def writable(self, t=time.time):
         now = t()
         if self.delay:
-            # we called a deferred producer on this channel (see refill_buffer)
-            elapsed = now - self.last_writable_check
-            if elapsed < self.delay:
+            # we called a deferred producer via this channel (see refill_buffer)
+            last_writable_check = self.writable_check
+            self.writable_check = now
+            elapsed = now - last_writable_check
+            if elapsed > self.delay:
+                return True
+            else:
                 return False
-            self.last_writable_check = now
 
-        return True
+        return http_server.http_channel.writable(self)
 
     def refill_buffer (self):
         """ Implement deferreds """
@@ -265,7 +371,6 @@ class deferring_http_channel(http_server.http_channel):
         """ We only override this to use 'deferring_http_request' class
         instead of the normal http_request class; it sucks to need to override
         this """
-        
         if self.current_request:
             self.current_request.found_terminator()
         else:
@@ -341,30 +446,164 @@ class deferring_http_channel(http_server.http_channel):
 
 class supervisor_http_server(http_server.http_server):
     channel_class = deferring_http_channel
+    ip = None
 
-    def __init__ (self, ip, port, resolver=None, logger_object=None,
-                  username=None, password=None):
+    def prebind(self, sock, logger_object):
         """ Override __init__ to do logger setup earlier so it can
         go to our logger object instead of stdout """
         from medusa import logger
 
         if not logger_object:
-            logger_object = logger.file_logger (sys.stdout)
+            logger_object = logger.file_logger(sys.stdout)
 
-        if resolver:
-            self.logger = logger.resolving_logger (resolver, logger_object)
-        else:
-            self.logger = logger.unresolving_logger (logger_object)
+        logger_object = logger.unresolving_logger(logger_object)
+        self.logger = logger_object
+
+        asyncore.dispatcher.__init__ (self)
+        self.set_socket(sock)
+
+        self.handlers = []
+
+        sock.setblocking(0)
+        self.set_reuse_addr()
         
-        return http_server.http_server.__init__(self, ip, port, resolver,
-                                                logger_object)
+    def postbind(self):
+        from medusa.counter import counter
+        from medusa.http_server import VERSION_STRING
+
+        self.listen(1024)
+
+        self.total_clients = counter()
+        self.total_requests = counter()
+        self.exceptions = counter()
+        self.bytes_out = counter()
+        self.bytes_in  = counter()
+
+        self.log_info (
+                'Medusa (V%s) started at %s'
+                '\n\tHostname: %s'
+                '\n\tPort:%s'
+                '\n' % (
+                        VERSION_STRING,
+                        time.ctime(time.time()),
+                        self.server_name,
+                        self.port,
+                        )
+                )
 
     def log_info(self, message, type='info'):
         ip = ''
-        if hasattr(self, 'ip'):
+        if getattr(self, 'ip', None) is not None:
             ip = self.ip
         self.logger.log(ip, message)
 
+class supervisor_af_inet_http_server(supervisor_http_server):
+    """ AF_INET version of supervisor HTTP server """
+
+    def __init__(self, ip, port, logger_object):
+        self.ip = ip
+        self.port = port
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.prebind(sock, logger_object)
+        self.bind((ip, port))
+
+        host, port = self.socket.getsockname()
+        if not ip:
+            self.log_info('Computing default hostname', 'warning')
+            ip = socket.gethostbyname (socket.gethostname())
+        try:
+            self.server_name = socket.gethostbyaddr (ip)[0]
+        except socket.error:
+            self.log_info('Cannot do reverse lookup', 'warning')
+            self.server_name = ip       # use the IP address as the "hostname"
+
+        self.postbind()
+
+class supervisor_af_unix_http_server(supervisor_http_server):
+    """ AF_UNIX version of supervisor HTTP server """
+
+    def __init__(self, socketname, sockchmod, sockchown, logger_object):
+        self.ip = socketname
+        self.port = socketname
+
+        # XXX this is insecure.  We really should do something like
+        # http://developer.apple.com/samplecode/CFLocalServer/listing6.html
+        # (see also http://developer.apple.com/technotes/tn2005/tn2083.html#SECUNIXDOMAINSOCKETS)
+        # but it would be very inconvenient for the user to need to get all
+        # the directory setup right.
+
+        tempname = "%s.%d" % (socketname, os.getpid())
+
+        try:
+            os.unlink(tempname)
+        except os.error:
+            pass
+
+        while 1:
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            try:
+                sock.bind(tempname)
+                os.chmod(tempname, sockchmod)
+                try:
+                    # hard link
+                    os.link(tempname, socketname)
+                except os.error:
+                    # Lock contention, or stale socket.
+                    used = self.checkused(socketname)
+                    if used:
+                        # cooperate with 'openhttpserver' in supervisord
+                        raise socket.error(errno.EADDRINUSE)
+                        
+                    # Stale socket -- delete, sleep, and try again.
+                    msg = "Unlinking stale socket %s\n" % socketname
+                    sys.stderr.write(msg)
+                    try:
+                        os.unlink(socketname)
+                    except:
+                        pass
+                    sock.close()
+                    time.sleep(.3)
+                    continue
+                else:
+                    try:
+                        os.chown(socketname, sockchown[0], sockchown[1])
+                    except os.error, why:
+                        if why[0] == errno.EPERM:
+                            msg = ('Not permitted to chown %s to uid/gid %s; '
+                                   'adjust "sockchown" value in config file or '
+                                   'on command line to values that the '
+                                   'current user (%s) can successfully chown')
+                            raise ValueError(msg % (socketname,
+                                                    repr(sockchown),
+                                                    pwd.getpwuid(
+                                                        os.geteuid())[0],
+                                                    ),
+                                             )
+                        else:
+                            raise
+                    self.prebind(sock, logger_object)
+                    break
+
+            finally:
+                try:
+                    os.unlink(tempname)
+                except os.error:
+                    pass
+
+        self.server_name = '<unix domain socket>'
+        self.postbind()
+
+    def checkused(self, socketname):
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            s.connect(socketname)
+            s.send("GET / HTTP/1.0\r\n\r\n")
+            data = s.recv(1)
+            s.close()
+        except socket.error:
+            return False
+        else:
+            return True
 
 class tail_f_producer:
     def __init__(self, request, filename, head):
@@ -375,7 +614,7 @@ class tail_f_producer:
         if sz >= head:
             self.sz = sz - head
         else:
-            self.sz = sz
+            self.sz = 0
 
     def more(self):
         try:
@@ -444,18 +683,16 @@ class logtail_handler:
         # the lack of a Content-Length header makes the outputter
         # send a 'Transfer-Encoding: chunked' response
 
-        request.push(tail_f_producer(request, logfile, 80))
+        request.push(tail_f_producer(request, logfile, 1024))
 
         request.done()
 
-def makeHTTPServer(supervisord):
-    options = supervisord.options
-    if not options.xmlrpc_port:
+def make_http_server(options, supervisord):
+    if not options.http_port:
         return
 
-    host, port = options.xmlrpc_port.address
-    username = options.xmlrpc_username
-    password = options.xmlrpc_password
+    username = options.http_username
+    password = options.http_password
 
     class LogWrapper:
         def log(self, msg):
@@ -463,11 +700,29 @@ def makeHTTPServer(supervisord):
                 msg = msg[:-1]
             options.logger.info(msg)
     wrapper = LogWrapper()
-    hs = supervisor_http_server(host, port, logger_object=wrapper,
-                                username=username, password=password)
-    from rpc import supervisor_xmlrpc_handler
+
+    family = options.http_port.family
+    
+    if family == socket.AF_INET:
+        host, port = options.http_port.address
+        hs = supervisor_af_inet_http_server(host, port, logger_object=wrapper)
+    elif family == socket.AF_UNIX:
+        socketname = options.http_port.address
+        sockchmod = options.sockchmod
+        sockchown = options.sockchown
+        hs = supervisor_af_unix_http_server(socketname, sockchmod, sockchown,
+                                            logger_object=wrapper)
+    else:
+        raise ValueError('Cannot determine socket type %r' % family)
+
+    from xmlrpc import supervisor_xmlrpc_handler
+    from web import supervisor_ui_handler
     xmlrpchandler = supervisor_xmlrpc_handler(supervisord)
     tailhandler = logtail_handler(supervisord)
+    here = os.path.abspath(os.path.dirname(__file__))
+    templatedir = os.path.join(here, 'ui')
+    filesystem = filesys.os_filesystem(templatedir)
+    uihandler = supervisor_ui_handler(filesystem, supervisord)
 
     if username:
         # wrap the xmlrpc handler and tailhandler in an authentication handler
@@ -475,9 +730,11 @@ def makeHTTPServer(supervisord):
         from medusa.auth_handler import auth_handler
         xmlrpchandler = auth_handler(users, xmlrpchandler)
         tailhandler = auth_handler(users, tailhandler)
+        uihandler = auth_handler(users, uihandler)
     else:
         options.logger.critical('Running without any HTTP authentication '
                                 'checking')
-    hs.install_handler(xmlrpchandler)
+    hs.install_handler(uihandler)
     hs.install_handler(tailhandler)
+    hs.install_handler(xmlrpchandler)
     return hs
