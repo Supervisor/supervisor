@@ -146,7 +146,7 @@ class Controller(cmd.Cmd):
 
         self._output('==> Press Ctrl-C to exit <==')
 
-        url = self.options.serverurl + '/logtail/' + arg
+        path = '/logtail/' + arg
         username = self.options.username
         password = self.options.password
         try:
@@ -159,7 +159,7 @@ class Controller(cmd.Cmd):
             import http_client
             listener = http_client.Listener()
             handler = http_client.HTTPHandler(listener, username, password)
-            handler.get(url)
+            handler.get(self.options.serverurl, path)
             asyncore.loop()
         except KeyboardInterrupt:
             handler.close()
