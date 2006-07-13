@@ -1,4 +1,9 @@
-2.0
+Next
+
+  - supervisorctl "tail -f" didn't work with supervisorctl sections
+    configured with an absolute unix:// URL
+
+2.0b1
 
   - fundamental rewrite based on 1.0.6, use distutils (only) for
     installation, use ConfigParser rather than ZConfig, use HTTP for
