@@ -1,5 +1,7 @@
 Next
 
+  - pidfile written in daemon mode had incorrect pid.
+
   - supervisorctl: tail (non -f) did not pass through proper error
     messages when supplied by the server.
 

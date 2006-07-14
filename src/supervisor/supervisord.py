@@ -457,11 +457,13 @@ class Supervisor:
             name = program.name
             self.processes[name] = self.options.make_process(program)
         try:
-            self.options.write_pidfile()
             self.options.openhttpserver(self)
             self.options.setsignals()
             if not self.options.nodaemon:
                 self.options.daemonize()
+            # writing pid file needs to come *after* daemonizing or pid
+            # will be wrong
+            self.options.write_pidfile()
             self.runforever(test)
         finally:
             self.options.cleanup()

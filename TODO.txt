@@ -16,3 +16,8 @@
 
 - Test on Linux.
 
+- Provide a way to get the supervisord pid from supervisorctl/web interface.
+
+- Provide a way to tail the activity log from within supervisorctl/
+  web interface.
+
