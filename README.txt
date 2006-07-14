@@ -403,6 +403,7 @@ Examples of Program Configurations
     command=/path/to/postmaster
     ; we use the "fast" shutdown signal SIGINT
     stopsignal=INT
+    log_stderr=true
  
   Zope 2.8 instances and ZEO::
 
