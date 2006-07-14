@@ -1,5 +1,8 @@
 Next
 
+  - supervisorctl: tail (non -f) did not pass through proper error
+    messages when supplied by the server.
+
   - Log signal name used to kill processes at debug level.
 
   - supervisorctl "tail -f" didn't work with supervisorctl sections

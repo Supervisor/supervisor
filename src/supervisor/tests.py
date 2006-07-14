@@ -1815,6 +1815,33 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(len(lines), 12)
         self.assertEqual(lines[0], 'output line')
 
+    def test_tail_no_file(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_tail('NO_FILE')
+        lines = controller.stdout.getvalue().split('\n')
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[0], 'NO_FILE: ERROR (no log file)')
+
+    def test_tail_failed(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_tail('FAILED')
+        lines = controller.stdout.getvalue().split('\n')
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[0], 'FAILED: ERROR (unknown error reading log)')
+
+    def test_tail_bad_name(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_tail('BAD_NAME')
+        lines = controller.stdout.getvalue().split('\n')
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[0], 'BAD_NAME: ERROR (no such process name)')
+
     def test_tail_twoargs(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
@@ -2449,6 +2476,13 @@ class DummySupervisorRPCNamespace:
         return '1.0'
 
     def readProcessLog(self, name, offset, length):
+        import xmlrpclib
+        if name == 'BAD_NAME':
+            raise xmlrpclib.Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+        elif name == 'FAILED':
+            raise xmlrpclib.Fault(xmlrpc.Faults.FAILED, 'FAILED')
+        elif name == 'NO_FILE':
+            raise xmlrpclib.Fault(xmlrpc.Faults.NO_FILE, 'NO_FILE')
         a = 'output line\n' * 10
         return a[offset:]
 

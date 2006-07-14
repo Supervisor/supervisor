@@ -207,8 +207,14 @@ class Controller(cmd.Cmd):
         try:
             output = supervisor.readProcessLog(processname, -bytes, 0)
         except xmlrpclib.Fault, e:
-            if e.faultCode == xmlrpc.Faults.FAILED:
-                self._output("Error: Log file doesn't yet exist on server")
+            template = '%s: ERROR (%s)'
+            if e.faultCode == xmlrpc.Faults.NO_FILE:
+                self._output(template % (processname, 'no log file'))
+            elif e.faultCode == xmlrpc.Faults.FAILED:
+                self._output(template % (processname,
+                                         'unknown error reading log'))
+            elif e.faultCode == xmlrpc.Faults.BAD_NAME:
+                self._output(template % (processname, 'no such process name'))
         else:
             self._output(output)
 
