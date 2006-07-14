@@ -1339,7 +1339,8 @@ class SubprocessTests(unittest.TestCase):
         instance.stop()
         self.assertEqual(instance.administrative_stop, 1)
         self.failUnless(instance.delay)
-        self.assertEqual(options.logger.data[0], 'killing test (pid 11)')
+        self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
+                         'signal SIGTERM')
         self.assertEqual(instance.killing, 1)
         self.assertEqual(options.kills[11], signal.SIGTERM)
 
@@ -1359,7 +1360,8 @@ class SubprocessTests(unittest.TestCase):
         instance = self._makeOne(options, config)
         instance.pid = 11
         instance.kill(signal.SIGTERM)
-        self.assertEqual(options.logger.data[0], 'killing test (pid 11)')
+        self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
+                         'signal SIGTERM')
         self.failUnless(options.logger.data[1].startswith(
             'unknown problem killing test'))
         self.assertEqual(instance.killing, 0)
@@ -1370,7 +1372,8 @@ class SubprocessTests(unittest.TestCase):
         instance = self._makeOne(options, config)
         instance.pid = 11
         instance.kill(signal.SIGTERM)
-        self.assertEqual(options.logger.data[0], 'killing test (pid 11)')
+        self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
+                         'signal SIGTERM')
         self.assertEqual(instance.killing, 1)
         self.assertEqual(options.kills[11], signal.SIGTERM)
 

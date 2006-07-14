@@ -1,5 +1,7 @@
 Next
 
+  - Log signal name used to kill processes at debug level.
+
   - supervisorctl "tail -f" didn't work with supervisorctl sections
     configured with an absolute unix:// URL
 

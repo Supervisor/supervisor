@@ -317,8 +317,10 @@ class Subprocess:
             self.options.logger.debug(msg)
             return msg
         try:
-            self.options.logger.debug('killing %s (pid %s)' % (self.config.name,
-                                                               self.pid))
+            self.options.logger.debug('killing %s (pid %s) with signal %s'
+                                      % (self.config.name,
+                                         self.pid,
+                                         signame(sig)))
             self.killing = 1
             self.delay = now + self.config.stopwaitsecs
             self.options.kill(self.pid, sig)
