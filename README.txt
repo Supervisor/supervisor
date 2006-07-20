@@ -98,9 +98,7 @@ Running Supervisord
   To change the set of programs controlled by supervisord, edit the
   supervisord.conf file and kill -HUP or otherwise restart the
   supervisord process.  This file has several example program
-  definitions.  Controlled programs should themselves not be daemons,
-  as supervisord assumes it is responsible for daemonizing its
-  subprocesses.
+  definitions.
 
   Supervisord accepts a number of command-line overrides.  Type
   'supervisord -h' for an overview.
@@ -321,7 +319,9 @@ Configuration File '[program:x]' Section Settings
   can accept arguments, e.g. ('/path/to/program foo bar').  The
   command line can used double quotes to group arguments with spaces
   in them to pass to the program, e.g. ('/path/to/program/name -p "foo
-  bar"').
+  bar"').  Controlled programs should themselves not be daemons, as
+  supervisord assumes it is responsible for daemonizing its
+  subprocesses.
 
   'priority' -- the relative priority of the program in the start and
   shutdown ordering.  Lower priorities indicate programs that start
@@ -395,7 +395,28 @@ Configuration File '[program:x]' Section Settings
   from process log file rotation.  Set this to 0 to indicate an
   unlimited number of backups.  Default: 10.
 
+Nondaemonizing of Subprocesses
+
+  Programs run under supervisor *should not* daemonize themselves.
+  Instead, they should run in the foreground and not detach from the
+  "terminal" that starts them.  The easiest way to tell if a command
+  will run in the foreground is to run the command from a shell
+  prompt.  If it gives you control of the terminal back, it's
+  daemonizing itself and that will be the wrong way to run it under
+  supervisor.  You want to run a command that essentially requires you
+  to press Ctrl-C to get control of the terminal back.  If it gives
+  you a shell prompt back after running it without needing to press
+  Ctrl-C, it's not useful under supervisor.  All programs have options
+  to be run in the foreground but there's no standard way to do it;
+  you'll need to read the documentation for each program you want to
+  do this with.
+
 Examples of Program Configurations
+
+  Apache 2.0.54::
+
+    [program:apache]
+    command=/usr/sbin/httpd -DNO_DETACH
 
   Postgres 8.14::
 
@@ -526,7 +547,9 @@ Other Notes
   Some examples of shell scripts to start services under supervisor
   can be found "here":http://www.thedjbway.org/services.html.  These
   examples are actually for daemontools but the premise is the same
-  for supervisor.
+  for supervisor.  Another collection of recipes for starting various
+  programs in the foreground is
+  "here":http://smarden.org/runit/runscripts.html .
 
   Some processes (like mysqld) ignore signals sent to the actual
   process/thread which is created by supervisord.  Instead, a
