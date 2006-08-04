@@ -1538,6 +1538,7 @@ class SupervisordTests(unittest.TestCase):
         options.programs = [pconfig]
         supervisord.main(args='abc', test=True, first=True)
         self.assertEqual(options.realizeargs, 'abc')
+        self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.fds_cleaned_up, True)
         self.assertEqual(options.rlimits_set, True)
         self.assertEqual(options.make_logger_messages,
@@ -2331,6 +2332,7 @@ class DummyOptions:
         self.setuid_msg = None
         self.privsdropped = None
         self.logs_reopened = False
+        self.environment_processed = False
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -2452,7 +2454,9 @@ class DummyOptions:
 
     def reopenlogs(self):
         self.logs_reopened = True
-        
+
+    def process_environment(self):
+        self.environment_processed = True
 
 class DummyClientOptions:
     def __init__(self):

@@ -457,6 +457,7 @@ class Supervisor:
             name = program.name
             self.processes[name] = self.options.make_process(program)
         try:
+            self.options.process_environment()
             self.options.openhttpserver(self)
             self.options.setsignals()
             if not self.options.nodaemon:

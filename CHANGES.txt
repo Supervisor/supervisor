@@ -10,6 +10,9 @@ Next
   - supervisorctl "tail -f" didn't work with supervisorctl sections
     configured with an absolute unix:// URL
 
+  - New "environment" config file option allows you to add environment
+    variable values to supervisord environment from config file.
+
 2.0b1
 
   - fundamental rewrite based on 1.0.6, use distutils (only) for

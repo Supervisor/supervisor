@@ -435,6 +435,7 @@ class ServerOptions(Options):
     passwdfile = None
     nodaemon = None
     signal = None
+    environment = None
     AUTOMATIC = []
     TRACE = 5
 
@@ -482,6 +483,8 @@ class ServerOptions(Options):
 		 datatypes.octal_type, default=0700)
 	self.add("sockchown", "supervisord.sockchown", "o:", "socket-owner=",
 		 datatypes.dot_separated_user_group)
+	self.add("environment", "supervisord.environment", "b:", "environment=",
+		 datatypes.dict_of_key_value_pairs)
         self.pidhistory = {}
 
     def getLogger(self, filename, level, fmt, rotating=False,
@@ -655,6 +658,9 @@ class ServerOptions(Options):
                 section.sockchmod = datatypes.octal_type(sockchmod)
             except (TypeError, ValueError):
                 raise ValueError('Invalid sockchmod value %s' % sockchmod)
+
+        environment = config.getdefault('environment', '')
+        section.environment = datatypes.dict_of_key_value_pairs(environment)
 
         section.programs = self.programs_from_config(config)
         return section
@@ -1118,6 +1124,10 @@ class ServerOptions(Options):
                 raise
             data = ''
         return data
+
+    def process_environment(self):
+        os.environ.update(self.environment or {})
+        
 
 class ClientOptions(Options):
     positional_args_allowed = 1

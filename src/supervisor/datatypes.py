@@ -31,6 +31,19 @@ def list_of_ints(arg):
     else:
         return map(int, arg.split(","))
 
+def dict_of_key_value_pairs(arg):
+    """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'} """
+    D = {}
+    pairs = [ x.strip() for x in arg.split(',') ]
+    pairs = filter(None, pairs)
+    for pair in pairs:
+        try:
+            k, v = pair.split('=', 1)
+        except ValueError:
+            raise ValueError('Unknown key/value pair %s' % pair)
+        D[k] = v
+    return D
+
 class RangeCheckedConversion:
     """Conversion helper that range checks another conversion."""
 
