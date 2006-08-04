@@ -265,6 +265,10 @@ Configuration File '[supervisord]' Section Settings
   'directory' -- When supervisord daemonizes, switch to this
   directory.  Default: do not cd.
 
+  'environment' -- A list of key/value pairs in the form "KEY=val,KEY2=val2"
+   that will be placed in the supervisord process' environment (and as a
+   result in all of its child process' environments).  Default: none.
+
 Configuration File '[supervisorctl]' Section Settings
 
   The configuration file may contain settings for the supervisorctl

@@ -1,4 +1,4 @@
-Next
+2.0
 
   - pidfile written in daemon mode had incorrect pid.
 

@@ -19,7 +19,7 @@ Supervisor is a client/server system that allows its users to
 control a number of processes on UNIX-like operating systems. """
 
 CLASSIFIERS = [
-    'Development Status :: 4 - Beta',
+    'Development Status :: 5 - Production/Stable',
     'Environment :: No Input/Output (Daemon)',
     'Intended Audience :: System Administrators',
     'License :: OSI Approved :: Zope Public License',
@@ -32,7 +32,7 @@ CLASSIFIERS = [
 
 dist = setup(
     name = 'supervisor',
-    version = "2.0b1",
+    version = "2.0",
     license = 'ZPL/BSD (see LICENSES.txt)',
     url = 'http://www.plope.com/software',
     description = "A system for controlling process state under UNIX",
