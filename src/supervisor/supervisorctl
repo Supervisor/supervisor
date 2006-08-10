@@ -1,4 +1,5 @@
 #!/usr/bin/python
 from supervisor.supervisorctl import main
+from supervisor.supervisorctl import __doc__
 main()
 

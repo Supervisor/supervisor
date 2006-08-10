@@ -1,3 +1,8 @@
+Next
+
+  - "supervisord -h" and "supervisorctl -h" did not work (traceback
+    instead of showing help view).
+
 2.0
 
   - pidfile written in daemon mode had incorrect pid.
