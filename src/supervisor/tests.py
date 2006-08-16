@@ -13,6 +13,7 @@ import pickle
 import pwd
 import errno
 from StringIO import StringIO
+from datetime import datetime
 
 import supervisord
 import datatypes
@@ -553,12 +554,14 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test__interpretProcessInfo(self):
         supervisord = DummySupervisor({})
         interface = self._makeOne(supervisord)
+        start = _NOW -100
+        stop  = _NOW -1
         from supervisord import ProcessStates
         running = {'name':'running',
                    'pid':1,
                    'state':ProcessStates.RUNNING,
-                   'start':_NOW -100,
-                   'stop':_NOW -1,
+                   'start':start,
+                   'stop':stop,
                    'now':_NOW}
         
         description = interface._interpretProcessInfo(running)
@@ -567,8 +570,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         fatal = {'name':'fatal',
                  'pid':2,
                  'state':ProcessStates.FATAL,
-                 'start':_NOW -100,
-                 'stop':_NOW -1,
+                 'start':start,
+                 'stop':stop,
                  'now':_NOW,
                  'spawnerr':'Hosed'}
                  
@@ -578,8 +581,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         fatal2 = {'name':'fatal',
                   'pid':2,
                   'state':ProcessStates.FATAL,
-                  'start':_NOW -100,
-                  'stop':_NOW -1,
+                  'start':start,
+                  'stop':stop,
                   'now':_NOW,
                   'spawnerr':'',}
                  
@@ -589,19 +592,20 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         stopped = {'name':'stopped',
                    'pid':3,
                    'state':ProcessStates.STOPPED,
-                   'start':_NOW -100,
-                   'stop':_NOW -1,
+                   'start':start,
+                   'stop':stop,
                    'now':_NOW,
                    'spawnerr':'',}
 
         description = interface._interpretProcessInfo(stopped)
-        self.assertEqual(description, 'Jun 26 07:42 PM')
+        stoptime = datetime(*time.localtime(stop)[:7])
+        self.assertEqual(description, stoptime.strftime(_TIMEFORMAT))
         
         stopped2 = {'name':'stopped',
                    'pid':3,
                    'state':ProcessStates.STOPPED,
                    'start':0,
-                   'stop':_NOW -1,
+                   'stop':stop,
                    'now':_NOW,
                    'spawnerr':'',}
 
@@ -675,13 +679,16 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(p2info['logfile'], '/tmp/process2.log')
         self.assertEqual(p2info['name'], 'process2')
         self.assertEqual(p2info['pid'], 0)
-        self.assertEqual(p2info['start'], 20)
+        self.assertEqual(p2info['start'], process2.laststart)
         self.assertEqual(p2info['stop'], 11)
         self.assertEqual(p2info['state'], ProcessStates.STOPPED)
         self.assertEqual(p2info['statename'], 'STOPPED')
         self.assertEqual(p2info['exitstatus'], 0)
         self.assertEqual(p2info['spawnerr'], '')
-        self.assertEqual(p2info['description'], 'Dec 31 07:00 PM')
+        
+        starttime = datetime(*time.localtime(process2.laststart)[:7])
+        self.assertEqual(p2info['description'], 
+                            starttime.strftime(_TIMEFORMAT))
 
     def test_readProcessLog_unreadable(self):
         options = DummyOptions()
@@ -2470,6 +2477,7 @@ class DummyClientOptions:
         return self._server
 
 _NOW = 1151365354
+_TIMEFORMAT = '%b %d %I:%M %p'
 
 class DummySupervisorRPCNamespace:
     _restartable = True
