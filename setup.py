@@ -32,7 +32,7 @@ CLASSIFIERS = [
 
 dist = setup(
     name = 'supervisor',
-    version = "2.1",
+    version = "2.1b1",
     license = 'ZPL/BSD (see LICENSES.txt)',
     url = 'http://www.plope.com/software',
     description = "A system for controlling process state under UNIX",

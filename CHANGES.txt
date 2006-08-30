@@ -1,4 +1,4 @@
-2.1
+2.1b1
 
   - "supervisord -h" and "supervisorctl -h" did not work (traceback
     instead of showing help view (thanks to Damjan from Macedonia for
