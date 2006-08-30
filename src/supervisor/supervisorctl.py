@@ -27,7 +27,7 @@ Options:
 
 action [arguments] -- see below
 
-Actions are commands like "tailf" or "stop".  If -i is specified or no action is
+Actions are commands like "tail" or "stop".  If -i is specified or no action is
 specified on the command line, a"shell" interpreting actions typed
 interactively is started.  Use the action "help" to find out about available
 actions.
@@ -140,13 +140,12 @@ class Controller(cmd.Cmd):
     def help_EOF(self):
         self._output("To quit, type ^D or use the quit command.")
 
-    def _tailf(self, arg):
+    def _tailf(self, path):
         if not self._upcheck():
             return
 
         self._output('==> Press Ctrl-C to exit <==')
 
-        path = '/logtail/' + arg
         username = self.options.username
         password = self.options.password
         try:
@@ -186,7 +185,8 @@ class Controller(cmd.Cmd):
             if args[0].startswith('-'):
                 what = args[0][1:]
                 if what == 'f':
-                    return self._tailf(args[1])
+                    path = '/logtail/' + args[1]
+                    return self._tailf(path)
                 try:
                     what = int(what)
                 except:
@@ -224,6 +224,58 @@ class Controller(cmd.Cmd):
             "\t\t\tCtrl-C to exit.\n"
             "tail -100 <processname>\tlast 100 *bytes* of process log file\n"
             "tail <processname>\tlast 1600 *bytes* of process log file\n"
+            )
+
+    def do_maintail(self, arg):
+        if not self._upcheck():
+            return
+        
+        args = arg.strip().split()
+
+        if len(args) > 1:
+            self._output('Error: too many arguments')
+            self.help_maintail()
+            return
+
+        elif len(args) == 1:
+            if args[0].startswith('-'):
+                what = args[0][1:]
+                if what == 'f':
+                    path = '/mainlogtail'
+                    return self._tailf(path)
+                try:
+                    what = int(what)
+                except:
+                    self._output('Error: bad argument %s' % args[0])
+                    return
+                else:
+                    bytes = what
+            else:
+                self._output('Error: bad argument %s' % args[0])
+                
+        else:
+            bytes = 1600
+
+        supervisor = self._get_supervisor()
+
+        try:
+            output = supervisor.readMainLog(-bytes, 0)
+        except xmlrpclib.Fault, e:
+            template = '%s: ERROR (%s)'
+            if e.faultCode == xmlrpc.Faults.NO_FILE:
+                self._output(template % (processname, 'no log file'))
+            elif e.faultCode == xmlrpc.Faults.FAILED:
+                self._output(template % (processname,
+                                         'unknown error reading log'))
+        else:
+            self._output(output)
+
+    def help_maintail(self):
+        self._output(
+            "maintail -f \tContinuous tail of supervisor main log file,\n"
+            "\t\t\tCtrl-C to exit.\n"
+            "maintail -100\tlast 100 *bytes* of supervisord main log file\n"
+            "maintail\tlast 1600 *bytes* of supervisor main log file\n"
             )
 
     def do_quit(self, arg):
@@ -280,7 +332,7 @@ class Controller(cmd.Cmd):
         elif code == xmlrpc.Faults.SPAWN_ERROR:
             return template % (processname, 'spawn error')
         elif code == xmlrpc.Faults.ABNORMAL_TERMINATION:
-            return template % (processname, 'abornal termination')
+            return template % (processname, 'abnormal termination')
         elif code == xmlrpc.Faults.SUCCESS:
             return '%s: started' % processname
         

@@ -424,16 +424,40 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_startProcess(self):
         options = DummyOptions()
+        config = DummyPConfig('foo', '/bin/foo', autostart=False, startsecs=.01)
+        process = DummyProcess(options, config, state=ProcessStates.STOPPED)
+        supervisord = DummySupervisor({'foo':process})
+        interface = self._makeOne(supervisord)
+        callback = interface.startProcess('foo')
+        self.assertEqual(callback(), http.NOT_DONE_YET)
+        self.assertEqual(process.spawned, True)
+        self.assertEqual(interface.update_text, 'startProcess')
+        process.state = ProcessStates.RUNNING
+        time.sleep(.02)
+        result = callback()
+        self.assertEqual(result, True)
+
+    def test_startProcess_nowait(self):
+        options = DummyOptions()
         config = DummyPConfig('foo', '/bin/foo', autostart=False)
         process = DummyProcess(options, config, state=ProcessStates.STOPPED)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
-        callback = interface.startProcess('foo', 100) # milliseconds
-        self.assertEqual(callback(), http.NOT_DONE_YET)
+        callback = interface.startProcess('foo', wait=False)
+        self.assertEqual(callback(), True)
         self.assertEqual(process.spawned, True)
         self.assertEqual(interface.update_text, 'startProcess')
-        time.sleep(.1) # 100 milliseconds
+
+    def test_startProcess_nostartsecs(self):
+        options = DummyOptions()
+        config = DummyPConfig('foo', '/bin/foo', autostart=False, startsecs=0)
+        process = DummyProcess(options, config, state=ProcessStates.STOPPED)
+        supervisord = DummySupervisor({'foo':process})
+        interface = self._makeOne(supervisord)
+        callback = interface.startProcess('foo', wait=True)
         self.assertEqual(callback(), True)
+        self.assertEqual(process.spawned, True)
+        self.assertEqual(interface.update_text, 'startProcess')
 
     def test_startProcess_abnormal_term(self):
         options = DummyOptions()
@@ -450,24 +474,17 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self._assertRPCError(xmlrpc.Faults.ABNORMAL_TERMINATION,
                              callback)
     
-    def test_startProcess_badtimeout(self):
-        options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', autostart=False)
-        process = DummyProcess(options, config)
-        supervisord = DummySupervisor({'foo':process})
-        interface = self._makeOne(supervisord)
-        self._assertRPCError(xmlrpc.Faults.BAD_ARGUMENTS,
-                             interface.startProcess, 'foo', 'flee')
-
     def test_startAllProcesses(self):
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', priority=1)
-        config2 = DummyPConfig('foo2', '/bin/foo2', priority=2)
+        config = DummyPConfig('foo', '/bin/foo', priority=1,
+                               startsecs=.01)
+        config2 = DummyPConfig('foo2', '/bin/foo2', priority=2,
+                               startsecs=.01)
         process = DummyProcess(options, config, ProcessStates.STOPPED)
         process2 = DummyProcess(options, config2, ProcessStates.STOPPED)
         supervisord = DummySupervisor({'foo':process, 'foo2':process2})
         interface = self._makeOne(supervisord)
-        callback = interface.startAllProcesses(200) # milliseconds
+        callback = interface.startAllProcesses()
         from http import NOT_DONE_YET
         from xmlrpc import Faults
 
@@ -479,10 +496,10 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(callback(), NOT_DONE_YET)
 
         # wait for timeout 1
-        time.sleep(.2)
+        time.sleep(.02)
         result = callback()
         # wait for timeout 2
-        time.sleep(.2)
+        time.sleep(.02)
 
         result = callback()
 
@@ -499,7 +516,34 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
         self.assertEqual(process.spawned, True)
         self.assertEqual(process2.spawned, True)
-        
+
+    def test_startAllProcesses_nowait(self):
+        options = DummyOptions()
+        config = DummyPConfig('foo', '/bin/foo', priority=1,
+                               startsecs=.01)
+        config2 = DummyPConfig('foo2', '/bin/foo2', priority=2,
+                               startsecs=.01)
+        process = DummyProcess(options, config, ProcessStates.STOPPED)
+        process2 = DummyProcess(options, config2, ProcessStates.STOPPED)
+        supervisord = DummySupervisor({'foo':process, 'foo2':process2})
+        interface = self._makeOne(supervisord)
+        callback = interface.startAllProcesses(wait=False)
+        from http import NOT_DONE_YET
+        from xmlrpc import Faults
+
+        # create callbacks in startall()
+        self.assertEqual(callback(), NOT_DONE_YET)
+
+        result = callback()
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]['name'], 'foo')
+        self.assertEqual(result[0]['status'],  Faults.SUCCESS)
+        self.assertEqual(result[0]['description'], 'OK')
+
+        self.assertEqual(result[1]['name'], 'foo2')
+        self.assertEqual(result[1]['status'],  Faults.SUCCESS)
+        self.assertEqual(result[1]['description'], 'OK')
 
     def test_stopProcess_badname(self):
         supervisord = DummySupervisor()
@@ -744,6 +788,51 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             data = interface.readProcessLog('foo', offset=0, length=2048)
             self.assertEqual(data, 'x' * 2048)
             data = interface.readProcessLog('foo', offset=-4, length=0)
+            self.assertEqual(data, 'y' * 4)
+        finally:
+            os.remove(logfile)
+
+    def test_readMainLog_unreadable(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.NO_FILE,
+                             interface.readMainLog, offset=0, length=1)
+
+    def test_readMainLog_badargs(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+
+        try:
+            logfile = supervisord.options.logfile
+            f = open(logfile, 'w+')
+            f.write('x' * 2048)
+            f.close()
+            self._assertRPCError(xmlrpc.Faults.BAD_ARGUMENTS,
+                                 interface.readMainLog,
+                                 offset=-1, length=1)
+            self._assertRPCError(xmlrpc.Faults.BAD_ARGUMENTS,
+                                 interface.readMainLog,
+                                 offset=-1, length=-1)
+        finally:
+            os.remove(logfile)
+
+    def test_readMainLog(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        logfile = supervisord.options.logfile
+        try:
+            f = open(logfile, 'w+')
+            f.write('x' * 2048)
+            f.write('y' * 2048)
+            f.close()
+            data = interface.readMainLog(offset=0, length=0)
+            self.assertEqual(interface.update_text, 'readMainLog')
+            self.assertEqual(data, ('x' * 2048) + ('y' * 2048))
+            data = interface.readMainLog(offset=2048, length=0)
+            self.assertEqual(data, 'y' * 2048)
+            data = interface.readMainLog(offset=0, length=2048)
+            self.assertEqual(data, 'x' * 2048)
+            data = interface.readMainLog(offset=-4, length=0)
             self.assertEqual(data, 'y' * 4)
         finally:
             os.remove(logfile)
@@ -1396,7 +1485,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.killing, 0)
         self.assertEqual(instance.pid, 0)
         self.assertEqual(instance.pipes, {})
-        self.assertEqual(options.logger.data[0], 'killed: notthere '
+        self.assertEqual(options.logger.data[0], 'stopped: notthere '
                          '(terminated by SIGHUP)')
         self.assertEqual(instance.exitstatus, -1)
 
@@ -1441,11 +1530,13 @@ class SubprocessTests(unittest.TestCase):
 
         instance = self._makeOne(options, config)
         instance.killing = True
+        instance.laststart = 100
         self.assertEqual(instance.get_state(), ProcessStates.STOPPING)
 
         instance = self._makeOne(options, config)
         instance.laststart = 1
         instance.delay = 1
+        instance.pid = 1
         self.assertEqual(instance.get_state(), ProcessStates.STARTING)
 
         instance = self._makeOne(options, config)
@@ -1455,6 +1546,7 @@ class SubprocessTests(unittest.TestCase):
         
         instance = self._makeOne(options, config)
         instance.system_stop = True
+        instance.laststart = 100
         self.assertEqual(instance.get_state(), ProcessStates.FATAL)
 
         instance = self._makeOne(options, config)
@@ -1468,7 +1560,7 @@ class SubprocessTests(unittest.TestCase):
 
         instance = self._makeOne(options, config)
         instance.laststart = 1
-        instance.backoff = 1
+        instance.delay = 1
         self.assertEqual(instance.get_state(), ProcessStates.BACKOFF)
 
         instance = self._makeOne(options, config)
@@ -1605,9 +1697,11 @@ class SupervisordTests(unittest.TestCase):
         pconfig2 = DummyPConfig('process2', 'process2', '/bin/process2')
         process2 = DummyProcess(options, pconfig2, state=ProcessStates.RUNNING)
         pconfig3 = DummyPConfig('process3', 'process3', '/bin/process3')
-        process3 = DummyProcess(options, pconfig3, state=ProcessStates.BACKOFF)
+        process3 = DummyProcess(options, pconfig3, state=ProcessStates.STARTING)
         pconfig4 = DummyPConfig('process4', 'process4', '/bin/process4')
-        process4 = DummyProcess(options, pconfig4, state=ProcessStates.STARTING)
+        process4 = DummyProcess(options, pconfig4, state=ProcessStates.BACKOFF)
+        process4.delay = 1000
+        process4.backoff = 10
         supervisord = self._makeOne(options)
         supervisord.processes = {'process1': process1, 'process2': process2,
                                  'process3':process3, 'process4':process4}
@@ -1615,42 +1709,46 @@ class SupervisordTests(unittest.TestCase):
         supervisord.stop_all()
         self.assertEqual(process1.stop_called, False)
         self.assertEqual(process2.stop_called, True)
-        self.assertEqual(process1.backoff, 0)
-        self.assertEqual(process2.backoff, 0)
-        self.assertEqual(process3.backoff, 1000)
-        self.assertEqual(process4.backoff, 1000)
+        self.assertEqual(process3.stop_called, True)
+        self.assertEqual(process4.stop_called, False)
+
+        self.assertEqual(process4.delay, 0)
+        self.assertEqual(process4.backoff, 0)
+        self.assertEqual(process4.system_stop, 1)
+
         
-    def test_give_up(self):
+    def test_transition(self):
         options = DummyOptions()
 
+        # this should go to FATAL via transition()
         pconfig1 = DummyPConfig('process1', 'process1', '/bin/process1')
         process1 = DummyProcess(options, pconfig1, state=ProcessStates.BACKOFF)
         process1.backoff = 10000
         process1.delay = 1
         process1.system_stop = 0
 
+        # this should go to RUNNING via transition()
         pconfig2 = DummyPConfig('process2', 'process2', '/bin/process2')
-        process2 = DummyProcess(options, pconfig2, state=ProcessStates.BACKOFF)
+        process2 = DummyProcess(options, pconfig2, state=ProcessStates.STARTING)
         process2.backoff = 1
         process2.delay = 1
         process2.system_stop = 0
-
-        pconfig3 = DummyPConfig('process3', 'process3', '/bin/process3')
-        process3 = DummyProcess(options, pconfig3, state=ProcessStates.RUNNING)
-        process3.delay = 5
+        process2.laststart = 1
 
         supervisord = self._makeOne(options)
-        supervisord.processes = { 'process1': process1, 'process2': process2,
-                                  'process3':process3 }
+        supervisord.processes = { 'process1': process1, 'process2': process2 }
 
-        supervisord.give_up()
+        supervisord.transition()
+
+        # this implies FATAL
         self.assertEqual(process1.backoff, 0)
         self.assertEqual(process1.delay, 0)
         self.assertEqual(process1.system_stop, 1)
-        self.assertEqual(process2.backoff, 1)
-        self.assertEqual(process2.delay, 1)
+
+        # this implies RUNNING
+        self.assertEqual(process2.backoff, 0)
+        self.assertEqual(process2.delay, 0)
         self.assertEqual(process2.system_stop, 0)
-        self.assertEqual(process3.delay, 0)
 
     def test_get_undead(self):
         options = DummyOptions()

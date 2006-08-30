@@ -687,6 +687,38 @@ class logtail_handler:
 
         request.done()
 
+class mainlogtail_handler:
+    IDENT = 'Main Logtail HTTP Request Handler'
+    path = '/mainlogtail'
+
+    def __init__(self, supervisord):
+        self.supervisord = supervisord
+
+    def match(self, request):
+        path, params, query, fragment = request.split_uri()
+        return (path[:len(self.path)] == self.path)
+
+    def handle_request(self, request):
+        if request.command != 'GET':
+            request.error (400) # bad request
+            return
+
+        logfile = self.supervisord.options.logfile
+
+        if logfile is None or not os.path.exists(logfile):
+            request.error(410) # gone
+            return
+
+        mtime = os.stat(logfile)[stat.ST_MTIME]
+        request['Last-Modified'] = http_date.build_http_date(mtime)
+        request['Content-Type'] = 'text/plain'
+        # the lack of a Content-Length header makes the outputter
+        # send a 'Transfer-Encoding: chunked' response
+
+        request.push(tail_f_producer(request, logfile, 1024))
+
+        request.done()
+
 def make_http_server(options, supervisord):
     if not options.http_port:
         return
@@ -719,6 +751,7 @@ def make_http_server(options, supervisord):
     from web import supervisor_ui_handler
     xmlrpchandler = supervisor_xmlrpc_handler(supervisord)
     tailhandler = logtail_handler(supervisord)
+    maintailhandler = mainlogtail_handler(supervisord)
     here = os.path.abspath(os.path.dirname(__file__))
     templatedir = os.path.join(here, 'ui')
     filesystem = filesys.os_filesystem(templatedir)
@@ -730,11 +763,13 @@ def make_http_server(options, supervisord):
         from medusa.auth_handler import auth_handler
         xmlrpchandler = auth_handler(users, xmlrpchandler)
         tailhandler = auth_handler(users, tailhandler)
+        maintailhandler = auth_handler(users, maintailhandler)
         uihandler = auth_handler(users, uihandler)
     else:
         options.logger.critical('Running without any HTTP authentication '
                                 'checking')
     hs.install_handler(uihandler)
     hs.install_handler(tailhandler)
+    hs.install_handler(maintailhandler)
     hs.install_handler(xmlrpchandler)
     return hs

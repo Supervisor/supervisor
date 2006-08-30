@@ -1,7 +1,34 @@
-Next
+2.1
 
   - "supervisord -h" and "supervisorctl -h" did not work (traceback
-    instead of showing help view).
+    instead of showing help view (thanks to Damjan from Macedonia for
+    the bug report).
+
+  - Processes which started successfully after failing to start
+    initially are no longer reported in BACKOFF state once they are
+    started successfully (thanks to Damjan from Macdonia for the bug
+    report).
+
+  - Add new 'maintail' command to supervisorctl shell, which allows
+    you to tail the 'main' supervisor log.  This uses a new
+    readMainLog xmlrpc API.
+
+  - Various process-state-transition related changes, all internal.
+    README.txt updated with new state transition map.
+
+  - startProcess and startAllProcesses xmlrpc APIs changed: instead of
+    accepting a timeout integer, these accept a wait boolean (timeout
+    is implied by process' "startsecs" configuration).  If wait is
+    False, do not wait for startsecs.
+
+  Known issues:
+
+    Code does not match state transition map.  Processes which are
+    configured as autorestarting which start "successfully" but
+    subsequently die after 'startsecs' go through the transitions
+    RUNNING -> BACKOFF -> STARTING instead of the correct transitions
+    RUNNING -> EXITED -> STARTING.  This has no real negative effect,
+    but should be fixed for correctness.
 
 2.0
 

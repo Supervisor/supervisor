@@ -4,6 +4,8 @@ History
 
   7/3/2006: updated for version 2.0
 
+  8/30/2006: updated for version 2.1
+
 Introduction
 
   The supervisor is a client/server system that allows its users to
@@ -300,7 +302,7 @@ Configuration File '[program:x]' Section Settings
     priority=1
     autostart=true
     autorestart=true
-    startsecs=10
+    startsecs=1
     startretries=3
     exitcodes=0,2
     stopsignal=TERM
@@ -347,7 +349,7 @@ Configuration File '[program:x]' Section Settings
   If the program does not stay up for this many seconds after it is
   started, even if it exits with an "expected" exit code, the startup
   will be considered a failure.  Set to 0 to indicate that the program
-  needn't stay running for any particular amount of time.  Default: 1.
+  needn't stay running for any particular amount of time.  Default: 1
 
   'startretries' -- The number of serial failure attempts that
   supervisord will allow when attempting to start the program before
@@ -476,18 +478,18 @@ Process States
 
   Process progress through these states as per the following directed
   graph::
-
-                           STOPPED
-                           ^     |
-                          /      |
-                    STOPPING     |
-                     ^           V
+                            --> STOPPED
+                          /       |
+                         |        |
+                         |        |
+                    STOPPING      |
+                     ^            V
                      |       STARTING <-----> BACKOFF
-                     |      /        \
-                     |     V          V
-                     \-- RUNNING    FATAL
-                           |
-                           V
+                     |      /     ^            |
+                     |     V      |            |
+                     \-- RUNNING / \           |
+                           |    /   \          V
+                           V   /     \ ----- FATAL
                          EXITED
 
   A process is in the STOPPED state if it has been stopped
@@ -512,8 +514,23 @@ Process States
   during normal operations as it implies that the process did not
   respond to a final SIGKILL, which is "impossible" under UNIX.
 
-  Terminal states are "STOPPED", "FATAL", "EXITED", and "UNKNOWN".
-  All other states are transitional.
+  State transitions which always require user action to invoke are
+  these:
+
+    FATAL   -> STARTING
+
+    RUNNING -> STOPPING
+
+  State transitions which typically, but not always, require user
+  action to invoke are these, with exceptions noted:
+
+    STOPPED -> STARTING (except at supervisord startup if process is
+                         configured to autostart)
+
+    EXITED  -> STARTING (except if process is configured to autorestart)
+
+  All other state transitions are managed by supervisord
+  automatically.
 
 Signals
 

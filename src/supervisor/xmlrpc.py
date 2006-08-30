@@ -274,11 +274,11 @@ class SupervisorNamespaceRPCInterface:
         self.supervisord.mood = 0
         return True
 
-    def startProcess(self, name, timeout=500):
+    def startProcess(self, name, wait=True):
         """ Start a process
 
         @param string name Process name
-        @param int timeout Number of milliseconds to wait for process start
+        @param boolean wait Wait for process to be fully started
         @return boolean result     Always true unless error
 
         """
@@ -287,20 +287,21 @@ class SupervisorNamespaceRPCInterface:
         processes = self.supervisord.processes
         process = processes.get(name)
 
-        try:
-            timeout = int(timeout)
-        except:
-            raise RPCError(Faults.BAD_ARGUMENTS, 'timeout: %s' % timeout)
-
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
 
         started = []
 
+        startsecs = process.config.startsecs
+
+        running_states = (ProcessStates.RUNNING,
+                          ProcessStates.BACKOFF,
+                          ProcessStates.STARTING)
+
         def startit():
             if not started:
 
-                if process.get_state() == ProcessStates.RUNNING:
+                if process.get_state() in running_states:
                     raise RPCError(Faults.ALREADY_STARTED, name)
 
                 process.spawn()
@@ -314,13 +315,21 @@ class SupervisorNamespaceRPCInterface:
                 # call through, it forgets about 'started', claiming
                 # it's undeclared).
                 started.append(time.time())
+
+
+            if not wait or not startsecs:
+                return True
                 
             t = time.time()
             runtime = (t - started[0])
-            milliseconds = timeout / 1000.0
-            if runtime < milliseconds:
-                return NOT_DONE_YET
             state = process.get_state()
+
+            if state not in (ProcessStates.STARTING, ProcessStates.RUNNING):
+                raise RPCError(Faults.ABNORMAL_TERMINATION, name)
+
+            if runtime < startsecs:
+                return NOT_DONE_YET
+
             if state == ProcessStates.RUNNING:
                 return True
             raise RPCError(Faults.ABNORMAL_TERMINATION, name)
@@ -329,18 +338,13 @@ class SupervisorNamespaceRPCInterface:
         startit.rpcinterface = self
         return startit # deferred
 
-    def startAllProcesses(self, timeout=500):
+    def startAllProcesses(self, wait=True):
         """ Start all processes listed in the configuration file
 
-        @param int timeout Number of milliseconds to wait for each process start
+        @param boolean wait Wait for each process to be fully started
         @return struct result     A structure containing start statuses
         """
         self._update('startAllProcesses')
-
-        try:
-            timeout = int(timeout)
-        except:
-            raise RPCError(Faults.BAD_ARGUMENTS, 'timeout: %s' % timeout)
 
         processes = self.supervisord.processes.values()
         processes.sort() # asc by priority
@@ -348,18 +352,20 @@ class SupervisorNamespaceRPCInterface:
         results = []
         callbacks = []
 
+        running_states = (ProcessStates.RUNNING,
+                          ProcessStates.BACKOFF,
+                          ProcessStates.STARTING)
+
         def startall():
             if not callbacks:
 
                 for process in processes:
-                    if process.get_state() not in (ProcessStates.RUNNING,
-                                                   ProcessStates.BACKOFF):
+                    if process.get_state() not in running_states:
                         # only start nonrunning processes
                         try:
                             callbacks.append((
                                 process.config.name,
-                                self.startProcess(process.config.name,
-                                                  timeout)))
+                                self.startProcess(process.config.name, wait)))
                         except RPCError, e:
                             results.append({'name':process.config.name,
                                             'status':e.code,
@@ -414,21 +420,28 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.BAD_NAME, name)
 
         stopped = []
+        called  = []
+
+        running_states = (ProcessStates.RUNNING,
+                          ProcessStates.STARTING,
+                          ProcessStates.BACKOFF)
 
         def killit():
-            if not stopped:
-                if process.get_state() != ProcessStates.RUNNING:
+            if not called:
+                if process.get_state() not in running_states:
                     raise RPCError(Faults.NOT_RUNNING)
                 # use a mutable for lexical scoping; see startProcess
-                stopped.append(1)
-            
-            if process.get_state() == ProcessStates.RUNNING:
+                called.append(1)
+
+            if not stopped:
                 msg = process.stop()
                 if msg is not None:
                     raise RPCError(Faults.FAILED, name)
+                stopped.append(1)
                 return NOT_DONE_YET
-            elif process.get_state() not in (ProcessStates.STOPPED,
-                                             ProcessStates.EXITED):
+            
+            if process.get_state() not in (ProcessStates.STOPPED,
+                                           ProcessStates.EXITED):
                 return NOT_DONE_YET
             else:
                 return True
@@ -450,11 +463,15 @@ class SupervisorNamespaceRPCInterface:
         callbacks = []
         results = []
 
+        running_states = (ProcessStates.RUNNING,
+                          ProcessStates.STARTING,
+                          ProcessStates.BACKOFF)
+
         def killall():
             if not callbacks:
 
                 for process in processes:
-                    if process.get_state() == ProcessStates.RUNNING:
+                    if process.get_state() in running_states:
                         # only stop running processes
                         try:
                             callbacks.append(
@@ -590,6 +607,26 @@ class SupervisorNamespaceRPCInterface:
         for processname in processnames:
             output.append(self.getProcessInfo(processname))
         return output
+
+    def readMainLog(self, offset, length):
+        """ Read length bytes from the main log starting at offset
+
+        @param int offset         offset to start reading from.
+        @param int length         number of bytes to read from the log.
+        @return string result     Bytes of log
+        """
+        self._update('readMainLog')
+
+        logfile = self.supervisord.options.logfile
+
+        if logfile is None or not os.path.exists(logfile):
+            raise RPCError(Faults.NO_FILE, logfile)
+
+        try:
+            return readFile(logfile, offset, length)
+        except ValueError, inst:
+            why = inst.args[0]
+            raise RPCError(getattr(Faults, why))
 
     def readProcessLog(self, name, offset, length):
         """ Read length bytes from name's log starting at offset

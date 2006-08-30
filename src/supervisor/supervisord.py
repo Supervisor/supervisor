@@ -93,7 +93,7 @@ class Subprocess:
     administrative_stop = 0 # true if the process has been stopped by an admin
     system_stop = 0 # true if the process has been stopped by the system
     killing = 0 # flag determining whether we are trying to kill this proc
-    backoff = 0 # backoff counter (to startsecs)
+    backoff = 0 # backoff counter (to startretries)
     pipes = None # mapping of pipe descriptor purpose to file descriptor
     childlog = None # the current logger 
     logbuffer = '' # buffer of characters read from child pipes
@@ -256,6 +256,8 @@ class Subprocess:
                 self.options.close_fd(self.pipes[fdname])
             self.options.logger.info('spawned: %r with pid %s' % (pname, pid))
             self.spawnerr = None
+            # we use self.delay here as a mechanism to indicate that we're in
+            # the STARTING state.
             self.delay = time.time() + self.config.startsecs
             self.options.pidhistory[pid] = self
             return pid
@@ -321,6 +323,7 @@ class Subprocess:
                                       % (self.config.name,
                                          self.pid,
                                          signame(sig)))
+            # RUNNING -> STOPPING
             self.killing = 1
             self.delay = now + self.config.stopwaitsecs
             self.options.kill(self.pid, sig)
@@ -348,17 +351,31 @@ class Subprocess:
 
         now = time.time()
         self.laststop = now
+        processname = self.config.name
 
         tooquickly = now - self.laststart < self.config.startsecs
         badexit = not es in self.config.exitcodes
+        expected = not (tooquickly or badexit)
 
         if self.killing:
-            # we've been expecting to reap this
+            # likely the result of a stop request
+            # implies STOPPING -> STOPPED
             self.killing = 0
             self.delay = 0
-        elif tooquickly or badexit:
+            self.exitstatus = es
+            msg = "stopped: %s (%s)" % (processname, msg)
+        elif expected:
+            # this finish was not the result of a stop request, but
+            # was otherwise expected
+            # implies RUNNING -> EXITED
+            self.delay = 0
+            self.backoff = 0
+            self.exitstatus = es
+            msg = "exited: %s (%s)" % (processname, msg + "; expected")
+        else:
             # the program did not stay up long enough or exited with
             # an unexpected exit code
+            self.exitstatus = None
             self.backoff = self.backoff + 1
             self.delay = now + self.backoff
             if tooquickly:
@@ -366,22 +383,12 @@ class Subprocess:
                     'Exited too quickly (process log may have details)')
             elif badexit:
                 self.spawnerr = 'Bad exit code %s' % es
-        else:
-            self.delay = 0
-            self.backoff = 0
+            msg = "exited: %s (%s)" % (processname, msg + "; not expected")
+
+        self.options.logger.info(msg)
 
         self.pid = 0
         self.pipes = {}
-        processname = self.config.name
-
-        if es in self.config.exitcodes and not self.killing:
-            msg = "exited: %s (%s)" % (processname, msg + "; expected")
-        elif es != -1:
-            msg = "exited: %s (%s)" % (processname, msg + "; not expected")
-        else:
-            msg = "killed: %s (%s)" % (processname, msg)
-        self.options.logger.info(msg)
-        self.exitstatus = es
 
     def set_uid(self):
         if self.config.uid is None:
@@ -400,23 +407,25 @@ class Subprocess:
             getProcessStateDescription(self.get_state()))
 
     def get_state(self):
-        if self.killing:
+        if not self.laststart:
+            return ProcessStates.STOPPED
+        elif self.killing:
             return ProcessStates.STOPPING
         elif self.system_stop:
             return ProcessStates.FATAL
-        elif self.administrative_stop or not self.laststart:
-            return ProcessStates.STOPPED
-        elif self.backoff:
-            return ProcessStates.BACKOFF
-        elif not self.pid and self.delay:
-            return ProcessStates.STARTING
+        elif self.exitstatus is not None:
+            if self.administrative_stop:
+                return ProcessStates.STOPPED
+            else:
+                return ProcessStates.EXITED
+        elif self.delay:
+            if self.pid:
+                return ProcessStates.STARTING
+            else:
+                return ProcessStates.BACKOFF
         elif self.pid:
             return ProcessStates.RUNNING
-        else:
-            if self.exitstatus is not None:
-                return ProcessStates.EXITED
-            else:
-                return ProcessStates.UNKNOWN
+        return ProcessStates.UNKNOWN
 
 class Supervisor:
     mood = 1 # 1: up, 0: restarting, -1: suicidal
@@ -545,7 +554,7 @@ class Supervisor:
                     except:
                         socket_map[fd].handle_error()
 
-            self.give_up()
+            self.transition()
             self.kill_undead()
             self.reap()
             self.handle_signal()
@@ -562,12 +571,15 @@ class Supervisor:
             state = p.get_state()
             if state == ProcessStates.STOPPED and not p.laststart:
                 if p.config.autostart:
+                    # STOPPED -> STARTING
                     p.spawn()
             elif state == ProcessStates.EXITED:
                 if p.config.autorestart:
+                    # EXITED -> STARTING
                     p.spawn()
             elif state == ProcessStates.BACKOFF:
                 if now > p.delay:
+                    # BACKOFF -> STARTING
                     p.spawn()
             
     def stop_all(self):
@@ -576,29 +588,53 @@ class Supervisor:
         processes.reverse() # stop in desc priority order
 
         for proc in processes:
-            # only stop running or starting processes
             state = proc.get_state()
             if state == ProcessStates.RUNNING:
+                # RUNNING -> STOPPING
                 proc.stop()
-            elif state in (ProcessStates.STARTING, ProcessStates.BACKOFF):
-                # put it into backoff
-                proc.backoff = proc.config.startretries + 1
+            elif state == ProcessStates.STARTING:
+                # STARTING -> STOPPING (unceremoniously subvert the RUNNING
+                # state)
+                proc.stop()
+            elif state == ProcessStates.BACKOFF:
+                # BACKOFF -> FATAL
+                proc.delay = 0
+                proc.backoff = 0
+                proc.system_stop = 1
 
-    def give_up(self):
+    def transition(self):
         now = time.time()
         processes = self.processes.values()
         for proc in processes:
             state = proc.get_state()
+
+            # we need to transition processes between BACKOFF ->
+            # FATAL and STARTING -> RUNNING within here
+            
+            config = proc.config
+            logger = self.options.logger
+
             if state == ProcessStates.BACKOFF:
-                if proc.backoff > proc.config.startretries:
+                if proc.backoff > config.startretries:
+                    # BACKOFF -> FATAL if the proc has exceeded its number
+                    # of retries
+                    proc.delay = 0
                     proc.backoff = 0
-                    proc.delay = 0
                     proc.system_stop = 1
-            elif state == ProcessStates.RUNNING:
-                if proc.delay < now:
+                    msg = ('entered FATAL state, too many start retries too '
+                           'quickly')
+                    logger.info('gave up: %s %s' % (config.name, msg))
+
+            elif state == ProcessStates.STARTING:
+                if now - proc.laststart > config.startsecs:
+                    # STARTING -> RUNNING if the proc has started
+                    # successfully and it has stayed up for at least
+                    # self.config.startsecs,
                     proc.delay = 0
-            elif state == ProcessStates.FATAL:
-                proc.delay = 0
+                    proc.backoff = 0
+                    msg = ('entered RUNNING state, process has stayed up for '
+                           '> than %s seconds (startsecs)' % config.startsecs)
+                    logger.info('success: %s %s' % (config.name, msg))
 
     def get_delay_processes(self):
         """ Processes which are starting or stopping """

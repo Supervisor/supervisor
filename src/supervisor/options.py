@@ -337,7 +337,6 @@ class Options:
 
         doc      -- usage message (default is __main__.__doc__)
         """
-
          # Provide dynamic default method arguments
         if args is None:
             args = sys.argv[1:]
