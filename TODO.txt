@@ -1,0 +1,17 @@
+- Web interface:
+
+   - Support POST requests.
+
+   - Unit tests for meld classes and ui server.
+
+   - Meta-refresh on tail page.
+
+- Expat error on Jens' system running slapd as root after reload.
+
+- Unit tests for log rotation.
+
+- Command-line arg tests.
+
+- Log logtail requests.
+
+- Provide a way to get the supervisord pid from supervisorctl/web interface.

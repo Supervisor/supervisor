@@ -26,7 +26,8 @@ class Listener(object):
         pass
 
     def feed(self, url, data):
-        print data
+        sys.stdout.write(data)
+        sys.stdout.flush()
 
     def close(self, url):
         pass
@@ -51,11 +52,11 @@ class HTTPHandler(object, asynchat.async_chat):
         self.url = None
         self.error_handled = False
 
-    def get(self, url):
+    def get(self, serverurl, path):
         assert(self.url==None, "Already doing a get") #@@
-        self.url = url
-        scheme, host, path, params, query, fragment = urlparse(url)
-        if not scheme=="http":
+        self.url = serverurl + path
+        scheme, host, path_ignored, params, query, fragment = urlparse(self.url)
+        if not scheme in ("http", "unix"):
             raise NotImplementedError
         self.host = host
         if ":" in host:
@@ -65,13 +66,17 @@ class HTTPHandler(object, asynchat.async_chat):
             hostname = host
             port = 80
 
-        self.path = "?".join([path, query])
+        self.path = path
         self.port = port
-        
-        ip = hostname
-        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.connect((ip, self.port))
-            
+
+        if scheme == "http":
+            ip = hostname
+            self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.connect((ip, self.port))
+        elif scheme == "unix":
+            socketname = serverurl[7:]
+            self.create_socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.connect(socketname)
     
     def close (self):
         self.listener.close(self.url)
