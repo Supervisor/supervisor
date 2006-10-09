@@ -1,3 +1,9 @@
+2.1b2
+
+  - Added new tailProcessLog() command to the XML-RPC API that
+    is more efficient for just tailing than the existing
+    readProcessLog() command (Mike Naberezny).
+
 2.1b1
 
   - "supervisord -h" and "supervisorctl -h" did not work (traceback

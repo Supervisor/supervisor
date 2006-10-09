@@ -792,6 +792,114 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         finally:
             os.remove(logfile)
 
+    def test_tailProcessLog_bad_name(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME, 
+                             interface.tailProcessLog, 'BAD_NAME', 0, 10)
+
+    def test_tailProcessLog_all(self):
+        """entire log is returned when offset==0 and logsize < length"""
+        from string import letters
+        options = DummyOptions()
+        config = DummyPConfig('foo', '/bin/foo', logfile='/tmp/fooooooo')
+        process = DummyProcess(options, config)
+        supervisord = DummySupervisor({'foo':process})
+        interface = self._makeOne(supervisord)
+        process = supervisord.processes.get('foo')
+        logfile = process.config.logfile
+        try:
+            f = open(logfile, 'w+')
+            f.write(letters)
+            f.close()
+            
+            data, offset, overflow = interface.tailProcessLog('foo', 
+                                                        offset=0, 
+                                                        length=len(letters))
+            self.assertEqual(interface.update_text, 'tailProcessLog')
+            self.assertEqual(overflow, False)
+            self.assertEqual(offset, len(letters))
+            self.assertEqual(data, letters)
+        finally:
+            os.remove(logfile)
+
+    def test_tailProcessLog_none(self):
+        """nothing is returned when offset <= logsize"""
+        from string import letters
+        options = DummyOptions()
+        config = DummyPConfig('foo', '/bin/foo', logfile='/tmp/fooooooo')
+        process = DummyProcess(options, config)
+        supervisord = DummySupervisor({'foo':process})
+        interface = self._makeOne(supervisord)
+        process = supervisord.processes.get('foo')
+        logfile = process.config.logfile
+        try:
+            f = open(logfile, 'w+')
+            f.write(letters)
+            f.close()
+
+            # offset==logsize
+            data, offset, overflow = interface.tailProcessLog('foo', 
+                                                        offset=len(letters), 
+                                                        length=100)
+            self.assertEqual(interface.update_text, 'tailProcessLog')
+            self.assertEqual(overflow, False)
+            self.assertEqual(offset, len(letters))
+            self.assertEqual(data, '')
+
+            # offset > logsize
+            data, offset, overflow = interface.tailProcessLog('foo', 
+                                                        offset=len(letters)+5, 
+                                                        length=100)
+            self.assertEqual(interface.update_text, 'tailProcessLog')
+            self.assertEqual(overflow, False)
+            self.assertEqual(offset, len(letters))
+            self.assertEqual(data, '')
+        finally:
+            os.remove(logfile)
+
+    def test_tailProcessLog_overflow(self):
+        """buffer overflow occurs when logsize > offset+length"""
+        from string import letters
+        options = DummyOptions()
+        config = DummyPConfig('foo', '/bin/foo', logfile='/tmp/fooooooo')
+        process = DummyProcess(options, config)
+        supervisord = DummySupervisor({'foo':process})
+        interface = self._makeOne(supervisord)
+        process = supervisord.processes.get('foo')
+        logfile = process.config.logfile
+        try:
+            f = open(logfile, 'w+')
+            f.write(letters)
+            f.close()
+
+            data, offset, overflow = interface.tailProcessLog('foo', 
+                                                        offset=0, length=5)
+            self.assertEqual(interface.update_text, 'tailProcessLog')
+            self.assertEqual(overflow, True)
+            self.assertEqual(offset, len(letters))
+            self.assertEqual(data, letters[-5:])
+        finally:
+            os.remove(logfile)
+    
+    def test_tailProcessLog_unreadable(self):
+        """nothing is returned if the log doesn't exist yet"""
+        from string import letters
+        options = DummyOptions()
+        config = DummyPConfig('foo', '/bin/foo', logfile='/tmp/fooooooo')
+        process = DummyProcess(options, config)
+        supervisord = DummySupervisor({'foo':process})
+        interface = self._makeOne(supervisord)
+        process = supervisord.processes.get('foo')
+        logfile = process.config.logfile
+                
+        data, offset, overflow = interface.tailProcessLog('foo', 
+                                                    offset=0, length=100)
+        self.assertEqual(interface.update_text, 'tailProcessLog')
+        self.assertEqual(overflow, False)
+        self.assertEqual(offset, 0)
+        self.assertEqual(data, '')
+
     def test_readMainLog_unreadable(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)

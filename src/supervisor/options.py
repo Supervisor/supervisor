@@ -478,12 +478,12 @@ class ServerOptions(Options):
                  "", "minprocs=", int, default=200)
         self.add("nocleanup", "supervisord.nocleanup",
                  "k", "nocleanup", flag=1, default=0)
-	self.add("sockchmod", "supervisord.sockchmod", "p:", "socket-mode=",
-		 datatypes.octal_type, default=0700)
-	self.add("sockchown", "supervisord.sockchown", "o:", "socket-owner=",
-		 datatypes.dot_separated_user_group)
-	self.add("environment", "supervisord.environment", "b:", "environment=",
-		 datatypes.dict_of_key_value_pairs)
+        self.add("sockchmod", "supervisord.sockchmod", "p:", "socket-mode=",
+                 datatypes.octal_type, default=0700)
+        self.add("sockchown", "supervisord.sockchown", "o:", "socket-owner=",
+                 datatypes.dot_separated_user_group)
+        self.add("environment", "supervisord.environment", "b:", "environment=",
+                 datatypes.dict_of_key_value_pairs)
         self.pidhistory = {}
 
     def getLogger(self, filename, level, fmt, rotating=False,
@@ -511,7 +511,7 @@ class ServerOptions(Options):
 
         # Additional checking of user option; set uid and gid
         if self.user is not None:
-	    uid = datatypes.name_to_uid(self.user)
+            uid = datatypes.name_to_uid(self.user)
             if uid is None:
                 self.usage("No such user %s" % self.user)
             self.uid = uid
@@ -1356,6 +1356,44 @@ def readFile(filename, offset, length):
         raise ValueError('FAILED')
 
     return data
+
+def tailFile(filename, offset, length):
+    """ 
+    Read length bytes from the file named by filename starting at
+    offset, automatically increasing offset and setting overflow
+    flag if log size has grown beyond (offset + length).  If length
+    bytes are not available, as many bytes as are available are returned.
+    """
+
+    overflow = False
+    try:
+        f = open(filename, 'rb')
+        f.seek(0, 2)
+        sz = f.tell()
+
+        if sz > (offset + length):
+            overflow = True
+            offset   = sz - 1
+
+        if (offset + length) > sz:
+            if (offset > (sz - 1)):
+                length = 0
+            offset = sz - length
+
+        if offset < 0: offset = 0
+        if length < 0: length = 0
+
+        if length == 0:
+            data = ''
+        else:
+            f.seek(offset)
+            data = f.read(length)
+
+        offset = sz
+        return [data, offset, overflow]
+
+    except (os.error, IOError):
+        return ['', offset, False]
 
 def gettags(comment):
     """ Parse documentation strings into JavaDoc-like tokens """

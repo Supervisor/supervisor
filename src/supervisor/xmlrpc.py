@@ -21,6 +21,7 @@ from medusa import producers
 
 from http import NOT_DONE_YET
 from options import readFile
+from options import tailFile
 from options import gettags
 
 RPC_VERSION  = 1.0
@@ -631,7 +632,7 @@ class SupervisorNamespaceRPCInterface:
     def readProcessLog(self, name, offset, length):
         """ Read length bytes from name's log starting at offset
 
-        @param string name The name of the process
+        @param string name        the name of the process
         @param int offset         offset to start reading from.
         @param int length         number of bytes to read from the log.
         @return string result     Bytes of log
@@ -652,6 +653,36 @@ class SupervisorNamespaceRPCInterface:
         except ValueError, inst:
             why = inst.args[0]
             raise RPCError(getattr(Faults, why))
+
+    def tailProcessLog(self, name, offset, length):
+        """
+        Provides a more efficient way to tail logs than readProcessLog().
+        Use readProcessLog() to read chucks and tailProcessLog() to tail.
+        
+        Requests (length) bytes from the (name)'s log, starting at 
+        (offset).  If the total log size is greater than (offset + length), 
+        the overflow flag is set and the (offset) is automatically increased 
+        to position the buffer at the end of the log.  If less than (length) 
+        bytes are available, the maximum number of available bytes will be 
+        returned.  (offset) returned is always the last offset in the log +1.
+
+        @param string name         the name of the process
+        @param int offset          offset to start reading from
+        @param int length          maximum number of bytes to return
+        @return array result       [string bytes, int offset, bool overflow]
+        """
+        self._update('tailProcessLog')
+
+        process = self.supervisord.processes.get(name)
+        if process is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
+        logfile = process.config.logfile
+        
+        if logfile is None or not os.path.exists(logfile):
+            return ['', 0, False]
+
+        return tailFile(logfile, offset, length)
 
     def clearProcessLog(self, name):
         """ Clear the log for name and reopen it
