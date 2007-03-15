@@ -430,6 +430,7 @@ class Subprocess:
 class Supervisor:
     mood = 1 # 1: up, 0: restarting, -1: suicidal
     stopping = False # set after we detect that we are handling a stop request
+    lastdelayreport = 0
 
     def __init__(self, options):
         self.options = options
@@ -515,9 +516,13 @@ class Supervisor:
                 # everything), it's OK to stop or reload
                 delayprocs = self.get_delay_processes()
                 if delayprocs:
-                    names = [ p.config.name for p in delayprocs]
-                    namestr = ', '.join(names)
-                    self.options.logger.info('waiting for %s to die' % namestr)
+                    now = time.time()
+                    if now > (self.lastdelayreport + 3): # every 3 secs
+                        names = [ p.config.name for p in delayprocs]
+                        namestr = ', '.join(names)
+                        self.options.logger.info('waiting for %s to die' %
+                                                 namestr)
+                        self.lastdelayreport = now
                 else:
                     break
 

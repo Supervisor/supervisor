@@ -7,6 +7,12 @@
     socket file, so the process could not be controlled (it and all of
     its subprocesses would need to be killed by hand).
 
+  - When a process was not killable with a "normal" signal at shutdown
+    time, too many "INFO: waiting for x to die" messages would be sent
+    to the log until we ended up killing the process with a SIGKILL.
+    Now a maximum of one every three seconds is sent up until SIGKILL
+    time.  Thanks to Ian Bicking.
+
 2.1b2
 
   - Added new tailProcessLog() command to the XML-RPC API that
