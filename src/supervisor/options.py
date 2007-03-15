@@ -435,6 +435,8 @@ class ServerOptions(Options):
     nodaemon = None
     signal = None
     environment = None
+    httpserver = None
+    unlink_socketfile = True
     AUTOMATIC = []
     TRACE = 5
 
@@ -800,7 +802,10 @@ class ServerOptions(Options):
         try:
             if self.http_port is not None:
                 if self.http_port.family == socket.AF_UNIX:
-                    os.unlink(self.http_port.address)
+                    if self.httpserver is not None:
+                        if self.unlink_socketfile:
+                            socketname = self.http_port.address
+                            os.unlink(socketname)
         except os.error:
             pass
         try:
@@ -831,6 +836,7 @@ class ServerOptions(Options):
                            'configured to use (%s).  Shut this program '
                            'down first before starting supervisord. ' %
                            port)
+            self.unlink_socketfile = False
         except ValueError, why:
             self.usage(why[0])
 
