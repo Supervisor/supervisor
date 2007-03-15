@@ -907,6 +907,14 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
             try:
                 logger.debug('XML-RPC method called: %s()' % method)
                 value = self.call(method, params)
+                # application-specific: instead of we never want to
+                # marshal None (even though we could by saying allow_none=True
+                # in dumps within xmlrpc_marshall), this is meant as
+                # a debugging fixture, see issue 223.
+                assert value is not None, (
+                    'return value from method %r with params %r is None' %
+                    (method, params)
+                    )
                 logger.debug('XML-RPC method %s() returned successfully' %
                              method)
             except RPCError, err:

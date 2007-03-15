@@ -13,6 +13,12 @@
     Now a maximum of one every three seconds is sent up until SIGKILL
     time.  Thanks to Ian Bicking.
 
+  - Add an assertion: we never want to try to marshal None to XML-RPC
+    callers.  Issue 223 in the collector from vgatto indicates that
+    somehow a supervisor XML-RPC method is returning None (which
+    should never happen), but I cannot identify how.  Maybe the
+    assertion will give us more clues if it happens again.
+
 2.1b2
 
   - Added new tailProcessLog() command to the XML-RPC API that
