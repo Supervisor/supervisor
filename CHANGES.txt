@@ -1,3 +1,12 @@
+2.1
+
+  - When supervisord was invoked more than once, and its configuration
+    was set up to use a UNIX domain socket as the HTTP server, the
+    socket file would be erased in error.  The symptom of this was
+    that a subsequent invocation of supervisorctl could not find the
+    socket file, so the process could not be controlled (it and all of
+    its subprocesses would need to be killed by hand).
+
 2.1b2
 
   - Added new tailProcessLog() command to the XML-RPC API that
