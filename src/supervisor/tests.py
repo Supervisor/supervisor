@@ -1684,6 +1684,30 @@ class XMLRPCMarshallingTests(unittest.TestCase):
         data = xmlrpc.xmlrpc_marshal(fault)
         self.assertEqual(data, xmlrpclib.dumps(fault))
 
+class XMLRPCHandlerTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from xmlrpc import supervisor_xmlrpc_handler
+        return supervisor_xmlrpc_handler
+    
+    def _makeOne(self, supervisord):
+        return self._getTargetClass()(supervisord)
+
+    def test_ctor(self):
+        supervisor = DummySupervisor()
+        handler = self._makeOne(supervisor)
+        self.assertEqual(handler.supervisord, supervisor)
+        from xmlrpc import RPCInterface
+        self.assertEqual(handler.rpcinterface.__class__, RPCInterface)
+
+    def test_continue_request(self):
+        supervisor = DummySupervisor()
+        handler = self._makeOne(supervisor)
+        import xmlrpclib
+        data = xmlrpclib.dumps((['a', 'b'], 'supervisor.getInfo'))
+        request = DummyRequest('/what/ever', None, None, None)
+        handler.continue_request(data, request)
+        # XXX this needs to actually be a test
+
 class LogtailHandlerTests(unittest.TestCase):
     def _getTargetClass(self):
         from http import logtail_handler
@@ -2872,6 +2896,7 @@ def test_suite():
     suite.addTest(unittest.makeSuite(SystemNamespaceXMLRPCInterfaceTests))
     suite.addTest(unittest.makeSuite(SubprocessTests))
     suite.addTest(unittest.makeSuite(XMLRPCMarshallingTests))
+    suite.addTest(unittest.makeSuite(XMLRPCHandlerTests))
     suite.addTest(unittest.makeSuite(LogtailHandlerTests))
     suite.addTest(unittest.makeSuite(TailFProducerTests))
     return suite
