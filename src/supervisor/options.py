@@ -1261,6 +1261,7 @@ class ProcessConfig:
 class BasicAuthTransport(xmlrpclib.Transport):
     """ A transport that understands basic auth and UNIX domain socket
     URLs """
+    _use_datetime = 0 # python 2.5 fwd compatibility
     def __init__(self, username=None, password=None, serverurl=None):
         self.username = username
         self.password = password
