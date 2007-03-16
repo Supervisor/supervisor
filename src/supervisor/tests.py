@@ -2522,6 +2522,28 @@ class TailFProducerTests(unittest.TestCase):
         result = producer.more()
         self.assertEqual(result, '==> File truncated <==\n')
 
+class BasicAuthTransportTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from options import BasicAuthTransport
+        return BasicAuthTransport
+
+    def _makeOne(self, username=None, password=None, serverurl=None):
+        klass = self._getTargetClass()
+        return klass(username, password, serverurl)
+
+    def test_ctor(self):
+        instance = self._makeOne('username', 'password', 'serverurl')
+        self.assertEqual(instance.username, 'username')
+        self.assertEqual(instance.password, 'password')
+        self.assertEqual(instance.serverurl, 'serverurl')
+        self.assertEqual(instance.verbose, False)
+
+    def test_works_with_py25(self):
+        instance = self._makeOne('username', 'password', 'serverurl')
+        # the test is just to insure that this method can be called; failure
+        # would be an AttributeError for _use_datetime under Python 2.5
+        parser, unmarshaller = instance.getparser() # this uses _use_datetime
+
 class DummyProcess:
     # Initial state; overridden by instance variables
     pid = 0 # Subprocess pid; 0 when not running
@@ -3024,6 +3046,7 @@ def test_suite():
     suite.addTest(unittest.makeSuite(XMLRPCHandlerTests))
     suite.addTest(unittest.makeSuite(LogtailHandlerTests))
     suite.addTest(unittest.makeSuite(TailFProducerTests))
+    suite.addTest(unittest.makeSuite(BasicAuthTransportTests))
     return suite
 
 if __name__ == '__main__':
