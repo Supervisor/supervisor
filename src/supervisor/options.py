@@ -805,7 +805,10 @@ class ServerOptions(Options):
                     if self.httpserver is not None:
                         if self.unlink_socketfile:
                             socketname = self.http_port.address
-                            os.unlink(socketname)
+                            try:
+                                os.unlink(socketname)
+                            except os.error:
+                                pass
         except os.error:
             pass
         try:

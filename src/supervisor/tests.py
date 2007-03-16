@@ -203,6 +203,80 @@ exitcodes=0,1,127
         result = instance.check_execv_args('/', None, os.stat('/'))
         self.assertEqual(result, "command at '/' is a directory")
 
+    def test_cleanup_afunix_unlink(self):
+        import tempfile
+        fn = tempfile.mktemp()
+        f = open(fn, 'w')
+        f.write('foo')
+        f.close()
+        instance = self._makeOne()
+        import socket
+        class Port:
+            family = socket.AF_UNIX
+            address = fn
+        class Server:
+            pass
+        instance.http_port = Port()
+        instance.httpserver = Server()
+        instance.pidfile = ''
+        instance.cleanup()
+        self.failIf(os.path.exists(fn))
+
+    def test_cleanup_afunix_nounlink(self):
+        import tempfile
+        fn = tempfile.mktemp()
+        try:
+            f = open(fn, 'w')
+            f.write('foo')
+            f.close()
+            instance = self._makeOne()
+            import socket
+            class Port:
+                family = socket.AF_UNIX
+                address = fn
+            class Server:
+                pass
+            instance.http_port = Port()
+            instance.httpserver = Server()
+            instance.pidfile = ''
+            instance.unlink_socketfile = False
+            instance.cleanup()
+            self.failUnless(os.path.exists(fn))
+        finally:
+            try:
+                os.unlink(fn)
+            except os.error:
+                pass
+
+    def test_write_pidfile_ok(self):
+        import tempfile
+        fn = tempfile.mktemp()
+        try:
+            instance = self._makeOne()
+            instance.logger = DummyLogger()
+            instance.pidfile = fn
+            instance.write_pidfile()
+            self.failUnless(os.path.exists(fn))
+            pid = int(open(fn, 'r').read()[:-1])
+            self.assertEqual(pid, os.getpid())
+            msg = instance.logger.data[0]
+            self.failUnless(msg.startswith('supervisord started with pid'))
+        finally:
+            try:
+                os.unlink(fn)
+            except os.error:
+                pass
+
+    def test_write_pidfile_fail(self):
+        import tempfile
+        fn = '/cannot/possibly/exist'
+        instance = self._makeOne()
+        instance.logger = DummyLogger()
+        instance.pidfile = fn
+        instance.write_pidfile()
+        msg = instance.logger.data[0]
+        self.failUnless(msg.startswith('could not write pidfile'))
+
 class TestBase(unittest.TestCase):
     def setUp(self):
         pass
