@@ -19,6 +19,13 @@
     should never happen), but I cannot identify how.  Maybe the
     assertion will give us more clues if it happens again.
 
+  - Supervisor would crash when run under Python 2.5 because the
+    xmlrpclib.Transport class in Python 2.5 changed in a
+    backward-incompatible way.  Thanks to Eric Westra for the bug
+    report and a fix.
+
+  - Tests now pass under Python 2.5.
+
 2.1b2
 
   - Added new tailProcessLog() command to the XML-RPC API that

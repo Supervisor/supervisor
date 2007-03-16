@@ -1474,9 +1474,9 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         self.assertEqual(len(options.written), 1)
-        self.failUnless(options.written[1][0].startswith(
-         "couldn't exec /good/filename: exceptions.RuntimeError, 2: "
-         "file: test.py line:"))
+        msg = options.written[1][0]
+        self.failUnless(msg.startswith("couldn't exec /good/filename:"))
+        self.failUnless("exceptions.RuntimeError" in msg)
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options._exitcode, 127)
 
