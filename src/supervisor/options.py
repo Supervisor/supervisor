@@ -1067,7 +1067,7 @@ class ServerOptions(Options):
     def close_fd(self, fd):
         try:
             os.close(fd)
-        except:
+        except os.error:
             pass
 
     def fork(self):

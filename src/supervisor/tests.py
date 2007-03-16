@@ -277,6 +277,17 @@ exitcodes=0,1,127
         msg = instance.logger.data[0]
         self.failUnless(msg.startswith('could not write pidfile'))
 
+    def test_close_fd(self):
+        instance = self._makeOne()
+        innie, outie = os.pipe()
+        os.read(innie, 0) # we can read it while its open
+        os.write(outie, 'foo') # we can write to it while its open
+        instance.close_fd(innie)
+        self.assertRaises(os.error, os.read, innie, 0)
+        instance.close_fd(outie)
+        self.assertRaises(os.error, os.write, outie, 'foo')
+        
+
 class TestBase(unittest.TestCase):
     def setUp(self):
         pass
