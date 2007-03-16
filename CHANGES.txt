@@ -26,6 +26,9 @@
 
   - Tests now pass under Python 2.5.
 
+  - Better supervisorctl reporting on stop requests that have a FAILED
+    status.
+
 2.1b2
 
   - Added new tailProcessLog() command to the XML-RPC API that
