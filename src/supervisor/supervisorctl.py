@@ -388,7 +388,7 @@ class Controller(cmd.Cmd):
                      "in")
         self._output("  priority order (see config file)")
 
-    def _stopresult(self, code, processname, default=None):
+    def _stopresult(self, code, processname, fault_string=None):
         template = '%s: ERROR (%s)'
         if code == xmlrpc.Faults.BAD_NAME:
             return template % (processname, 'no such process')
@@ -396,7 +396,9 @@ class Controller(cmd.Cmd):
             return template % (processname, 'not running')
         elif code == xmlrpc.Faults.SUCCESS:
             return '%s: stopped' % processname
-        return default
+        elif code == xmlrpc.Faults.FAILED:
+            return fault_string
+        return None
 
     def do_stop(self, arg):
         if not self._upcheck():
@@ -415,7 +417,8 @@ class Controller(cmd.Cmd):
             for result in results:
                 name = result['name']
                 code = result['status']
-                result = self._stopresult(code, name)
+                fault_string = result['description']
+                result = self._stopresult(code, name, fault_string)
                 if result is None:
                     # assertion
                     raise ValueError('Unknown result code %s for %s' %
@@ -429,7 +432,8 @@ class Controller(cmd.Cmd):
                 try:
                     result = supervisor.stopProcess(processname)
                 except xmlrpclib.Fault, e:
-                    error = self._stopresult(e.faultCode, processname)
+                    error = self._stopresult(e.faultCode, processname,
+                                             e.faultString)
                     if error is not None:
                         self._output(error)
                     else:

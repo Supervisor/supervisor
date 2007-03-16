@@ -437,7 +437,7 @@ class SupervisorNamespaceRPCInterface:
             if not stopped:
                 msg = process.stop()
                 if msg is not None:
-                    raise RPCError(Faults.FAILED, name)
+                    raise RPCError(Faults.FAILED, msg)
                 stopped.append(1)
                 return NOT_DONE_YET
             

@@ -2337,6 +2337,14 @@ baz            STOPPED    baz description
         self.assertEqual(controller.stdout.getvalue(),
                          'NOT_RUNNING: ERROR (not running)\n')
 
+    def test_stop_failed(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_stop('FAILED')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(), 'FAILED\n')
+
     def test_stop_one_success(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
@@ -2959,6 +2967,9 @@ class DummySupervisorRPCNamespace:
             raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
         if name == 'NOT_RUNNING':
             raise Fault(xmlrpc.Faults.NOT_RUNNING, 'NOT_RUNNING')
+        if name == 'FAILED':
+            raise Fault(xmlrpc.Faults.FAILED, 'FAILED')
+        
         return True
     
     def stopAllProcesses(self):
