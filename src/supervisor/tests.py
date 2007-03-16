@@ -1699,14 +1699,63 @@ class XMLRPCHandlerTests(unittest.TestCase):
         from xmlrpc import RPCInterface
         self.assertEqual(handler.rpcinterface.__class__, RPCInterface)
 
-    def test_continue_request(self):
+    def test_continue_request_nosuchmethod(self):
         supervisor = DummySupervisor()
         handler = self._makeOne(supervisor)
+        handler.rpcinterface = DummyRPCServer()
         import xmlrpclib
-        data = xmlrpclib.dumps((['a', 'b'], 'supervisor.getInfo'))
+        data = xmlrpclib.dumps(('a', 'b'), 'supervisor.noSuchMethod')
         request = DummyRequest('/what/ever', None, None, None)
         handler.continue_request(data, request)
-        # XXX this needs to actually be a test
+        logdata = supervisor.options.logger.data
+        self.assertEqual(len(logdata), 2)
+        self.assertEqual(logdata[0],
+                         u'XML-RPC method called: supervisor.noSuchMethod()')
+        self.assertEqual(logdata[1],
+           (u'XML-RPC method supervisor.noSuchMethod() returned fault: '
+            '[1] UNKNOWN_METHOD'))
+        self.assertEqual(len(request.producers), 1)
+        xml_response = request.producers[0]
+        self.assertRaises(xmlrpclib.Fault, xmlrpclib.loads, xml_response)
+
+    def test_continue_request_methodsuccess(self):
+        supervisor = DummySupervisor()
+        handler = self._makeOne(supervisor)
+        handler.rpcinterface = DummyRPCServer()
+        import xmlrpclib
+        data = xmlrpclib.dumps((), 'supervisor.getVersion')
+        request = DummyRequest('/what/ever', None, None, None)
+        handler.continue_request(data, request)
+        logdata = supervisor.options.logger.data
+        self.assertEqual(len(logdata), 2)
+        self.assertEqual(logdata[0],
+               u'XML-RPC method called: supervisor.getVersion()')
+        self.assertEqual(logdata[1],
+            u'XML-RPC method supervisor.getVersion() returned successfully')
+        self.assertEqual(len(request.producers), 1)
+        xml_response = request.producers[0]
+        response = xmlrpclib.loads(xml_response)
+        self.assertEqual(response[0][0], '1.0')
+        self.assertEqual(request._done, True)
+        self.assertEqual(request.headers['Content-Type'], 'text/xml')
+        self.assertEqual(request.headers['Content-Length'], len(xml_response))
+
+    def test_continue_request_500(self):
+        supervisor = DummySupervisor()
+        handler = self._makeOne(supervisor)
+        handler.rpcinterface = DummyRPCServer()
+        import xmlrpclib
+        data = xmlrpclib.dumps((), 'supervisor.raiseError')
+        request = DummyRequest('/what/ever', None, None, None)
+        handler.continue_request(data, request)
+        logdata = supervisor.options.logger.data
+        self.assertEqual(len(logdata), 2)
+        self.assertEqual(logdata[0],
+               u'XML-RPC method called: supervisor.raiseError()')
+        self.failUnless(logdata[1].startswith('Traceback'))
+        self.failUnless(logdata[1].endswith('ValueError: error\n'))
+        self.assertEqual(len(request.producers), 0)
+        self.assertEqual(request._error, 500)
 
 class LogtailHandlerTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -2511,7 +2560,7 @@ class DummyLogger:
     def info(self, *args):
         for arg in args:
             self.data.append(arg)
-    log = debug = critical = trace = info
+    warn = log = debug = critical = trace = info
     def reopen(self):
         self.reopened = True
     def close(self):
@@ -2840,7 +2889,9 @@ class DummySupervisorRPCNamespace:
             {'name':'failed','status':xmlrpc.Faults.FAILED,
              'description':'FAILED'}
             ]
-        
+
+    def raiseError(self):
+        raise ValueError('error')
         
 
 class DummySystemRPCNamespace:
