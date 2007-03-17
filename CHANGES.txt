@@ -7,6 +7,11 @@
     socket file, so the process could not be controlled (it and all of
     its subprocesses would need to be killed by hand).
 
+  - Close subprocess file descriptors properly when a subprocess exits
+    or otherwise dies.  This should result in fewer "too many open
+    files to spawn foo" messages when supervisor is left up for long
+    periods of time.
+
   - When a process was not killable with a "normal" signal at shutdown
     time, too many "INFO: waiting for x to die" messages would be sent
     to the log until we ended up killing the process with a SIGKILL.
@@ -28,6 +33,9 @@
 
   - Better supervisorctl reporting on stop requests that have a FAILED
     status.
+
+  - Removed duplicated code (readLog/readMainLog), thanks to Mike
+    Naberezny.
 
 2.1b2
 

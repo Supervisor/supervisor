@@ -985,51 +985,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(offset, 0)
         self.assertEqual(data, '')
 
-    def test_readMainLog_unreadable(self):
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-        self._assertRPCError(xmlrpc.Faults.NO_FILE,
-                             interface.readMainLog, offset=0, length=1)
-
-    def test_readMainLog_badargs(self):
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-
-        try:
-            logfile = supervisord.options.logfile
-            f = open(logfile, 'w+')
-            f.write('x' * 2048)
-            f.close()
-            self._assertRPCError(xmlrpc.Faults.BAD_ARGUMENTS,
-                                 interface.readMainLog,
-                                 offset=-1, length=1)
-            self._assertRPCError(xmlrpc.Faults.BAD_ARGUMENTS,
-                                 interface.readMainLog,
-                                 offset=-1, length=-1)
-        finally:
-            os.remove(logfile)
-
-    def test_readMainLog(self):
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-        logfile = supervisord.options.logfile
-        try:
-            f = open(logfile, 'w+')
-            f.write('x' * 2048)
-            f.write('y' * 2048)
-            f.close()
-            data = interface.readMainLog(offset=0, length=0)
-            self.assertEqual(interface.update_text, 'readMainLog')
-            self.assertEqual(data, ('x' * 2048) + ('y' * 2048))
-            data = interface.readMainLog(offset=2048, length=0)
-            self.assertEqual(data, 'y' * 2048)
-            data = interface.readMainLog(offset=0, length=2048)
-            self.assertEqual(data, 'x' * 2048)
-            data = interface.readMainLog(offset=-4, length=0)
-            self.assertEqual(data, 'y' * 4)
-        finally:
-            os.remove(logfile)
-
     def test_clearProcessLog_bad_name(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
@@ -1475,7 +1430,8 @@ class SubprocessTests(unittest.TestCase):
                          "Too many processes in process table to spawn 'good'")
         self.assertEqual(options.logger.data[0],
              "spawnerr: Too many processes in process table to spawn 'good'")
-        self.assertEqual(len(options.pipes_closed), 6)
+        self.assertEqual(len(options.parent_pipes_closed), 6)
+        self.assertEqual(len(options.child_pipes_closed), 6)
         self.failUnless(instance.delay)
         self.failUnless(instance.backoff)
 
@@ -1489,7 +1445,8 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
         self.assertEqual(options.logger.data[0],
                          "spawnerr: unknown error: EPERM")
-        self.assertEqual(len(options.pipes_closed), 6)
+        self.assertEqual(len(options.parent_pipes_closed), 6)
+        self.assertEqual(len(options.child_pipes_closed), 6)
         self.failUnless(instance.delay)
         self.failUnless(instance.backoff)
 
@@ -1500,7 +1457,8 @@ class SubprocessTests(unittest.TestCase):
         instance = self._makeOne(options, config)
         result = instance.spawn()
         self.assertEqual(result, None)
-        self.assertEqual(options.pipes_closed, None)
+        self.assertEqual(options.parent_pipes_closed, None)
+        self.assertEqual(options.child_pipes_closed, None)
         self.assertEqual(options.pgrp_set, True)
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
@@ -1518,7 +1476,8 @@ class SubprocessTests(unittest.TestCase):
         instance = self._makeOne(options, config)
         result = instance.spawn()
         self.assertEqual(result, None)
-        self.assertEqual(options.pipes_closed, None)
+        self.assertEqual(options.parent_pipes_closed, None)
+        self.assertEqual(options.child_pipes_closed, None)
         self.assertEqual(options.pgrp_set, True)
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
@@ -1537,7 +1496,8 @@ class SubprocessTests(unittest.TestCase):
         instance = self._makeOne(options, config)
         result = instance.spawn()
         self.assertEqual(result, None)
-        self.assertEqual(options.pipes_closed, None)
+        self.assertEqual(options.parent_pipes_closed, None)
+        self.assertEqual(options.child_pipes_closed, None)
         self.assertEqual(options.pgrp_set, True)
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
@@ -1554,7 +1514,8 @@ class SubprocessTests(unittest.TestCase):
         instance = self._makeOne(options, config)
         result = instance.spawn()
         self.assertEqual(result, None)
-        self.assertEqual(options.pipes_closed, None)
+        self.assertEqual(options.parent_pipes_closed, None)
+        self.assertEqual(options.child_pipes_closed, None)
         self.assertEqual(options.pgrp_set, True)
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
@@ -1572,8 +1533,8 @@ class SubprocessTests(unittest.TestCase):
         instance = self._makeOne(options, config)
         result = instance.spawn()
         self.assertEqual(result, 10)
-        self.assertEqual(options.pipes_closed, None)
-        self.assertEqual(len(options.fds_closed), 3)
+        self.assertEqual(options.parent_pipes_closed, None)
+        self.assertEqual(len(options.child_pipes_closed), 6)
         self.assertEqual(options.logger.data[0], "spawned: 'good' with pid 10")
         self.assertEqual(instance.spawnerr, None)
         self.failUnless(instance.delay)
@@ -1673,10 +1634,12 @@ class SubprocessTests(unittest.TestCase):
         instance.waitstatus = (123, 1) # pid, waitstatus
         instance.options.pidhistory[123] = instance
         instance.killing = 1
-        instance.pipes = {'stdout':'','stderr':''}
+        pipes = {'stdout':'','stderr':''}
+        instance.pipes = pipes
         instance.finish(123, 1)
         self.assertEqual(instance.killing, 0)
         self.assertEqual(instance.pid, 0)
+        self.assertEqual(options.parent_pipes_closed, pipes)
         self.assertEqual(instance.pipes, {})
         self.assertEqual(options.logger.data[0], 'stopped: notthere '
                          '(terminated by SIGHUP)')
@@ -2722,7 +2685,8 @@ class DummyOptions:
         self.waitpid_return = None, None
         self.kills = {}
         self.signal = None
-        self.pipes_closed = None
+        self.parent_pipes_closed = None
+        self.child_pipes_closed = None
         self.forkpid = 0
         self.pgrp_set = None
         self.duped = {}
@@ -2821,8 +2785,11 @@ class DummyOptions:
     def close_fd(self, fd):
         self.fds_closed.append(fd)
 
-    def close_pipes(self, pipes):
-        self.pipes_closed = pipes
+    def close_parent_pipes(self, pipes):
+        self.parent_pipes_closed = pipes
+
+    def close_child_pipes(self, pipes):
+        self.child_pipes_closed = pipes
 
     def setpgrp(self):
         self.pgrp_set = True

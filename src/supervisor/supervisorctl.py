@@ -259,7 +259,7 @@ class Controller(cmd.Cmd):
         supervisor = self._get_supervisor()
 
         try:
-            output = supervisor.readMainLog(-bytes, 0)
+            output = supervisor.readLog(-bytes, 0)
         except xmlrpclib.Fault, e:
             template = '%s: ERROR (%s)'
             if e.faultCode == xmlrpc.Faults.NO_FILE:

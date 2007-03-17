@@ -888,7 +888,7 @@ class ServerOptions(Options):
         for x in range(start, self.minfds):
             try:
                 os.close(x)
-            except:
+            except os.error:
                 pass
 
     def kill(self, pid, signal):
@@ -1057,12 +1057,17 @@ class ServerOptions(Options):
                 fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | os.O_NDELAY)
             return pipes
         except OSError:
-            self.close_pipes(pipes)
-            raise
+            for fd in pipes.values():
+                self.close_fd(fd)
+            subprocess.pipes = {}
 
-    def close_pipes(self, pipes):
-        for fd in pipes.values():
-            self.close_fd(fd)
+    def close_parent_pipes(self, pipes):
+        for fdname in ('stdin', 'stdout', 'stderr'):
+            self.close_fd(pipes[fdname])
+
+    def close_child_pipes(self, pipes):
+        for fdname in ('child_stdin', 'child_stdout', 'child_stderr'):
+            self.close_fd(pipes[fdname])
 
     def close_fd(self, fd):
         try:

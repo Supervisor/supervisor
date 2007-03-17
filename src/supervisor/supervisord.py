@@ -246,14 +246,14 @@ class Subprocess:
                 msg = 'unknown error: %s' % errno.errorcode.get(code, code)
 
             self.record_spawnerr(msg)
-            self.options.close_pipes(self.pipes)
+            self.options.close_parent_pipes(self.pipes)
+            self.options.close_child_pipes(self.pipes)
             return
 
         if pid != 0:
             # Parent
             self.pid = pid
-            for fdname in ('child_stdin', 'child_stdout', 'child_stderr'):
-                self.options.close_fd(self.pipes[fdname])
+            self.options.close_child_pipes(self.pipes)
             self.options.logger.info('spawned: %r with pid %s' % (pname, pid))
             self.spawnerr = None
             # we use self.delay here as a mechanism to indicate that we're in
@@ -388,6 +388,7 @@ class Subprocess:
         self.options.logger.info(msg)
 
         self.pid = 0
+        self.options.close_parent_pipes(self.pipes)
         self.pipes = {}
 
     def set_uid(self):
@@ -490,23 +491,6 @@ class Supervisor:
 
             r, w, x = [], [], []
 
-            process_map = {}
-
-            # process output fds
-            for proc in self.processes.values():
-                proc.log_output()
-                drains = proc.get_pipe_drains()
-                for fd, drain in drains:
-                    r.append(fd)
-                    process_map[fd] = drain
-
-            # medusa i/o fds
-            for fd, dispatcher in socket_map.items():
-                if dispatcher.readable():
-                    r.append(fd)
-                if dispatcher.writable():
-                    w.append(fd)
-
             if self.mood < 1:
                 if not self.stopping:
                     self.stop_all()
@@ -526,15 +510,33 @@ class Supervisor:
                 else:
                     break
 
+            process_map = {}
+
+            # process output fds
+            for proc in self.processes.values():
+                proc.log_output()
+                drains = proc.get_pipe_drains()
+                for fd, drain in drains:
+                    r.append(fd)
+                    process_map[fd] = drain
+
+            # medusa i/o fds
+            for fd, dispatcher in socket_map.items():
+                if dispatcher.readable():
+                    r.append(fd)
+                if dispatcher.writable():
+                    w.append(fd)
+
             try:
                 r, w, x = select.select(r, w, x, timeout)
             except select.error, err:
+                r = w = x = []
                 if err[0] == errno.EINTR:
                     self.options.logger.log(self.options.TRACE,
                                             'EINTR encountered in select')
+                    
                 else:
                     raise
-                r = w = x = []
 
             for fd in r:
                 if process_map.has_key(fd):
@@ -692,6 +694,9 @@ class Supervisor:
                 self.options.logger.critical(
                     'received %s indicating restart request' % signame(sig))
                 self.mood = 0
+            elif sig == signal.SIGCHLD:
+                self.options.logger.info(
+                    'received %s indicating a child quit' % signame(sig))
             elif sig == signal.SIGUSR2:
                 self.options.logger.info(
                     'received %s indicating log reopen request' % signame(sig))
