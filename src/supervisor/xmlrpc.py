@@ -214,24 +214,26 @@ class SupervisorNamespaceRPCInterface:
         return data
 
     def readLog(self, offset, length):
-        """ Read length bytes from the main log starting at offset.
+        """ Read length bytes from the main log starting at offset
 
-        @param int offset offset to start reading from.
-        @param int length number of bytes to read from the log.
-        @return struct data a struct with keys 'log' (value of 'log' is string).
+        @param int offset         offset to start reading from.
+        @param int length         number of bytes to read from the log.
+        @return string result     Bytes of log
         """
         self._update('readLog')
 
         logfile = self.supervisord.options.logfile
 
         if logfile is None or not os.path.exists(logfile):
-            raise RPCError(Faults.NO_FILE)
+            raise RPCError(Faults.NO_FILE, logfile)
 
         try:
             return readFile(logfile, offset, length)
         except ValueError, inst:
             why = inst.args[0]
             raise RPCError(getattr(Faults, why))
+
+    readMainLog = readLog # b/w compatibility with releases before 2.1
 
     def clearLog(self):
         """ Clear the main log.
@@ -608,26 +610,6 @@ class SupervisorNamespaceRPCInterface:
         for processname in processnames:
             output.append(self.getProcessInfo(processname))
         return output
-
-    def readMainLog(self, offset, length):
-        """ Read length bytes from the main log starting at offset
-
-        @param int offset         offset to start reading from.
-        @param int length         number of bytes to read from the log.
-        @return string result     Bytes of log
-        """
-        self._update('readMainLog')
-
-        logfile = self.supervisord.options.logfile
-
-        if logfile is None or not os.path.exists(logfile):
-            raise RPCError(Faults.NO_FILE, logfile)
-
-        try:
-            return readFile(logfile, offset, length)
-        except ValueError, inst:
-            why = inst.args[0]
-            raise RPCError(getattr(Faults, why))
 
     def readProcessLog(self, name, offset, length):
         """ Read length bytes from name's log starting at offset
