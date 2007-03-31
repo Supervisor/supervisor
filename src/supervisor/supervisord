@@ -1,4 +1,7 @@
 #!/usr/bin/python
-from xsupervisor.supervisord import main
+from supervisor.supervisord import main
+
+# __doc__ required to make supervisord -h work
+from supervisor.supervisord import __doc__
 main()
 

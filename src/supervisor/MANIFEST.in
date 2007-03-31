@@ -1,0 +1,3 @@
+include *.txt
+include *.conf
+include ui/*.css ui/*.gif ui/*.html

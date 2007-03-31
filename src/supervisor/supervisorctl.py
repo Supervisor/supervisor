@@ -27,7 +27,7 @@ Options:
 
 action [arguments] -- see below
 
-Actions are commands like "tailf" or "stop".  If -i is specified or no action is
+Actions are commands like "tail" or "stop".  If -i is specified or no action is
 specified on the command line, a"shell" interpreting actions typed
 interactively is started.  Use the action "help" to find out about available
 actions.
@@ -38,26 +38,27 @@ import cmd
 import sys
 import time
 import getpass
-import supervisord
-import rpc
-from options import ClientOptions
 import xmlrpclib
 import urllib2
-import httplib
 import fcntl
 import socket
-import pprint
 import asyncore
 import errno
 import time
 import datetime
+import urlparse
 
-class ZDCmd(cmd.Cmd):
+from options import ClientOptions
+from supervisord import ProcessStates
+from supervisord import getProcessStateDescription
+import xmlrpc
 
-    def __init__(self, options):
+class Controller(cmd.Cmd):
+
+    def __init__(self, options, completekey='tab', stdin=None, stdout=None):
         self.options = options
         self.prompt = self.options.prompt + '> '
-        cmd.Cmd.__init__(self)
+        cmd.Cmd.__init__(self, completekey, stdin, stdout)
 
     def emptyline(self):
         # We don't want a blank line to repeat the last command.
@@ -66,6 +67,7 @@ class ZDCmd(cmd.Cmd):
     def onecmd(self, line):
         """ Override the onecmd method to catch and print all exceptions
         """
+        origline = line
         cmd, arg, line = self.parseline(line)
         if not line:
             return self.emptyline()
@@ -80,7 +82,24 @@ class ZDCmd(cmd.Cmd):
             except AttributeError:
                 return self.default(line)
             try:
-                return func(arg)
+                try:
+                    return func(arg)
+                except xmlrpclib.ProtocolError, e:
+                    if e.errcode == 401:
+                        if self.options.interactive:
+                            self._output('Server requires authentication')
+                            username = raw_input('Username:')
+                            password = getpass.getpass(prompt='Password:')
+                            self._output('')
+                            self.options.username = username
+                            self.options.password = password
+                            return self.onecmd(origline)
+                        else:
+                            self.options.usage('Server requires authentication')
+                    else:
+                        raise
+            except SystemExit:
+                raise
             except Exception, e:
                 (file, fun, line), t, v, tbinfo = asyncore.compact_traceback()
                 error = 'error: %s, %s: file: %s line: %s' % (t, v, file, line)
@@ -88,16 +107,10 @@ class ZDCmd(cmd.Cmd):
 
     def _output(self, stuff):
         if stuff is not None:
-            print stuff
-
-    def _getServerProxy(self):
-        return xmlrpclib.ServerProxy(
-            self.options.serverurl,
-            transport = BasicAuthTransport(self.options.username,
-                                           self.options.password))
+            self.stdout.write(stuff + '\n')
 
     def _makeNamespace(self, namespace):
-        proxy = self._getServerProxy()
+        proxy = self.options.getServerProxy()
         namespace = getattr(proxy, namespace)
         return namespace
 
@@ -117,21 +130,22 @@ class ZDCmd(cmd.Cmd):
         return True
 
     def help_help(self):
-        print "help\t\tPrint a list of available actions."
-        print "help <action>\tPrint help for <action>."
+        self._output("help\t\tPrint a list of available actions.")
+        self._output("help <action>\tPrint help for <action>.")
 
     def do_EOF(self, arg):
-        print
+        self._output('')
         return 1
 
     def help_EOF(self):
-        print "To quit, type ^D or use the quit command."
+        self._output("To quit, type ^D or use the quit command.")
 
-    def do_tailf(self, arg):
+    def _tailf(self, path):
         if not self._upcheck():
             return
 
-        url = self.options.serverurl + '/logtail/' + arg
+        self._output('==> Press Ctrl-C to exit <==')
+
         username = self.options.username
         password = self.options.password
         try:
@@ -144,56 +158,136 @@ class ZDCmd(cmd.Cmd):
             import http_client
             listener = http_client.Listener()
             handler = http_client.HTTPHandler(listener, username, password)
-            handler.get(url)
+            handler.get(self.options.serverurl, path)
             asyncore.loop()
         except KeyboardInterrupt:
+            handler.close()
+            self._output('')
             return
 
-    def help_tailf(self):
-        print ("tailf <processname>\tContinuous tail of named process stdout, "
-               "Ctrl-C to exit.")
+    def do_tail(self, arg):
+        if not self._upcheck():
+            return
+        
+        args = arg.strip().split()
+
+        if len(args) < 1:
+            self._output('Error: too few arguments')
+            self.help_tail()
+            return
+
+        elif len(args) > 2:
+            self._output('Error: too many arguments')
+            self.help_tail()
+            return
+
+        elif len(args) == 2:
+            if args[0].startswith('-'):
+                what = args[0][1:]
+                if what == 'f':
+                    path = '/logtail/' + args[1]
+                    return self._tailf(path)
+                try:
+                    what = int(what)
+                except:
+                    self._output('Error: bad argument %s' % args[0])
+                    return
+                else:
+                    bytes = what
+            else:
+                self._output('Error: bad argument %s' % args[0])
+                
+        else:
+            bytes = 1600
+
+        processname = args[-1]
+        
+        supervisor = self._get_supervisor()
+
+        try:
+            output = supervisor.readProcessLog(processname, -bytes, 0)
+        except xmlrpclib.Fault, e:
+            template = '%s: ERROR (%s)'
+            if e.faultCode == xmlrpc.Faults.NO_FILE:
+                self._output(template % (processname, 'no log file'))
+            elif e.faultCode == xmlrpc.Faults.FAILED:
+                self._output(template % (processname,
+                                         'unknown error reading log'))
+            elif e.faultCode == xmlrpc.Faults.BAD_NAME:
+                self._output(template % (processname, 'no such process name'))
+        else:
+            self._output(output)
+
+    def help_tail(self):
+        self._output(
+            "tail -f <processname>\tContinuous tail of named process stdout,\n"
+            "\t\t\tCtrl-C to exit.\n"
+            "tail -100 <processname>\tlast 100 *bytes* of process log file\n"
+            "tail <processname>\tlast 1600 *bytes* of process log file\n"
+            )
+
+    def do_maintail(self, arg):
+        if not self._upcheck():
+            return
+        
+        args = arg.strip().split()
+
+        if len(args) > 1:
+            self._output('Error: too many arguments')
+            self.help_maintail()
+            return
+
+        elif len(args) == 1:
+            if args[0].startswith('-'):
+                what = args[0][1:]
+                if what == 'f':
+                    path = '/mainlogtail'
+                    return self._tailf(path)
+                try:
+                    what = int(what)
+                except:
+                    self._output('Error: bad argument %s' % args[0])
+                    return
+                else:
+                    bytes = what
+            else:
+                self._output('Error: bad argument %s' % args[0])
+                
+        else:
+            bytes = 1600
+
+        supervisor = self._get_supervisor()
+
+        try:
+            output = supervisor.readLog(-bytes, 0)
+        except xmlrpclib.Fault, e:
+            template = '%s: ERROR (%s)'
+            if e.faultCode == xmlrpc.Faults.NO_FILE:
+                self._output(template % (processname, 'no log file'))
+            elif e.faultCode == xmlrpc.Faults.FAILED:
+                self._output(template % (processname,
+                                         'unknown error reading log'))
+        else:
+            self._output(output)
+
+    def help_maintail(self):
+        self._output(
+            "maintail -f \tContinuous tail of supervisor main log file,\n"
+            "\t\t\tCtrl-C to exit.\n"
+            "maintail -100\tlast 100 *bytes* of supervisord main log file\n"
+            "maintail\tlast 1600 *bytes* of supervisor main log file\n"
+            )
 
     def do_quit(self, arg):
         sys.exit(0)
 
     def help_quit(self):
-        print "quit\tExit the supervisor shell."
+        self._output("quit\tExit the supervisor shell.")
 
-    def _interpretProcessInfo(self, info):
-        result = {}
-        result['name'] = info['name']
-        pid = info['pid']
+    do_exit = do_quit
 
-        state = info['state']
-
-        if state == supervisord.ProcessStates.RUNNING:
-            start = info['start']
-            now = info['now']
-            start_dt = datetime.datetime(*time.gmtime(start)[:6])
-            now_dt = datetime.datetime(*time.gmtime(now)[:6])
-            uptime = now_dt - start_dt
-            desc = 'pid %s, uptime %s' % (info['pid'], uptime)
-
-        elif state == supervisord.ProcessStates.ERROR:
-            desc = info['spawnerr']
-            if not desc:
-                desc = 'unknown error (try "tailf %s")' % info['name']
-
-        elif state in (supervisord.ProcessStates.STOPPED,
-                       supervisord.ProcessStates.KILLED,
-                       supervisord.ProcessStates.EXITED):
-            stop = info['stop']
-            stop_dt = datetime.datetime(*time.gmtime(stop)[:7])
-            desc = stop_dt.strftime('%b %d %I:%M %p')
-            desc += ' (%s)' % info['reportstatusmsg']
-            
-
-        else:
-            desc = ''
-
-        result['desc'] = desc
-        result['state'] = supervisord.getProcessStateDescription(state)
-        return result
+    def help_exit(self):
+        self._output("exit\tExit the supervisor shell.")
 
     def do_status(self, arg):
         if not self._upcheck():
@@ -206,18 +300,43 @@ class ZDCmd(cmd.Cmd):
 
         if processnames:
             for processname in processnames:
-                info = supervisor.getProcessInfo(processname)
-                newinfo = self._interpretProcessInfo(info)
+                try:
+                    info = supervisor.getProcessInfo(processname)
+                except xmlrpclib.Fault, e:
+                    if e.faultCode == xmlrpc.Faults.BAD_NAME:
+                        self._output('No such process %s' % processname)
+                    else:
+                        raise
+                    continue
+                newinfo = {'name':info['name'], 'state':info['statename'],
+                           'desc':info['description']}
                 self._output(template % newinfo)
         else:
             for info in supervisor.getAllProcessInfo():
-                newinfo = self._interpretProcessInfo(info)
+                newinfo = {'name':info['name'], 'state':info['statename'],
+                           'desc':info['description']}
                 self._output(template % newinfo)
 
     def help_status(self):
-        print "status\t\t\tGet all process status info."
-        print "status <name>\t\tGet status on a single process by name."
-        print "status <name> <name>\tGet status on multiple named processes."
+        self._output("status\t\t\tGet all process status info.")
+        self._output("status <name>\t\tGet status on a single process by name.")
+        self._output("status <name> <name>\tGet status on multiple named "
+                     "processes.")
+
+    def _startresult(self, code, processname, default=None):
+        template = '%s: ERROR (%s)'
+        if code == xmlrpc.Faults.BAD_NAME:
+            return template % (processname,'no such process')
+        elif code == xmlrpc.Faults.ALREADY_STARTED:
+            return template % (processname,'already started')
+        elif code == xmlrpc.Faults.SPAWN_ERROR:
+            return template % (processname, 'spawn error')
+        elif code == xmlrpc.Faults.ABNORMAL_TERMINATION:
+            return template % (processname, 'abnormal termination')
+        elif code == xmlrpc.Faults.SUCCESS:
+            return '%s: started' % processname
+        
+        return default
 
     def do_start(self, arg):
         if not self._upcheck():
@@ -225,31 +344,61 @@ class ZDCmd(cmd.Cmd):
 
         processnames = arg.strip().split()
         supervisor = self._get_supervisor()
+
         if not processnames:
-            print "You must provide a process name (see 'help start')"
+            self._output("Error: start requires a process name")
+            self.help_start()
             return
+
         if 'all' in processnames:
-            self._output(supervisor.startAllProcesses())
+            results = supervisor.startAllProcesses()
+            for result in results:
+                name = result['name']
+                code = result['status']
+                result = self._startresult(code, name)
+                if result is None:
+                    # assertion
+                    raise ValueError('Unknown result code %s for %s' %
+                                     (code, name))
+                else:
+                    self._output(result)
+                
         else:
             for processname in processnames:
                 try:
-                    self._output(supervisor.startProcess(processname))
+                    result = supervisor.startProcess(processname)
                 except xmlrpclib.Fault, e:
-                    template = 'Cannot start %s (%s)'
-                    if e.faultCode == rpc.FAULTS['START_BAD_NAME']:
-                        self._output(template % (processname,'no such process'))
-                    elif e.faultCode == rpc.FAULTS['START_ALREADY_STARTED']:
-                        self._output(template % (processname,'already started'))
+                    error = self._startresult(e.faultCode, processname)
+                    if error is not None:
+                        self._output(error)
                     else:
                         raise
+                else:
+                    if result == True:
+                        self._output('%s: started' % processname)
+                    else:
+                        raise # assertion
 
     def help_start(self):
-        print "start <processname>\t\t\tStart a process."
-        print "start <processname> <processname>\tStart multiple processes"
-        print "start all\t\t\t\tStart all processes"
-        print "  When multiple processes are started, they are started in"
-        print "  priority order (see config file)"
-        # XXX the above is not true yet
+        self._output("start <processname>\t\t\tStart a process.")
+        self._output("start <processname> <processname>\tStart multiple "
+                     "processes")
+        self._output("start all\t\t\t\tStart all processes")
+        self._output("  When all processes are started, they are started "
+                     "in")
+        self._output("  priority order (see config file)")
+
+    def _stopresult(self, code, processname, fault_string=None):
+        template = '%s: ERROR (%s)'
+        if code == xmlrpc.Faults.BAD_NAME:
+            return template % (processname, 'no such process')
+        elif code == xmlrpc.Faults.NOT_RUNNING:
+            return template % (processname, 'not running')
+        elif code == xmlrpc.Faults.SUCCESS:
+            return '%s: stopped' % processname
+        elif code == xmlrpc.Faults.FAILED:
+            return fault_string
+        return None
 
     def do_stop(self, arg):
         if not self._upcheck():
@@ -257,86 +406,203 @@ class ZDCmd(cmd.Cmd):
 
         processnames = arg.strip().split()
         supervisor = self._get_supervisor()
-        if processnames:
+
+        if not processnames:
+            self._output('Error: stop requires a process name')
+            self.help_stop()
+            return
+
+        if 'all' in processnames:
+            results = supervisor.stopAllProcesses()
+            for result in results:
+                name = result['name']
+                code = result['status']
+                fault_string = result['description']
+                result = self._stopresult(code, name, fault_string)
+                if result is None:
+                    # assertion
+                    raise ValueError('Unknown result code %s for %s' %
+                                     (code, name))
+                else:
+                    self._output(result)
+
+        else:
+
             for processname in processnames:
-                self._output(supervisor.stopProcess(processname))
+                try:
+                    result = supervisor.stopProcess(processname)
+                except xmlrpclib.Fault, e:
+                    error = self._stopresult(e.faultCode, processname,
+                                             e.faultString)
+                    if error is not None:
+                        self._output(error)
+                    else:
+                        raise
+                else:
+                    if result == True:
+                        self._output('%s: stopped' % processname)
+                    else:
+                        raise # assertion
 
     def help_stop(self):
-        print "stop <processname>\t\t\tStop a process."
-        print "stop <processname> <processname>\tStop multiple processes"
-        print "stop all\t\t\t\tStop all processes"
-        print "  When multiple processes are stopped, they are stopped in"
-        print "  reverse priority order (see config file)"
-        # XXX the above is not true yet
+        self._output("stop <processname>\t\t\tStop a process.")
+        self._output("stop <processname> <processname>\tStop multiple "
+                     "processes")
+        self._output("stop all\t\t\t\tStop all processes")
+        self._output("  When all processes are stopped, they are stopped "
+                     "in")
+        self._output("  reverse priority order (see config file)")
 
     def do_restart(self, arg):
         if not self._upcheck():
             return
 
         processnames = arg.strip().split()
-        supervisor = self._get_supervisor()
-        if processnames:
-            for processname in processnames:
-                self._output(supervisor.stopProcess(processname))
-                self._output(supervisor.startProcess(processname))
+
+        if not processnames:
+            self._output('Error: restart requires a process name')
+            self.help_restart()
+            return
+
+        self.do_stop(arg)
+        self.do_start(arg)
 
     def help_restart(self):
-        print "restart <processname>\t\t\tRestart a process."
-        print "restart <processname> <processname>\tRestart multiple processes"
-        print "restart all\t\t\t\tRestart all processes"
-        print "  When multiple processes are restarted, they are started in"
-        print "  priority order (see config file)"
-        # XXX the above is not true yet
+        self._output("restart <processname>\t\t\tRestart a process.")
+        self._output("restart <processname> <processname>\tRestart multiple "
+                     "processes")
+        self._output("restart all\t\t\t\tRestart all processes")
+        self._output("  When all processes are restarted, they are "
+                     "started in")
+        self._output("  priority order (see config file)")
 
-class BasicAuthTransport(xmlrpclib.Transport):
-    # Py 2.3 backwards compatibility class
-    def __init__(self, username=None, password=None):
-        self.username = username
-        self.password = password
-        self.verbose = False
+    def do_shutdown(self, arg):
+        if self.options.interactive:
+            yesno = raw_input('Really shut the remote supervisord process '
+                              'down y/N? ')
+            really = yesno.lower().startswith('y')
+        else:
+            really = 1
+        if really:
+            supervisor = self._get_supervisor()
+            try:
+                supervisor.shutdown()
+            except xmlrpclib.Fault, e:
+                if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
+                    self._output('ERROR: already shutting down')
+            else:
+                self._output('Shut down')
 
-    def request(self, host, handler, request_body, verbose=False):
-        # issue XML-RPC request
+    def help_shutdown(self):
+        self._output("shutdown \t\tShut the remote supervisord down.")
 
-        h = httplib.HTTP(host)
-        h.putrequest("POST", handler)
+    def do_reload(self, arg):
+        if self.options.interactive:
+            yesno = raw_input('Really restart the remote supervisord process '
+                              'y/N? ')
+            really = yesno.lower().startswith('y')
+        else:
+            really = 1
+        if really:
+            supervisor = self._get_supervisor()
+            try:
+                supervisor.restart()
+            except xmlrpclib.Fault, e:
+                if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
+                    self._output('ERROR: already shutting down')
+            else:
+                self._output('Restarted supervisord')
 
-        # required by HTTP/1.1
-        h.putheader("Host", host)
+    def help_reload(self):
+        self._output("reload \t\tRestart the remote supervisord.")
 
-        # required by XML-RPC
-        h.putheader("User-Agent", self.user_agent)
-        h.putheader("Content-Type", "text/xml")
-        h.putheader("Content-Length", str(len(request_body)))
+    def _clearresult(self, code, processname, default=None):
+        template = '%s: ERROR (%s)'
+        if code == xmlrpc.Faults.BAD_NAME:
+            return template % (processname, 'no such process')
+        elif code == xmlrpc.Faults.FAILED:
+            return template % (processname, 'failed')
+        elif code == xmlrpc.Faults.SUCCESS:
+            return '%s: cleared' % processname
+        return default
 
-        # basic auth
-        if self.username is not None and self.password is not None:
-            unencoded = "%s:%s" % (self.username, self.password)
-            encoded = unencoded.encode('base64')
-            encoded = encoded.replace('\012', '')
-            h.putheader("Authorization", "Basic %s" % encoded)
+    def do_clear(self, arg):
+        if not self._upcheck():
+            return
 
-        h.endheaders()
+        processnames = arg.strip().split()
 
-        if request_body:
-            h.send(request_body)
+        if not processnames:
+            self._output('Error: clear requires a process name')
+            self.help_clear()
+            return
 
-        errcode, errmsg, headers = h.getreply()
+        supervisor = self._get_supervisor()
 
-        if errcode != 200:
-            raise xmlrpclib.ProtocolError(
-                host + handler,
-                errcode, errmsg,
-                headers
-                )
+        if 'all' in processnames:
+            results = supervisor.clearAllProcessLogs()
+            for result in results:
+                name = result['name']
+                code = result['status']
+                result = self._clearresult(code, name)
+                if result is None:
+                    # assertion
+                    raise ValueError('Unknown result code %s for %s' %
+                                     (code, name))
+                else:
+                    self._output(result)
 
-        return self.parse_response(h.getfile())
+        else:
+
+            for processname in processnames:
+                try:
+                    result = supervisor.clearProcessLog(processname)
+                except xmlrpclib.Fault, e:
+                    error = self._clearresult(e.faultCode, processname)
+                    if error is not None:
+                        self._output(error)
+                    else:
+                        raise
+                else:
+                    if result == True:
+                        self._output('%s: cleared' % processname)
+                    else:
+                        raise # assertion
+
+    def help_clear(self):
+        self._output("clear <processname>\t\t\tClear a process' log file.")
+        self._output("clear <processname> <processname>\tclear multiple "
+                     "process log files")
+        self._output("clear all\t\t\t\tClear all process log files")
+
+    def do_open(self, arg):
+        url = arg.strip()
+        parts = urlparse.urlparse(url)
+        if parts[0] not in ('unix', 'http'):
+            self._output('ERROR: url must be http:// or unix://')
+            return
+        self.options.serverurl = url
+        self.do_status('')
+
+    def help_open(self):
+        self._output("open <url>\t\t\tConnect to a remote supervisord process.")
+        self._output("\t\t\t(for UNIX domain socket, use unix:///socket/path)")
+
+    def do_version(self, arg):
+        if not self._upcheck():
+            return
+        supervisor = self._get_supervisor()
+        self._output(supervisor.getSupervisorVersion())
+
+    def help_version(self):
+        self._output("version\t\t\tShow the version of the remote supervisord ")
+        self._output("\t\t\tprocess")
 
 def main(args=None, options=None):
     if options is None:
         options = ClientOptions()
     options.realize(args)
-    c = ZDCmd(options)
+    c = Controller(options)
     if options.args:
         c.onecmd(" ".join(options.args))
     if options.interactive:
@@ -348,7 +614,7 @@ def main(args=None, options=None):
             c.onecmd('status')
             c.cmdloop()
         except KeyboardInterrupt:
-            print
+            c._output('')
             pass
 
 if __name__ == "__main__":
