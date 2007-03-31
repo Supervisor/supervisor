@@ -6,6 +6,8 @@ History
 
   8/30/2006: updated for version 2.1
 
+  3/31/2007: updated for version 2.2
+
 Introduction
 
   The supervisor is a client/server system that allows its users to
@@ -313,6 +315,7 @@ Configuration File '[program:x]' Section Settings
     logfile=/tmp/programname.log
     logfile_maxbytes=10MB
     logfile_backups=2
+    environment=A=1,B=2
 
   '[program:programname]' -- the section header, required for each
   program.  'programname' is a descriptive name (arbitrary) used to
@@ -400,6 +403,9 @@ Configuration File '[program:x]' Section Settings
   'logfile_backups' -- The number of backups to keep around resulting
   from process log file rotation.  Set this to 0 to indicate an
   unlimited number of backups.  Default: 10.
+
+  'environment' -- A list of key/value pairs in the form "KEY=val,KEY2=val2"
+  that will be placed in the child process' environment.  Default: none.
 
 Nondaemonizing of Subprocesses
 

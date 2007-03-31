@@ -288,7 +288,10 @@ class Subprocess:
                         )
                     self.options.write(1, "%s: %s\n" % (pname, msg))
                 try:
-                    self.options.execv(filename, argv)
+                    env = os.environ.copy()
+                    if self.config.environment is not None:
+                        env.update(self.config.environment)
+                    self.options.execve(filename, argv, env)
                 except OSError, why:
                     code = why[0]
                     self.options.write(1, "couldn't exec %s: %s\n" % (

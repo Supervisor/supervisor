@@ -1,3 +1,12 @@
+2.2b1
+
+  - Individual program configuration sections can now specify an
+    environment.
+
+  - Added a 'version' command to supervisorctl.  This returns the
+    version of the supervisor2 package which the remote supervisord
+    process is using.
+
 2.1
 
   - When supervisord was invoked more than once, and its configuration

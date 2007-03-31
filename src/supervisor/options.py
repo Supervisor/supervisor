@@ -18,6 +18,8 @@ import grp
 import resource
 import stat
 
+VERSION = '2.2b1'
+
 from fcntl import fcntl
 from fcntl import F_SETFL, F_GETFL
 
@@ -439,7 +441,6 @@ class ServerOptions(Options):
     unlink_socketfile = True
     AUTOMATIC = []
     TRACE = 5
-
     
     def __init__(self):
         Options.__init__(self)
@@ -715,6 +716,9 @@ class ServerOptions(Options):
             log_stdout = datatypes.boolean(log_stdout)
             log_stderr = config.saneget(section, 'log_stderr', 'false')
             log_stderr = datatypes.boolean(log_stderr)
+            environment = config.saneget(section, 'environment', '')
+            environment = datatypes.dict_of_key_value_pairs(environment)
+
             pconfig = ProcessConfig(name=name, command=command,
                                     priority=priority,
                                     autostart=autostart,
@@ -729,7 +733,8 @@ class ServerOptions(Options):
                                     stopwaitsecs=stopwaitsecs,
                                     exitcodes=exitcodes,
                                     log_stdout=log_stdout,
-                                    log_stderr=log_stderr)
+                                    log_stderr=log_stderr,
+                                    environment=environment)
             programs.append(pconfig)
 
         programs.sort() # asc by priority
@@ -1090,8 +1095,8 @@ class ServerOptions(Options):
     def write(self, fd, data):
         return os.write(fd, data)
 
-    def execv(self, filename, argv):
-        return os.execv(filename, argv)
+    def execve(self, filename, argv, env):
+        return os.execve(filename, argv, env)
 
     def _exit(self, code):
         os._exit(code)
@@ -1245,7 +1250,7 @@ class ProcessConfig:
     def __init__(self, name, command, priority, autostart, autorestart,
                  startsecs, startretries, uid, logfile, logfile_backups,
                  logfile_maxbytes, stopsignal, stopwaitsecs, exitcodes,
-                 log_stdout, log_stderr):
+                 log_stdout, log_stderr, environment=None):
         self.name = name
         self.command = command
         self.priority = priority
@@ -1262,6 +1267,7 @@ class ProcessConfig:
         self.exitcodes = exitcodes
         self.log_stdout = log_stdout
         self.log_stderr = log_stderr
+        self.environment = environment
 
     def __cmp__(self, other):
         return cmp(self.priority, other.priority)

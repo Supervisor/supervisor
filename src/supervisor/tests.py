@@ -286,6 +286,47 @@ exitcodes=0,1,127
         self.assertRaises(os.error, os.read, innie, 0)
         instance.close_fd(outie)
         self.assertRaises(os.error, os.write, outie, 'foo')
+
+    def test_programs_from_config(self):
+        class DummyConfig:
+            command = '/bin/cat'
+            priority = 1
+            autostart = 'false'
+            autorestart = 'false'
+            startsecs = 100
+            startretries = 100
+            user = 'root'
+            logfile = 'NONE'
+            logfile_backups = 1
+            logfile_maxbytes = '100MB'
+            stopsignal = 'KILL'
+            stopwaitsecs = 100
+            exitcodes = '1,4'
+            log_stdout = 'false'
+            log_stderr = 'true'
+            environment = 'KEY1=val1,KEY2=val2'
+            def sections(self):
+                return ['program:foo']
+            def saneget(self, section, name, default):
+                return getattr(self, name, default)
+        instance = self._makeOne()
+        pconfig = instance.programs_from_config(DummyConfig())[0]
+        self.assertEqual(pconfig.name, 'foo')
+        self.assertEqual(pconfig.command, '/bin/cat')
+        self.assertEqual(pconfig.autostart, False)
+        self.assertEqual(pconfig.autorestart, False)
+        self.assertEqual(pconfig.startsecs, 100)
+        self.assertEqual(pconfig.startretries, 100)
+        self.assertEqual(pconfig.uid, 0)
+        self.assertEqual(pconfig.logfile, None)
+        self.assertEqual(pconfig.logfile_maxbytes, 104857600)
+        self.assertEqual(pconfig.stopsignal, signal.SIGKILL)
+        self.assertEqual(pconfig.stopwaitsecs, 100)
+        self.assertEqual(pconfig.exitcodes, [1,4])
+        self.assertEqual(pconfig.log_stdout, False)
+        self.assertEqual(pconfig.log_stderr, True)
+        self.assertEqual(pconfig.environment, {'KEY1':'val1', 'KEY2':'val2'})
+        
         
 
 class TestBase(unittest.TestCase):
@@ -378,6 +419,15 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         version = interface.getVersion()
         self.assertEqual(version, xmlrpc.RPC_VERSION)
         self.assertEqual(interface.update_text, 'getVersion')
+
+    def test_getSupervisorVersion(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        version = interface.getSupervisorVersion()
+        import options
+        self.assertEqual(version, options.VERSION)
+        self.assertEqual(interface.update_text, 'getSupervisorVersion')
+        
 
     def test_getIdentification(self):
         supervisord = DummySupervisor()
@@ -1526,6 +1576,17 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options._exitcode, 127)
 
+    def test_spawn_as_child_uses_pconfig_environment(self):
+        options = DummyOptions()
+        options.forkpid = 0
+        config = DummyPConfig('cat', '/bin/cat',
+                              environment={'_TEST_':'1'})
+        instance = self._makeOne(options, config)
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(options.execv_args, ('/bin/cat', ['/bin/cat']) )
+        self.assertEqual(options.execv_environment['_TEST_'], '1')
+
     def test_spawn_as_parent(self):
         options = DummyOptions()
         options.forkpid = 10
@@ -2475,6 +2536,13 @@ foo            RUNNING    foo description
 bar            FATAL      bar description
 baz            STOPPED    baz description
 """)
+
+    def test_version(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        controller.do_version(None)
+        self.assertEqual(controller.stdout.getvalue(), '3000\n')
         
 class TailFProducerTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -2609,7 +2677,7 @@ class DummyPConfig:
                  uid=None, logfile=None, logfile_backups=0,
                  logfile_maxbytes=0, log_stdout=True, log_stderr=False,
                  stopsignal=signal.SIGTERM, stopwaitsecs=10,
-                 exitcodes=[0,2]):
+                 exitcodes=[0,2], environment=None):
         self.name = name
         self.command = command
         self.priority = priority
@@ -2626,6 +2694,7 @@ class DummyPConfig:
         self.stopsignal = stopsignal
         self.stopwaitsecs = stopwaitsecs
         self.exitcodes = exitcodes
+        self.environment = environment
         
 
 class DummyLogger:
@@ -2804,13 +2873,14 @@ class DummyOptions:
     def _exit(self, code):
         self._exitcode = code
 
-    def execv(self, filename, argv):
+    def execve(self, filename, argv, environment):
         if self.execv_error:
             if self.execv_error == 1:
                 raise OSError(self.execv_error)
             else:
                 raise RuntimeError(self.execv_error)
         self.execv_args = (filename, argv)
+        self.execv_environment = environment
 
     def dropPrivileges(self, uid):
         if self.setuid_msg:
@@ -2977,7 +3047,9 @@ class DummySupervisorRPCNamespace:
 
     def raiseError(self):
         raise ValueError('error')
-        
+
+    def getSupervisorVersion(self):
+        return '3000'
 
 class DummySystemRPCNamespace:
     pass

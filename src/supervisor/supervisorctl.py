@@ -588,6 +588,15 @@ class Controller(cmd.Cmd):
         self._output("open <url>\t\t\tConnect to a remote supervisord process.")
         self._output("\t\t\t(for UNIX domain socket, use unix:///socket/path)")
 
+    def do_version(self, arg):
+        if not self._upcheck():
+            return
+        supervisor = self._get_supervisor()
+        self._output(supervisor.getSupervisorVersion())
+
+    def help_version(self):
+        self._output("version\t\t\tShow the version of the remote supervisord ")
+        self._output("\t\t\tprocess")
 
 def main(args=None, options=None):
     if options is None:

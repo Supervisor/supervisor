@@ -29,10 +29,11 @@ CLASSIFIERS = [
     'Topic :: System :: Systems Administration',
     ]
 
+from options import VERSION
 
 dist = setup(
     name = 'supervisor',
-    version = "2.1",
+    version = VERSION,
     license = 'ZPL/BSD (see LICENSES.txt)',
     url = 'http://www.plope.com/software',
     description = "A system for controlling process state under UNIX",

@@ -24,7 +24,7 @@ from options import readFile
 from options import tailFile
 from options import gettags
 
-RPC_VERSION  = 1.0
+RPC_VERSION  = '1.0'
 
 class Faults:
     UNKNOWN_METHOD = 1
@@ -185,10 +185,19 @@ class SupervisorNamespaceRPCInterface:
     def getVersion(self):
         """ Return the version of the RPC API used by supervisord
 
-        @return int version version id
+        @return string version version id
         """
         self._update('getVersion')
         return RPC_VERSION
+
+    def getSupervisorVersion(self):
+        """ Return the version of the supervisor package in use by supervisord
+
+        @return string version version id
+        """
+        self._update('getSupervisorVersion')
+        import options
+        return options.VERSION
 
     def getIdentification(self):
         """ Return identifiying string of supervisord
