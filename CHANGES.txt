@@ -46,6 +46,11 @@
   - Removed duplicated code (readLog/readMainLog), thanks to Mike
     Naberezny.
 
+  - Added tailProcessLog command to the XML-RPC API.  It provides a
+    more efficient way to tail logs than readProcessLog().  Use
+    readProcessLog() to read chunks and tailProcessLog() to tail.
+    (thanks to Mike Naberezny).
+
 2.1b2
 
   - Added new tailProcessLog() command to the XML-RPC API that
