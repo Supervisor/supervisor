@@ -237,7 +237,7 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.NO_FILE, logfile)
 
         try:
-            return readFile(logfile, offset, length)
+            return readFile(logfile, int(offset), int(length))
         except ValueError, inst:
             why = inst.args[0]
             raise RPCError(getattr(Faults, why))
@@ -640,7 +640,7 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.NO_FILE, logfile)
 
         try:
-            return readFile(logfile, offset, length)
+            return readFile(logfile, int(offset), int(length))
         except ValueError, inst:
             why = inst.args[0]
             raise RPCError(getattr(Faults, why))
@@ -673,7 +673,7 @@ class SupervisorNamespaceRPCInterface:
         if logfile is None or not os.path.exists(logfile):
             return ['', 0, False]
 
-        return tailFile(logfile, offset, length)
+        return tailFile(logfile, int(offset), int(length))
 
     def clearProcessLog(self, name):
         """ Clear the log for name and reopen it
