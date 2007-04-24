@@ -2,7 +2,10 @@ Next Release
 
   - Default config file comment documented 10 secs as default for
     'startsecs' value in process config, in reality it was 1 sec.
-    Thanks to cito.
+    Thanks to Christoph Zwerschke.
+
+  - Make note of subprocess environment behavior in README.txt.
+    Thanks to Christoph Zwerschke.
 
 2.2b1
 

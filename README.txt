@@ -269,9 +269,14 @@ Configuration File '[supervisord]' Section Settings
   'directory' -- When supervisord daemonizes, switch to this
   directory.  Default: do not cd.
 
-  'environment' -- A list of key/value pairs in the form "KEY=val,KEY2=val2"
-   that will be placed in the supervisord process' environment (and as a
-   result in all of its child process' environments).  Default: none.
+  'environment' -- A list of key/value pairs in the form
+   "KEY=val,KEY2=val2" that will be placed in the supervisord process'
+   environment (and as a result in all of its child process'
+   environments).  Default: none.  **Note** that subprocesses will
+   inherit the environment variables of the shell used to start
+   "supervisord" except for the ones overridden here and within the
+   program's "environment" configuration stanza.  See "Subprocess
+   Environment" below.
 
 Configuration File '[supervisorctl]' Section Settings
 
@@ -404,8 +409,12 @@ Configuration File '[program:x]' Section Settings
   from process log file rotation.  Set this to 0 to indicate an
   unlimited number of backups.  Default: 10.
 
-  'environment' -- A list of key/value pairs in the form "KEY=val,KEY2=val2"
-  that will be placed in the child process' environment.  Default: none.
+  'environment' -- A list of key/value pairs in the form
+  "KEY=val,KEY2=val2" that will be placed in the child process'
+  environment.  Default: none.  **Note** that the subprocess will
+  inherit the environment variables of the shell used to start
+  "supervisord" except for the ones overridden here.  See "Subprocess
+  Environment" below.
 
 Nondaemonizing of Subprocesses
 
@@ -422,6 +431,47 @@ Nondaemonizing of Subprocesses
   to be run in the foreground but there's no standard way to do it;
   you'll need to read the documentation for each program you want to
   do this with.
+
+Subprocess Environment
+
+  Subprocesses will inherit the environment of the shell used to start
+  the supervisord program.  These environment variables may be
+  overridden within the "environment" global config option (applies to
+  all subprocesses) or within the per-program "environment" config
+  option (applies only to the subprocess specified within the
+  "program" section).  These "environment" settings are additive.  In
+  other words, each subprocess' environment will consist of::
+
+    The environment variables set within the shell used to start
+    supervisord...
+
+    ... added-to/overridden-by ...
+
+    ... the environment variables set within the "environment" global
+    config option ...
+
+    ... added-to/overridden-by ...
+
+    .. the environment variables set within the per-process
+    "environment" config option.
+
+  No shell is executed by supervisord when it runs a subprocess, so
+  settings such as USER, PATH, HOME, SHELL, LOGNAME, etc. are not
+  changed from their defaults or otherwise reassigned.  This is
+  particularly important to note when you are running a program from a
+  supervisord run as root with a "user=" stanza in the configuration.
+  Unlike cron, supervisord does not attempt to divine and override
+  "fundamental" environment variables like USER, PATH, HOME, and
+  LOGNAME when it performs a setuid to the user defined within the
+  "user=" program config option.  If you need to set environment
+  variables for a particular program that might otherwise be set by a
+  shell invocation for a particular user, you must do it explicitly
+  within the "environment=" program config option.  For example::
+
+    [program:apache]
+    command=/home/chrism/bin/httpd -DNO_DETACH
+    user=chrism
+    environment=HOME=/home/chrism,USER=chrism
 
 Examples of Program Configurations
 
