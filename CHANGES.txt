@@ -1,3 +1,9 @@
+Next Release
+
+  - Default config file comment documented 10 secs as default for
+    'startsecs' value in process config, in reality it was 1 sec.
+    Thanks to cito.
+
 2.2b1
 
   - Individual program configuration sections can now specify an
