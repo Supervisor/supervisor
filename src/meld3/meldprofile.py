@@ -1,4 +1,3 @@
-#!/Users/chrism/projects/revelation/bin/python
 import profile as profiler
 import pstats
 import meld3

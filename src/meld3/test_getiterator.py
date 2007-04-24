@@ -1,4 +1,3 @@
-#!/Users/chrism/projects/revelation/bin/python
 import hotshot
 import hotshot.stats
 import meld3
