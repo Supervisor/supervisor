@@ -660,6 +660,12 @@ FAQ
   program can check for the presence of this variable to determine
   whether it is running under supervisor (new in 2.0).
 
+  My command line works fine when I invoke it by hand from a shell
+  prompt, but when I use the same command line in a supervisor
+  "command=" section, the program fails mysteriously.  Why?  This may
+  be due to your process' dependence on environment variable settings.
+  See "Subprocess Environment" in this document.
+
 Reporting Bugs
 
   Please report bugs at http://www.plope.com/software/collector .
