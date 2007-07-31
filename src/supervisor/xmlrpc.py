@@ -823,9 +823,7 @@ class SystemNamespaceRPCInterface:
                 params = call.get('params', [])
                 if name == 'system.multicall':
                     # Recursive system.multicall forbidden
-                    error = 'INCORRECT_PARAMETERS'
-                    raise xmlrpclib.Fault(Faults.INCORRECT_PARAMETERS,
-                                          error)
+                    raise RPCError(Faults.INCORRECT_PARAMETERS)
                 root = AttrDict(self.namespaces)
                 value = traverse(root, name, params)
             except RPCError, inst:

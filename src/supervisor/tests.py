@@ -1240,6 +1240,22 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(result[0], interface.methodHelp('system.methodHelp'))
         self.assertEqual(result[1], interface.listMethods())
 
+    def test_multicall_recursion_guard(self):
+        interface = self._makeOne()
+        callback = interface.multicall([
+            {'methodName': 'system.multicall', 'params': []},        
+        ])
+
+        result = http.NOT_DONE_YET
+        while result is http.NOT_DONE_YET:
+            result = callback()
+        
+        code = xmlrpc.Faults.INCORRECT_PARAMETERS
+        desc = xmlrpc.getFaultDescription(code)
+        recursion_fault = {'faultCode': code, 'faultString': desc}
+
+        self.assertEqual(result, [recursion_fault])
+        
     def test_multicall_nested_callback(self):
         interface = self._makeOne()
         callback = interface.multicall([
