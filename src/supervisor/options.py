@@ -18,10 +18,10 @@ import grp
 import resource
 import stat
 
-VERSION = '2.2b1'
-
 from fcntl import fcntl
 from fcntl import F_SETFL, F_GETFL
+
+VERSION = '2.2b1'
 
 class FileHandler(logging.StreamHandler):
     """File handler which supports reopening of logs.
@@ -442,6 +442,10 @@ class ServerOptions(Options):
     AUTOMATIC = []
     TRACE = 5
     
+    ANSI_ESCAPE_BEGIN = '\x1b['
+    ANSI_TERMINATORS = ('H', 'f', 'A', 'B', 'C', 'D', 'R', 's', 'u', 'J', 
+                        'K', 'h', 'l', 'p', 'm')    
+    
     def __init__(self):
         Options.__init__(self)
         self.configroot = Dummy()
@@ -481,6 +485,8 @@ class ServerOptions(Options):
                  "", "minprocs=", int, default=200)
         self.add("nocleanup", "supervisord.nocleanup",
                  "k", "nocleanup", flag=1, default=0)
+        self.add("strip_ansi", "supervisord.strip_ansi",
+                 "t", "strip_ansi", flag=1, default=0)
         self.add("sockchmod", "supervisord.sockchmod", "p:", "socket-mode=",
                  datatypes.octal_type, default=0700)
         self.add("sockchown", "supervisord.sockchown", "o:", "socket-owner=",
@@ -642,6 +648,9 @@ class ServerOptions(Options):
         nocleanup = config.getdefault('nocleanup', 'false')
         section.nocleanup = datatypes.boolean(nocleanup)
 
+        strip_ansi = config.getdefault('strip_ansi', 'false')
+        section.strip_ansi = datatypes.boolean(strip_ansi)
+        
         sockchown = config.getdefault('sockchown', None)
         if sockchown is None:
             section.sockchown = (-1, -1)
@@ -942,6 +951,28 @@ class ServerOptions(Options):
         except OSError:
             return 'Could not set group id of effective user'
         os.setuid(uid)
+
+    def stripEscapes(self, string):
+        """
+        Remove all ANSI color escapes from the given string.
+        """
+        result = ''
+        show = 1
+        i = 0
+        L = len(string)
+        while i < L:
+            if show == 0 and string[i] in self.ANSI_TERMINATORS:
+                show = 1
+            elif show:
+                n = string.find(self.ANSI_ESCAPE_BEGIN, i)
+                if n == -1:
+                    return result + string[i:]
+                else:
+                    result = result + string[i:n]
+                    i = n
+                    show = 0
+            i = i + 1
+        return result
 
     def waitpid(self):
         # need pthread_sigmask here to avoid concurrent sigchild, but

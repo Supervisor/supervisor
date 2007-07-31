@@ -1816,6 +1816,42 @@ class XMLRPCHandlerTests(unittest.TestCase):
     
     def _makeOne(self, supervisord):
         return self._getTargetClass()(supervisord)
+    def test_strip_ansi(self):
+        executable = '/bin/cat'
+        options = DummyOptions()
+        from options import getLogger
+        options.getLogger = getLogger
+        options.strip_ansi = True
+        config = DummyPConfig('output', executable, logfile='/tmp/foo')
+
+        ansi = '\x1b[34mHello world!\x1b[0m'
+        noansi = 'Hello world!'
+
+        try:
+            instance = self._makeOne(options, config)
+            instance.logbuffer = ansi
+            instance.log_output()
+            [ x.flush() for x in instance.childlog.handlers ]
+            self.assertEqual(open(instance.config.logfile, 'r').read(), noansi)
+        finally:
+            try:
+                os.remove(instance.config.logfile)
+            except (OSError, IOError):
+                pass
+
+        try:
+            options.strip_ansi = False
+            instance = self._makeOne(options, config)
+            instance.logbuffer = ansi
+            instance.log_output()
+            [ x.flush() for x in instance.childlog.handlers ]
+            self.assertEqual(open(instance.config.logfile, 'r').read(), ansi)
+        finally:
+            try:
+                os.remove(instance.config.logfile)
+            except (OSError, IOError):
+                pass
+
 
     def test_ctor(self):
         supervisor = DummySupervisor()
@@ -2764,6 +2800,7 @@ class DummyOptions:
         self.make_logger_messages = None
         self.autochildlogs_created = False
         self.autochildlogdir_cleared = False
+        self.strip_ansi = False
         self.cleaned_up = False
         self.pidfile_written = False
         self.directory = None
@@ -2928,6 +2965,11 @@ _TIMEFORMAT = '%b %d %I:%M %p'
 
 class DummySupervisorRPCNamespace:
     _restartable = True
+    def stripEscapes(self, data):
+        from options import ServerOptions
+        o = ServerOptions()
+        return o.stripEscapes(data)
+
     _restarted = False
     _shutdown = False
 

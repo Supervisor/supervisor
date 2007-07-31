@@ -36,6 +36,7 @@ Options:
 -g/--http_username STR -- the username for HTTP auth
 -r/--http_password STR -- the password for HTTP auth
 -a/--minfds NUM -- the minimum number of file descriptors for start success
+-t/--strip_ansi -- strip ansi escape codes from output
 --minprocs NUM  -- the minimum number of processes available for start success
 """
 
@@ -135,6 +136,8 @@ class Subprocess:
         if self.logbuffer:
             data, self.logbuffer = self.logbuffer, ''
             if self.childlog:
+                if self.options.strip_ansi:
+                    data = self.options.stripEscapes(data)
                 self.childlog.info(data)
             msg = '%s output:\n%s' % (self.config.name, data)
             self.options.logger.log(self.options.TRACE, msg)

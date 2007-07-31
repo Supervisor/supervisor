@@ -7,6 +7,10 @@ Next Release
   - Make note of subprocess environment behavior in README.txt.
     Thanks to Christoph Zwerschke.
 
+  - New "strip_ansi" config file option attempts to strip ANSI escape
+    sequences from logs for smaller/more readable logs (submitted by
+    Mike Naberezny).
+
 2.2b1
 
   - Individual program configuration sections can now specify an
