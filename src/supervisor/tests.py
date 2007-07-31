@@ -1800,22 +1800,6 @@ class SubprocessTests(unittest.TestCase):
         instance.laststart = 1
         self.assertEqual(instance.get_state(), ProcessStates.UNKNOWN)
 
-class XMLRPCMarshallingTests(unittest.TestCase):
-    def test_xmlrpc_marshal(self):
-        import xmlrpclib
-        data = xmlrpc.xmlrpc_marshal(1)
-        self.assertEqual(data, xmlrpclib.dumps((1,), methodresponse=True))
-        fault = xmlrpclib.Fault(1, 'foo')
-        data = xmlrpc.xmlrpc_marshal(fault)
-        self.assertEqual(data, xmlrpclib.dumps(fault))
-
-class XMLRPCHandlerTests(unittest.TestCase):
-    def _getTargetClass(self):
-        from xmlrpc import supervisor_xmlrpc_handler
-        return supervisor_xmlrpc_handler
-    
-    def _makeOne(self, supervisord):
-        return self._getTargetClass()(supervisord)
     def test_strip_ansi(self):
         executable = '/bin/cat'
         options = DummyOptions()
@@ -1852,6 +1836,22 @@ class XMLRPCHandlerTests(unittest.TestCase):
             except (OSError, IOError):
                 pass
 
+class XMLRPCMarshallingTests(unittest.TestCase):
+    def test_xmlrpc_marshal(self):
+        import xmlrpclib
+        data = xmlrpc.xmlrpc_marshal(1)
+        self.assertEqual(data, xmlrpclib.dumps((1,), methodresponse=True))
+        fault = xmlrpclib.Fault(1, 'foo')
+        data = xmlrpc.xmlrpc_marshal(fault)
+        self.assertEqual(data, xmlrpclib.dumps(fault))
+
+class XMLRPCHandlerTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from xmlrpc import supervisor_xmlrpc_handler
+        return supervisor_xmlrpc_handler
+    
+    def _makeOne(self, supervisord):
+        return self._getTargetClass()(supervisord)
 
     def test_ctor(self):
         supervisor = DummySupervisor()
@@ -2784,6 +2784,7 @@ class DummyOptions:
         self.backofflimit = 10
         self.logfile = '/tmp/logfile'
         self.nocleanup = False
+        self.strip_ansi = False
         self.pidhistory = {}
         self.programs = []
         self.nodaemon = False
@@ -2800,7 +2801,6 @@ class DummyOptions:
         self.make_logger_messages = None
         self.autochildlogs_created = False
         self.autochildlogdir_cleared = False
-        self.strip_ansi = False
         self.cleaned_up = False
         self.pidfile_written = False
         self.directory = None
@@ -2949,6 +2949,11 @@ class DummyOptions:
     def process_environment(self):
         self.environment_processed = True
 
+    def stripEscapes(self, data):
+        from options import ServerOptions
+        o = ServerOptions()
+        return o.stripEscapes(data)
+
 class DummyClientOptions:
     def __init__(self):
         self.prompt = 'supervisor'
@@ -2965,11 +2970,6 @@ _TIMEFORMAT = '%b %d %I:%M %p'
 
 class DummySupervisorRPCNamespace:
     _restartable = True
-    def stripEscapes(self, data):
-        from options import ServerOptions
-        o = ServerOptions()
-        return o.stripEscapes(data)
-
     _restarted = False
     _shutdown = False
 
