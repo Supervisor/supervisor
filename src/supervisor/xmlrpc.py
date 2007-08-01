@@ -190,7 +190,7 @@ class SupervisorNamespaceRPCInterface:
         self._update('getProtocolVersion')
         return RPC_VERSION
 
-    getVersion = getProtocolVersion # b/w compatibility with releases before 2.2
+    getVersion = getProtocolVersion # b/w compatibility with releases before 2.3
 
     def getSupervisorVersion(self):
         """ Return the version of the supervisor package in use by supervisord
