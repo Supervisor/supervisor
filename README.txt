@@ -197,6 +197,11 @@ Components
     multicall API described at
     http://www.xmlrpc.com/discuss/msgReader$1208.
 
+    You can extend supervisor functionality with new XML-RPC API
+    methods by adding new top-level RPC interfaces as necessary.  See
+    "Configuration File ['rpcinterface:x] Section Settings" in this
+    file.
+
 Configuration File '[supervisord]' Section Settings
 
   The supervisord.conf log file contains a section named
@@ -429,10 +434,14 @@ Configuration File '[rpcinterface:x]' Section Settings (ADVANCED)
    supervisor.rpcinterface_factory = supervisor.xmlrpc:make_main_rpcinterface
 
   This section must remain in the configuration for the standard setup
-  of supervisor to work properly.  If you wish to add rpc interface
-  namespaces to a custom version of supervisor, you may add additional
-  [rpcinterface:foo] sections, where "foo" represents the namespace of
-  the interface (from the web root), and the value named by
+  of supervisor to work properly.  If you don't want supervisor to do
+  anything it doesn't already do out of the box, this is all you need
+  to know about this type of section.
+
+  However, if you wish to add rpc interface namespaces to a custom
+  version of supervisor, you may add additional [rpcinterface:foo]
+  sections, where "foo" represents the namespace of the interface
+  (from the web root), and the value named by
   "supervisor.rpcinterface_factory" is a factory callable which should
   have a function signature that accepts a single positional argument
   "supervisord" and as many keyword arguments as required to perform
