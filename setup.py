@@ -1,6 +1,9 @@
 
 __revision__ = '$Id$'
 
+from ez_setup import use_setuptools
+use_setuptools()
+
 import os
 import sys
 import string
