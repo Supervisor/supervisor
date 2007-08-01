@@ -11,6 +11,11 @@ Next Release
     sequences from logs for smaller/more readable logs (submitted by
     Mike Naberezny).
 
+  - The XML-RPC method supervisor.getVersion() has been renamed for 
+    clarity to supervisor.getProtocolVersion().  The old name is
+    aliased for compatibility but is deprecated and will be removed 
+    in a future version (Mike Naberezny).
+
 2.2b1
 
   - Individual program configuration sections can now specify an

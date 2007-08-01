@@ -121,7 +121,7 @@ class Controller(cmd.Cmd):
     def _upcheck(self):
         try:
             supervisor = self._get_supervisor()
-            supervisor.getVersion()
+            supervisor.getSupervisorVersion()
         except socket.error, why:
             if why[0] == errno.ECONNREFUSED:
                 self._output('%s refused connection' % self.options.serverurl)
