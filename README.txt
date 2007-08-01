@@ -441,7 +441,7 @@ Configuration File '[rpcinterface:x]' Section Settings (ADVANCED)
   factory.  Here's an example of a factory function, created in the
   package "my.package"::
 
-   def make_another_rpc_interface(supervisord, **config):
+   def make_another_rpcinterface(supervisord, **config):
        retries = int(config.get('retries', 0))
        another_rpc_interface = AnotherRPCInterface(supervisord, retries)
        return another_rpc_interface
