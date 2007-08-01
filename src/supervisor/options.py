@@ -17,11 +17,12 @@ import pwd
 import grp
 import resource
 import stat
+import pkg_resources
 
 from fcntl import fcntl
 from fcntl import F_SETFL, F_GETFL
 
-VERSION = '2.2b1'
+VERSION = '2.3b1'
 
 class FileHandler(logging.StreamHandler):
     """File handler which supports reopening of logs.
@@ -674,6 +675,7 @@ class ServerOptions(Options):
         section.environment = datatypes.dict_of_key_value_pairs(environment)
 
         section.programs = self.programs_from_config(config)
+        section.rpcinterface_factories = self.rpcinterfaces_from_config(config)
         return section
 
     def programs_from_config(self, config):
@@ -748,6 +750,34 @@ class ServerOptions(Options):
 
         programs.sort() # asc by priority
         return programs
+
+    def import_spec(self, spec):
+        return pkg_resources.EntryPoint.parse("x="+spec).load(False)
+
+    def rpcinterfaces_from_config(self, config):
+        factories = []
+        factory_key = 'supervisor.rpcinterface_factory'
+
+        for section in config.sections():
+            if not section.startswith('rpcinterface:'):
+                continue
+            options = config.options(section)
+            name = section.split(':', 1)[1]
+            realoptions = []
+            factory_spec = config.saneget(section, factory_key, None)
+            if factory_spec is None:
+                raise ValueError('section [%s] does not specify a %s'  %
+                                 (section, factory_key))
+            try:
+                factory = self.import_spec(factory_spec)
+            except ImportError:
+                raise ValueError('%s cannot be resolved within [%s]' % (
+                    factory_spec, section))
+            items = config.items(section)
+            items.remove((factory_key, factory_spec))
+            factories.append((name, factory, dict(items)))
+
+        return factories
 
     def daemonize(self):
         # To daemonize, we need to become the leader of our own session

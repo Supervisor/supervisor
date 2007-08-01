@@ -748,8 +748,21 @@ def make_http_server(options, supervisord):
         raise ValueError('Cannot determine socket type %r' % family)
 
     from xmlrpc import supervisor_xmlrpc_handler
+    from xmlrpc import SystemNamespaceRPCInterface
     from web import supervisor_ui_handler
-    xmlrpchandler = supervisor_xmlrpc_handler(supervisord)
+    rpcfactories = options.configroot.supervisord.rpcinterface_factories
+
+    subinterfaces = []
+    for name, factory, d in rpcfactories:
+        try:
+            inst = factory(supervisord, **d)
+        except:
+            import traceback; traceback.print_exc()
+            raise ValueError('Could not make %s rpc interface' % name)
+        subinterfaces.append((name, inst))
+        
+    subinterfaces.append(('system', SystemNamespaceRPCInterface(subinterfaces)))
+    xmlrpchandler = supervisor_xmlrpc_handler(supervisord, subinterfaces)
     tailhandler = logtail_handler(supervisord)
     maintailhandler = mainlogtail_handler(supervisord)
     here = os.path.abspath(os.path.dirname(__file__))

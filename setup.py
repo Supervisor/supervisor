@@ -1,8 +1,10 @@
 
 __revision__ = '$Id$'
 
+import os
 import sys
 import string
+
 version, extra = string.split(sys.version, ' ', 1)
 maj, minor = string.split(version, '.', 1)
 
@@ -11,8 +13,8 @@ if not maj[0] >= '2' and minor[0] >= '3':
            "install it using version %s.  Please install with a "
            "supported version" % version)
 
-from distutils.core import setup
-
+from setuptools import setup, find_packages
+here = os.path.abspath(os.path.normpath(os.path.dirname(__file__)))
 
 DESC = """\
 Supervisor is a client/server system that allows its users to
@@ -29,13 +31,11 @@ CLASSIFIERS = [
     'Topic :: System :: Systems Administration',
     ]
 
-from options import VERSION
-
 dist = setup(
     name = 'supervisor',
-    version = VERSION,
-    license = 'ZPL/BSD (see LICENSES.txt)',
-    url = 'http://www.plope.com/software',
+    version = '2.3b1',
+    license = 'ZPL 2.0/BSD (see LICENSES.txt)',
+    url = 'http://www.plope.com/software/supervisor2',
     description = "A system for controlling process state under UNIX",
     long_description= DESC,
     platform = 'UNIX',
@@ -44,23 +44,10 @@ dist = setup(
     author_email = "chrism@plope.com",
     maintainer = "Chris McDonough",
     maintainer_email = "chrism@plope.com",
-    scripts=['supervisord', 'supervisorctl'],
-    packages = ['supervisor', 'supervisor.medusa', 'supervisor.meld3',
-                'supervisor.meld3.elementtree'],
-    package_dir = {'supervisor':'.'},
-    # package_data doesn't work under 2.3
-    package_data= {'supervisor':['ui/*.gif', 'ui/*.css', 'ui/*.html']},
+    package_dir = {'':'src'},
+    packages = find_packages(os.path.join(here, 'src')),
+    scripts=['src/supervisor/supervisord', 'src/supervisor/supervisorctl'],
+    include_package_data = True,
+    zip_safe = False,
+    namespace_packages = ['supervisor'],
     )
-
-if __name__ == '__main__':
-    # if pre-2.4 distutils was a joke, i suspect nobody laughed
-    if minor[0] <= '3':
-        if 'install' in sys.argv:
-            from distutils import dir_util
-            import os
-            pkg_dir = dist.command_obj['install'].install_purelib
-            for dirname in ['ui']:
-                dir_util.copy_tree(
-                    os.path.join(dirname),
-                    os.path.join(pkg_dir, 'supervisor',  dirname)
-                    )

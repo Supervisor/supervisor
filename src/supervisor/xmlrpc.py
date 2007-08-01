@@ -875,17 +875,14 @@ class AttrDict(dict):
     def __getattr__(self, name):
         return self[name]
 
-class RPCInterface:
-    def __init__(self, supervisord):
-        self.supervisord = supervisord
-        self.supervisor = SupervisorNamespaceRPCInterface(supervisord)
-        self.system = SystemNamespaceRPCInterface(
-            [('supervisor', self.supervisor)]
-            )
+class RootRPCInterface:
+    def __init__(self, subinterfaces):
+        for name, rpcinterface in subinterfaces:
+            setattr(self, name, rpcinterface)
 
 class supervisor_xmlrpc_handler(xmlrpc_handler):
-    def __init__(self, supervisord):
-        self.rpcinterface = RPCInterface(supervisord)
+    def __init__(self, supervisord, subinterfaces):
+        self.rpcinterface = RootRPCInterface(subinterfaces)
         self.supervisord = supervisord
         
     def continue_request (self, data, request):
@@ -958,4 +955,5 @@ def traverse(ob, method, params):
     except TypeError:
         raise RPCError(Faults.INCORRECT_PARAMETERS)
 
-
+def make_main_rpcinterface(supervisord):
+    return SupervisorNamespaceRPCInterface(supervisord)

@@ -347,20 +347,18 @@ class TestBase(unittest.TestCase):
 class MainXMLRPCInterfaceTests(TestBase):
 
     def _getTargetClass(self):
-        return xmlrpc.RPCInterface
+        return xmlrpc.RootRPCInterface
 
     def _makeOne(self, *args, **kw):
         return self._getTargetClass()(*args, **kw)
 
     def test_ctor(self):
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-        self.assertEqual(interface.supervisor.supervisord, supervisord)
-        self.failUnless(interface.system)
+        interface = self._makeOne([('supervisor', None)])
+        self.assertEqual(interface.supervisor, None)
 
     def test_traverse(self):
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
+        dummy = DummyRPCInterface()
+        interface = self._makeOne([('dummy', dummy)])
         from xmlrpc import traverse
         self._assertRPCError(xmlrpc.Faults.UNKNOWN_METHOD,
                              traverse, interface, 'notthere.hello', [])
@@ -368,10 +366,8 @@ class MainXMLRPCInterfaceTests(TestBase):
                              traverse, interface, 'supervisor._readFile', [])
         self._assertRPCError(xmlrpc.Faults.INCORRECT_PARAMETERS,
                              traverse, interface,
-                             'supervisor.getIdentification', [1])
-        self.assertEqual(
-            traverse(interface, 'supervisor.getIdentification', []),
-            'supervisor')
+                             'dummy.hello', [1])
+        self.assertEqual(traverse(interface, 'dummy.hello', []), 'Hello!')
             
 def makeExecutable(file, substitutions=None):
     if substitutions is None:
@@ -1860,20 +1856,21 @@ class XMLRPCHandlerTests(unittest.TestCase):
         from xmlrpc import supervisor_xmlrpc_handler
         return supervisor_xmlrpc_handler
     
-    def _makeOne(self, supervisord):
-        return self._getTargetClass()(supervisord)
+    def _makeOne(self, supervisord, subinterfaces):
+        return self._getTargetClass()(supervisord, subinterfaces)
 
     def test_ctor(self):
         supervisor = DummySupervisor()
-        handler = self._makeOne(supervisor)
+        subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
+        handler = self._makeOne(supervisor, subinterfaces)
         self.assertEqual(handler.supervisord, supervisor)
-        from xmlrpc import RPCInterface
-        self.assertEqual(handler.rpcinterface.__class__, RPCInterface)
+        from xmlrpc import RootRPCInterface
+        self.assertEqual(handler.rpcinterface.__class__, RootRPCInterface)
 
     def test_continue_request_nosuchmethod(self):
         supervisor = DummySupervisor()
-        handler = self._makeOne(supervisor)
-        handler.rpcinterface = DummyRPCServer()
+        subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
+        handler = self._makeOne(supervisor, subinterfaces)
         import xmlrpclib
         data = xmlrpclib.dumps(('a', 'b'), 'supervisor.noSuchMethod')
         request = DummyRequest('/what/ever', None, None, None)
@@ -1891,8 +1888,8 @@ class XMLRPCHandlerTests(unittest.TestCase):
 
     def test_continue_request_methodsuccess(self):
         supervisor = DummySupervisor()
-        handler = self._makeOne(supervisor)
-        handler.rpcinterface = DummyRPCServer()
+        subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
+        handler = self._makeOne(supervisor, subinterfaces)
         import xmlrpclib
         data = xmlrpclib.dumps((), 'supervisor.getProtocolVersion')
         request = DummyRequest('/what/ever', None, None, None)
@@ -1913,8 +1910,8 @@ class XMLRPCHandlerTests(unittest.TestCase):
 
     def test_continue_request_500(self):
         supervisor = DummySupervisor()
-        handler = self._makeOne(supervisor)
-        handler.rpcinterface = DummyRPCServer()
+        subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
+        handler = self._makeOne(supervisor, subinterfaces)
         import xmlrpclib
         data = xmlrpclib.dumps((), 'supervisor.raiseError')
         request = DummyRequest('/what/ever', None, None, None)
@@ -3161,6 +3158,10 @@ class DummyRequest:
 
     def done(self):
         self._done = True
+
+class DummyRPCInterface:
+    def hello(self):
+        return 'Hello!'
         
 def test_suite():
     suite = unittest.TestSuite()
