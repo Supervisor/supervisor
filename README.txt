@@ -416,6 +416,43 @@ Configuration File '[program:x]' Section Settings
   "supervisord" except for the ones overridden here.  See "Subprocess
   Environment" below.
 
+Configuration File '[rpcinterface:x]' Section Settings (ADVANCED)
+
+  Changing "rpcinterface:x" settings in the configuration file is only
+  useful for people who wish to extend supervisor with additional
+  behavior.
+
+  In the sample config file, there is a section which is named
+  "rpcinterface:supervisor".  By default it looks like this:
+
+   [rpcinterface:supervisor]
+   supervisor.rpcinterface_factory = supervisor.xmlrpc:make_main_rpcinterface
+
+  This section must remain in the configuration for the standard setup
+  of supervisor to work properly.  If you wish to add rpc interface
+  namespaces to a custom version of supervisor, you may add additional
+  [rpcinterface:foo] sections, where "foo" represents the namespace of
+  the interface (from the web root), and the value named by
+  "supervisor.rpcinterface_factory" is a factory callable which should
+  have a function signature that accepts a single positional argument
+  "supervisord" and as many keyword arguments as required to perform
+  configuration.  Any key/value pairs defined within the
+  rpcinterface:foo section will be passed as keyword arguments to the
+  factory.  Here's an example of a factory function, created in the
+  package "my.package"::
+
+   def make_another_rpc_interface(supervisord, **config):
+       retries = int(config.get('retries', 0))
+       another_rpc_interface = AnotherRPCInterface(supervisord, retries)
+       return another_rpc_interface
+
+   And a section in the config file meant to configure
+   it::
+
+    [rpcinterface:another]
+    supervisor.rpcinterface_factory = my.package:make_another_rpcinterface
+    retries = 1
+
 Nondaemonizing of Subprocesses
 
   Programs run under supervisor *should not* daemonize themselves.
