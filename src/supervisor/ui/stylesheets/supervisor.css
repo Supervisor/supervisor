@@ -1,0 +1,212 @@
+/* =ORDER
+ 1. display
+ 2. float and position
+ 3. width and height
+ 4. Specific element properties
+ 5. margin
+ 6. border
+ 7. padding
+ 8. background
+ 9. color
+10. font related properties
+----------------------------------------------- */
+
+/* =MAIN
+----------------------------------------------- */
+body, td, input, select, textarea, a {
+  font: 12px/1.5em arial, helvetica, verdana, sans-serif;
+  color: #333;
+}
+html, body, form, fieldset, h1, h2, h3, h4, h5, h6, 
+p, pre, blockquote, ul, ol, dl, address {
+  margin: 0;
+  padding: 0;
+}
+form label {
+  cursor: pointer;
+}
+fieldset {
+  border: none;
+}
+img, table {
+  border-width: 0;
+}
+form {
+  display: inline;
+}
+
+/* =COLORS
+----------------------------------------------- */
+body {
+  background-color: #FFFFF3;
+  color: #333;
+}
+a:link, 
+a:visited {
+  color: #333;
+}
+a:hover {
+  color: #000;
+}
+
+/* =FLOATS
+----------------------------------------------- */
+.left {
+  float: left;
+}
+.right {
+	text-align: right;
+	float: right;
+}
+/* clear float */
+.clr:after {
+  content: "."; 
+  display: block; 
+  height: 0; 
+  clear: both; 
+  visibility: hidden;
+}
+.clr {display: inline-block;}
+/* Hides from IE-mac \*/
+* html .clr {height: 1%;}
+.clr {display: block;}
+/* End hide from IE-mac */
+
+/* =LAYOUT
+----------------------------------------------- */
+#wrapper {
+  margin: 0pt auto;
+  width: 782px;
+}
+.hidden {
+  display: none;
+}
+
+/* =STATUS
+----------------------------------------------- */
+#header {
+  margin-bottom: 13px;
+  padding: 10px 0 13px 0;
+  background: url("../images/rule.gif") left bottom repeat-x;
+}
+.status_msg {
+  padding: 5px 10px;
+  border: 1px solid #919191;
+  background-color: #FBFBFB;
+  color: #259217;
+}
+
+#buttons {
+  margin: 13px 0;
+}
+#buttons li {
+  float: left;
+  display: block;
+  margin: 0 7px 0 0;
+}
+#buttons a {
+  float: left;
+  display: block;
+  padding: 1px 0 0 0;
+}
+#buttons a, #buttons a:link {
+  text-decoration: none;
+}
+
+#refresh a {
+  width: 62px;
+  background: url("../images/button_refresh.gif") 0 0 no-repeat;
+}
+#refresh a:hover {
+  background-position: -62px;
+}
+#restart_all a {
+  width: 84px;
+  background: url("../images/button_restart.gif") 0 0 no-repeat;
+}
+#restart_all a:hover {
+  background-position: -84px;
+}
+#stop_all a {
+  width: 65px;
+  background: url("../images/button_stop.gif") 0 0 no-repeat;
+}
+#stop_all a:hover {
+  background-position: -65px;
+}
+
+table {
+  width: 100%;
+  border: 1px solid #919191;
+}
+th {
+  background-color: #919191;
+  color: #fff;
+  text-align: left;
+}
+th.state {
+  text-align: center;
+  width: 44px;
+}
+th.desc {
+  width: 200px;
+}
+th.name {
+  width: 200px;
+}
+th.action {
+}
+td, th {
+  padding: 4px 8px;
+  border-bottom: 1px solid #fff;
+}
+tr td {
+  background-color: #FBFBFB;
+}
+tr.shade td {
+  background-color: #F0F0F0;
+}
+.action ul {
+  list-style: none;
+  display: inline;
+}
+.action li {
+  margin-right: 10px;
+  display: inline;
+}
+
+/* status message */
+.status span {
+  display: block;
+  width: 60px;
+  height: 16px;
+  border: 1px solid #fff;
+  text-align: center;
+  font-size: 95%;
+  line-height: 1.4em;
+}
+.statusnominal {
+  background-image: url("../images/state0.gif");
+}
+.statusrunning { 
+  background-image: url("../images/state2.gif");
+}
+.statuserror { 
+  background-image: url("../images/state3.gif");
+}
+#footer {
+  position: fixed;
+  bottom: 0pt;
+  width: 762px;
+  padding: 5px 10px 5px 10px;
+  border: 1px solid #C8C8C2;
+  border-bottom-width: 0;
+  background-color: #FBFBFB;
+  overflow: hidden;
+  opacity: 0.7;
+  color: #000;
+  font-size: 95%;
+}
+#footer a {
+  font-size: inherit;
+}

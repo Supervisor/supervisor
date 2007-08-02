@@ -4,70 +4,63 @@
       xmlns:meld="http://www.plope.com/software/meld3">
 <head>
   <title>Supervisor Status</title>
-  <link href="supervisor.css" rel="stylesheet" type="text/css" />
+  <link href="/stylesheets/supervisor.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
+<div id="wrapper">
 
-<div style="margin-bottom: 10px">
-  <img src="supervisor.gif" alt="supervisor image" width="200" height="67" />
-  <div style="margin-bottom: 5px;">
-    <small>(c) 2006 Chris McDonough</small>
+  <div id="header">
+    <img src="/images/supervisor.gif" alt="Supervisor status" />
   </div>
-  <div meld:id="statusmessage" style="width: 797px"></div>
-</div>
 
-<div meld:id="content">
+  <div meld:id="content">
+    <div class="hidden" meld:id="statusmessage">#</div>
 
-<form meld:id="form" action="index.html" method="POST">
+    <form meld:id="form" action="index.html" method="post">
+      <ul id="buttons" class="clr">
+        <li id="refresh"><a href="/index.html?action=refresh">&amp;nbsp;</a></li>
+        <li id="restart_all"><a href="/index.html?action=restartall">&amp;nbsp;</a></li>
+        <li id="stop_all"><a href="/index.html?action=stopall">&amp;nbsp;</a></li>
+      </ul>
 
-<div style="margin-top: 10px;">
+      <table cellspacing="0" meld:id="statustable">
+        <thead>
+        <tr>
+          <th class="state">State</th>
+          <th class="desc">Description</th>
+          <th class="name">Name</th>
+          <th class="action">Action</th>
+        </tr>
+        </thead>
 
-<a href="index.html?action=refresh">
-   <input type="button" value=" Refresh " name="refresh" />
-</a>
-
-<a href="index.html?action=restartall">
-   <input type="button" value=" Restart All " name="restartall" />
-</a>
-
-<a href="index.html?action=stopall">
-   <input type="button" value=" Stop All " name="stopall" />
-</a>
-
-</div>
-
-<table width="800" border="0" meld:id="statustable">
-  <th width="130" class="tableheader">State</th>
-  <th width="200" class="tableheader">Description</th>
-  <th width="159" class="tableheader">Name</th>
-  <th width="297" class="tableheader">Action</th>
-  <tbody meld:id="tbody">
-    <tr meld:id="tr">
-      <td meld:id="status_td">
-           <span meld:id="status_text" class="statusnominal">Status</span>
-      </td>
-      <td meld:id="info_td">
-           <span meld:id="info_text">Info</span>
-      </td>
-      <td meld:id="name_td"><a href="#" meld:id="name_anchor"
-                               target="_blank">Name</a></td>
-      <td meld:id="action_td">
-        <table>
-          <tr>
-            <td meld:id="actionitem_td" width="70" align="center">
-	      <a href="#" name="foo" meld:id="actionitem_anchor"
-		 >Action</a>
-	    </td>
-	  </tr>
-	</table>
-      </td>
-    </tr>
-  </tbody>
-</table>
-
-</form>
+        <tbody meld:id="tbody">
+          <tr meld:id="tr" class="">
+            <td meld:id="status_td" class="status"><span meld:id="status_text" class="statusnominal">nominal</span></td>
+            <td meld:id="info_td"><span meld:id="info_text">Info</span></td>
+            <td meld:id="name_td"><a href="#" meld:id="name_anchor" target="_blank">Name</a></td>
+            <td meld:id="action_td" class="action">
+              <ul>
+                <li meld:id="actionitem_td">
+                  <a href="#" name="#" meld:id="actionitem_anchor">Action</a>
+                </li>
+              </ul>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </form>
+    
+    <div id="footer" class="clr">
+      <div class="left">
+        &amp;copy; 2006-<span meld:id="copyright_date">#</span> <strong>Chris McDonough</strong>, 
+        <a href="http://agendaless.com/">Agendaless Consulting</a>
+      </div>
+      <div class="right">
+        design by <a href="http://maintainable.com">Maintainable Software</a>
+      </div>
+    </div>
+  </div>
 
 </div>
-
 </body>
 </html>

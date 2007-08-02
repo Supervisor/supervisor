@@ -16,6 +16,8 @@ Next Release
     aliased for compatibility but is deprecated and will be removed 
     in a future version (Mike Naberezny).
 
+  - Improved web interface styling (Mike Naberezny, Derek DeVries)
+
 2.2b1
 
   - Individual program configuration sections can now specify an

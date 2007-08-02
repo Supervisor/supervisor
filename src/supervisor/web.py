@@ -14,6 +14,7 @@ from medusa import producers
 from supervisord import ProcessStates
 from http import NOT_DONE_YET
 import xmlrpc
+import datetime
 
 class DeferredWebProducer:
     """ A medusa producer that implements a deferred callback; requires
@@ -411,36 +412,49 @@ class StatusView(MeldView):
 
         if message is not None:
             statusarea = root.findmeld('statusmessage')
-            statusarea.attrib['class'] = 'statusmessage'
+            statusarea.attrib['class'] = 'status_msg'
             statusarea.content(message)
 
         if data:
             iterator = root.findmeld('tr').repeat(data)
-            for element, item in iterator:
-                status_text = element.findmeld('status_text')
-                status_text.content(item['status'])
+            shaded_tr = False
+
+            for tr_element, item in iterator:
+                status_text = tr_element.findmeld('status_text')
+                status_text.content(item['status'].lower())
                 status_text.attrib['class'] = self.css_class_for_state(
                     item['state'])
-                info_text = element.findmeld('info_text')
+
+                info_text = tr_element.findmeld('info_text')
                 info_text.content(item['description'])
-                anchor = element.findmeld('name_anchor')
+
+                anchor = tr_element.findmeld('name_anchor')
                 processname = item['name']
                 anchor.attributes(href='tail.html?processname=%s' % processname)
                 anchor.content(processname)
+
                 actions = item['actions']
-                actionitem_td = element.findmeld('actionitem_td')
-                for element, actionitem in actionitem_td.repeat(actions):
+                actionitem_td = tr_element.findmeld('actionitem_td')
+                
+                for li_element, actionitem in actionitem_td.repeat(actions):
+                    anchor = li_element.findmeld('actionitem_anchor')
                     if actionitem is None:
-                        element.content('&nbsp;', structure=True)
+                        anchor.attrib['class'] = 'hidden'
                     else:
-                        anchor = element.findmeld('actionitem_anchor')
-                        anchor.attributes(href=actionitem['href'])
+                        anchor.attributes(href=actionitem['href'], 
+                                          name=actionitem['name'])
                         anchor.content(actionitem['name'])
                         if actionitem['target']:
                             anchor.attributes(target=actionitem['target'])
+                if shaded_tr: 
+                    tr_element.attrib['class'] = 'shade'
+                shaded_tr = not shaded_tr
         else:
             table = root.findmeld('statustable')
             table.replace('No programs to manage')
+
+        copyright_year = str(datetime.date.today().year)
+        root.findmeld('copyright_date').content(copyright_year)
 
         return root.write_xhtmlstring()
 
