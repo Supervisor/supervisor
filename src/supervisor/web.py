@@ -261,10 +261,10 @@ class StatusView(MeldView):
 
         # the rpc interface code is already written to deal properly in a
         # deferred world, so just use it
-        rpcinterface = xmlrpc.RootRPCInterface(
-            [('supervisor',
-              xmlrpc.SupervisorNamespaceRPCInterface(supervisord))]
-            )
+
+        supervisor_ns = ('supervisor', xmlrpc.SupervisorNamespaceRPCInterface(supervisord))
+        system_ns     = ('system',     xmlrpc.SystemNamespaceRPCInterface([supervisor_ns]))
+        rpcinterface = xmlrpc.RootRPCInterface([supervisor_ns, system_ns])
 
         if action:
 
@@ -387,7 +387,10 @@ class StatusView(MeldView):
                     response['headers']['Location'] = location
 
         supervisord = self.context.supervisord
-        rpcinterface = xmlrpc.RPCInterface(supervisord)
+        rpcinterface = xmlrpc.RootRPCInterface(
+            [('supervisor',
+              xmlrpc.SupervisorNamespaceRPCInterface(supervisord))]
+            )
 
         processnames = supervisord.processes.keys()
         processnames.sort()
