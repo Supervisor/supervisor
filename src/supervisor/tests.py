@@ -2653,6 +2653,22 @@ class BasicAuthTransportTests(unittest.TestCase):
         # would be an AttributeError for _use_datetime under Python 2.5
         parser, unmarshaller = instance.getparser() # this uses _use_datetime
 
+class StatusViewTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from web import StatusView
+        return StatusView
+
+    def _makeOne(self, context):
+        klass = self._getTargetClass()
+        return klass(context)
+
+    def test_make_callback_noaction(self):
+        context = DummyContext()
+        context.supervisord = DummySupervisor()
+        context.template = 'ui/status.html'
+        view = self._makeOne(context)
+        self.assertRaises(ValueError, view.make_callback, 'process', None)
+
 class DummyProcess:
     # Initial state; overridden by instance variables
     pid = 0 # Subprocess pid; 0 when not running
@@ -3162,6 +3178,9 @@ class DummyRequest:
 class DummyRPCInterface:
     def hello(self):
         return 'Hello!'
+
+class DummyContext:
+    pass
         
 def test_suite():
     suite = unittest.TestSuite()
@@ -3177,6 +3196,7 @@ def test_suite():
     suite.addTest(unittest.makeSuite(LogtailHandlerTests))
     suite.addTest(unittest.makeSuite(TailFProducerTests))
     suite.addTest(unittest.makeSuite(BasicAuthTransportTests))
+    suite.addTest(unittest.makeSuite(StatusViewTests))
     return suite
 
 if __name__ == '__main__':

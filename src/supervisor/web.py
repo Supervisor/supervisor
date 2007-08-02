@@ -261,7 +261,10 @@ class StatusView(MeldView):
 
         # the rpc interface code is already written to deal properly in a
         # deferred world, so just use it
-        rpcinterface = xmlrpc.RPCInterface(supervisord)
+        rpcinterface = xmlrpc.RootRPCInterface(
+            [('supervisor',
+              xmlrpc.SupervisorNamespaceRPCInterface(supervisord))]
+            )
 
         if action:
 
