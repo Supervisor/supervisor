@@ -44,7 +44,6 @@ import os
 import sys
 import time
 import errno
-import socket
 import select
 import signal
 import asyncore
@@ -53,9 +52,9 @@ import StringIO
 import shlex
 import logging
 
-from options import ServerOptions
-from options import decode_wait_status
-from options import signame
+from supervisor.options import ServerOptions
+from supervisor.options import decode_wait_status
+from supervisor.options import signame
 
 class ProcessStates:
     STOPPED = 0

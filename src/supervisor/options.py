@@ -4,7 +4,6 @@ import socket
 import getopt
 import os
 import sys
-import datatypes
 import logging
 import tempfile
 import errno
@@ -21,6 +20,8 @@ import pkg_resources
 
 from fcntl import fcntl
 from fcntl import F_SETFL, F_GETFL
+
+from supervisor import datatypes
 
 VERSION = '2.3b1'
 
@@ -1107,7 +1108,7 @@ class ServerOptions(Options):
             self.logger.info(msg)
 
     def make_process(self, config):
-        from supervisord import Subprocess
+        from supervisor.supervisord import Subprocess
         return Subprocess(self, config)
 
     def make_pipes(self):
@@ -1125,7 +1126,6 @@ class ServerOptions(Options):
         except OSError:
             for fd in pipes.values():
                 self.close_fd(fd)
-            subprocess.pipes = {}
 
     def close_parent_pipes(self, pipes):
         for fdname in ('stdin', 'stdout', 'stderr'):

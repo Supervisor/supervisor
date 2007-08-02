@@ -33,25 +33,17 @@ interactively is started.  Use the action "help" to find out about available
 actions.
 """
 
-import os
 import cmd
 import sys
-import time
 import getpass
 import xmlrpclib
-import urllib2
-import fcntl
 import socket
 import asyncore
 import errno
-import time
-import datetime
 import urlparse
 
-from options import ClientOptions
-from supervisord import ProcessStates
-from supervisord import getProcessStateDescription
-import xmlrpc
+from supervisor.options import ClientOptions
+from supervisor import xmlrpc
 
 class Controller(cmd.Cmd):
 
@@ -263,9 +255,9 @@ class Controller(cmd.Cmd):
         except xmlrpclib.Fault, e:
             template = '%s: ERROR (%s)'
             if e.faultCode == xmlrpc.Faults.NO_FILE:
-                self._output(template % (processname, 'no log file'))
+                self._output(template % ('supervisord', 'no log file'))
             elif e.faultCode == xmlrpc.Faults.FAILED:
-                self._output(template % (processname,
+                self._output(template % ('supervisord',
                                          'unknown error reading log'))
         else:
             self._output(output)

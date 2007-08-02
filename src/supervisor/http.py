@@ -1,7 +1,3 @@
-from medusa import http_date
-from medusa import http_server
-from medusa import producers
-from medusa import filesys
 import asyncore
 import os
 import stat
@@ -12,6 +8,11 @@ import socket
 import errno
 import pwd
 import urllib
+
+from medusa import http_date
+from medusa import http_server
+from medusa import producers
+from medusa import filesys
 
 NOT_DONE_YET = []
 

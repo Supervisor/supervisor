@@ -1,20 +1,21 @@
 import os
 import re
 import cgi
-import meld3
 import time
 import traceback
 import urllib
-from options import readFile
+import datetime
+
 from medusa import default_handler
 from medusa import producers
 from medusa.http_server import http_date
 from medusa.http_server import get_header
-from medusa import producers
-from supervisord import ProcessStates
-from http import NOT_DONE_YET
-import xmlrpc
-import datetime
+
+import meld3
+
+from supervisor import xmlrpc
+from supervisor.supervisord import ProcessStates
+from supervisor.http import NOT_DONE_YET
 
 class DeferredWebProducer:
     """ A medusa producer that implements a deferred callback; requires

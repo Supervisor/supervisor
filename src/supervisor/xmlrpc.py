@@ -6,9 +6,6 @@ import types
 import re
 import traceback
 import StringIO
-import tempfile
-import errno
-import signal
 import time
 
 from supervisord import ProcessStates
@@ -492,6 +489,7 @@ class SupervisorNamespaceRPCInterface:
                                 (process.config.name,
                                  self.stopProcess(process.config.name)))
                         except RPCError, e:
+                            name = process.config.name
                             results.append({'name':name, 'status':e.code,
                                             'description':e.text})
                             continue

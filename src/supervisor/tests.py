@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Test suite for supervisord.py."""
 
 import os
@@ -9,32 +8,19 @@ import signal
 import tempfile
 import unittest
 import socket
-import pickle
-import pwd
 import errno
 from StringIO import StringIO
 from datetime import datetime
 
-import supervisord
-import datatypes
-import xmlrpc
-import http
-from supervisord import ProcessStates
-from supervisord import SupervisorStates
-try:
-    __file__
-except:
-    __file__ = sys.argv[0]
-
-
-DEBUG = 0
-
-
-import unittest
+from supervisor import datatypes
+from supervisor import xmlrpc
+from supervisor import http
+from supervisor.supervisord import ProcessStates
+from supervisor.supervisord import SupervisorStates
 
 class ServerOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
-        from options import ServerOptions
+        from supervisor.options import ServerOptions
         return ServerOptions
 
     def _makeOne(self):
@@ -86,13 +72,11 @@ command=/bin/cat
 exitcodes=0,1,127
 """ % {'tempdir':tempfile.gettempdir()}
 
-        from StringIO import StringIO
         fp = StringIO(s)
         instance = self._makeOne()
         instance.configfile = fp
         instance.realize()
         options = instance.configroot.supervisord
-        import socket
         self.assertEqual(options.directory, tempfile.gettempdir())
         self.assertEqual(options.umask, 022)
         self.assertEqual(options.logfile, 'supervisord.log')
@@ -179,7 +163,7 @@ exitcodes=0,1,127
         self.assertEqual(instance.minprocs, 300)
 
     def test_readFile_failed(self):
-        from options import readFile
+        from supervisor.options import readFile
         try:
             readFile('/notthere', 0, 10)
         except ValueError, inst:
@@ -204,13 +188,11 @@ exitcodes=0,1,127
         self.assertEqual(result, "command at '/' is a directory")
 
     def test_cleanup_afunix_unlink(self):
-        import tempfile
         fn = tempfile.mktemp()
         f = open(fn, 'w')
         f.write('foo')
         f.close()
         instance = self._makeOne()
-        import socket
         class Port:
             family = socket.AF_UNIX
             address = fn
@@ -223,14 +205,12 @@ exitcodes=0,1,127
         self.failIf(os.path.exists(fn))
 
     def test_cleanup_afunix_nounlink(self):
-        import tempfile
         fn = tempfile.mktemp()
         try:
             f = open(fn, 'w')
             f.write('foo')
             f.close()
             instance = self._makeOne()
-            import socket
             class Port:
                 family = socket.AF_UNIX
                 address = fn
@@ -249,7 +229,6 @@ exitcodes=0,1,127
                 pass
 
     def test_write_pidfile_ok(self):
-        import tempfile
         fn = tempfile.mktemp()
         try:
             instance = self._makeOne()
@@ -268,7 +247,6 @@ exitcodes=0,1,127
                 pass
 
     def test_write_pidfile_fail(self):
-        import tempfile
         fn = '/cannot/possibly/exist'
         instance = self._makeOne()
         instance.logger = DummyLogger()
@@ -359,7 +337,7 @@ class MainXMLRPCInterfaceTests(TestBase):
     def test_traverse(self):
         dummy = DummyRPCInterface()
         interface = self._makeOne([('dummy', dummy)])
-        from xmlrpc import traverse
+        from supervisor.xmlrpc import traverse
         self._assertRPCError(xmlrpc.Faults.UNKNOWN_METHOD,
                              traverse, interface, 'notthere.hello', [])
         self._assertRPCError(xmlrpc.Faults.UNKNOWN_METHOD,
@@ -379,7 +357,6 @@ def makeExecutable(file, substitutions=None):
     for key in substitutions.keys():
         data = data.replace('<<%s>>' % key.upper(), substitutions[key])
     
-    import tempfile
     tmpnam = tempfile.mktemp(prefix=last)
     f = open(tmpnam, 'w')
     f.write(data)
@@ -425,7 +402,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
         version = interface.getSupervisorVersion()
-        import options
+        from supervisor import options
         self.assertEqual(version, options.VERSION)
         self.assertEqual(interface.update_text, 'getSupervisorVersion')
         
@@ -438,7 +415,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(interface.update_text, 'getIdentification')
 
     def test_getState(self):
-        from supervisord import getSupervisorStateDescription
+        from supervisor.supervisord import getSupervisorStateDescription
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
         stateinfo = interface.getState()
@@ -626,8 +603,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = DummySupervisor({'foo':process, 'foo2':process2})
         interface = self._makeOne(supervisord)
         callback = interface.startAllProcesses()
-        from http import NOT_DONE_YET
-        from xmlrpc import Faults
+        from supervisor.http import NOT_DONE_YET
+        from supervisor.xmlrpc import Faults
 
         # create callbacks in startall()
         self.assertEqual(callback(), NOT_DONE_YET)
@@ -669,8 +646,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = DummySupervisor({'foo':process, 'foo2':process2})
         interface = self._makeOne(supervisord)
         callback = interface.startAllProcesses(wait=False)
-        from http import NOT_DONE_YET
-        from xmlrpc import Faults
+        from supervisor.http import NOT_DONE_YET
+        from supervisor.xmlrpc import Faults
 
         # create callbacks in startall()
         self.assertEqual(callback(), NOT_DONE_YET)
@@ -741,7 +718,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         start = _NOW -100
         stop  = _NOW -1
-        from supervisord import ProcessStates
+        from supervisor.supervisord import ProcessStates
         running = {'name':'running',
                    'pid':1,
                    'state':ProcessStates.RUNNING,
@@ -799,7 +776,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                    
 
     def test_getProcessInfo(self):
-        from supervisord import ProcessStates
+        from supervisor.supervisord import ProcessStates
 
         options = DummyOptions()
         config = DummyPConfig('foo', '/bin/foo', logfile='/tmp/fleeb.bar')
@@ -824,7 +801,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.failUnless(data['description'].startswith('pid 111'))
 
     def test_getAllProcessInfo(self):
-        from supervisord import ProcessStates
+        from supervisor.supervisord import ProcessStates
         options = DummyOptions()
 
         p1config = DummyPConfig('process1', '/bin/process1', priority=1,
@@ -1025,7 +1002,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     
     def test_tailProcessLog_unreadable(self):
         """nothing is returned if the log doesn't exist yet"""
-        from string import letters
         options = DummyOptions()
         config = DummyPConfig('foo', '/bin/foo', logfile='/tmp/fooooooo')
         process = DummyProcess(options, config)
@@ -1143,7 +1119,7 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
     def test_allMethodDocs(self):
         # belt-and-suspenders test for docstring-as-typing parsing correctness
         # and documentation validity vs. implementation
-        import options
+        from supervisor import options
         _RPCTYPES = ['int', 'double', 'string', 'boolean', 'dateTime.iso8601',
                      'base64', 'binary', 'array', 'struct']
         interface = self._makeOne()
@@ -1281,10 +1257,11 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
 
 class SubprocessTests(unittest.TestCase):
     def _getTargetClass(self):
-        return supervisord.Subprocess
+        from supervisor.supervisord import Subprocess
+        return Subprocess
 
     def _makeOne(self, *arg, **kw):
-        return supervisord.Subprocess(*arg, **kw)
+        return self._getTargetClass()(*arg, **kw)
 
     def test_ctor(self):
         options = DummyOptions()
@@ -1765,7 +1742,7 @@ class SubprocessTests(unittest.TestCase):
     def test_get_state(self):
         options = DummyOptions()
         config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
-        from supervisord import ProcessStates
+        from supervisor.supervisord import ProcessStates
 
         instance = self._makeOne(options, config)
         instance.killing = True
@@ -1809,7 +1786,7 @@ class SubprocessTests(unittest.TestCase):
     def test_strip_ansi(self):
         executable = '/bin/cat'
         options = DummyOptions()
-        from options import getLogger
+        from supervisor.options import getLogger
         options.getLogger = getLogger
         options.strip_ansi = True
         config = DummyPConfig('output', executable, logfile='/tmp/foo')
@@ -1853,7 +1830,7 @@ class XMLRPCMarshallingTests(unittest.TestCase):
 
 class XMLRPCHandlerTests(unittest.TestCase):
     def _getTargetClass(self):
-        from xmlrpc import supervisor_xmlrpc_handler
+        from supervisor.xmlrpc import supervisor_xmlrpc_handler
         return supervisor_xmlrpc_handler
     
     def _makeOne(self, supervisord, subinterfaces):
@@ -1864,7 +1841,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
         subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
         handler = self._makeOne(supervisor, subinterfaces)
         self.assertEqual(handler.supervisord, supervisor)
-        from xmlrpc import RootRPCInterface
+        from supervisor.xmlrpc import RootRPCInterface
         self.assertEqual(handler.rpcinterface.__class__, RootRPCInterface)
 
     def test_continue_request_nosuchmethod(self):
@@ -1927,7 +1904,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
 
 class LogtailHandlerTests(unittest.TestCase):
     def _getTargetClass(self):
-        from http import logtail_handler
+        from supervisor.http import logtail_handler
         return logtail_handler
 
     def _makeOne(self, supervisord):
@@ -1973,7 +1950,7 @@ class LogtailHandlerTests(unittest.TestCase):
 
 class SupervisordTests(unittest.TestCase):
     def _getTargetClass(self):
-        from supervisord import Supervisor
+        from supervisor.supervisord import Supervisor
         return Supervisor
 
     def _makeOne(self, options):
@@ -2002,7 +1979,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(options.cleaned_up, True)
 
     def test_get_state(self):
-        from supervisord import SupervisorStates
+        from supervisor.supervisord import SupervisorStates
         options = DummyOptions()
         supervisord = self._makeOne(options)
         self.assertEqual(supervisord.get_state(), SupervisorStates.ACTIVE)
@@ -2010,7 +1987,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(supervisord.get_state(), SupervisorStates.SHUTDOWN)
 
     def test_start_necessary(self):
-        from supervisord import ProcessStates
+        from supervisor.supervisord import ProcessStates
         options = DummyOptions()
         pconfig1 = DummyPConfig('killed', 'killed', '/bin/killed')
         process1 = DummyProcess(options, pconfig1, ProcessStates.EXITED)
@@ -2215,7 +2192,7 @@ class SupervisordTests(unittest.TestCase):
 
 class ControllerTests(unittest.TestCase):
     def _getTargetClass(self):
-        from supervisorctl import Controller
+        from supervisor.supervisorctl import Controller
         return Controller
 
     def _makeOne(self, options):
@@ -2605,7 +2582,7 @@ baz            STOPPED    baz description
         
 class TailFProducerTests(unittest.TestCase):
     def _getTargetClass(self):
-        from http import tail_f_producer
+        from supervisor.http import tail_f_producer
         return tail_f_producer
 
     def _makeOne(self, request, filename, head):
@@ -2633,7 +2610,7 @@ class TailFProducerTests(unittest.TestCase):
 
 class BasicAuthTransportTests(unittest.TestCase):
     def _getTargetClass(self):
-        from options import BasicAuthTransport
+        from supervisor.options import BasicAuthTransport
         return BasicAuthTransport
 
     def _makeOne(self, username=None, password=None, serverurl=None):
@@ -2655,7 +2632,7 @@ class BasicAuthTransportTests(unittest.TestCase):
 
 class StatusViewTests(unittest.TestCase):
     def _getTargetClass(self):
-        from web import StatusView
+        from supervisor.web import StatusView
         return StatusView
 
     def _makeOne(self, context):
@@ -2973,7 +2950,7 @@ class DummyOptions:
         self.environment_processed = True
 
     def stripEscapes(self, data):
-        from options import ServerOptions
+        from supervisor.options import ServerOptions
         o = ServerOptions()
         return o.stripEscapes(data)
 
