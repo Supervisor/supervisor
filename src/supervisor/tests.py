@@ -409,17 +409,17 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self._assertRPCError(xmlrpc.Faults.SHUTDOWN_STATE, interface._update,
                              'foo')
 
-    def test_getProtocolVersion(self):
+    def test_getAPIVersion(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
-        version = interface.getProtocolVersion()
+        version = interface.getAPIVersion()
         self.assertEqual(version, xmlrpc.RPC_VERSION)
-        self.assertEqual(interface.update_text, 'getProtocolVersion')
+        self.assertEqual(interface.update_text, 'getAPIVersion')
 
-    def test_getProtocolVersion_aliased_to_deprecated_getVersion(self):
+    def test_getAPIVersion_aliased_to_deprecated_getVersion(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
-        self.assertEqual(interface.getProtocolVersion, interface.getVersion)
+        self.assertEqual(interface.getAPIVersion, interface.getVersion)
 
     def test_getSupervisorVersion(self):
         supervisord = DummySupervisor()
@@ -1891,15 +1891,15 @@ class XMLRPCHandlerTests(unittest.TestCase):
         subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
         handler = self._makeOne(supervisor, subinterfaces)
         import xmlrpclib
-        data = xmlrpclib.dumps((), 'supervisor.getProtocolVersion')
+        data = xmlrpclib.dumps((), 'supervisor.getAPIVersion')
         request = DummyRequest('/what/ever', None, None, None)
         handler.continue_request(data, request)
         logdata = supervisor.options.logger.data
         self.assertEqual(len(logdata), 2)
         self.assertEqual(logdata[0],
-               u'XML-RPC method called: supervisor.getProtocolVersion()')
+               u'XML-RPC method called: supervisor.getAPIVersion()')
         self.assertEqual(logdata[1],
-            u'XML-RPC method supervisor.getProtocolVersion() returned successfully')
+            u'XML-RPC method supervisor.getAPIVersion() returned successfully')
         self.assertEqual(len(request.producers), 1)
         xml_response = request.producers[0]
         response = xmlrpclib.loads(xml_response)
@@ -2996,7 +2996,7 @@ class DummySupervisorRPCNamespace:
     _restarted = False
     _shutdown = False
 
-    def getProtocolVersion(self):
+    def getAPIVersion(self):
         return '1.0'
 
     def readProcessLog(self, name, offset, length):

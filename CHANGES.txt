@@ -12,9 +12,9 @@ Next Release
     Mike Naberezny).
 
   - The XML-RPC method supervisor.getVersion() has been renamed for 
-    clarity to supervisor.getProtocolVersion().  The old name is
-    aliased for compatibility but is deprecated and will be removed 
-    in a future version (Mike Naberezny).
+    clarity to supervisor.getAPIVersion().  The old name is aliased 
+    for compatibility but is deprecated and will be removed in a
+    future version (Mike Naberezny).
 
   - Improved web interface styling (Mike Naberezny, Derek DeVries)
 

@@ -182,15 +182,15 @@ class SupervisorNamespaceRPCInterface:
 
     # RPC API methods
 
-    def getProtocolVersion(self):
+    def getAPIVersion(self):
         """ Return the version of the RPC API used by supervisord
 
         @return string version version id
         """
-        self._update('getProtocolVersion')
+        self._update('getAPIVersion')
         return RPC_VERSION
 
-    getVersion = getProtocolVersion # b/w compatibility with releases before 2.3
+    getVersion = getAPIVersion # b/w compatibility with releases before 2.3
 
     def getSupervisorVersion(self):
         """ Return the version of the supervisor package in use by supervisord
