@@ -53,4 +53,5 @@ dist = setup(
     include_package_data = True,
     zip_safe = False,
     namespace_packages = ['supervisor'],
+    test_suite = "supervisor.tests.test_suite",
     )
