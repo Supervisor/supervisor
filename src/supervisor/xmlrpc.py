@@ -16,6 +16,11 @@ from supervisor.http import NOT_DONE_YET
 from supervisor.options import readFile
 from supervisor.options import tailFile
 from supervisor.options import gettags
+
+from supervisor.options import NotExecutable
+from supervisor.options import NotFound
+from supervisor.options import NoPermission
+
 from supervisor.supervisord import ProcessStates
 from supervisor.supervisord import SupervisorStates
 from supervisor.supervisord import getSupervisorStateDescription
@@ -303,13 +308,14 @@ class SupervisorNamespaceRPCInterface:
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
         
-        # test filespec
-        command  = process.config.command # "<filespec> <args>"
-        filespec = self.COMMAND_SEPARATOR.split(command)[0]
-        if not os.path.exists(filespec):
-            raise RPCError(Faults.NO_FILE)
-        if not os.access(filespec, os.F_OK|os.X_OK):
-            raise RPCError(Faults.NOT_EXECUTABLE)
+        # test filespec, don't bother trying to spawn if we know it will
+        # eventually fail
+        try:
+            filename, argv = process.get_execv_args()
+        except NotFound, why:
+            raise RPCError(Faults.NO_FILE, why.args[0])
+        except (NotExecutable, NoPermission), why:
+            raise RPCError(Faults.NOT_EXECUTABLE, why.args[0])
 
         started = []
 

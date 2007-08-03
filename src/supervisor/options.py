@@ -1175,22 +1175,17 @@ class ServerOptions(Options):
         return path
 
     def check_execv_args(self, filename, argv, st):
-        msg = None
-        
         if st is None:
-            msg = "can't find command %r" % filename
+            raise NotFound("can't find command %r" % filename)
 
         elif stat.S_ISDIR(st[stat.ST_MODE]):
-            msg = "command at %r is a directory" % filename
+            raise NotExecutable("command at %r is a directory" % filename)
 
         elif not (stat.S_IMODE(st[stat.ST_MODE]) & 0111):
-            # not executable
-            msg = "command at %r is not executable" % filename
+            raise NotExecutable("command at %r is not executable" % filename)
 
         elif not os.access(filename, os.X_OK):
-            msg = "no permission to run command %r" % filename
-
-        return msg
+            raise NoPermission("no permission to run command %r" % filename)
 
     def reopenlogs(self):
         self.logger.info('supervisord logreopen')
@@ -1578,3 +1573,18 @@ def _init_signames():
             d[v] = k
     _signames = d
 
+class ProcessException(Exception):
+    """ Specialized exceptions used when attempting to start a process """
+
+class NotExecutable(ProcessException):
+    """ Indicates that the filespec cannot be executed because its path
+    resolves to a file which is not executable, or which is a directory. """
+
+class NotFound(ProcessException):
+    """ Indicates that the filespec cannot be executed because it could not
+    be found """
+
+class NoPermission(ProcessException):
+    """ Indicates that the file cannot be executed because the supervisor
+    process does not possess the appropriate UNIX filesystem permission
+    to execute the file. """

@@ -173,19 +173,23 @@ exitcodes=0,1,127
 
     def test_check_execv_args_cant_find_command(self):
         instance = self._makeOne()
-        result = instance.check_execv_args('/not/there', None, None)
-        self.assertEqual(result, "can't find command '/not/there'")
+        from supervisor.options import NotFound
+        self.assertRaises(NotFound, instance.check_execv_args,
+                          '/not/there', None, None)
 
     def test_check_execv_args_notexecutable(self):
         instance = self._makeOne()
-        result = instance.check_execv_args('/etc/passwd', None,
-                                           os.stat('/etc/passwd'))
-        self.assertEqual(result, "command at '/etc/passwd' is not executable")
+        from supervisor.options import NotExecutable
+        self.assertRaises(NotExecutable,
+                          instance.check_execv_args, '/etc/passwd',
+                          ['etc/passwd'], os.stat('/etc/passwd'))
 
     def test_check_execv_args_isdir(self):
         instance = self._makeOne()
-        result = instance.check_execv_args('/', None, os.stat('/'))
-        self.assertEqual(result, "command at '/' is a directory")
+        from supervisor.options import NotExecutable
+        self.assertRaises(NotExecutable,
+                          instance.check_execv_args, '/',
+                          ['/'], os.stat('/'))
 
     def test_cleanup_afunix_unlink(self):
         fn = tempfile.mktemp()
@@ -530,12 +534,11 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                              interface.startProcess, 'foo')
 
     def test_startProcess_file_not_found(self):
-        filespec = '/file/not/found'
-        self.assertFalse(os.path.exists(filespec))
-        
         options = DummyOptions()
-        config  = DummyPConfig('foo', filespec, autostart=False)
+        config  = DummyPConfig('foo', '/foo/bar', autostart=False)
+        from supervisor.options import NotFound
         process = DummyProcess(options, config, ProcessStates.STOPPED)
+        process.execv_arg_exception = NotFound
         supervisord = DummySupervisor({'foo':process})
 
         interface = self._makeOne(supervisord)
@@ -543,13 +546,11 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                              interface.startProcess, 'foo')
 
     def test_startProcess_file_not_executable(self):
-        f = tempfile.NamedTemporaryFile()
-        self.assertTrue(os.path.exists(f.name))
-        self.assertFalse(os.access(f.name, os.F_OK|os.X_OK))
-
         options = DummyOptions()
-        config  = DummyPConfig('foo', f.name, autostart=False)
+        config  = DummyPConfig('foo', '/foo/bar', autostart=False)
+        from supervisor.options import NotExecutable
         process = DummyProcess(options, config, ProcessStates.STOPPED)
+        process.execv_arg_exception = NotExecutable
         supervisord = DummySupervisor({'foo':process})
         
         interface = self._makeOne(supervisord)
@@ -1395,29 +1396,28 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig('notthere', '/notthere')
         instance = self._makeOne(options, config)
         args = instance.get_execv_args()
-        self.assertEqual(args, ('/notthere', ['/notthere'], None))
+        self.assertEqual(args, ('/notthere', ['/notthere']))
 
     def test_get_execv_args_abs_withquotes_missing(self):
         options = DummyOptions()
         config = DummyPConfig('notthere', '/notthere "an argument"')
         instance = self._makeOne(options, config)
         args = instance.get_execv_args()
-        self.assertEqual(args, ('/notthere', ['/notthere', 'an argument'],
-                                None))
+        self.assertEqual(args, ('/notthere', ['/notthere', 'an argument']))
 
     def test_get_execv_args_rel_missing(self):
         options = DummyOptions()
         config = DummyPConfig('notthere', 'notthere')
         instance = self._makeOne(options, config)
         args = instance.get_execv_args()
-        self.assertEqual(args, (None, ['notthere'], None))
+        self.assertEqual(args, (None, ['notthere']))
 
     def test_get_execv_args_rel_withquotes_missing(self):
         options = DummyOptions()
         config = DummyPConfig('notthere', 'notthere "an argument"')
         instance = self._makeOne(options, config)
         args = instance.get_execv_args()
-        self.assertEqual(args, (None, ['notthere', 'an argument'], None))
+        self.assertEqual(args, (None, ['notthere', 'an argument']))
 
     def test_get_execv_args_abs(self):
         executable = '/bin/sh foo'
@@ -1425,9 +1425,9 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig('sh', executable)
         instance = self._makeOne(options, config)
         args = instance.get_execv_args()
+        self.assertEqual(len(args), 2)
         self.assertEqual(args[0], '/bin/sh')
         self.assertEqual(args[1], ['/bin/sh', 'foo'])
-        self.assertEqual(len(args[2]), 10)
 
     def test_get_execv_args_rel(self):
         executable = 'sh foo'
@@ -1435,9 +1435,9 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig('sh', executable)
         instance = self._makeOne(options, config)
         args = instance.get_execv_args()
+        self.assertEqual(len(args), 2)
         self.assertEqual(args[0], '/bin/sh')
         self.assertEqual(args[1], ['sh', 'foo'])
-        self.assertEqual(len(args[2]), 10)
 
     def test_record_spawnerr(self):
         options = DummyOptions()
@@ -2773,6 +2773,7 @@ class DummyProcess:
         self.pipes = {}
         self.finished = None
         self.logs_reopened = False
+        self.execv_arg_exception = None
 
     def reopenlogs(self):
         self.logs_reopened = True
@@ -2815,6 +2816,16 @@ class DummyProcess:
 
     def finish(self, pid, sts):
         self.finished = pid, sts
+
+    def get_execv_args(self):
+        if self.execv_arg_exception:
+            raise self.execv_arg_exception('whatever')
+        import shlex
+        commandargs = shlex.split(self.config.command)
+        program = commandargs[0]
+        return program, commandargs
+        
+        
 
 class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,
@@ -2980,8 +2991,8 @@ class DummyOptions:
 
     def check_execv_args(self, filename, argv, st):
         if filename == '/bad/filename':
-            return 'bad filename'
-        return None
+            from supervisor.options import NotFound
+            raise NotFound('bad filename')
 
     def make_pipes(self):
         if self.make_pipes_error:

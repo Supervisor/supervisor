@@ -57,6 +57,7 @@ from supervisor.events import ProcessCommunicationEvent
 from supervisor.options import ServerOptions
 from supervisor.options import decode_wait_status
 from supervisor.options import signame
+from supervisor.options import ProcessException
 
 class ProcessStates:
     STOPPED = 0
@@ -245,7 +246,8 @@ class Subprocess:
         
     def get_execv_args(self):
         """Internal: turn a program name into a file name, using $PATH,
-        make sure it exists """
+        make sure it exists / is executable, raising a ProcessException
+        if not """
         commandargs = shlex.split(self.config.command)
 
         program = commandargs[0]
@@ -254,9 +256,8 @@ class Subprocess:
             filename = program
             try:
                 st = self.options.stat(filename)
-                return filename, commandargs, st
             except OSError:
-                return filename, commandargs, None
+                st = None
             
         else:
             path = self.options.get_path()
@@ -266,10 +267,17 @@ class Subprocess:
                 filename = os.path.join(dir, program)
                 try:
                     st = self.options.stat(filename)
-                    return filename, commandargs, st
                 except OSError:
-                    continue
-            return None, commandargs, None
+                    filename = None
+                else:
+                    break
+
+        # check_execv_args will raise a ProcessException if the execv
+        # args are bogus, we break it out into a separate options
+        # method call here only to service unit tests
+        self.options.check_execv_args(filename, commandargs, st)
+
+        return filename, commandargs
 
     def record_spawnerr(self, msg):
         now = time.time()
@@ -298,10 +306,10 @@ class Subprocess:
         
         self.laststart = time.time()
 
-        filename, argv, st = self.get_execv_args()
-        fail_msg = self.options.check_execv_args(filename, argv, st)
-        if fail_msg is not None:
-            self.record_spawnerr(fail_msg)
+        try:
+            filename, argv = self.get_execv_args()
+        except ProcessException, what:
+            self.record_spawnerr(what.args[0])
             return
 
         try:
