@@ -8,18 +8,18 @@ import traceback
 import StringIO
 import time
 
-from supervisord import ProcessStates
-from supervisord import SupervisorStates
-from supervisord import getSupervisorStateDescription
-from supervisord import getProcessStateDescription
 from medusa.xmlrpc_handler import xmlrpc_handler
 from medusa.http_server import get_header
 from medusa import producers
 
-from http import NOT_DONE_YET
-from options import readFile
-from options import tailFile
-from options import gettags
+from supervisor.http import NOT_DONE_YET
+from supervisor.options import readFile
+from supervisor.options import tailFile
+from supervisor.options import gettags
+from supervisor.supervisord import ProcessStates
+from supervisor.supervisord import SupervisorStates
+from supervisor.supervisord import getSupervisorStateDescription
+from supervisor.supervisord import getProcessStateDescription
 
 RPC_VERSION  = '1.0'
 
