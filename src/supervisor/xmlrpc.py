@@ -31,6 +31,7 @@ class Faults:
     SHUTDOWN_STATE = 6
     BAD_NAME = 10
     NO_FILE = 20
+    NOT_EXECUTABLE = 21
     FAILED = 30
     ABNORMAL_TERMINATION = 40
     SPAWN_ERROR = 50
@@ -165,6 +166,7 @@ def xmlrpc_marshal(value):
     return body
 
 class SupervisorNamespaceRPCInterface:
+    COMMAND_SEPARATOR = re.compile('\s+')
 
     def __init__(self, supervisord):
         self.supervisord = supervisord
@@ -295,11 +297,19 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('startProcess')
 
+        # get process to start from name
         processes = self.supervisord.processes
         process = processes.get(name)
-
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
+        
+        # test filespec
+        command  = process.config.command # "<filespec> <args>"
+        filespec = self.COMMAND_SEPARATOR.split(command)[0]
+        if not os.path.exists(filespec):
+            raise RPCError(Faults.NO_FILE)
+        if not os.access(filespec, os.F_OK|os.X_OK):
+            raise RPCError(Faults.NOT_EXECUTABLE)
 
         started = []
 

@@ -18,6 +18,9 @@ Next Release
 
   - Improved web interface styling (Mike Naberezny, Derek DeVries)
 
+  - The XML-RPC method supervisor.startProcess() now checks that
+    the file exists and is executable (Mike Naberezny).
+
 2.2b1
 
   - Individual program configuration sections can now specify an

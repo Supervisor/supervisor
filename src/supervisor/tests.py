@@ -514,7 +514,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_startProcess_already_started(self):
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', autostart=False)
+        config = DummyPConfig('foo', __file__, autostart=False)
         process = DummyProcess(options, config)
         process.pid = 10
         supervisord = DummySupervisor({'foo':process})
@@ -523,16 +523,42 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self._assertRPCError(xmlrpc.Faults.ALREADY_STARTED,
                              callback)
 
-    def test_startProcess_badname(self):
+    def test_startProcess_bad_name(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
-                             interface.startProcess,
-                             'foo')
+                             interface.startProcess, 'foo')
+
+    def test_startProcess_file_not_found(self):
+        filespec = '/file/not/found'
+        self.assertFalse(os.path.exists(filespec))
+        
+        options = DummyOptions()
+        config  = DummyPConfig('foo', filespec, autostart=False)
+        process = DummyProcess(options, config, ProcessStates.STOPPED)
+        supervisord = DummySupervisor({'foo':process})
+
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.NO_FILE,
+                             interface.startProcess, 'foo')
+
+    def test_startProcess_file_not_executable(self):
+        f = tempfile.NamedTemporaryFile()
+        self.assertTrue(os.path.exists(f.name))
+        self.assertFalse(os.access(f.name, os.F_OK|os.X_OK))
+
+        options = DummyOptions()
+        config  = DummyPConfig('foo', f.name, autostart=False)
+        process = DummyProcess(options, config, ProcessStates.STOPPED)
+        supervisord = DummySupervisor({'foo':process})
+        
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.NOT_EXECUTABLE,
+                             interface.startProcess, 'foo')
 
     def test_startProcess_spawnerr(self):
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', autostart=False)
+        config = DummyPConfig('foo', __file__, autostart=False)
         process = DummyProcess(options, config, ProcessStates.STOPPED)
         process.spawnerr = 'abc'
         supervisord = DummySupervisor({'foo':process})
@@ -542,7 +568,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_startProcess(self):
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', autostart=False, startsecs=.01)
+        config = DummyPConfig('foo', __file__, autostart=False, startsecs=.01)
         process = DummyProcess(options, config, state=ProcessStates.STOPPED)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
@@ -557,7 +583,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_startProcess_nowait(self):
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', autostart=False)
+        config = DummyPConfig('foo', __file__, autostart=False)
         process = DummyProcess(options, config, state=ProcessStates.STOPPED)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
@@ -568,7 +594,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_startProcess_nostartsecs(self):
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', autostart=False, startsecs=0)
+        config = DummyPConfig('foo', __file__, autostart=False, startsecs=0)
         process = DummyProcess(options, config, state=ProcessStates.STOPPED)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
@@ -579,7 +605,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_startProcess_abnormal_term(self):
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', autostart=False)
+        config = DummyPConfig('foo', __file__, autostart=False)
         process = DummyProcess(options, config, ProcessStates.STOPPED)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
@@ -594,9 +620,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     
     def test_startAllProcesses(self):
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', priority=1,
+        config = DummyPConfig('foo', __file__, priority=1,
                                startsecs=.01)
-        config2 = DummyPConfig('foo2', '/bin/foo2', priority=2,
+        config2 = DummyPConfig('foo2', __file__, priority=2,
                                startsecs=.01)
         process = DummyProcess(options, config, ProcessStates.STOPPED)
         process2 = DummyProcess(options, config2, ProcessStates.STOPPED)
@@ -637,9 +663,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_startAllProcesses_nowait(self):
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', priority=1,
+        config = DummyPConfig('foo', __file__, priority=1,
                                startsecs=.01)
-        config2 = DummyPConfig('foo2', '/bin/foo2', priority=2,
+        config2 = DummyPConfig('foo2', __file__, priority=2,
                                startsecs=.01)
         process = DummyProcess(options, config, ProcessStates.STOPPED)
         process2 = DummyProcess(options, config2, ProcessStates.STOPPED)
