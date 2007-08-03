@@ -700,13 +700,18 @@ class ServerOptions(Options):
             uid = config.saneget(section, 'user', None)
             if uid is not None:
                 uid = datatypes.name_to_uid(uid)
-            logfile = config.saneget(section, 'logfile', None)
-            if logfile in ('NONE', 'OFF'):
-                logfile = None
-            elif logfile in (None, 'AUTO'):
-                logfile = self.AUTOMATIC
-            else:
-                logfile = datatypes.existing_dirpath(logfile)
+            for n in ('logfile', 'eventlogfile'):
+                val = config.saneget(section, n, None)
+                if val in ('NONE', 'OFF'):
+                    val = None
+                elif val in (None, 'AUTO'):
+                    val = self.AUTOMATIC
+                else:
+                    val = datatypes.existing_dirpath(val)
+                if n == 'logfile':
+                    logfile = val
+                else:
+                    eventlogfile = val
             logfile_backups = config.saneget(section, 'logfile_backups', 10)
             logfile_backups = datatypes.integer(logfile_backups)
             logfile_maxbytes = config.saneget(section, 'logfile_maxbytes',
@@ -736,6 +741,7 @@ class ServerOptions(Options):
                                     startretries=startretries,
                                     uid=uid,
                                     logfile=logfile,
+                                    eventlogfile = eventlogfile,
                                     logfile_backups=logfile_backups,
                                     logfile_maxbytes=logfile_maxbytes,
                                     stopsignal=stopsignal,
@@ -1306,9 +1312,10 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
 
 class ProcessConfig:
     def __init__(self, name, command, priority, autostart, autorestart,
-                 startsecs, startretries, uid, logfile, logfile_backups,
-                 logfile_maxbytes, stopsignal, stopwaitsecs, exitcodes,
-                 log_stdout, log_stderr, environment=None):
+                 startsecs, startretries, uid, logfile, eventlogfile,
+                 logfile_backups, logfile_maxbytes, stopsignal,
+                 stopwaitsecs, exitcodes, log_stdout, log_stderr,
+                 environment=None):
         self.name = name
         self.command = command
         self.priority = priority
@@ -1318,6 +1325,7 @@ class ProcessConfig:
         self.startretries = startretries
         self.uid = uid
         self.logfile = logfile
+        self.eventlogfile = eventlogfile
         self.logfile_backups = logfile_backups
         self.logfile_maxbytes = logfile_maxbytes
         self.stopsignal = stopsignal

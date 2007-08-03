@@ -52,6 +52,8 @@ import StringIO
 import shlex
 import logging
 
+from supervisor.events import notify
+from supervisor.events import ProcessCommunicationEvent
 from supervisor.options import ServerOptions
 from supervisor.options import decode_wait_status
 from supervisor.options import signame
@@ -95,7 +97,10 @@ class Subprocess:
     killing = 0 # flag determining whether we are trying to kill this proc
     backoff = 0 # backoff counter (to startretries)
     pipes = None # mapping of pipe descriptor purpose to file descriptor
-    childlog = None # the current logger 
+    eventmode = False # are we capturing process output event data
+    mainlog = None # the process log file
+    eventlog = None # the log file captured to when we're in eventmode
+    childlog = None # the current logger (event or main)
     logbuffer = '' # buffer of characters read from child pipes
     exitstatus = None # status attached to dead process by finsh()
     spawnerr = None # error message attached by spawn() if any
@@ -114,33 +119,107 @@ class Subprocess:
             # using "not not maxbytes" below is an optimization.  If
             # maxbytes is zero, it means we're not using rotation.  The
             # rotating logger is more expensive than the normal one.
-            self.childlog = options.getLogger(config.logfile, logging.INFO,
+            self.mainlog = options.getLogger(config.logfile, logging.INFO,
+                                             '%(message)s',
+                                             rotating=not not maxbytes,
+                                             maxbytes=maxbytes,
+                                             backups=backups)
+        if config.eventlogfile:
+            self.eventlog = options.getLogger(config.eventlogfile,
+                                              logging.INFO,
                                               '%(message)s',
-                                              rotating=not not maxbytes,
-                                              maxbytes=maxbytes,
-                                              backups=backups)
+                                              rotating=False)
+        self.childlog = self.mainlog
 
     def removelogs(self):
-        if self.childlog:
-            for handler in self.childlog.handlers:
-                handler.remove()
-                handler.reopen()
+        for log in (self.mainlog, self.eventlog):
+            if log is not None:
+                for handler in log.handlers:
+                    handler.remove()
+                    handler.reopen()
 
     def reopenlogs(self):
-        if self.childlog:
-            for handler in self.childlog.handlers:
-                handler.reopen()
+        for log in (self.mainlog, self.eventlog):
+            if log is not None:
+                for handler in log.handlers:
+                    handler.reopen()
+
+    def toggle_eventmode(self):
+        options = self.options
+        self.eventmode = not self.eventmode
+
+        if self.config.eventlogfile:
+            if self.eventmode:
+                self.childlog = self.eventlog
+            else:
+                eventlogfile = self.config.eventlogfile
+                for handler in self.eventlog.handlers:
+                    handler.flush()
+                data = ''
+                f = open(eventlogfile, 'r')
+                while 1:
+                    new = f.read(1<<20) # 1MB
+                    data += new
+                    if not new:
+                        break
+                    if len(data) > (1 << 21): #2MB
+                        data = data[:1<<21]
+                        # DWIM: don't overrun memory
+                        self.options.logger.info(
+                            'Truncated oversized EVENT mode log to 2MB')
+                        break 
+                    
+                notify(ProcessCommunicationEvent(self.config.name, data))
+                                        
+                msg = "Process '%s' emitted a comm event" % self.config.name
+                self.options.logger.info(msg)
+                                        
+                for handler in self.eventlog.handlers:
+                    handler.remove()
+                    handler.reopen()
+                self.childlog = self.mainlog
 
     def log_output(self):
-        if self.logbuffer:
-            data, self.logbuffer = self.logbuffer, ''
-            if self.childlog:
-                if self.options.strip_ansi:
-                    data = self.options.stripEscapes(data)
-                self.childlog.info(data)
-            msg = '%s output:\n%s' % (self.config.name, data)
-            self.options.logger.log(self.options.TRACE, msg)
+        if not self.logbuffer:
+            return
+        
+        if self.eventmode:
+            token = ProcessCommunicationEvent.END_TOKEN
+        else:
+            token = ProcessCommunicationEvent.BEGIN_TOKEN
 
+        data = self.logbuffer
+        self.logbuffer = ''
+
+        if len(data) + len(self.logbuffer) <= len(token):
+            self.logbuffer = data
+            return # not enough data
+
+        try:
+            before, after = data.split(token, 1)
+        except ValueError:
+            after = None
+            index = find_prefix_at_end(data, token)
+            if index:
+                self.logbuffer = self.logbuffer + data[-index:]
+                data = data[:-index]
+                # XXX log and trace data
+        else:
+            data = before
+            self.toggle_eventmode()
+            self.logbuffer = after
+
+        if self.childlog:
+            if self.options.strip_ansi:
+                data = self.options.stripEscapes(data)
+            self.childlog.info(data)
+
+        msg = '%s output:\n%s' % (self.config.name, data)
+        self.options.logger.log(self.options.TRACE, msg)
+
+        if after:
+            self.log_output()
+            
     def drain_stdout(self, *ignored):
         output = self.options.readfd(self.pipes['stdout'])
         if self.config.log_stdout:
@@ -432,6 +511,12 @@ class Subprocess:
         elif self.pid:
             return ProcessStates.RUNNING
         return ProcessStates.UNKNOWN
+
+def find_prefix_at_end(haystack, needle):
+    l = len(needle) - 1
+    while l and not haystack.endswith(needle[:l]):
+        l -= 1
+    return l
 
 class Supervisor:
     mood = 1 # 1: up, 0: restarting, -1: suicidal

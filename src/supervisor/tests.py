@@ -1304,10 +1304,12 @@ class SubprocessTests(unittest.TestCase):
         options = DummyOptions()
         config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
         instance = self._makeOne(options, config)
-        instance.logbuffer = 'foo'
+        instance.logbuffer = 'this string is longer than a pcomm token'
         instance.log_output()
-        self.assertEqual(instance.childlog.data, ['foo'])
-        self.assertEqual(options.logger.data, [5, 'notthere output:\nfoo'])
+        self.assertEqual(instance.childlog.data,
+                         ['this string is longer than a pcomm token'])
+        self.assertEqual(options.logger.data,
+            [5, 'notthere output:\nthis string is longer than a pcomm token'])
 
     def test_drain_stdout(self):
         options = DummyOptions()
@@ -1783,6 +1785,71 @@ class SubprocessTests(unittest.TestCase):
         instance.laststart = 1
         self.assertEqual(instance.get_state(), ProcessStates.UNKNOWN)
 
+    def test_eventmode_switch(self):
+        from supervisor.events import ProcessCommunicationEvent
+        from supervisor.events import subscribe
+        events = []
+        def doit(event):
+            events.append(event)
+        subscribe(ProcessCommunicationEvent, doit)
+        import string
+        letters = string.letters
+        digits = string.digits * 4
+        BEGIN_TOKEN = ProcessCommunicationEvent.BEGIN_TOKEN
+        END_TOKEN = ProcessCommunicationEvent.END_TOKEN
+        data = (letters +  BEGIN_TOKEN + digits + END_TOKEN + letters)
+        # boundaries that split tokens
+        broken = data.split(':')
+        first = broken[0] + ':'
+        second = broken[1] + ':'
+        third = broken[2]
+
+        executable = '/bin/cat'
+        options = DummyOptions()
+        from options import getLogger
+        options.getLogger = getLogger
+        config = DummyPConfig('output', executable, logfile='/tmp/foo',
+                              eventlogfile='/tmp/bar')
+
+        try:
+            instance = self._makeOne(options, config)
+            logfile = instance.config.logfile
+            instance.logbuffer = first
+            instance.log_output()
+            [ x.flush() for x in instance.mainlog.handlers]
+            self.assertEqual(open(logfile, 'r').read(), letters)
+            self.assertEqual(instance.logbuffer, first[len(letters):])
+            self.assertEqual(len(events), 0)
+
+            instance.logbuffer += second
+            instance.log_output()
+            self.assertEqual(len(events), 0)
+            [ x.flush() for x in instance.mainlog.handlers]
+            self.assertEqual(open(logfile, 'r').read(), letters)
+            self.assertEqual(instance.logbuffer, first[len(letters):])
+            self.assertEqual(len(events), 0)
+
+            instance.logbuffer += third
+            instance.log_output()
+            [ x.flush() for x in instance.mainlog.handlers]
+            self.assertEqual(open(instance.config.logfile, 'r').read(),
+                             letters *2)
+            self.assertEqual(len(events), 1)
+            event = events[0]
+            self.assertEqual(event.__class__, ProcessCommunicationEvent)
+            self.assertEqual(event.process_name, 'output')
+            self.assertEqual(event.data, digits)
+
+        finally:
+            try:
+                os.remove(instance.config.logfile)
+            except (OSError, IOError):
+                pass
+            try:
+                os.remove(instance.config.eventlogfile)
+            except (OSError, IOError):
+                pass
+
     def test_strip_ansi(self):
         executable = '/bin/cat'
         options = DummyOptions()
@@ -1791,8 +1858,8 @@ class SubprocessTests(unittest.TestCase):
         options.strip_ansi = True
         config = DummyPConfig('output', executable, logfile='/tmp/foo')
 
-        ansi = '\x1b[34mHello world!\x1b[0m'
-        noansi = 'Hello world!'
+        ansi = '\x1b[34mHello world... this is longer than a token!\x1b[0m'
+        noansi = 'Hello world... this is longer than a token!'
 
         try:
             instance = self._makeOne(options, config)
@@ -2726,7 +2793,7 @@ class DummyProcess:
 class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,
                  autorestart=True, startsecs=10, startretries=999,
-                 uid=None, logfile=None, logfile_backups=0,
+                 uid=None, logfile=None, eventlogfile=None, logfile_backups=0,
                  logfile_maxbytes=0, log_stdout=True, log_stderr=False,
                  stopsignal=signal.SIGTERM, stopwaitsecs=10,
                  exitcodes=[0,2], environment=None):
@@ -2739,6 +2806,7 @@ class DummyPConfig:
         self.startretries = startretries
         self.uid = uid
         self.logfile = logfile
+        self.eventlogfile = eventlogfile
         self.logfile_backups = logfile_backups
         self.logfile_maxbytes = logfile_maxbytes
         self.log_stdout = log_stdout
@@ -2747,7 +2815,6 @@ class DummyPConfig:
         self.stopwaitsecs = stopwaitsecs
         self.exitcodes = exitcodes
         self.environment = environment
-        
 
 class DummyLogger:
     def __init__(self):
