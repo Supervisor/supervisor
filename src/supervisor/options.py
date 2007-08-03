@@ -550,9 +550,6 @@ class ServerOptions(Options):
 
         self.identifier = self.configroot.supervisord.identifier
 
-        if self.nodaemon:
-            self.daemon = False
-
     def convert_sockchown(self, sockchown):
         # Convert chown stuff to uid/gid
         user = sockchown[0]
