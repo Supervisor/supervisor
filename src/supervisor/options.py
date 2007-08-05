@@ -686,7 +686,7 @@ class ServerOptions(Options):
             command = config.saneget(section, 'command', None)
             if command is None:
                 raise ValueError, (
-                    'program section %s does not specify a command' )
+                    'program section %s does not specify a command' % section)
             priority = config.saneget(section, 'priority', 999)
             priority = datatypes.integer(priority)
             autostart = config.saneget(section, 'autostart', 'true')
