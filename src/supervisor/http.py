@@ -761,6 +761,7 @@ def make_http_server(options, supervisord):
             import traceback; traceback.print_exc()
             raise ValueError('Could not make %s rpc interface' % name)
         subinterfaces.append((name, inst))
+        options.logger.info('RPC interface %r initialized' % name)
         
     subinterfaces.append(('system', SystemNamespaceRPCInterface(subinterfaces)))
     xmlrpchandler = supervisor_xmlrpc_handler(supervisord, subinterfaces)
