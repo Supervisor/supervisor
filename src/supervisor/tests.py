@@ -1359,6 +1359,68 @@ class SubprocessTests(unittest.TestCase):
         instance.drain_stderr()
         self.assertEqual(instance.logbuffer, 'abc')
 
+    def test_drain_stdin_nodata(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
+        instance = self._makeOne(options, config)
+        self.assertEqual(instance.writebuffer, '')
+        instance.drain_stdin()
+        self.assertEqual(instance.writebuffer, '')
+        self.assertEqual(options.written, {})
+
+    def test_drain_stdin_normal(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
+        instance = self._makeOne(options, config)
+        instance.spawn()
+        instance.writebuffer = 'foo'
+        instance.drain_stdin()
+        self.assertEqual(instance.writebuffer, '')
+        self.assertEqual(options.written[instance.pipes['stdin']], 'foo')
+
+    def test_drain_stdin_overhardcoded_limit(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
+        instance = self._makeOne(options, config)
+        instance.spawn()
+        instance.writebuffer = 'a' * (2 << 17)
+        instance.drain_stdin()
+        self.assertEqual(len(instance.writebuffer), (2<<17)-(2<<16))
+        self.assertEqual(options.written[instance.pipes['stdin']],
+                         ('a' * (2 << 16)))
+
+    def test_drain_stdin_over_os_limit(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
+        instance = self._makeOne(options, config)
+        options.write_accept = 1
+        instance.spawn()
+        instance.writebuffer = 'a' * (2 << 16)
+        instance.drain_stdin()
+        self.assertEqual(len(instance.writebuffer), (2<<16) - 1)
+        self.assertEqual(options.written[instance.pipes['stdin']], 'a')
+
+    def test_drain_stdin_epipe(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
+        instance = self._makeOne(options, config)
+        options.write_error = errno.EPIPE
+        instance.writebuffer = 'foo'
+        instance.spawn()
+        instance.drain_stdin()
+        self.assertEqual(instance.writebuffer, '')
+        self.assertEqual(options.logger.data,
+            ["failed writing to process 'test' stdin"])
+
+    def test_drain_stdin_uncaught_oserror(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test')
+        instance = self._makeOne(options, config)
+        options.write_error = errno.EBADF
+        instance.writebuffer = 'foo'
+        instance.spawn()
+        self.assertRaises(OSError, instance.drain_stdin)
+
     def test_drain(self):
         options = DummyOptions()
         config = DummyPConfig('test', '/test')
@@ -1374,7 +1436,7 @@ class SubprocessTests(unittest.TestCase):
         instance.drain()
         self.assertEqual(instance.logbuffer, 'abc')
         
-    def test_get_pipe_drains(self):
+    def test_get_output_drains(self):
         options = DummyOptions()
         config = DummyPConfig('test', '/test')
         instance = self._makeOne(options, config)
@@ -1382,13 +1444,13 @@ class SubprocessTests(unittest.TestCase):
         instance.pipes['stdout'] = 'abc'
         instance.pipes['stderr'] = 'def'
 
-        drains = instance.get_pipe_drains()
+        drains = instance.get_output_drains()
         self.assertEqual(len(drains), 2)
         self.assertEqual(drains[0], ['abc', instance.drain_stdout])
         self.assertEqual(drains[1], ['def', instance.drain_stderr])
 
         instance.pipes = {}
-        drains = instance.get_pipe_drains()
+        drains = instance.get_output_drains()
         self.assertEqual(drains, [])
         
 
@@ -1560,7 +1622,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         self.assertEqual(options.written,
-             {1: ['good: error trying to setuid to 1!\n', 'good: screwed\n']})
+             {1: 'good: error trying to setuid to 1!\ngood: screwed\n'})
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options.execv_args,
                          ('/good/filename', ['/good/filename']) )
@@ -1580,7 +1642,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         self.assertEqual(options.written,
-                         {1: ["couldn't exec /good/filename: EPERM\n"]})
+                         {1: "couldn't exec /good/filename: EPERM\n"})
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options._exitcode, 127)
 
@@ -1598,7 +1660,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         self.assertEqual(len(options.written), 1)
-        msg = options.written[1][0]
+        msg = options.written[1]
         self.failUnless(msg.startswith("couldn't exec /good/filename:"))
         self.failUnless("exceptions.RuntimeError" in msg)
         self.assertEqual(options.privsdropped, None)
@@ -1628,6 +1690,21 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.spawnerr, None)
         self.failUnless(instance.delay)
         self.assertEqual(instance.options.pidhistory[10], instance)
+
+    def test_write(self):
+        executable = '/bin/cat'
+        options = DummyOptions()
+        config = DummyPConfig('output', executable)
+        instance = self._makeOne(options, config)
+        sent = 'a' * (1 << 13)
+        self.assertRaises(IOError, instance.write, sent)
+        options.forkpid = 1
+        result = instance.spawn()
+        instance.write(sent)
+        received = instance.writebuffer
+        self.assertEqual(sent, received)
+        instance.killing = True
+        self.assertRaises(IOError, instance.write, sent)
 
     def dont_test_spawn_and_kill(self):
         # this is a functional test
@@ -2755,8 +2832,9 @@ class DummyProcess:
     pipes = None
     childlog = None # the current logger 
     spawnerr = None
-    logbuffer = '' # buffer of characters to send to child process' stdin
-    
+    logbuffer = '' # buffer of characters from child output to log
+    writebuffer = '' # buffer of characters to send to child process' stdin
+
     def __init__(self, options, config, state=ProcessStates.RUNNING):
         self.options = options
         self.config = config
@@ -2802,7 +2880,7 @@ class DummyProcess:
     def drain(self):
         self.drained = True
 
-    def get_pipe_drains(self):
+    def get_output_drains(self):
         return []
 
     def __cmp__(self, other):
@@ -2925,6 +3003,8 @@ class DummyOptions:
         self.privsdropped = None
         self.logs_reopened = False
         self.environment_processed = False
+        self.write_accept = None
+        self.write_error = None
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -3004,6 +3084,16 @@ class DummyOptions:
         pipes['stderr'], pipes['child_stderr'] = (7, 8)
         return pipes
 
+    def write(self, fd, chars):
+        if self.write_error:
+            raise OSError(self.write_error)
+        if self.write_accept:
+            chars = chars[self.write_accept]
+        data = self.written.setdefault(fd, '')
+        data += chars
+        self.written[fd] = data
+        return len(chars)
+
     def fork(self):
         if self.fork_error:
             raise OSError(self.fork_error)
@@ -3023,10 +3113,6 @@ class DummyOptions:
 
     def dup2(self, frm, to):
         self.duped[frm] = to
-
-    def write(self, fd, data):
-        old_data = self.written.setdefault(fd, [])
-        old_data.append(data)
 
     def _exit(self, code):
         self._exitcode = code

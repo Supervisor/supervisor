@@ -149,7 +149,7 @@ class Supervisor:
             # process output fds
             for proc in self.processes.values():
                 proc.log_output()
-                drains = proc.get_pipe_drains()
+                drains = proc.get_output_drains()
                 for fd, drain in drains:
                     r.append(fd)
                     process_map[fd] = drain
@@ -176,7 +176,7 @@ class Supervisor:
                 if process_map.has_key(fd):
                     drain = process_map[fd]
                     # drain the file descriptor
-                    drain(fd)
+                    drain()
 
                 if socket_map.has_key(fd):
                     try:

@@ -49,6 +49,7 @@ class Subprocess:
     eventlog = None # the log file captured to when we're in eventmode
     childlog = None # the current logger (event or main)
     logbuffer = '' # buffer of characters read from child pipes
+    writebuffer = '' # buffer of characters to be sent to child's stdin
     exitstatus = None # status attached to dead process by finsh()
     spawnerr = None # error message attached by spawn() if any
     
@@ -166,30 +167,52 @@ class Subprocess:
 
         if after:
             self.log_output()
+
+    def write(self, chars):
+        if not self.pid or self.killing:
+            raise IOError(errno.EPIPE, "Process already closed")
+        self.writebuffer = self.writebuffer + chars
             
-    def drain_stdout(self, *ignored):
+    def drain_stdout(self):
         output = self.options.readfd(self.pipes['stdout'])
         if self.config.log_stdout:
             self.logbuffer += output
 
-    def drain_stderr(self, *ignored):
+    def drain_stderr(self):
         output = self.options.readfd(self.pipes['stderr'])
         if self.config.log_stderr:
             self.logbuffer += output
 
+    def drain_stdin(self):
+        if self.writebuffer:
+            to_send = self.writebuffer[:2<<16]
+            try:
+                sent = self.options.write(self.pipes['stdin'], to_send)
+                self.writebuffer = self.writebuffer[sent:]
+            except OSError, why:
+                msg = 'failed writing to process %r stdin' % self.config.name
+                if why[0] == errno.EPIPE:
+                    self.writebuffer = ''
+                    self.options.logger.info(msg)
+                else:
+                    raise
+
     def drain(self):
         self.drain_stdout()
         self.drain_stderr()
+        self.drain_stdin()
 
-    def get_pipe_drains(self):
+    def get_output_drains(self):
         if not self.pipes:
             return []
+        return ( [ self.pipes['stdout'], self.drain_stdout],
+                 [ self.pipes['stderr'], self.drain_stderr] )
 
-        drains = ( [ self.pipes['stdout'], self.drain_stdout],
-                   [ self.pipes['stderr'], self.drain_stderr] )
+    def get_input_drains(self):
+        if not self.pipes:
+            return []
+        return ( [ self.pipes['stdin'], self.drain_stdin ], )
 
-        return drains
-        
     def get_execv_args(self):
         """Internal: turn a program name into a file name, using $PATH,
         make sure it exists / is executable, raising a ProcessException
