@@ -146,13 +146,22 @@ class Supervisor:
 
             process_map = {}
 
-            # process output fds
+            # process input and output
             for proc in self.processes.values():
                 proc.log_output()
-                drains = proc.get_output_drains()
-                for fd, drain in drains:
+
+                # process output fds
+                output_drains = proc.get_output_drains()
+                for fd, drain in output_drains:
                     r.append(fd)
                     process_map[fd] = drain
+
+                # process input fds
+                if proc.writebuffer:
+                    input_drains = proc.get_input_drains()
+                    for fd, drain in input_drains:
+                        w.append(fd)
+                        process_map[fd] = drain
 
             # medusa i/o fds
             for fd, dispatcher in socket_map.items():
@@ -175,7 +184,7 @@ class Supervisor:
             for fd in r:
                 if process_map.has_key(fd):
                     drain = process_map[fd]
-                    # drain the file descriptor
+                    # drain the file descriptor data to the logbuffer
                     drain()
 
                 if socket_map.has_key(fd):
@@ -187,6 +196,11 @@ class Supervisor:
                         socket_map[fd].handle_error()
 
             for fd in w:
+                if process_map.has_key(fd):
+                    # drain the writebuffer by sending it to child's stdin
+                    drain = process_map[fd]
+                    drain()
+
                 if socket_map.has_key(fd):
                     try:
                         socket_map[fd].handle_write_event()

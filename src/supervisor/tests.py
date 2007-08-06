@@ -1410,7 +1410,7 @@ class SubprocessTests(unittest.TestCase):
         instance.drain_stdin()
         self.assertEqual(instance.writebuffer, '')
         self.assertEqual(options.logger.data,
-            ["failed writing to process 'test' stdin"])
+            ["failed write to process 'test' stdin"])
 
     def test_drain_stdin_uncaught_oserror(self):
         options = DummyOptions()

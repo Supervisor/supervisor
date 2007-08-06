@@ -190,8 +190,8 @@ class Subprocess:
                 sent = self.options.write(self.pipes['stdin'], to_send)
                 self.writebuffer = self.writebuffer[sent:]
             except OSError, why:
-                msg = 'failed writing to process %r stdin' % self.config.name
                 if why[0] == errno.EPIPE:
+                    msg = 'failed write to process %r stdin' % self.config.name
                     self.writebuffer = ''
                     self.options.logger.info(msg)
                 else:
