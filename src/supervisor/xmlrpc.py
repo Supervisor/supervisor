@@ -21,10 +21,11 @@ from supervisor.options import NotExecutable
 from supervisor.options import NotFound
 from supervisor.options import NoPermission
 
-from supervisor.supervisord import ProcessStates
+from supervisor.process import ProcessStates
+from supervisor.process import getProcessStateDescription
+
 from supervisor.supervisord import SupervisorStates
 from supervisor.supervisord import getSupervisorStateDescription
-from supervisor.supervisord import getProcessStateDescription
 
 RPC_VERSION  = '1.0'
 

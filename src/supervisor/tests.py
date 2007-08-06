@@ -15,7 +15,8 @@ from datetime import datetime
 from supervisor import datatypes
 from supervisor import xmlrpc
 from supervisor import http
-from supervisor.supervisord import ProcessStates
+
+from supervisor.process import ProcessStates
 from supervisor.supervisord import SupervisorStates
 
 class ServerOptionsTests(unittest.TestCase):
@@ -745,7 +746,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         start = _NOW -100
         stop  = _NOW -1
-        from supervisor.supervisord import ProcessStates
+        from supervisor.process import ProcessStates
         running = {'name':'running',
                    'pid':1,
                    'state':ProcessStates.RUNNING,
@@ -803,7 +804,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                    
 
     def test_getProcessInfo(self):
-        from supervisor.supervisord import ProcessStates
+        from supervisor.process import ProcessStates
 
         options = DummyOptions()
         config = DummyPConfig('foo', '/bin/foo', logfile='/tmp/fleeb.bar')
@@ -828,7 +829,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.failUnless(data['description'].startswith('pid 111'))
 
     def test_getAllProcessInfo(self):
-        from supervisor.supervisord import ProcessStates
+        from supervisor.process import ProcessStates
         options = DummyOptions()
 
         p1config = DummyPConfig('process1', '/bin/process1', priority=1,
@@ -1284,7 +1285,7 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
 
 class SubprocessTests(unittest.TestCase):
     def _getTargetClass(self):
-        from supervisor.supervisord import Subprocess
+        from supervisor.process import Subprocess
         return Subprocess
 
     def _makeOne(self, *arg, **kw):
@@ -1770,7 +1771,7 @@ class SubprocessTests(unittest.TestCase):
     def test_get_state(self):
         options = DummyOptions()
         config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
-        from supervisor.supervisord import ProcessStates
+        from supervisor.process import ProcessStates
 
         instance = self._makeOne(options, config)
         instance.killing = True
@@ -2080,7 +2081,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(supervisord.get_state(), SupervisorStates.SHUTDOWN)
 
     def test_start_necessary(self):
-        from supervisor.supervisord import ProcessStates
+        from supervisor.process import ProcessStates
         options = DummyOptions()
         pconfig1 = DummyPConfig('killed', 'killed', '/bin/killed')
         process1 = DummyProcess(options, pconfig1, ProcessStates.EXITED)

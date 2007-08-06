@@ -1111,7 +1111,7 @@ class ServerOptions(Options):
             self.logger.info(msg)
 
     def make_process(self, config):
-        from supervisor.supervisord import Subprocess
+        from supervisor.process import Subprocess
         return Subprocess(self, config)
 
     def make_pipes(self):
