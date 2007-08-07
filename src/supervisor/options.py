@@ -37,7 +37,9 @@ from fcntl import F_SETFL, F_GETFL
 
 from supervisor import datatypes
 
-VERSION = '2.3b1'
+here = os.path.abspath(os.path.dirname(__file__))
+version_txt = os.path.join(here, 'version.txt')
+VERSION = open(version_txt).read().strip()
 
 class FileHandler(logging.StreamHandler):
     """File handler which supports reopening of logs.

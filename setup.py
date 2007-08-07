@@ -1,3 +1,16 @@
+##############################################################################
+#
+# Copyright (c) 2007 Agendaless Consulting and Contributors.
+# All Rights Reserved.
+#
+# This software is subject to the provisions of the Zope Public License,
+# Version 2.1 (ZPL).  A copy of the ZPL should accompany this distribution.
+# THIS SOFTWARE IS PROVIDED "AS IS" AND ANY AND ALL EXPRESS OR IMPLIED
+# WARRANTIES ARE DISCLAIMED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF TITLE, MERCHANTABILITY, AGAINST INFRINGEMENT, AND FITNESS
+# FOR A PARTICULAR PURPOSE
+#
+##############################################################################
 
 __revision__ = '$Id$'
 
@@ -34,14 +47,16 @@ CLASSIFIERS = [
     'Topic :: System :: Systems Administration',
     ]
 
+version_txt = os.path.join(here, 'src/supervisor/version.txt')
+supervisor_version = open(version_txt).read().strip()
+
 dist = setup(
     name = 'supervisor',
-    version = '2.3b1',
-    license = 'ZPL 2.0/BSD (see LICENSES.txt)',
+    version = '3.0a1',
+    license = 'ZPL 2.1/others (see LICENSES.txt)',
     url = 'http://www.plope.com/software/supervisor2',
     description = "A system for controlling process state under UNIX",
     long_description= DESC,
-    platform = 'UNIX',
     classifiers = CLASSIFIERS,
     author = "Chris McDonough",
     author_email = "chrism@plope.com",
