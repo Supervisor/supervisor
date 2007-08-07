@@ -44,12 +44,9 @@ class Subprocess:
     killing = 0 # flag determining whether we are trying to kill this proc
     backoff = 0 # backoff counter (to startretries)
     pipes = None # mapping of pipe descriptor purpose to file descriptor
-    eventmode = False # are we capturing process output event data
-    mainlog = None # the process log file
-    eventlog = None # the log file captured to when we're in eventmode
-    childlog = None # the current logger (event or main)
-    logbuffer = '' # buffer of characters read from child pipes
-    writebuffer = '' # buffer of characters to be sent to child's stdin
+    stdout_logger = None # Logger instance representing stdout
+    stderr_logger = None # Logger instance representing stderr
+    stdin_buffer = '' # buffer of characters to be sent to child's stdin
     exitstatus = None # status attached to dead process by finsh()
     spawnerr = None # error message attached by spawn() if any
     
@@ -61,138 +58,83 @@ class Subprocess:
         self.options = options
         self.config = config
         self.pipes = {}
-        if config.logfile:
-            backups = config.logfile_backups
-            maxbytes = config.logfile_maxbytes
-            # using "not not maxbytes" below is an optimization.  If
-            # maxbytes is zero, it means we're not using rotation.  The
-            # rotating logger is more expensive than the normal one.
-            self.mainlog = options.getLogger(config.logfile, logging.INFO,
-                                             '%(message)s',
-                                             rotating=not not maxbytes,
-                                             maxbytes=maxbytes,
-                                             backups=backups)
-        if config.eventlogfile:
-            self.eventlog = options.getLogger(config.eventlogfile,
-                                              logging.INFO,
-                                              '%(message)s',
-                                              rotating=False)
-        self.childlog = self.mainlog
+        self.loggers = {'stdout':None, 'stderr':None}
+        if config.stdout_logfile:
+            self.loggers['stdout'] = Logger(
+                procname = config.name,
+                channel = 'stdout',
+                options = options,
+                logfile = config.stdout_logfile,
+                logfile_backups = config.stdout_logfile_backups,
+                logfile_maxbytes = config.stdout_logfile_maxbytes,
+                eventlogfile = config.stdout_eventlogfile)
+        if config.stderr_logfile and not config.redirect_stderr:
+            self.loggers['stderr'] = Logger(
+                procname = config.name,
+                channel = 'stderr',
+                options = options,
+                logfile = config.stderr_logfile,
+                logfile_backups = config.stderr_logfile_backups,
+                logfile_maxbytes = config.stderr_logfile_maxbytes,
+                eventlogfile = config.stderr_eventlogfile)
 
     def removelogs(self):
-        for log in (self.mainlog, self.eventlog):
-            if log is not None:
-                for handler in log.handlers:
-                    handler.remove()
-                    handler.reopen()
+        for logger in (self.loggers['stdout'], self.loggers['stderr']):
+            if logger is not None:
+                logger.removelogs()
 
     def reopenlogs(self):
-        for log in (self.mainlog, self.eventlog):
-            if log is not None:
-                for handler in log.handlers:
-                    handler.reopen()
-
-    def toggle_eventmode(self):
-        options = self.options
-        self.eventmode = not self.eventmode
-
-        if self.config.eventlogfile:
-            if self.eventmode:
-                self.childlog = self.eventlog
-            else:
-                eventlogfile = self.config.eventlogfile
-                for handler in self.eventlog.handlers:
-                    handler.flush()
-                data = ''
-                f = open(eventlogfile, 'r')
-                while 1:
-                    new = f.read(1<<20) # 1MB
-                    data += new
-                    if not new:
-                        break
-                    if len(data) > (1 << 21): #2MB
-                        data = data[:1<<21]
-                        # DWIM: don't overrun memory
-                        self.options.logger.info(
-                            'Truncated oversized EVENT mode log to 2MB')
-                        break 
-                    
-                notify(ProcessCommunicationEvent(self.config.name, data))
-                                        
-                msg = "Process '%s' emitted a comm event" % self.config.name
-                self.options.logger.info(msg)
-                                        
-                for handler in self.eventlog.handlers:
-                    handler.remove()
-                    handler.reopen()
-                self.childlog = self.mainlog
+        for logger in (self.loggers['stdout'], self.loggers['stderr']):
+            if logger is not None:
+                logger.reopenlogs()
 
     def log_output(self):
-        if not self.logbuffer:
+        for logger in (self.loggers['stdout'], self.loggers['stderr']):
+            if logger is not None:
+                logger.log_output()
+
+    def _drain_output_pipe(self, name):
+        fd = self.pipes[name]
+        if fd is None:
             return
-        
-        if self.eventmode:
-            token = ProcessCommunicationEvent.END_TOKEN
-        else:
-            token = ProcessCommunicationEvent.BEGIN_TOKEN
+        output = self.options.readfd(fd)
+        if self.loggers[name] is not None:
+            self.loggers[name].output_buffer += output
 
-        data = self.logbuffer
-        self.logbuffer = ''
+    def drain_stdout(self):
+        return self._drain_output_pipe('stdout')
 
-        if len(data) + len(self.logbuffer) <= len(token):
-            self.logbuffer = data
-            return # not enough data
+    def drain_stderr(self):
+        return self._drain_output_pipe('stderr')
 
-        try:
-            before, after = data.split(token, 1)
-        except ValueError:
-            after = None
-            index = find_prefix_at_end(data, token)
-            if index:
-                self.logbuffer = self.logbuffer + data[-index:]
-                data = data[:-index]
-                # XXX log and trace data
-        else:
-            data = before
-            self.toggle_eventmode()
-            self.logbuffer = after
+    def get_output_drains(self):
+        drains = []
+        stdout_pipe = self.pipes['stdout']
+        stderr_pipe = self.pipes['stderr']
+        if stdout_pipe is not None:
+            drains.append((stdout_pipe, self.drain_stdout))
+        if stderr_pipe is not None:
+            drains.append((stderr_pipe, self.drain_stderr))
+        return drains
 
-        if self.childlog:
-            if self.options.strip_ansi:
-                data = self.options.stripEscapes(data)
-            self.childlog.info(data)
-
-        msg = '%s output:\n%s' % (self.config.name, data)
-        self.options.logger.log(self.options.TRACE, msg)
-
-        if after:
-            self.log_output()
+    def get_input_drains(self):
+        return [(self.pipes['stdin'], self.drain_stdin)]
 
     def write(self, chars):
         if not self.pid or self.killing:
             raise IOError(errno.EPIPE, "Process already closed")
-        self.writebuffer = self.writebuffer + chars
-            
-    def drain_stdout(self):
-        output = self.options.readfd(self.pipes['stdout'])
-        if self.config.log_stdout:
-            self.logbuffer += output
-
-    def drain_stderr(self):
-        output = self.options.readfd(self.pipes['stderr'])
-        if self.config.log_stderr:
-            self.logbuffer += output
+        self.stdin_buffer = self.stdin_buffer + chars
 
     def drain_stdin(self):
-        if self.writebuffer:
-            to_send = self.writebuffer[:2<<16]
+        if self.stdin_buffer:
+            to_send = self.stdin_buffer[:2<<16]
             try:
                 sent = self.options.write(self.pipes['stdin'], to_send)
-                self.writebuffer = self.writebuffer[sent:]
+                self.stdin_buffer = self.stdin_buffer[sent:]
             except OSError, why:
                 if why[0] == errno.EPIPE:
                     msg = 'failed write to process %r stdin' % self.config.name
-                    self.writebuffer = ''
+                    self.stdin_buffer = ''
                     self.options.logger.info(msg)
                 else:
                     raise
@@ -201,17 +143,6 @@ class Subprocess:
         self.drain_stdout()
         self.drain_stderr()
         self.drain_stdin()
-
-    def get_output_drains(self):
-        if not self.pipes:
-            return []
-        return ( [ self.pipes['stdout'], self.drain_stdout],
-                 [ self.pipes['stderr'], self.drain_stderr] )
-
-    def get_input_drains(self):
-        if not self.pipes:
-            return []
-        return ( [ self.pipes['stdin'], self.drain_stdin ], )
 
     def get_execv_args(self):
         """Internal: turn a program name into a file name, using $PATH,
@@ -258,7 +189,7 @@ class Subprocess:
     def spawn(self):
         """Start the subprocess.  It must not be running already.
 
-        Return the process id.  If the fork() call fails, return 0.
+        Return the process id.  If the fork() call fails, return None.
         """
         pname = self.config.name
 
@@ -282,7 +213,8 @@ class Subprocess:
             return
 
         try:
-            self.pipes = self.options.make_pipes()
+            use_stderr = not self.config.redirect_stderr
+            self.pipes = self.options.make_pipes(use_stderr)
         except OSError, why:
             code = why[0]
             if code == errno.EMFILE:
@@ -334,17 +266,19 @@ class Subprocess:
                 self.options.setpgrp()
                 self.options.dup2(self.pipes['child_stdin'], 0)
                 self.options.dup2(self.pipes['child_stdout'], 1)
-                self.options.dup2(self.pipes['child_stderr'], 2)
+                if self.config.redirect_stderr:
+                    self.options.dup2(self.pipes['child_stdout'], 2)
+                else:
+                    self.options.dup2(self.pipes['child_stderr'], 2)
                 for i in range(3, self.options.minfds):
                     self.options.close_fd(i)
                 # sending to fd 1 will put this output in the log(s)
                 msg = self.set_uid()
                 if msg:
-                    self.options.write(
-                        1, "%s: error trying to setuid to %s!\n" %
-                        (pname, self.config.uid)
-                        )
-                    self.options.write(1, "%s: %s\n" % (pname, msg))
+                    uid = self.config.uid
+                    s = 'supervisor: error trying to setuid to %s ' % uid
+                    self.options.write(1, s)
+                    self.options.write(1, "(%s)" % msg)
                 try:
                     env = os.environ.copy()
                     if self.config.environment is not None:
@@ -489,6 +423,124 @@ class Subprocess:
             return ProcessStates.RUNNING
         return ProcessStates.UNKNOWN
 
+class Logger:
+    procname = '' # process name which "owns" this logger
+    channel = None # 'stdin' or 'stdout'
+    options = None # reference to options.ServerOptions instance
+    eventmode = False # are we capturing process event data
+    mainlog = None #  the process' "normal" log file
+    eventlog = None # the log file while we're in eventmode
+    childlog = None # the current logger (event or main)
+    output_buffer = '' # data waiting to be logged
+    
+    def __init__(self, procname, channel, options, logfile, logfile_backups,
+                 logfile_maxbytes, eventlogfile):
+        self.procname = procname
+        self.channel = channel
+        self.options = options
+        self.mainlog = options.getLogger(
+                logfile, logging.INFO,
+                '%(message)s',
+                rotating=not not logfile_maxbytes,
+                maxbytes=logfile_maxbytes,
+                backups=logfile_backups)
+        self.childlog = self.mainlog
+
+        self.eventlogfile = eventlogfile
+        if eventlogfile:
+            self.eventlog = options.getLogger(
+                eventlogfile,
+                logging.INFO,
+                '%(message)s',
+                rotating=False)
+
+    def removelogs(self):
+        for log in (self.mainlog, self.eventlog):
+            if log is not None:
+                for handler in log.handlers:
+                    handler.remove()
+                    handler.reopen()
+
+    def reopenlogs(self):
+        for log in (self.mainlog, self.eventlog):
+            if log is not None:
+                for handler in log.handlers:
+                    handler.reopen()
+
+    def log_output(self):
+        if self.eventmode:
+            token = ProcessCommunicationEvent.END_TOKEN
+        else:
+            token = ProcessCommunicationEvent.BEGIN_TOKEN
+
+        data = self.output_buffer
+        self.output_buffer = ''
+
+        if len(data) + len(self.output_buffer) <= len(token):
+            self.output_buffer = data
+            return # not enough data
+
+        try:
+            before, after = data.split(token, 1)
+        except ValueError:
+            after = None
+            index = find_prefix_at_end(data, token)
+            if index:
+                self.output_buffer = self.output_buffer + data[-index:]
+                data = data[:-index]
+        else:
+            data = before
+            self.toggle_eventmode()
+            self.output_buffer = after
+
+        if self.childlog:
+            if self.options.strip_ansi:
+                data = self.options.stripEscapes(data)
+            self.childlog.info(data)
+
+        msg = '%r %s output:\n%s' % (self.procname, self.channel, data)
+        self.options.logger.log(self.options.TRACE, msg)
+
+        if after:
+            self.log_output()
+
+    def toggle_eventmode(self):
+        options = self.options
+        self.eventmode = not self.eventmode
+
+        if self.eventlog is not None:
+            if self.eventmode:
+                self.childlog = self.eventlog
+            else:
+                eventlogfile = self.eventlogfile
+                for handler in self.eventlog.handlers:
+                    handler.flush()
+                data = ''
+                f = open(eventlogfile, 'r')
+                while 1:
+                    new = f.read(1<<20) # 1MB
+                    data += new
+                    if not new:
+                        break
+                    if len(data) > (1 << 21): #2MB
+                        data = data[:1<<21]
+                        # DWIM: don't overrun memory
+                        self.options.logger.info(
+                            'Truncated oversized EVENT mode log to 2MB')
+                        break 
+
+                channel = self.channel
+                procname = self.procname
+                notify(ProcessCommunicationEvent(procname, channel, data))
+                                        
+                msg = "%r %s emitted a comm event" % (procname, channel)
+                self.options.logger.log(self.options.TRACE, msg)
+                                        
+                for handler in self.eventlog.handlers:
+                    handler.remove()
+                    handler.reopen()
+                self.childlog = self.mainlog
+        
 def find_prefix_at_end(haystack, needle):
     l = len(needle) - 1
     while l and not haystack.endswith(needle[:l]):

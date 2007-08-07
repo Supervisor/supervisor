@@ -12,6 +12,7 @@ class ProcessCommunicationEvent:
     # event mode tokens
     BEGIN_TOKEN = '<!--XSUPERVISOR:BEGIN-->'
     END_TOKEN   = '<!--XSUPERVISOR:END-->'
-    def __init__(self, process_name, data):
+    def __init__(self, process_name, channel, data):
         self.process_name = process_name
+        self.channel = channel
         self.data = data

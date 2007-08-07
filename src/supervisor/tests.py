@@ -54,7 +54,7 @@ priority=1
 autostart=true
 autorestart=true
 user=root
-logfile=/tmp/cat.log
+stdout_logfile=/tmp/cat.log
 stopsignal=KILL
 stopwaitsecs=5
 startsecs=5
@@ -64,9 +64,9 @@ startretries=10
 command=/bin/cat
 autostart=true
 autorestart=false
-logfile_maxbytes = 1024
-logfile_backups = 2
-logfile = /tmp/cat2.log
+stdout_logfile_maxbytes = 1024
+stdout_logfile_backups = 2
+stdout_logfile = /tmp/cat2.log
 
 [program:cat3]
 command=/bin/cat
@@ -107,11 +107,12 @@ exitcodes=0,1,127
         self.assertEqual(cat.startsecs, 5)
         self.assertEqual(cat.startretries, 10)
         self.assertEqual(cat.uid, 0)
-        self.assertEqual(cat.logfile, '/tmp/cat.log')
+        self.assertEqual(cat.stdout_logfile, '/tmp/cat.log')
         self.assertEqual(cat.stopsignal, signal.SIGKILL)
         self.assertEqual(cat.stopwaitsecs, 5)
-        self.assertEqual(cat.logfile_maxbytes, datatypes.byte_size('50MB'))
-        self.assertEqual(cat.logfile_backups, 10)
+        self.assertEqual(cat.stdout_logfile_maxbytes,
+                         datatypes.byte_size('50MB'))
+        self.assertEqual(cat.stdout_logfile_backups, 10)
         self.assertEqual(cat.exitcodes, [0,2])
 
         cat2 = options.programs[1]
@@ -121,10 +122,10 @@ exitcodes=0,1,127
         self.assertEqual(cat2.autostart, True)
         self.assertEqual(cat2.autorestart, False)
         self.assertEqual(cat2.uid, None)
-        self.assertEqual(cat2.logfile, '/tmp/cat2.log')
+        self.assertEqual(cat2.stdout_logfile, '/tmp/cat2.log')
         self.assertEqual(cat2.stopsignal, signal.SIGTERM)
-        self.assertEqual(cat2.logfile_maxbytes, 1024)
-        self.assertEqual(cat2.logfile_backups, 2)
+        self.assertEqual(cat2.stdout_logfile_maxbytes, 1024)
+        self.assertEqual(cat2.stdout_logfile_backups, 2)
         self.assertEqual(cat2.exitcodes, [0,2])
 
         cat3 = options.programs[2]
@@ -134,9 +135,10 @@ exitcodes=0,1,127
         self.assertEqual(cat3.autostart, True)
         self.assertEqual(cat3.autorestart, True)
         self.assertEqual(cat3.uid, None)
-        self.assertEqual(cat3.logfile, instance.AUTOMATIC)
-        self.assertEqual(cat3.logfile_maxbytes, datatypes.byte_size('50MB'))
-        self.assertEqual(cat3.logfile_backups, 10)
+        self.assertEqual(cat3.stdout_logfile, instance.AUTOMATIC)
+        self.assertEqual(cat3.stdout_logfile_maxbytes,
+                         datatypes.byte_size('50MB'))
+        self.assertEqual(cat3.stdout_logfile_backups, 10)
         self.assertEqual(cat3.exitcodes, [0,1,127])
         
         self.assertEqual(cat2.stopsignal, signal.SIGTERM)
@@ -279,14 +281,13 @@ exitcodes=0,1,127
             startsecs = 100
             startretries = 100
             user = 'root'
-            logfile = 'NONE'
-            logfile_backups = 1
-            logfile_maxbytes = '100MB'
+            stdout_logfile = 'NONE'
+            stdout_logfile_backups = 1
+            stdout_logfile_maxbytes = '100MB'
             stopsignal = 'KILL'
             stopwaitsecs = 100
             exitcodes = '1,4'
-            log_stdout = 'false'
-            log_stderr = 'true'
+            redirect_stderr = 'false'
             environment = 'KEY1=val1,KEY2=val2'
             def sections(self):
                 return ['program:foo']
@@ -301,15 +302,13 @@ exitcodes=0,1,127
         self.assertEqual(pconfig.startsecs, 100)
         self.assertEqual(pconfig.startretries, 100)
         self.assertEqual(pconfig.uid, 0)
-        self.assertEqual(pconfig.logfile, None)
-        self.assertEqual(pconfig.logfile_maxbytes, 104857600)
+        self.assertEqual(pconfig.stdout_logfile, None)
+        self.assertEqual(pconfig.stdout_logfile_maxbytes, 104857600)
         self.assertEqual(pconfig.stopsignal, signal.SIGKILL)
         self.assertEqual(pconfig.stopwaitsecs, 100)
         self.assertEqual(pconfig.exitcodes, [1,4])
-        self.assertEqual(pconfig.log_stdout, False)
-        self.assertEqual(pconfig.log_stderr, True)
+        self.assertEqual(pconfig.redirect_stderr, False)
         self.assertEqual(pconfig.environment, {'KEY1':'val1', 'KEY2':'val2'})
-        
         
 
 class TestBase(unittest.TestCase):
@@ -807,7 +806,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         from supervisor.process import ProcessStates
 
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', logfile='/tmp/fleeb.bar')
+        config = DummyPConfig('foo', '/bin/foo',
+                              stdout_logfile='/tmp/fleeb.bar')
         process = DummyProcess(options, config)
         process.pid = 111
         process.laststart = 10
@@ -833,9 +833,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         options = DummyOptions()
 
         p1config = DummyPConfig('process1', '/bin/process1', priority=1,
-                                logfile='/tmp/process1.log')
+                                stdout_logfile='/tmp/process1.log')
         p2config = DummyPConfig('process2', '/bin/process2', priority=2,
-                                logfile='/tmp/process2.log')
+                                stdout_logfile='/tmp/process2.log')
         process1 = DummyProcess(options, p1config, ProcessStates.RUNNING)
         process1.pid = 111
         process1.laststart = 10
@@ -883,7 +883,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_readProcessLog_unreadable(self):
         options = DummyOptions()
         config = DummyPConfig('process1', '/bin/process1', priority=1,
-                              logfile='/tmp/process1.log')
+                              stdout_logfile='/tmp/process1.log')
         process = DummyProcess(options, config)
         supervisord = DummySupervisor({'process1':process})
         interface = self._makeOne(supervisord)
@@ -894,13 +894,13 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_readProcessLog_badargs(self):
         options = DummyOptions()
         config = DummyPConfig('process1', '/bin/process1', priority=1,
-                              logfile='/tmp/process1.log')
+                              stdout_logfile='/tmp/process1.log')
         process = DummyProcess(options, config)
         supervisord = DummySupervisor({'process1':process})
         interface = self._makeOne(supervisord)
 
         try:
-            logfile = process.config.logfile
+            logfile = process.config.stdout_logfile
             f = open(logfile, 'w+')
             f.write('x' * 2048)
             f.close()
@@ -915,12 +915,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_readProcessLog(self):
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', logfile='/tmp/fooooooo')
+        config = DummyPConfig('foo', '/bin/foo', stdout_logfile='/tmp/fooooooo')
         process = DummyProcess(options, config)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
         process = supervisord.processes.get('foo')
-        logfile = process.config.logfile
+        logfile = process.config.stdout_logfile
         try:
             f = open(logfile, 'w+')
             f.write('x' * 2048)
@@ -948,12 +948,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         """entire log is returned when offset==0 and logsize < length"""
         from string import letters
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', logfile='/tmp/fooooooo')
+        config = DummyPConfig('foo', '/bin/foo', stdout_logfile='/tmp/fooooooo')
         process = DummyProcess(options, config)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
         process = supervisord.processes.get('foo')
-        logfile = process.config.logfile
+        logfile = process.config.stdout_logfile
         try:
             f = open(logfile, 'w+')
             f.write(letters)
@@ -973,12 +973,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         """nothing is returned when offset <= logsize"""
         from string import letters
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', logfile='/tmp/fooooooo')
+        config = DummyPConfig('foo', '/bin/foo', stdout_logfile='/tmp/fooooooo')
         process = DummyProcess(options, config)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
         process = supervisord.processes.get('foo')
-        logfile = process.config.logfile
+        logfile = process.config.stdout_logfile
         try:
             f = open(logfile, 'w+')
             f.write(letters)
@@ -1008,12 +1008,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         """buffer overflow occurs when logsize > offset+length"""
         from string import letters
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', logfile='/tmp/fooooooo')
+        config = DummyPConfig('foo', '/bin/foo', stdout_logfile='/tmp/fooooooo')
         process = DummyProcess(options, config)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
         process = supervisord.processes.get('foo')
-        logfile = process.config.logfile
+        logfile = process.config.stdout_logfile
         try:
             f = open(logfile, 'w+')
             f.write(letters)
@@ -1031,12 +1031,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def test_tailProcessLog_unreadable(self):
         """nothing is returned if the log doesn't exist yet"""
         options = DummyOptions()
-        config = DummyPConfig('foo', '/bin/foo', logfile='/tmp/fooooooo')
+        config = DummyPConfig('foo', '/bin/foo', stdout_logfile='/tmp/fooooooo')
         process = DummyProcess(options, config)
         supervisord = DummySupervisor({'foo':process})
         interface = self._makeOne(supervisord)
         process = supervisord.processes.get('foo')
-        logfile = process.config.logfile
+        logfile = process.config.stdout_logfile
                 
         data, offset, overflow = interface.tailProcessLog('foo', 
                                                     offset=0, length=100)
@@ -1293,13 +1293,18 @@ class SubprocessTests(unittest.TestCase):
 
     def test_ctor(self):
         options = DummyOptions()
-        config = DummyPConfig('cat', 'bin/cat', logfile='/tmp/temp123.log')
+        config = DummyPConfig('cat', 'bin/cat',
+                              stdout_logfile='/tmp/temp123.log',
+                              stderr_logfile='/tmp/temp456.log')
         instance = self._makeOne(options, config)
         self.assertEqual(instance.options, options)
         self.assertEqual(instance.config, config)
         self.assertEqual(instance.laststart, 0)
-        self.assertEqual(instance.childlog.args, (
+        self.assertEqual(instance.loggers['stdout'].childlog.args, (
             ('/tmp/temp123.log', 20, '%(message)s'),
+            {'rotating': False, 'backups': 0, 'maxbytes': 0}))
+        self.assertEqual(instance.loggers['stderr'].childlog.args, (
+            ('/tmp/temp456.log', 20, '%(message)s'),
             {'rotating': False, 'backups': 0, 'maxbytes': 0}))
         self.assertEqual(instance.pid, 0)
         self.assertEqual(instance.laststart, 0)
@@ -1310,62 +1315,109 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.backoff, 0)
         self.assertEqual(instance.pipes, {})
         self.assertEqual(instance.spawnerr, None)
-        self.assertEqual(instance.logbuffer, '')
+        self.assertEqual(instance.loggers['stdout'].output_buffer, '')
+        self.assertEqual(instance.loggers['stderr'].output_buffer, '')
 
     def test_removelogs(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
+        config = DummyPConfig('notthere', '/notthere',
+                              stdout_logfile='/tmp/foo',
+                              stderr_logfile='/tmp/bar')
         instance = self._makeOne(options, config)
         instance.removelogs()
-        self.assertEqual(instance.childlog.handlers[0].reopened, True)
-        self.assertEqual(instance.childlog.handlers[0].removed, True)
+        logger = instance.loggers['stdout']
+        self.assertEqual(logger.childlog.handlers[0].reopened, True)
+        self.assertEqual(logger.childlog.handlers[0].removed, True)
+        logger = instance.loggers['stderr']
+        self.assertEqual(logger.childlog.handlers[0].reopened, True)
+        self.assertEqual(logger.childlog.handlers[0].removed, True)
 
     def test_reopenlogs(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
+        config = DummyPConfig('notthere', '/notthere',
+                              stdout_logfile='/tmp/foo',
+                              stderr_logfile='/tmp/bar')
         instance = self._makeOne(options, config)
         instance.reopenlogs()
-        self.assertEqual(instance.childlog.handlers[0].reopened, True)
+        logger = instance.loggers['stdout']
+        self.assertEqual(logger.childlog.handlers[0].reopened, True)
+        logger = instance.loggers['stderr']
+        self.assertEqual(logger.childlog.handlers[0].reopened, True)
+        
 
     def test_log_output(self):
-        # stdout goes to the process log and the main log
+        # stdout/stderr goes to the process log and the main log
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
+        config = DummyPConfig('notthere', '/notthere',
+                              stdout_logfile='/tmp/foo',
+                              stderr_logfile='/tmp/bar')
         instance = self._makeOne(options, config)
-        instance.logbuffer = 'this string is longer than a pcomm token'
+        stdout_logger = instance.loggers['stdout']
+        stderr_logger = instance.loggers['stderr']
+        stdout_logger.output_buffer = 'stdout string longer than a token'
+        stderr_logger.output_buffer = 'stderr string longer than a token'
         instance.log_output()
-        self.assertEqual(instance.childlog.data,
-                         ['this string is longer than a pcomm token'])
-        self.assertEqual(options.logger.data,
-            [5, 'notthere output:\nthis string is longer than a pcomm token'])
+        self.assertEqual(stdout_logger.childlog.data,
+                         ['stdout string longer than a token'])
+        self.assertEqual(stderr_logger.childlog.data,
+                         ['stderr string longer than a token'])
+        self.assertEqual(options.logger.data[0], 5)
+        self.assertEqual(options.logger.data[1],
+             "'notthere' stdout output:\nstdout string longer than a token")
+        self.assertEqual(options.logger.data[2], 5)
+        self.assertEqual(options.logger.data[3],
+             "'notthere' stderr output:\nstderr string longer than a token" )
+
+    def test_log_output_no_loggers(self):
+        options = DummyOptions()
+        config = DummyPConfig('notthere', '/notthere',
+                              stdout_logfile=None,
+                              stderr_logfile=None)
+        instance = self._makeOne(options, config)
+        self.assertEqual(instance.loggers['stdout'], None)
+        self.assertEqual(instance.loggers['stderr'], None)
+        instance.log_output()
+        self.assertEqual(options.logger.data, [])
 
     def test_drain_stdout(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
+        config = DummyPConfig('test', '/test', stdout_logfile='/tmp/foo')
         instance = self._makeOne(options, config)
         instance.pipes['stdout'] = 'abc'
         instance.drain_stdout()
-        self.assertEqual(instance.logbuffer, 'abc')
+        self.assertEqual(instance.loggers['stdout'].output_buffer, 'abc')
+
+    def test_drain_stdout_no_logger(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test', stdout_logfile=None)
+        instance = self._makeOne(options, config)
+        instance.pipes['stdout'] = 'abc'
+        instance.drain_stdout()
+        self.assertEqual(instance.loggers['stdout'], None)
 
     def test_drain_stderr(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
+        config = DummyPConfig('test', '/test', stderr_logfile='/tmp/foo')
         instance = self._makeOne(options, config)
         instance.pipes['stderr'] = 'abc'
         instance.drain_stderr()
-        self.assertEqual(instance.logbuffer, '')
+        self.assertEqual(instance.loggers['stderr'].output_buffer, 'abc')
 
-        instance.config.log_stderr = True
+    def test_drain_stderr_no_logger(self):
+        options = DummyOptions()
+        config = DummyPConfig('test', '/test', stderr_logfile=None)
+        instance = self._makeOne(options, config)
+        instance.pipes['stderr'] = 'abc'
         instance.drain_stderr()
-        self.assertEqual(instance.logbuffer, 'abc')
+        self.assertEqual(instance.loggers['stderr'], None)
 
     def test_drain_stdin_nodata(self):
         options = DummyOptions()
         config = DummyPConfig('test', '/test')
         instance = self._makeOne(options, config)
-        self.assertEqual(instance.writebuffer, '')
+        self.assertEqual(instance.stdin_buffer, '')
         instance.drain_stdin()
-        self.assertEqual(instance.writebuffer, '')
+        self.assertEqual(instance.stdin_buffer, '')
         self.assertEqual(options.written, {})
 
     def test_drain_stdin_normal(self):
@@ -1373,9 +1425,9 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig('test', '/test')
         instance = self._makeOne(options, config)
         instance.spawn()
-        instance.writebuffer = 'foo'
+        instance.stdin_buffer = 'foo'
         instance.drain_stdin()
-        self.assertEqual(instance.writebuffer, '')
+        self.assertEqual(instance.stdin_buffer, '')
         self.assertEqual(options.written[instance.pipes['stdin']], 'foo')
 
     def test_drain_stdin_overhardcoded_limit(self):
@@ -1383,9 +1435,9 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig('test', '/test')
         instance = self._makeOne(options, config)
         instance.spawn()
-        instance.writebuffer = 'a' * (2 << 17)
+        instance.stdin_buffer = 'a' * (2 << 17)
         instance.drain_stdin()
-        self.assertEqual(len(instance.writebuffer), (2<<17)-(2<<16))
+        self.assertEqual(len(instance.stdin_buffer), (2<<17)-(2<<16))
         self.assertEqual(options.written[instance.pipes['stdin']],
                          ('a' * (2 << 16)))
 
@@ -1395,9 +1447,9 @@ class SubprocessTests(unittest.TestCase):
         instance = self._makeOne(options, config)
         options.write_accept = 1
         instance.spawn()
-        instance.writebuffer = 'a' * (2 << 16)
+        instance.stdin_buffer = 'a' * (2 << 16)
         instance.drain_stdin()
-        self.assertEqual(len(instance.writebuffer), (2<<16) - 1)
+        self.assertEqual(len(instance.stdin_buffer), (2<<16) - 1)
         self.assertEqual(options.written[instance.pipes['stdin']], 'a')
 
     def test_drain_stdin_epipe(self):
@@ -1405,10 +1457,10 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig('test', '/test')
         instance = self._makeOne(options, config)
         options.write_error = errno.EPIPE
-        instance.writebuffer = 'foo'
+        instance.stdin_buffer = 'foo'
         instance.spawn()
         instance.drain_stdin()
-        self.assertEqual(instance.writebuffer, '')
+        self.assertEqual(instance.stdin_buffer, '')
         self.assertEqual(options.logger.data,
             ["failed write to process 'test' stdin"])
 
@@ -1417,30 +1469,28 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig('test', '/test')
         instance = self._makeOne(options, config)
         options.write_error = errno.EBADF
-        instance.writebuffer = 'foo'
+        instance.stdin_buffer = 'foo'
         instance.spawn()
         self.assertRaises(OSError, instance.drain_stdin)
 
     def test_drain(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
+        config = DummyPConfig('test', '/test', stdout_logfile='/tmp/foo',
+                              stderr_logfile='/tmp/bar')
         instance = self._makeOne(options, config)
-        instance.config.log_stderr = True
         instance.pipes['stdout'] = 'abc'
         instance.pipes['stderr'] = 'def'
+        instance.pipes['stdin'] = 'thename'
+        instance.stdin_buffer = 'foo'
         instance.drain()
-        self.assertEqual(instance.logbuffer, 'abcdef')
-
-        instance.logbuffer = ''
-        instance.config.log_stderr = False
-        instance.drain()
-        self.assertEqual(instance.logbuffer, 'abc')
+        self.assertEqual(instance.loggers['stdout'].output_buffer, 'abc')
+        self.assertEqual(instance.loggers['stderr'].output_buffer, 'def')
+        self.assertEqual(options.written['thename'], 'foo')
         
     def test_get_output_drains(self):
         options = DummyOptions()
         config = DummyPConfig('test', '/test')
         instance = self._makeOne(options, config)
-        instance.config.log_stderr = True
         instance.pipes['stdout'] = 'abc'
         instance.pipes['stderr'] = 'def'
 
@@ -1701,7 +1751,7 @@ class SubprocessTests(unittest.TestCase):
         options.forkpid = 1
         result = instance.spawn()
         instance.write(sent)
-        received = instance.writebuffer
+        received = instance.stdin_buffer
         self.assertEqual(sent, received)
         instance.killing = True
         self.assertRaises(IOError, instance.write, sent)
@@ -1795,7 +1845,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_finish(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
+        config = DummyPConfig('notthere', '/notthere',
+                              stdout_logfile='/tmp/foo')
         instance = self._makeOne(options, config)
         instance.waitstatus = (123, 1) # pid, waitstatus
         instance.options.pidhistory[123] = instance
@@ -1828,15 +1879,18 @@ class SubprocessTests(unittest.TestCase):
 
     def test_cmp_bypriority(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo',
+        config = DummyPConfig('notthere', '/notthere',
+                              stdout_logfile='/tmp/foo',
                               priority=1)
         instance = self._makeOne(options, config)
 
-        config = DummyPConfig('notthere1', '/notthere', logfile='/tmp/foo',
+        config = DummyPConfig('notthere1', '/notthere',
+                              stdout_logfile='/tmp/foo',
                               priority=2)
         instance1 = self._makeOne(options, config)
 
-        config = DummyPConfig('notthere2', '/notthere', logfile='/tmp/foo',
+        config = DummyPConfig('notthere2', '/notthere',
+                              stdout_logfile='/tmp/foo',
                               priority=3)
         instance2 = self._makeOne(options, config)
 
@@ -1847,7 +1901,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_get_state(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere', logfile='/tmp/foo')
+        config = DummyPConfig('notthere', '/notthere',
+                              stdout_logfile='/tmp/foo')
         from supervisor.process import ProcessStates
 
         instance = self._makeOne(options, config)
@@ -1889,7 +1944,7 @@ class SubprocessTests(unittest.TestCase):
         instance.laststart = 1
         self.assertEqual(instance.get_state(), ProcessStates.UNKNOWN)
 
-    def test_eventmode_switch(self):
+    def test_stdout_eventmode_switch(self):
         from supervisor.events import ProcessCommunicationEvent
         from supervisor.events import subscribe
         events = []
@@ -1912,45 +1967,48 @@ class SubprocessTests(unittest.TestCase):
         options = DummyOptions()
         from options import getLogger
         options.getLogger = getLogger
-        config = DummyPConfig('output', executable, logfile='/tmp/foo',
-                              eventlogfile='/tmp/bar')
+        config = DummyPConfig('output', executable,
+                              stdout_logfile='/tmp/foo',
+                              stdout_eventlogfile='/tmp/bar')
 
         try:
             instance = self._makeOne(options, config)
-            logfile = instance.config.logfile
-            instance.logbuffer = first
+            logfile = instance.config.stdout_logfile
+            logger = instance.loggers['stdout']
+            logger.output_buffer = first
             instance.log_output()
-            [ x.flush() for x in instance.mainlog.handlers]
+            [ x.flush() for x in logger.childlog.handlers]
             self.assertEqual(open(logfile, 'r').read(), letters)
-            self.assertEqual(instance.logbuffer, first[len(letters):])
+            self.assertEqual(logger.output_buffer, first[len(letters):])
             self.assertEqual(len(events), 0)
 
-            instance.logbuffer += second
+            logger.output_buffer += second
             instance.log_output()
             self.assertEqual(len(events), 0)
-            [ x.flush() for x in instance.mainlog.handlers]
+            [ x.flush() for x in logger.childlog.handlers]
             self.assertEqual(open(logfile, 'r').read(), letters)
-            self.assertEqual(instance.logbuffer, first[len(letters):])
+            self.assertEqual(logger.output_buffer, first[len(letters):])
             self.assertEqual(len(events), 0)
 
-            instance.logbuffer += third
+            logger.output_buffer += third
             instance.log_output()
-            [ x.flush() for x in instance.mainlog.handlers]
-            self.assertEqual(open(instance.config.logfile, 'r').read(),
+            [ x.flush() for x in logger.childlog.handlers]
+            self.assertEqual(open(instance.config.stdout_logfile, 'r').read(),
                              letters *2)
             self.assertEqual(len(events), 1)
             event = events[0]
             self.assertEqual(event.__class__, ProcessCommunicationEvent)
             self.assertEqual(event.process_name, 'output')
+            self.assertEqual(event.channel, 'stdout')
             self.assertEqual(event.data, digits)
 
         finally:
             try:
-                os.remove(instance.config.logfile)
+                os.remove(instance.config.stdout_logfile)
             except (OSError, IOError):
                 pass
             try:
-                os.remove(instance.config.eventlogfile)
+                os.remove(instance.config.stdout_eventlogfile)
             except (OSError, IOError):
                 pass
 
@@ -1960,33 +2018,36 @@ class SubprocessTests(unittest.TestCase):
         from supervisor.options import getLogger
         options.getLogger = getLogger
         options.strip_ansi = True
-        config = DummyPConfig('output', executable, logfile='/tmp/foo')
+        config = DummyPConfig('output', executable,
+                              stdout_logfile='/tmp/foo')
 
         ansi = '\x1b[34mHello world... this is longer than a token!\x1b[0m'
         noansi = 'Hello world... this is longer than a token!'
 
         try:
             instance = self._makeOne(options, config)
-            instance.logbuffer = ansi
+            instance.loggers['stdout'].output_buffer = ansi
             instance.log_output()
-            [ x.flush() for x in instance.childlog.handlers ]
-            self.assertEqual(open(instance.config.logfile, 'r').read(), noansi)
+            [ x.flush() for x in instance.loggers['stdout'].childlog.handlers ]
+            self.assertEqual(
+                open(instance.config.stdout_logfile, 'r').read(), noansi)
         finally:
             try:
-                os.remove(instance.config.logfile)
+                os.remove(instance.config.stdout_logfile)
             except (OSError, IOError):
                 pass
 
         try:
             options.strip_ansi = False
             instance = self._makeOne(options, config)
-            instance.logbuffer = ansi
+            instance.loggers['stdout'].output_buffer = ansi
             instance.log_output()
-            [ x.flush() for x in instance.childlog.handlers ]
-            self.assertEqual(open(instance.config.logfile, 'r').read(), ansi)
+            [ x.flush() for x in instance.loggers['stdout'].childlog.handlers ]
+            self.assertEqual(
+                open(instance.config.stdout_logfile, 'r').read(), ansi)
         finally:
             try:
-                os.remove(instance.config.logfile)
+                os.remove(instance.config.stdout_logfile)
             except (OSError, IOError):
                 pass
 
@@ -2081,7 +2142,7 @@ class LogtailHandlerTests(unittest.TestCase):
     def _makeOne(self, supervisord):
         return self._getTargetClass()(supervisord)
 
-    def test_handle_request_logfile_none(self):
+    def test_handle_request_stdout_logfile_none(self):
         supervisor = DummySupervisor()
         pconfig = DummyPConfig('foo', 'foo', None)
         options = DummyOptions()
@@ -2091,7 +2152,7 @@ class LogtailHandlerTests(unittest.TestCase):
         handler.handle_request(request)
         self.assertEqual(request._error, 410)
 
-    def test_handle_request_logfile_missing(self):
+    def test_handle_request_stdout_logfile_missing(self):
         supervisor = DummySupervisor()
         pconfig = DummyPConfig('foo', 'foo', 'it/is/missing')
         options = DummyOptions()
@@ -2106,7 +2167,7 @@ class LogtailHandlerTests(unittest.TestCase):
         f = tempfile.NamedTemporaryFile()
         t = f.name
         options = DummyOptions()
-        pconfig = DummyPConfig('foo', 'foo', logfile=t)
+        pconfig = DummyPConfig('foo', 'foo', stdout_logfile=t)
         supervisor.processes = {'foo':DummyProcess(options, pconfig)}
         handler = self._makeOne(supervisor)
         request = DummyRequest('/logtail/foo', None, None, None)
@@ -2830,15 +2891,16 @@ class DummyProcess:
     waitstatus = None
     exitstatus = None
     pipes = None
-    childlog = None # the current logger 
+    stdout_logged = ''
+    stderr_logged = ''
     spawnerr = None
-    logbuffer = '' # buffer of characters from child output to log
-    writebuffer = '' # buffer of characters to send to child process' stdin
+    stdout_buffer = '' # buffer of characters from child stdout output to log
+    stderr_buffer = '' # buffer of characters from child stderr output to log
+    stdin_buffer = '' # buffer of characters to send to child process' stdin
 
     def __init__(self, options, config, state=ProcessStates.RUNNING):
         self.options = options
         self.config = config
-        self.childlog = DummyLogger()
         self.logsremoved = False
         self.stop_called = False
         self.backoff_secs = None
@@ -2847,8 +2909,10 @@ class DummyProcess:
         self.error_at_clear = False
         self.killed_with = None
         self.drained = False
-        self.logbuffer = ''
-        self.logged = ''
+        self.stdout_buffer = ''
+        self.stderr_buffer = ''
+        self.stdout_logged = ''
+        self.stderr_logged = ''
         self.pipes = {}
         self.finished = None
         self.logs_reopened = False
@@ -2890,8 +2954,11 @@ class DummyProcess:
         return []
 
     def log_output(self):
-        self.logged = self.logged + self.logbuffer
-        self.logbuffer = ''
+        self.stdout_logged += self.stdout_buffer
+        self.stdout_buffer = ''
+
+        self.stderr_logged += self.stderr_buffer
+        self.stderr_buffer = ''
 
     def finish(self, pid, sts):
         self.finished = pid, sts
@@ -2909,10 +2976,13 @@ class DummyProcess:
 class DummyPConfig:
     def __init__(self, name, command, priority=999, autostart=True,
                  autorestart=True, startsecs=10, startretries=999,
-                 uid=None, logfile=None, eventlogfile=None, logfile_backups=0,
-                 logfile_maxbytes=0, log_stdout=True, log_stderr=False,
+                 uid=None, stdout_logfile=None, stdout_eventlogfile=None,
+                 stdout_logfile_backups=0, stdout_logfile_maxbytes=0,
+                 stderr_logfile=None, stderr_eventlogfile=None,
+                 stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
+                 redirect_stderr=False,
                  stopsignal=signal.SIGTERM, stopwaitsecs=10,
-                 exitcodes=[0,2], environment=None):
+                 exitcodes=(0,2), environment=None):
         self.name = name
         self.command = command
         self.priority = priority
@@ -2921,12 +2991,15 @@ class DummyPConfig:
         self.startsecs = startsecs
         self.startretries = startretries
         self.uid = uid
-        self.logfile = logfile
-        self.eventlogfile = eventlogfile
-        self.logfile_backups = logfile_backups
-        self.logfile_maxbytes = logfile_maxbytes
-        self.log_stdout = log_stdout
-        self.log_stderr = log_stderr
+        self.stdout_logfile = stdout_logfile
+        self.stdout_eventlogfile = stdout_eventlogfile
+        self.stdout_logfile_backups = stdout_logfile_backups
+        self.stdout_logfile_maxbytes = stdout_logfile_maxbytes
+        self.stderr_logfile = stderr_logfile
+        self.stderr_eventlogfile = stderr_eventlogfile
+        self.stderr_logfile_backups = stderr_logfile_backups
+        self.stderr_logfile_maxbytes = stderr_logfile_maxbytes
+        self.redirect_stderr = redirect_stderr
         self.stopsignal = stopsignal
         self.stopwaitsecs = stopwaitsecs
         self.exitcodes = exitcodes

@@ -151,13 +151,12 @@ class Supervisor:
                 proc.log_output()
 
                 # process output fds
-                output_drains = proc.get_output_drains()
-                for fd, drain in output_drains:
+                for fd, drain in proc.get_output_drains():
                     r.append(fd)
                     process_map[fd] = drain
 
                 # process input fds
-                if proc.writebuffer:
+                if proc.stdin_buffer:
                     input_drains = proc.get_input_drains()
                     for fd, drain in input_drains:
                         w.append(fd)
@@ -184,7 +183,7 @@ class Supervisor:
             for fd in r:
                 if process_map.has_key(fd):
                     drain = process_map[fd]
-                    # drain the file descriptor data to the logbuffer
+                    # drain the file descriptor data to the stdout/stderr_buffer
                     drain()
 
                 if socket_map.has_key(fd):
@@ -197,7 +196,7 @@ class Supervisor:
 
             for fd in w:
                 if process_map.has_key(fd):
-                    # drain the writebuffer by sending it to child's stdin
+                    # drain the stdin_buffer by sending it to child's stdin
                     drain = process_map[fd]
                     drain()
 

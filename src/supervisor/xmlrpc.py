@@ -615,7 +615,7 @@ class SupervisorNamespaceRPCInterface:
             'statename':getProcessStateDescription(state),
             'spawnerr':spawnerr,
             'exitstatus':exitstatus,
-            'logfile':process.config.logfile,
+            'logfile':process.config.stdout_logfile,
             'pid':process.pid
             }
         
@@ -651,7 +651,7 @@ class SupervisorNamespaceRPCInterface:
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
 
-        logfile = process.config.logfile
+        logfile = process.config.stdout_logfile
 
         if logfile is None or not os.path.exists(logfile):
             raise RPCError(Faults.NO_FILE, logfile)
@@ -685,7 +685,7 @@ class SupervisorNamespaceRPCInterface:
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
 
-        logfile = process.config.logfile
+        logfile = process.config.stdout_logfile
         
         if logfile is None or not os.path.exists(logfile):
             return ['', 0, False]

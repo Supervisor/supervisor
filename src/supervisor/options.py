@@ -700,23 +700,29 @@ class ServerOptions(Options):
             uid = config.saneget(section, 'user', None)
             if uid is not None:
                 uid = datatypes.name_to_uid(uid)
-            for n in ('logfile', 'eventlogfile'):
-                val = config.saneget(section, n, None)
-                if val in ('NONE', 'OFF'):
-                    val = None
-                elif val in (None, 'AUTO'):
-                    val = self.AUTOMATIC
-                else:
-                    val = datatypes.existing_dirpath(val)
-                if n == 'logfile':
-                    logfile = val
-                else:
-                    eventlogfile = val
-            logfile_backups = config.saneget(section, 'logfile_backups', 10)
-            logfile_backups = datatypes.integer(logfile_backups)
-            logfile_maxbytes = config.saneget(section, 'logfile_maxbytes',
-                                              '50MB')
-            logfile_maxbytes = datatypes.byte_size(logfile_maxbytes)
+
+            logfiles = {}
+            for k in ('stdout', 'stderr'):
+                for n in ('%s_logfile' % k, '%s_eventlogfile' % k):
+                    val = config.saneget(section, n, None)
+                    if val in ('NONE', 'OFF'):
+                        val = None
+                    elif val in (None, 'AUTO'):
+                        val = self.AUTOMATIC
+                    else:
+                        val = datatypes.existing_dirpath(val)
+                    logfiles[n] = val
+
+                bu_key = '%s_logfile_backups' % k
+                backups = config.saneget(section, bu_key, 10)
+                backups = datatypes.integer(backups)
+                logfiles[bu_key] = backups
+
+                mb_key = '%s_logfile_maxbytes' % k
+                maxbytes = config.saneget(section, mb_key, '50MB')
+                maxbytes = datatypes.byte_size(maxbytes)
+                logfiles[mb_key] = maxbytes
+
             stopsignal = config.saneget(section, 'stopsignal', 'TERM')
             stopsignal = datatypes.signal(stopsignal)
             stopwaitsecs = config.saneget(section, 'stopwaitsecs', 10)
@@ -726,30 +732,33 @@ class ServerOptions(Options):
                 exitcodes = datatypes.list_of_ints(exitcodes)
             except:
                 raise ValueError("exitcodes must be a list of ints e.g. 1,2")
-            log_stdout = config.saneget(section, 'log_stdout', 'true')
-            log_stdout = datatypes.boolean(log_stdout)
-            log_stderr = config.saneget(section, 'log_stderr', 'false')
-            log_stderr = datatypes.boolean(log_stderr)
+            redirect_stderr = config.saneget(section, 'redirect_stderr','false')
+            redirect_stderr = datatypes.boolean(redirect_stderr)
             environment = config.saneget(section, 'environment', '')
             environment = datatypes.dict_of_key_value_pairs(environment)
 
-            pconfig = ProcessConfig(name=name, command=command,
-                                    priority=priority,
-                                    autostart=autostart,
-                                    autorestart=autorestart,
-                                    startsecs=startsecs,
-                                    startretries=startretries,
-                                    uid=uid,
-                                    logfile=logfile,
-                                    eventlogfile = eventlogfile,
-                                    logfile_backups=logfile_backups,
-                                    logfile_maxbytes=logfile_maxbytes,
-                                    stopsignal=stopsignal,
-                                    stopwaitsecs=stopwaitsecs,
-                                    exitcodes=exitcodes,
-                                    log_stdout=log_stdout,
-                                    log_stderr=log_stderr,
-                                    environment=environment)
+            pconfig = ProcessConfig(
+                name=name,
+                command=command,
+                priority=priority,
+                autostart=autostart,
+                autorestart=autorestart,
+                startsecs=startsecs,
+                startretries=startretries,
+                uid=uid,
+                stdout_logfile=logfiles['stdout_logfile'],
+                stdout_eventlogfile=logfiles['stdout_eventlogfile'],
+                stdout_logfile_backups=logfiles['stdout_logfile_backups'],
+                stdout_logfile_maxbytes=logfiles['stdout_logfile_maxbytes'],
+                stderr_logfile=logfiles['stderr_logfile'],
+                stderr_eventlogfile=logfiles['stderr_eventlogfile'],
+                stderr_logfile_backups=logfiles['stderr_logfile_backups'],
+                stderr_logfile_maxbytes=logfiles['stderr_logfile_maxbytes'],
+                stopsignal=stopsignal,
+                stopwaitsecs=stopwaitsecs,
+                exitcodes=exitcodes,
+                redirect_stderr=redirect_stderr,
+                environment=environment)
             programs.append(pconfig)
 
         programs.sort() # asc by priority
@@ -893,15 +902,25 @@ class ServerOptions(Options):
 
     def create_autochildlogs(self):
         for program in self.programs:
-            if program.logfile is self.AUTOMATIC:
-                # temporary logfile which is erased at start time
-                prefix='%s---%s-' % (program.name, self.identifier)
-                fd, logfile = tempfile.mkstemp(
-                    suffix='.log',
-                    prefix=prefix,
-                    dir=self.childlogdir)
-                os.close(fd)
-                program.logfile = logfile
+            # temporary logfiles which are erased at start time
+            if program.stdout_logfile is self.AUTOMATIC:
+                program.stdout_logfile = self._getautolog(program.name,
+                                                          self.identifier,
+                                                          'stdout')
+            if program.stderr_logfile is self.AUTOMATIC:
+                program.stderr_logfile = self._getautolog(program.name,
+                                                          self.identifier,
+                                                          'stderr')
+                
+
+    def _getautolog(self, name, identifier, channel):
+        prefix='%s-%s---%s-' % (name, channel, identifier)
+        fd, logfile = tempfile.mkstemp(
+            suffix='.log',
+            prefix=prefix,
+            dir=self.childlogdir)
+        os.close(fd)
+        return logfile
 
     def clear_autochildlogdir(self):
         # must be called after realize()
@@ -1114,29 +1133,46 @@ class ServerOptions(Options):
         from supervisor.process import Subprocess
         return Subprocess(self, config)
 
-    def make_pipes(self):
+    def make_pipes(self, stderr=True):
         """ Create pipes for parent to child stdin/stdout/stderr
         communications.  Open fd in nonblocking mode so we can read them
-        in the mainloop without blocking """
-        pipes = {}
+        in the mainloop without blocking.  If stderr is False, don't
+        create a pipe for stderr. """
+
+        pipes = {'child_stdin':None,
+                 'stdin':None,
+                 'stdout':None,
+                 'child_stdout':None,
+                 'stderr':None,
+                 'child_stderr':None}
         try:
-            pipes['child_stdin'], pipes['stdin'] = os.pipe()
-            pipes['stdout'], pipes['child_stdout'] = os.pipe()
-            pipes['stderr'], pipes['child_stderr'] = os.pipe()
+            stdin, child_stdin = os.pipe()
+            pipes['child_stdin'], pipes['stdin'] = stdin, child_stdin
+            stdout, child_stdout = os.pipe()
+            pipes['stdout'], pipes['child_stdout'] = stdout, child_stdout
+            if stderr:
+                stderr, child_stderr = os.pipe()
+                pipes['stderr'], pipes['child_stderr'] = stderr, child_stderr
             for fd in (pipes['stdout'], pipes['stderr'], pipes['stdin']):
-                fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | os.O_NDELAY)
+                if fd is not None:
+                    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | os.O_NDELAY)
             return pipes
         except OSError:
             for fd in pipes.values():
-                self.close_fd(fd)
+                if fd is not None:
+                    self.close_fd(fd)
 
     def close_parent_pipes(self, pipes):
         for fdname in ('stdin', 'stdout', 'stderr'):
-            self.close_fd(pipes[fdname])
+            fd = pipes[fdname]
+            if fd is not None:
+                self.close_fd(fd)
 
     def close_child_pipes(self, pipes):
         for fdname in ('child_stdin', 'child_stdout', 'child_stderr'):
-            self.close_fd(pipes[fdname])
+            fd = pipes[fdname]
+            if fd is not None:
+                self.close_fd(fd)
 
     def close_fd(self, fd):
         try:
@@ -1306,10 +1342,13 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
                 return default
 
 class ProcessConfig:
-    def __init__(self, name, command, priority, autostart, autorestart,
-                 startsecs, startretries, uid, logfile, eventlogfile,
-                 logfile_backups, logfile_maxbytes, stopsignal,
-                 stopwaitsecs, exitcodes, log_stdout, log_stderr,
+    def __init__(self, name, command, priority, autostart,
+                 autorestart, startsecs, startretries, uid,
+                 stdout_logfile, stdout_eventlogfile,
+                 stdout_logfile_backups, stdout_logfile_maxbytes,
+                 stderr_logfile, stderr_eventlogfile,
+                 stderr_logfile_backups, stderr_logfile_maxbytes,
+                 stopsignal, stopwaitsecs, exitcodes, redirect_stderr,
                  environment=None):
         self.name = name
         self.command = command
@@ -1319,15 +1358,18 @@ class ProcessConfig:
         self.startsecs = startsecs
         self.startretries = startretries
         self.uid = uid
-        self.logfile = logfile
-        self.eventlogfile = eventlogfile
-        self.logfile_backups = logfile_backups
-        self.logfile_maxbytes = logfile_maxbytes
+        self.stdout_logfile = stdout_logfile
+        self.stdout_eventlogfile = stdout_eventlogfile
+        self.stdout_logfile_backups = stdout_logfile_backups
+        self.stdout_logfile_maxbytes = stdout_logfile_maxbytes
+        self.stderr_logfile = stderr_logfile
+        self.stderr_eventlogfile = stderr_eventlogfile
+        self.stderr_logfile_backups = stderr_logfile_backups
+        self.stderr_logfile_maxbytes = stderr_logfile_maxbytes
         self.stopsignal = stopsignal
         self.stopwaitsecs = stopwaitsecs
         self.exitcodes = exitcodes
-        self.log_stdout = log_stdout
-        self.log_stderr = log_stderr
+        self.redirect_stderr = redirect_stderr
         self.environment = environment
 
     def __cmp__(self, other):

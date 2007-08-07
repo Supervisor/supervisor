@@ -669,7 +669,7 @@ class logtail_handler:
             request.error(404) # not found
             return
 
-        logfile = process.config.logfile
+        logfile = process.config.stdout_logfile
 
         if logfile is None or not os.path.exists(logfile):
             # XXX problematic: processes that don't start won't have a log
