@@ -31,10 +31,11 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(options.autochildlogs_created, True)
         self.assertEqual(len(supervisord.processes), 1)
         self.assertEqual(supervisord.processes['foo'].options, options)
-        self.assertEqual(options.pidfile_written, True)
+        self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.httpserver_opened, True)
         self.assertEqual(options.signals_set, True)
         self.assertEqual(options.daemonized, True)
+        self.assertEqual(options.pidfile_written, True)
         self.assertEqual(options.cleaned_up, True)
 
     def test_get_state(self):
@@ -253,7 +254,6 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(supervisord.mood, 1)
         self.assertEqual(options.logger.data[0],
                          'received SIGUSR1 indicating nothing')
-        
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

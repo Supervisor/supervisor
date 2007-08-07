@@ -65,7 +65,7 @@ def getSupervisorStateDescription(code):
 class Supervisor:
     mood = 1 # 1: up, 0: restarting, -1: suicidal
     stopping = False # set after we detect that we are handling a stop request
-    lastdelayreport = 0
+    lastdelayreport = 0 # while we're stopping, if delayed, last time we tried
 
     def __init__(self, options):
         self.options = options
