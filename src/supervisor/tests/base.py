@@ -1,0 +1,581 @@
+_NOW = 1151365354
+_TIMEFORMAT = '%b %d %I:%M %p'
+
+class DummyOptions:
+
+    TRACE = 5
+    make_pipes_error = None
+    fork_error = None
+    execv_error = None
+    kill_error = None
+    minfds = 5
+
+    def __init__(self):
+        self.identifier = 'supervisor'
+        self.childlogdir = '/tmp'
+        self.uid = 999
+        self.logger = self.getLogger()
+        self.backofflimit = 10
+        self.logfile = '/tmp/logfile'
+        self.nocleanup = False
+        self.strip_ansi = False
+        self.pidhistory = {}
+        self.programs = []
+        self.nodaemon = False
+        self.socket_map = {}
+        self.mood = 1
+        self.mustreopen = False
+        self.realizeargs = None
+        self.fds_cleaned_up = False
+        self.rlimit_set = False
+        self.setuid_called = False
+        self.httpserver_opened = False
+        self.signals_set = False
+        self.daemonized = False
+        self.make_logger_messages = None
+        self.autochildlogs_created = False
+        self.autochildlogdir_cleared = False
+        self.cleaned_up = False
+        self.pidfile_written = False
+        self.directory = None
+        self.waitpid_return = None, None
+        self.kills = {}
+        self.signal = None
+        self.parent_pipes_closed = None
+        self.child_pipes_closed = None
+        self.forkpid = 0
+        self.pgrp_set = None
+        self.duped = {}
+        self.written = {}
+        self.fds_closed = []
+        self._exitcode = None
+        self.execv_args = None
+        self.setuid_msg = None
+        self.privsdropped = None
+        self.logs_reopened = False
+        self.environment_processed = False
+        self.write_accept = None
+        self.write_error = None
+
+    def getLogger(self, *args, **kw):
+        logger = DummyLogger()
+        logger.handlers = [DummyLogger()]
+        logger.args = args, kw
+        return logger
+
+    def realize(self, args):
+        self.realizeargs = args
+
+    def cleanup_fds(self):
+        self.fds_cleaned_up = True
+
+    def set_rlimits(self):
+        self.rlimits_set = True
+        return ['rlimits_set']
+
+    def set_uid(self):
+        self.setuid_called = True
+        return 'setuid_called'
+
+    def openhttpserver(self, supervisord):
+        self.httpserver_opened = True
+
+    def daemonize(self):
+        self.daemonized = True
+
+    def setsignals(self):
+        self.signals_set = True
+
+    def get_socket_map(self):
+        return self.socket_map
+
+    def make_logger(self, critical_msgs, info_msgs):
+        self.make_logger_messages = critical_msgs, info_msgs
+
+    def create_autochildlogs(self):
+        self.autochildlogs_created = True
+
+    def clear_autochildlogdir(self):
+        self.autochildlogdir_cleared = True
+
+    def cleanup(self):
+        self.cleaned_up = True
+
+    def write_pidfile(self):
+        self.pidfile_written = True
+
+    def waitpid(self):
+        return self.waitpid_return
+
+    def make_process(self, config):
+        return DummyProcess(self, config)
+
+    def kill(self, pid, sig):
+        if self.kill_error:
+            raise OSError(self.kill_error)
+        self.kills[pid] = sig
+
+    def stat(self, filename):
+        import os
+        return os.stat(filename)
+
+    def get_path(self):
+        return ["/bin", "/usr/bin", "/usr/local/bin"]
+
+    def check_execv_args(self, filename, argv, st):
+        if filename == '/bad/filename':
+            from supervisor.options import NotFound
+            raise NotFound('bad filename')
+
+    def make_pipes(self, stderr=True):
+        if self.make_pipes_error:
+            raise OSError(self.make_pipes_error)
+        pipes = {}
+        pipes['child_stdin'], pipes['stdin'] = (3, 4)
+        pipes['stdout'], pipes['child_stdout'] = (5, 6)
+        if stderr:
+            pipes['stderr'], pipes['child_stderr'] = (7, 8)
+        else:
+            pipes['stderr'], pipes['child_stderr'] = None, None
+        return pipes
+
+    def write(self, fd, chars):
+        if self.write_error:
+            raise OSError(self.write_error)
+        if self.write_accept:
+            chars = chars[self.write_accept]
+        data = self.written.setdefault(fd, '')
+        data += chars
+        self.written[fd] = data
+        return len(chars)
+
+    def fork(self):
+        if self.fork_error:
+            raise OSError(self.fork_error)
+        return self.forkpid
+
+    def close_fd(self, fd):
+        self.fds_closed.append(fd)
+
+    def close_parent_pipes(self, pipes):
+        self.parent_pipes_closed = pipes
+
+    def close_child_pipes(self, pipes):
+        self.child_pipes_closed = pipes
+
+    def setpgrp(self):
+        self.pgrp_set = True
+
+    def dup2(self, frm, to):
+        self.duped[frm] = to
+
+    def _exit(self, code):
+        self._exitcode = code
+
+    def execve(self, filename, argv, environment):
+        if self.execv_error:
+            if self.execv_error == 1:
+                raise OSError(self.execv_error)
+            else:
+                raise RuntimeError(self.execv_error)
+        self.execv_args = (filename, argv)
+        self.execv_environment = environment
+
+    def dropPrivileges(self, uid):
+        if self.setuid_msg:
+            return self.setuid_msg
+        self.privsdropped = uid
+
+    def readfd(self, fd):
+        return fd
+
+    def reopenlogs(self):
+        self.logs_reopened = True
+
+    def process_environment(self):
+        self.environment_processed = True
+
+    def stripEscapes(self, data):
+        from supervisor.options import ServerOptions
+        o = ServerOptions()
+        return o.stripEscapes(data)
+
+class DummyLogger:
+    def __init__(self):
+        self.reopened = False
+        self.removed = False
+        self.closed = False
+        self.data = []
+
+    def info(self, *args):
+        for arg in args:
+            self.data.append(arg)
+    warn = log = debug = critical = trace = info
+    def reopen(self):
+        self.reopened = True
+    def close(self):
+        self.closed = True
+    def remove(self):
+        self.removed = True
+
+
+class DummySupervisor:
+    def __init__(self, processes=None, state=None):
+        if processes is None:
+            processes = {}
+        self.processes = processes
+        self.options = DummyOptions()
+        if state is None:
+            from supervisor.supervisord import SupervisorStates
+        self.state = SupervisorStates.ACTIVE
+
+    def get_state(self):
+        return self.state
+
+class DummyProcess:
+    # Initial state; overridden by instance variables
+    pid = 0 # Subprocess pid; 0 when not running
+    laststart = 0 # Last time the subprocess was started; 0 if never
+    laststop = 0  # Last time the subprocess was stopped; 0 if never
+    delay = 0 # If nonzero, delay starting or killing until this time
+    administrative_stop = 0 # true if the process has been stopped by an admin
+    system_stop = 0 # true if the process has been stopped by the system
+    killing = 0 # flag determining whether we are trying to kill this proc
+    backoff = 0 # backoff counter (to backofflimit)
+    waitstatus = None
+    exitstatus = None
+    pipes = None
+    stdout_logged = ''
+    stderr_logged = ''
+    spawnerr = None
+    stdout_buffer = '' # buffer of characters from child stdout output to log
+    stderr_buffer = '' # buffer of characters from child stderr output to log
+    stdin_buffer = '' # buffer of characters to send to child process' stdin
+
+    def __init__(self, options, config, state=None):
+        self.options = options
+        self.config = config
+        self.logsremoved = False
+        self.stop_called = False
+        self.backoff_secs = None
+        self.spawned = False
+        if state is None:
+            from supervisor.process import ProcessStates
+            state = ProcessStates.RUNNING
+        self.state = state
+        self.error_at_clear = False
+        self.killed_with = None
+        self.drained = False
+        self.stdout_buffer = ''
+        self.stderr_buffer = ''
+        self.stdout_logged = ''
+        self.stderr_logged = ''
+        self.pipes = {}
+        self.finished = None
+        self.logs_reopened = False
+        self.execv_arg_exception = None
+
+    def reopenlogs(self):
+        self.logs_reopened = True
+
+    def removelogs(self):
+        if self.error_at_clear:
+            raise IOError('whatever')
+        self.logsremoved = True
+
+    def get_state(self):
+        return self.state
+
+    def stop(self):
+        self.stop_called = True
+        self.killing = False
+        from supervisor.process import ProcessStates
+        self.state = ProcessStates.STOPPED
+
+    def kill(self, signal):
+        self.killed_with = signal
+
+    def spawn(self):
+        self.spawned = True
+        from supervisor.process import ProcessStates
+        self.state = ProcessStates.RUNNING
+
+    def drain(self):
+        self.drained = True
+
+    def get_output_drains(self):
+        return []
+
+    def __cmp__(self, other):
+        return cmp(self.config.priority, other.config.priority)
+
+    def readable_fds(self):
+        return []
+
+    def log_output(self):
+        self.stdout_logged += self.stdout_buffer
+        self.stdout_buffer = ''
+
+        self.stderr_logged += self.stderr_buffer
+        self.stderr_buffer = ''
+
+    def finish(self, pid, sts):
+        self.finished = pid, sts
+
+    def get_execv_args(self):
+        if self.execv_arg_exception:
+            raise self.execv_arg_exception('whatever')
+        import shlex
+        commandargs = shlex.split(self.config.command)
+        program = commandargs[0]
+        return program, commandargs
+        
+class DummyPConfig:
+    def __init__(self, name, command, priority=999, autostart=True,
+                 autorestart=True, startsecs=10, startretries=999,
+                 uid=None, stdout_logfile=None, stdout_eventlogfile=None,
+                 stdout_logfile_backups=0, stdout_logfile_maxbytes=0,
+                 stderr_logfile=None, stderr_eventlogfile=None,
+                 stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
+                 redirect_stderr=False,
+                 stopsignal=None, stopwaitsecs=10,
+                 exitcodes=(0,2), environment=None):
+        self.name = name
+        self.command = command
+        self.priority = priority
+        self.autostart = autostart
+        self.autorestart = autorestart
+        self.startsecs = startsecs
+        self.startretries = startretries
+        self.uid = uid
+        self.stdout_logfile = stdout_logfile
+        self.stdout_eventlogfile = stdout_eventlogfile
+        self.stdout_logfile_backups = stdout_logfile_backups
+        self.stdout_logfile_maxbytes = stdout_logfile_maxbytes
+        self.stderr_logfile = stderr_logfile
+        self.stderr_eventlogfile = stderr_eventlogfile
+        self.stderr_logfile_backups = stderr_logfile_backups
+        self.stderr_logfile_maxbytes = stderr_logfile_maxbytes
+        self.redirect_stderr = redirect_stderr
+        if stopsignal is None:
+            import signal
+            stopsignal = signal.SIGTERM
+        self.stopsignal = stopsignal
+        self.stopwaitsecs = stopwaitsecs
+        self.exitcodes = exitcodes
+        self.environment = environment
+
+def makeExecutable(file, substitutions=None):
+    import os
+    import sys
+    import tempfile
+    
+    if substitutions is None:
+        substitutions = {}
+    data = open(file).read()
+    last = os.path.split(file)[1]
+
+    substitutions['PYTHON'] = sys.executable
+    for key in substitutions.keys():
+        data = data.replace('<<%s>>' % key.upper(), substitutions[key])
+    
+    tmpnam = tempfile.mktemp(prefix=last)
+    f = open(tmpnam, 'w')
+    f.write(data)
+    f.close()
+    os.chmod(tmpnam, 0755)
+    return tmpnam
+
+def makeSpew(unkillable=False):
+    import os
+    here = os.path.dirname(__file__)
+    if not unkillable:
+        return makeExecutable(os.path.join(here, 'fixtures/spew.py'))
+    return makeExecutable(os.path.join(here, 'fixtures/unkillable_spew.py'))
+
+
+class DummyRequest:
+    command = 'GET'
+    _error = None
+    _done = False
+    def __init__(self, path, params, query, fragment):
+        self.args = path, params, query, fragment
+        self.producers = []
+        self.headers = {}
+
+    def split_uri(self):
+        return self.args
+
+    def error(self, code):
+        self._error = code
+
+    def push(self, producer):
+        self.producers.append(producer)
+
+    def __setitem__(self, header, value):
+        self.headers[header] = value
+
+    def done(self):
+        self._done = True
+
+class DummyRPCServer:
+    def __init__(self):
+        self.supervisor = DummySupervisorRPCNamespace()
+        self.system = DummySystemRPCNamespace()
+
+class DummySystemRPCNamespace:
+    pass
+
+class DummySupervisorRPCNamespace:
+    _restartable = True
+    _restarted = False
+    _shutdown = False
+
+    def getAPIVersion(self):
+        return '1.0'
+
+    def readProcessLog(self, name, offset, length):
+        from supervisor import xmlrpc
+        import xmlrpclib
+        if name == 'BAD_NAME':
+            raise xmlrpclib.Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+        elif name == 'FAILED':
+            raise xmlrpclib.Fault(xmlrpc.Faults.FAILED, 'FAILED')
+        elif name == 'NO_FILE':
+            raise xmlrpclib.Fault(xmlrpc.Faults.NO_FILE, 'NO_FILE')
+        a = 'output line\n' * 10
+        return a[offset:]
+
+    def getAllProcessInfo(self):
+        from supervisor.process import ProcessStates
+        return [
+            {
+            'name':'foo',
+            'pid':11,
+            'state':ProcessStates.RUNNING,
+            'statename':'RUNNING',
+            'start':_NOW - 100,
+            'stop':0,
+            'spawnerr':'',
+            'now':_NOW,
+            'description':'foo description',
+             },
+            {
+            'name':'bar',
+            'pid':12,
+            'state':ProcessStates.FATAL,
+            'statename':'FATAL',
+            'start':_NOW - 100,
+            'stop':_NOW - 50,
+            'spawnerr':'screwed',
+            'now':_NOW,
+            'description':'bar description',
+             },
+            {
+            'name':'baz',
+            'pid':12,
+            'state':ProcessStates.STOPPED,
+            'statename':'STOPPED',
+            'start':_NOW - 100,
+            'stop':_NOW - 25,
+            'spawnerr':'',
+            'now':_NOW,
+            'description':'baz description',
+             },
+            ]
+                
+
+    def getProcessInfo(self, name):
+        from supervisor.process import ProcessStates
+        return {
+            'name':'foo',
+            'pid':11,
+            'state':ProcessStates.RUNNING,
+            'statename':'RUNNING',
+            'start':_NOW - 100,
+            'stop':0,
+            'spawnerr':'',
+            'now':_NOW,
+            'description':'foo description',
+             }
+
+    def startProcess(self, name):
+        from supervisor import xmlrpc
+        from xmlrpclib import Fault
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+        if name == 'ALREADY_STARTED':
+            raise Fault(xmlrpc.Faults.ALREADY_STARTED, 'ALREADY_STARTED')
+        if name == 'SPAWN_ERROR':
+            raise Fault(xmlrpc.Faults.SPAWN_ERROR, 'SPAWN_ERROR')
+        return True
+
+    def startAllProcesses(self):
+        from supervisor import xmlrpc
+        return [
+            {'name':'foo', 'status': xmlrpc.Faults.SUCCESS,'description': 'OK'},
+            {'name':'foo2', 'status':xmlrpc.Faults.SUCCESS,'description': 'OK'},
+            {'name':'failed', 'status':xmlrpc.Faults.SPAWN_ERROR,
+             'description':'SPAWN_ERROR'}
+            ]
+
+    def stopProcess(self, name):
+        from supervisor import xmlrpc
+        from xmlrpclib import Fault
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+        if name == 'NOT_RUNNING':
+            raise Fault(xmlrpc.Faults.NOT_RUNNING, 'NOT_RUNNING')
+        if name == 'FAILED':
+            raise Fault(xmlrpc.Faults.FAILED, 'FAILED')
+        
+        return True
+    
+    def stopAllProcesses(self):
+        from supervisor import xmlrpc
+        return [
+            {'name':'foo','status': xmlrpc.Faults.SUCCESS,'description': 'OK'},
+            {'name':'foo2', 'status':xmlrpc.Faults.SUCCESS,'description': 'OK'},
+            {'name':'failed', 'status':xmlrpc.Faults.BAD_NAME,
+             'description':'FAILED'}
+            ]
+
+    def restart(self):
+        if self._restartable:
+            self._restarted = True
+            return
+        from xmlrpclib import Fault
+        from supervisor import xmlrpc
+        raise Fault(xmlrpc.Faults.SHUTDOWN_STATE, '')
+
+    def shutdown(self):
+        if self._restartable:
+            self._shutdown = True
+            return
+        from xmlrpclib import Fault
+        from supervisor import xmlrpc
+        raise Fault(xmlrpc.Faults.SHUTDOWN_STATE, '')
+
+    def clearProcessLog(self, name):
+        from xmlrpclib import Fault
+        from supervisor import xmlrpc
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+        return True
+
+    def clearAllProcessLogs(self):
+        from supervisor import xmlrpc
+        return [
+            {'name':'foo', 'status':xmlrpc.Faults.SUCCESS,'description': 'OK'},
+            {'name':'foo2', 'status':xmlrpc.Faults.SUCCESS,'description': 'OK'},
+            {'name':'failed','status':xmlrpc.Faults.FAILED,
+             'description':'FAILED'}
+            ]
+
+    def raiseError(self):
+        raise ValueError('error')
+
+    def getSupervisorVersion(self):
+        return '3000'
+
+

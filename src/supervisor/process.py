@@ -109,8 +109,8 @@ class Subprocess:
 
     def get_output_drains(self):
         drains = []
-        stdout_pipe = self.pipes['stdout']
-        stderr_pipe = self.pipes['stderr']
+        stdout_pipe = self.pipes.get('stdout', None)
+        stderr_pipe = self.pipes.get('stderr', None)
         if stdout_pipe is not None:
             drains.append((stdout_pipe, self.drain_stdout))
         if stderr_pipe is not None:
@@ -278,7 +278,7 @@ class Subprocess:
                     uid = self.config.uid
                     s = 'supervisor: error trying to setuid to %s ' % uid
                     self.options.write(1, s)
-                    self.options.write(1, "(%s)" % msg)
+                    self.options.write(1, "(%s)\n" % msg)
                 try:
                     env = os.environ.copy()
                     if self.config.environment is not None:
