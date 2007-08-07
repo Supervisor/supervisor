@@ -1,5 +1,19 @@
-# An executable which proxies for a subprocess; upon a signal, it sends that
-# signal to the process identified by a pidfile
+##############################################################################
+#
+# Copyright (c) 2007 Agendaless Consulting and Contributors.
+# All Rights Reserved.
+#
+# This software is subject to the provisions of the Zope Public License,
+# Version 2.1 (ZPL).  A copy of the ZPL should accompany this distribution.
+# THIS SOFTWARE IS PROVIDED "AS IS" AND ANY AND ALL EXPRESS OR IMPLIED
+# WARRANTIES ARE DISCLAIMED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF TITLE, MERCHANTABILITY, AGAINST INFRINGEMENT, AND FITNESS
+# FOR A PARTICULAR PURPOSE
+#
+##############################################################################
+
+""" An executable which proxies for a subprocess; upon a signal, it sends that
+signal to the process identified by a pidfile. """
 
 import os
 import sys
