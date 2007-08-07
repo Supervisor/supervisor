@@ -1,3 +1,4 @@
 include *.txt
-include *.conf
-include ui/*.css ui/*.gif ui/*.html
+include ui/*.html ui/images/*.gif ui/stylesheets/*css
+include tests/fixtures/*.py
+
