@@ -168,6 +168,7 @@ class SupervisordTests(unittest.TestCase):
         supervisord.mood = 0
         import asyncore
         self.assertRaises(asyncore.ExitNow, supervisord.runforever, test=True)
+        self.assertEqual(pgroup.all_stopped, True)
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
