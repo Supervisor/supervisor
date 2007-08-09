@@ -7,6 +7,7 @@ from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyPGroupConfig
 from supervisor.tests.base import DummyProcess
+from supervisor.tests.base import DummyProcessGroup
 
 class SupervisordTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -125,6 +126,48 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(supervisord.mood, 1)
         self.assertEqual(options.logger.data[0],
                          'received SIGUSR1 indicating nothing')
+
+    def test_runforever_select_eintr(self):
+        options = DummyOptions()
+        import errno
+        options.select_error = errno.EINTR
+        supervisord = self._makeOne(options)
+        supervisord.runforever(test=True)
+        self.assertEqual(options.logger.data[0], 5)
+        self.assertEqual(options.logger.data[1], 'EINTR encountered in select')
+
+    def test_one_process_group_select(self):
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
+        process = DummyProcess(pconfig)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
+        pgroup = DummyProcessGroup(gconfig)
+        L = []
+        def callback():
+            L.append(1)
+        pgroup.select_result = {6:callback, 7:callback}, [6], [7], []
+        supervisord.process_groups = {'foo': pgroup}
+        options.select_result = [6], [7], []
+        supervisord.runforever(test=True)
+        self.assertEqual(pgroup.necessary_started, True)
+        self.assertEqual(pgroup.transitioned, True)
+        self.assertEqual(L, [1, 1])
+        
+    def test_exit(self):
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
+        process = DummyProcess(pconfig)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
+        pgroup = DummyProcessGroup(gconfig)
+        L = []
+        def callback():
+            L.append(1)
+        supervisord.process_groups = {'foo': pgroup}
+        supervisord.mood = 0
+        import asyncore
+        self.assertRaises(asyncore.ExitNow, supervisord.runforever, test=True)
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

@@ -31,6 +31,7 @@ import grp
 import resource
 import stat
 import pkg_resources
+import select
 
 from fcntl import fcntl
 from fcntl import F_SETFL, F_GETFL
@@ -981,6 +982,9 @@ class ServerOptions(Options):
                 os.close(x)
             except os.error:
                 pass
+
+    def select(self, r, w, x, timeout):
+        return select.select(r, w, x, timeout)
 
     def kill(self, pid, signal):
         os.kill(pid, signal)

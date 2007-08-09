@@ -119,22 +119,24 @@ class Supervisor:
         socket_map = self.options.get_socket_map()
 
         while 1:
+            pgroups = self.process_groups.values()
+
             if self.mood > 0:
-                for group in self.process_groups.values():
+                for group in pgroups:
                     group.start_necessary()
 
             r, w, x = [], [], []
 
             if self.mood < 1:
                 if not self.stopping:
-                    for group in self.process_groups.values():
+                    for group in pgroups:
                         group.stop_all()
                     self.stopping = True
 
                 # if there are no delayed processes (we're done killing
                 # everything), it's OK to stop or reload
                 delayprocs = []
-                for group in self.process_groups.values():
+                for group in pgroups:
                     delayprocs.extend(group.get_delay_processes())
 
                 if delayprocs:
@@ -151,7 +153,7 @@ class Supervisor:
             process_callbacks = {}
 
             # subprocess input and output
-            for group in self.process_groups.values():
+            for group in pgroups:
                 callbacks, group_r, group_w, group_x = group.select()
                 r.extend(group_r)
                 w.extend(group_w)
@@ -166,7 +168,7 @@ class Supervisor:
                     w.append(fd)
 
             try:
-                r, w, x = select.select(r, w, x, timeout)
+                r, w, x = self.options.select(r, w, x, timeout)
             except select.error, err:
                 r = w = x = []
                 if err[0] == errno.EINTR:
@@ -202,7 +204,7 @@ class Supervisor:
                     except:
                         socket_map[fd].handle_error()
 
-            for group in self.process_groups.values():
+            for group in pgroups:
                 group.transition()
 
             self.reap()

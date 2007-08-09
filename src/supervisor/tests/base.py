@@ -56,6 +56,8 @@ class DummyOptions:
         self.write_accept = None
         self.write_error = None
         self.tempfile_name = '/foo/bar'
+        self.select_result = [], [], []
+        self.select_error = None
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -202,6 +204,12 @@ class DummyOptions:
 
     def mktempfile(self, prefix, suffix, dir):
         return self.tempfile_name
+
+    def select(self, r, w, x, timeout):
+        import select
+        if self.select_error:
+            raise select.error(self.select_error)
+        return self.select_result
 
 class DummyLogger:
     def __init__(self):
@@ -603,15 +611,24 @@ class DummyProcessGroup:
         self.config = config
         self.necessary_started = False
         self.transitioned = False
+        self.all_stopped = False
+        self.delay_processes = []
+        self.select_result = {}, [], [], []
 
     def start_necessary(self):
         self.necessary_started = True
 
     def select(self):
-        return {}, [], [], []
+        return self.select_result
 
     def transition(self):
         self.transitioned = True
+
+    def stop_all(self):
+        self.all_stopped = True
+
+    def get_delay_processes(self):
+        return self.delay_processes
         
 
 def lstrip(s):
