@@ -675,9 +675,17 @@ class logtail_handler:
         while path and path[0] == '/':
             path = path[1:]
 
-        path, processName = path.split('/', 1)
+        path, process_name = path.split('/', 1)
 
-        process = self.supervisord.processes.get(processName)
+        from supervisor.options import split_namespec
+        group_name, process_name = split_namespec(process_name)
+
+        group = self.supervisord.process_groups.get(group_name)
+        if group is None:
+            request.error(404) # not found
+            return
+
+        process = group.processes.get(process_name)
         if process is None:
             request.error(404) # not found
             return

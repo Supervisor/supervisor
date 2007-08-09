@@ -8,6 +8,8 @@ from supervisor.options import tailFile
 from supervisor.options import NotExecutable
 from supervisor.options import NotFound
 from supervisor.options import NoPermission
+from supervisor.options import make_namespec
+from supervisor.options import split_namespec
 
 from supervisor.http import NOT_DONE_YET
 from supervisor.xmlrpc import Faults
@@ -44,7 +46,7 @@ class SupervisorNamespaceRPCInterface:
         self._update('getAPIVersion')
         return API_VERSION
 
-    getVersion = getAPIVersion # b/w compatibility with releases before 2.3
+    getVersion = getAPIVersion # b/w compatibility with releases before 3.0
 
     def getSupervisorVersion(self):
         """ Return the version of the supervisor package in use by supervisord
@@ -108,11 +110,12 @@ class SupervisorNamespaceRPCInterface:
         self._update('clearLog')
 
         logfile = self.supervisord.options.logfile
-        if  logfile is None or not os.path.exists(logfile):
+        if  logfile is None or not self.supervisord.options.exists(logfile):
             raise RPCError(Faults.NO_FILE)
 
+        # there is a race condition here, but ignore it.
         try:
-            os.remove(logfile) # there is a race condition here, but ignore it.
+            self.supervisord.options.remove(logfile)
         except (os.error, IOError):
             raise RPCError(Faults.FAILED)
 
@@ -145,7 +148,7 @@ class SupervisorNamespaceRPCInterface:
     def startProcess(self, name, wait=True):
         """ Start a process
 
-        @param string name Process name
+        @param string name Process name (or 'group:name')
         @param boolean wait Wait for process to be fully started
         @return boolean result     Always true unless error
 
@@ -153,8 +156,13 @@ class SupervisorNamespaceRPCInterface:
         self._update('startProcess')
 
         # get process to start from name
-        processes = self.supervisord.processes
-        process = processes.get(name)
+        group_name, process_name = split_namespec(name)
+
+        group = self.supervisord.process_groups.get(group_name)
+        if group is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
+        process = group.processes.get(process_name)
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
         
@@ -193,7 +201,6 @@ class SupervisorNamespaceRPCInterface:
                 # it's undeclared).
                 started.append(time.time())
 
-
             if not wait or not startsecs:
                 return True
                 
@@ -209,11 +216,39 @@ class SupervisorNamespaceRPCInterface:
 
             if state == ProcessStates.RUNNING:
                 return True
+
             raise RPCError(Faults.ABNORMAL_TERMINATION, name)
 
         startit.delay = 0.05
         startit.rpcinterface = self
         return startit # deferred
+
+    def _getAllProcesses(self, lexical=False):
+        # if lexical is true, return processes sorted in lexical order,
+        # otherwise, sort in priority order
+        all_processes = []
+
+        if lexical:
+            group_names = self.supervisord.process_groups.keys()
+            group_names.sort()
+            for group_name in group_names:
+                group = self.supervisord.process_groups[group_name]
+                process_names = group.processes.keys()
+                process_names.sort()
+                for process_name in process_names:
+                    process = group.processes[process_name]
+                    all_processes.append((group, process))
+        else:
+            groups = self.supervisord.process_groups.values()
+            groups.sort() # asc by priority
+
+            for group in groups:
+                processes = group.processes.values()
+                processes.sort() # asc by priority
+                for process in processes:
+                    all_processes.append((group, process))
+
+        return all_processes
 
     def startAllProcesses(self, wait=True):
         """ Start all processes listed in the configuration file
@@ -223,12 +258,10 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('startAllProcesses')
 
-        processes = self.supervisord.processes.values()
-        processes.sort() # asc by priority
+        all_processes = self._getAllProcesses()
 
         results = []
         callbacks = []
-
         running_states = (ProcessStates.RUNNING,
                           ProcessStates.BACKOFF,
                           ProcessStates.STARTING)
@@ -236,15 +269,16 @@ class SupervisorNamespaceRPCInterface:
         def startall():
             if not callbacks:
 
-                for process in processes:
+                for group, process in all_processes:
+                    name = make_namespec(group.config.name, process.config.name)
                     if process.get_state() not in running_states:
                         # only start nonrunning processes
                         try:
-                            callbacks.append((
-                                process.config.name,
-                                self.startProcess(process.config.name, wait)))
+                            callback = self.startProcess(name, wait)
+                            callbacks.append((group, process, callback))
                         except RPCError, e:
                             results.append({'name':process.config.name,
+                                            'group':group.config.name,
                                             'status':e.code,
                                             'description':e.text})
                             continue
@@ -252,20 +286,24 @@ class SupervisorNamespaceRPCInterface:
             if not callbacks:
                 return results
 
-            name, callback = callbacks.pop(0)
+            group, process, callback = callbacks.pop(0)
 
             try:
                 value = callback()
             except RPCError, e:
-                results.append({'name':name, 'status':e.code,
+                results.append({'name':process.config.name,
+                                'group':group.config.name,
+                                'status':e.code,
                                 'description':e.text})
                 return NOT_DONE_YET
-            
+
             if value is NOT_DONE_YET:
                 # push it back into the queue; it will finish eventually
-                callbacks.append((name,callback))
+                callbacks.append((group, process, callback))
             else:
-                results.append({'name':name, 'status':Faults.SUCCESS,
+                results.append({'name':process.config.name,
+                                'group':group.config.name,
+                                'status':Faults.SUCCESS,
                                 'description':'OK'})
 
             if callbacks:
@@ -292,10 +330,17 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('stopProcess')
 
-        process = self.supervisord.processes.get(name)
-        if process is None:
+        # get process to start from name
+        group_name, process_name = split_namespec(name)
+
+        group = self.supervisord.process_groups.get(group_name)
+        if group is None:
             raise RPCError(Faults.BAD_NAME, name)
 
+        process = group.processes.get(process_name)
+        if process is None:
+            raise RPCError(Faults.BAD_NAME, name)
+        
         stopped = []
         called  = []
 
@@ -333,9 +378,8 @@ class SupervisorNamespaceRPCInterface:
         @return boolean result Always return true unless error.
         """
         self._update('stopAllProcesses')
-        processes = self.supervisord.processes.values()
-        processes.sort()
-        processes.reverse() # stop in reverse priority order
+        
+        all_processes = self._getAllProcesses()
 
         callbacks = []
         results = []
@@ -347,36 +391,45 @@ class SupervisorNamespaceRPCInterface:
         def killall():
             if not callbacks:
 
-                for process in processes:
+                for group, process in all_processes:
+                    name = make_namespec(group.config.name, process.config.name)
                     if process.get_state() in running_states:
                         # only stop running processes
                         try:
-                            callbacks.append(
-                                (process.config.name,
-                                 self.stopProcess(process.config.name)))
+                            callback = self.stopProcess(name)
+                            callbacks.append((group, process, callback))
                         except RPCError, e:
-                            name = process.config.name
-                            results.append({'name':name, 'status':e.code,
+                            results.append({'name':process.config.name,
+                                            'group':group.config.name,
+                                            'status':e.code,
                                             'description':e.text})
                             continue
 
             if not callbacks:
                 return results
 
-            name, callback = callbacks.pop(0)
+            group, process, callback = callbacks.pop(0)
+
             try:
                 value = callback()
             except RPCError, e:
-                results.append({'name':name, 'status':e.code,
-                                'description':e.text})
+                results.append(
+                    {'name':process.config.name,
+                     'group':group.config.name,
+                     'status':e.code,
+                     'description':e.text})
                 return NOT_DONE_YET
             
             if value is NOT_DONE_YET:
                 # push it back into the queue; it will finish eventually
-                callbacks.append((name, callback))
+                callbacks.append((group, process, callback))
             else:
-                results.append({'name':name, 'status':Faults.SUCCESS,
-                                'description':'OK'})
+                results.append(
+                    {'name':process.config.name,
+                     'group':group.config.name,
+                     'status':Faults.SUCCESS,
+                     'description':'OK'}
+                    )
 
             if callbacks:
                 return NOT_DONE_YET
@@ -442,8 +495,14 @@ class SupervisorNamespaceRPCInterface:
         @return struct result     A structure containing data about the process
         """
         self._update('getProcessInfo')
+
+        group_name, process_name = split_namespec(name)
+
+        group = self.supervisord.process_groups.get(group_name)
+        if group is None:
+            raise RPCError(Faults.BAD_NAME, name)
         
-        process = self.supervisord.processes.get(name)
+        process = group.processes.get(process_name)
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
 
@@ -456,7 +515,8 @@ class SupervisorNamespaceRPCInterface:
         exitstatus = process.exitstatus or 0
 
         info = {
-            'name':name,
+            'name':process.config.name,
+            'group':group.config.name,
             'start':start,
             'stop':stop,
             'now':now,
@@ -465,7 +525,7 @@ class SupervisorNamespaceRPCInterface:
             'spawnerr':spawnerr,
             'exitstatus':exitstatus,
             'logfile':process.config.stdout_logfile,
-            'pid':process.pid
+            'pid':process.pid,
             }
         
         description = self._interpretProcessInfo(info)
@@ -479,11 +539,12 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('getAllProcessInfo')
 
-        processnames = self.supervisord.processes.keys()
-        processnames.sort()
+        all_processes = self._getAllProcesses(lexical=True)
+
         output = []
-        for processname in processnames:
-            output.append(self.getProcessInfo(processname))
+        for group, process in all_processes:
+            name = make_namespec(group.config.name, process.config.name)
+            output.append(self.getProcessInfo(name))
         return output
 
     def readProcessLog(self, name, offset, length):
@@ -496,7 +557,12 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('readProcessLog')
 
-        process = self.supervisord.processes.get(name)
+        group_name, process_name = split_namespec(name)
+        group = self.supervisord.process_groups.get(group_name)
+        if group is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
+        process = group.processes.get(process_name)
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
 
@@ -514,7 +580,7 @@ class SupervisorNamespaceRPCInterface:
     def tailProcessLog(self, name, offset, length):
         """
         Provides a more efficient way to tail logs than readProcessLog().
-        Use readProcessLog() to read chucks and tailProcessLog() to tail.
+        Use readProcessLog() to read chunks and tailProcessLog() to tail.
         
         Requests (length) bytes from the (name)'s log, starting at 
         (offset).  If the total log size is greater than (offset + length), 
@@ -530,7 +596,13 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('tailProcessLog')
 
-        process = self.supervisord.processes.get(name)
+        group_name, process_name = split_namespec(name)
+
+        group = self.supervisord.process_groups.get(group_name)
+        if group is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
+        process = group.processes.get(process_name)
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
 
@@ -542,14 +614,19 @@ class SupervisorNamespaceRPCInterface:
         return tailFile(logfile, int(offset), int(length))
 
     def clearProcessLog(self, name):
-        """ Clear the log for name and reopen it
+        """ Clear the log for the named process and reopen it.
 
-        @param string name   The name of the process
+        @param string name   The name of the process (or 'group:name')
         @return boolean result      Always True unless error
         """
         self._update('clearProcessLog')
+        group_name, process_name = split_namespec(name)
+        group = self.supervisord.process_groups.get(group_name)
 
-        process = self.supervisord.processes.get(name)
+        if group is None:
+            raise RPCError(Faults.BAD_NAME, group_name)
+
+        process = group.processes.get(process_name)
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
 
@@ -570,26 +647,33 @@ class SupervisorNamespaceRPCInterface:
         results  = []
         callbacks = []
 
-        processnames = self.supervisord.processes.keys()
-        processnames.sort()
-        
-        for processname in processnames:
-            callbacks.append((processname, self.clearProcessLog))
+        all_processes = self._getAllProcesses()
+
+        for group, process in all_processes:
+            callbacks.append((group, process, self.clearProcessLog))
 
         def clearall():
             if not callbacks:
                 return results
 
-            name, callback = callbacks.pop(0)
+            group, process, callback = callbacks.pop(0)
+            name = make_namespec(group.config.name, process.config.name)
             try:
                 callback(name)
             except RPCError, e:
-                results.append({'name':name, 'status':e.code,
-                                'description':e.text})
+                results.append(
+                    {'name':process.config.name,
+                     'group':group.config.name,
+                     'status':e.code,
+                     'description':e.text})
             else:
-                results.append({'name':name, 'status':Faults.SUCCESS,
-                                'description':'OK'})
-            
+                results.append(
+                    {'name':process.config.name,
+                     'group':group.config.name,
+                     'status':Faults.SUCCESS,
+                     'description':'OK'}
+                    )
+
             if callbacks:
                 return NOT_DONE_YET
 
@@ -602,3 +686,4 @@ class SupervisorNamespaceRPCInterface:
 # this is not used in code but referenced via an entry point in the conf file
 def make_main_rpcinterface(supervisord):
     return SupervisorNamespaceRPCInterface(supervisord)
+

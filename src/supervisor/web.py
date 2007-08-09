@@ -27,10 +27,14 @@ from medusa.http_server import get_header
 
 import meld3
 
-from supervisor import xmlrpc
 from supervisor.process import ProcessStates
 from supervisor.http import NOT_DONE_YET
+
 from supervisor.xmlrpc import SystemNamespaceRPCInterface
+from supervisor.xmlrpc import RootRPCInterface
+from supervisor.xmlrpc import Faults
+from supervisor.xmlrpc import RPCError
+
 from supervisor.rpcinterface import SupervisorNamespaceRPCInterface
 
 class DeferredWebProducer:
@@ -201,12 +205,11 @@ class TailView(MeldView):
             if not processname:
                 tail = 'No process name found'
             else:
-                rpcinterface = xmlrpc.SupervisorNamespaceRPCInterface(
-                    supervisord)
+                rpcinterface = SupervisorNamespaceRPCInterface(supervisord)
                 try:
                     tail = rpcinterface.readProcessLog(processname, -1024, 0)
-                except xmlrpc.RPCError, e:
-                    if e.code == xmlrpc.Faults.NO_FILE:
+                except RPCError, e:
+                    if e.code == Faults.NO_FILE:
                         tail = 'No file for %s' % processname
                     else:
                         raise
@@ -282,7 +285,7 @@ class StatusView(MeldView):
         main =   ('supervisor', SupervisorNamespaceRPCInterface(supervisord))
         system = ('system', SystemNamespaceRPCInterface(main))
 
-        rpcinterface = xmlrpc.RootRPCInterface([main, system])
+        rpcinterface = RootRPCInterface([main, system])
 
         if action:
 
@@ -316,12 +319,16 @@ class StatusView(MeldView):
                 return restartall
 
             elif processname:
-                if not supervisord.processes.get(processname):
-                    def wrong():
-                        return 'No such process named %s' % processname
-                    wrong.delay = 0.05
+                def wrong():
+                    return 'No such process named %s' % processname
+                wrong.delay = 0.05
+                group = supervisord.process_group.get(processname) # XXX
+                if group is None:
                     return wrong
-                
+                process = group.processes.get(processname)
+                if process is None:
+                    return wrong
+
                 elif action == 'stop':
                     callback = rpcinterface.supervisor.stopProcess(processname)
                     def stopprocess():
@@ -352,8 +359,8 @@ class StatusView(MeldView):
                     try:
                         callback = rpcinterface.supervisor.startProcess(
                             processname)
-                    except xmlrpc.RPCError, e:
-                        if e.code == xmlrpc.Faults.SPAWN_ERROR:
+                    except RPCError, e:
+                        if e.code == Faults.SPAWN_ERROR:
                             def spawnerr():
                                 return 'Process %s spawn error' % processname
                             spawnerr.delay = 0.05
@@ -405,9 +412,9 @@ class StatusView(MeldView):
                     response['headers']['Location'] = location
 
         supervisord = self.context.supervisord
-        rpcinterface = xmlrpc.RootRPCInterface(
+        rpcinterface = RootRPCInterface(
             [('supervisor',
-              xmlrpc.SupervisorNamespaceRPCInterface(supervisord))]
+              SupervisorNamespaceRPCInterface(supervisord))]
             )
 
         processnames = supervisord.processes.keys()

@@ -1235,6 +1235,12 @@ class ServerOptions(Options):
         os.close(fd)
         return filename
 
+    def remove(self, path):
+        os.remove(path)
+
+    def exists(self, path):
+        return os.path.exists(path)
+
     def _exit(self, code):
         os._exit(code)
 
@@ -1713,6 +1719,26 @@ def expand(s, expansions, name):
             'Format string %r for %r is badly formatted' % (s, name)
             )
 
+def make_namespec(group_name, process_name):
+    # we want to refer to the process by its "short name" (a process named
+    # process1 in the group process1 has a name "process1").  This is for
+    # backwards compatibility
+    if group_name == process_name:
+        name = process_name
+    else:
+        name = '%s:%s' % (group_name, process_name)
+    return name
+
+def split_namespec(namespec):
+    names = namespec.split(':', 1)
+    if len(names) == 2:
+        # group and and process name differ
+        group_name, process_name = names
+    else:
+        # group name is same as process name
+        group_name, process_name = namespec, namespec
+    return group_name, process_name
+
 class ProcessException(Exception):
     """ Specialized exceptions used when attempting to start a process """
 
@@ -1728,3 +1754,5 @@ class NoPermission(ProcessException):
     """ Indicates that the file cannot be executed because the supervisor
     process does not possess the appropriate UNIX filesystem permission
     to execute the file. """
+
+

@@ -58,6 +58,9 @@ class DummyOptions:
         self.tempfile_name = '/foo/bar'
         self.select_result = [], [], []
         self.select_error = None
+        self.remove_error = None
+        self.removed = []
+        self.existing = []
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -211,6 +214,17 @@ class DummyOptions:
             raise select.error(self.select_error)
         return self.select_result
 
+    def remove(self, path):
+        import os
+        if self.remove_error:
+            raise os.error(self.remove_error)
+        self.removed.append(path)
+
+    def exists(self, path):
+        if path in self.existing:
+            return True
+        return False
+
 class DummyLogger:
     def __init__(self):
         self.reopened = False
@@ -231,14 +245,20 @@ class DummyLogger:
 
 
 class DummySupervisor:
-    def __init__(self, process_group_configs=None, state=None):
-        if process_group_configs is None:
-            process_group_configs = []
-        self.options = DummyOptions()
-        self.options.process_group_configs = process_group_configs
+    def __init__(self, options=None, state=None, process_groups=None):
+        if options is None:
+            self.options = DummyOptions()
+        else:
+            self.options = options
         if state is None:
             from supervisor.supervisord import SupervisorStates
-        self.state = SupervisorStates.ACTIVE
+            self.state = SupervisorStates.ACTIVE
+        else:
+            self.state = state
+        if process_groups is None:
+            self.process_groups = {}
+        else:
+            self.process_groups = process_groups
 
     def get_state(self):
         return self.state
@@ -629,8 +649,27 @@ class DummyProcessGroup:
 
     def get_delay_processes(self):
         return self.delay_processes
-        
 
+class PopulatedDummySupervisor(DummySupervisor):
+    def __init__(self, options, group_name, *pconfigs):
+        DummySupervisor.__init__(self, options)
+        self.process_groups = {}
+        processes = {}
+        self.group_name = group_name
+        gconfig = DummyPGroupConfig(options, group_name, pconfigs=pconfigs)
+        pgroup = DummyProcessGroup(gconfig)
+        self.process_groups[group_name] = pgroup
+        for pconfig in pconfigs:
+            process = DummyProcess(pconfig)
+            processes[pconfig.name] = process
+        pgroup.processes = processes
+
+    def set_procattr(self, process_name, attr_name, val, group_name=None):
+        if group_name is None:
+            group_name = self.group_name
+        process = self.process_groups[group_name].processes[process_name]
+        setattr(process, attr_name, val)
+        
 def lstrip(s):
     strings = [x.strip() for x in s.split('\n')]
     return '\n'.join(strings)
