@@ -1,3 +1,4 @@
+import sys
 import unittest
 from StringIO import StringIO
 
@@ -403,4 +404,10 @@ class DummyClientOptions:
 
     def getServerProxy(self):
         return self._server
+
+def test_suite():
+    return unittest.findTestCases(sys.modules[__name__])
+
+if __name__ == '__main__':
+    unittest.main(defaultTest='test_suite')
 

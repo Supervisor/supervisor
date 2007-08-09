@@ -20,7 +20,7 @@ class DummyOptions:
         self.nocleanup = False
         self.strip_ansi = False
         self.pidhistory = {}
-        self.programs = []
+        self.process_group_configs = []
         self.nodaemon = False
         self.socket_map = {}
         self.mood = 1
@@ -33,7 +33,6 @@ class DummyOptions:
         self.signals_set = False
         self.daemonized = False
         self.make_logger_messages = None
-        self.autochildlogs_created = False
         self.autochildlogdir_cleared = False
         self.cleaned_up = False
         self.pidfile_written = False
@@ -56,6 +55,7 @@ class DummyOptions:
         self.environment_processed = False
         self.write_accept = None
         self.write_error = None
+        self.tempfile_name = '/foo/bar'
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -92,9 +92,6 @@ class DummyOptions:
     def make_logger(self, critical_msgs, info_msgs):
         self.make_logger_messages = critical_msgs, info_msgs
 
-    def create_autochildlogs(self):
-        self.autochildlogs_created = True
-
     def clear_autochildlogdir(self):
         self.autochildlogdir_cleared = True
 
@@ -108,7 +105,10 @@ class DummyOptions:
         return self.waitpid_return
 
     def make_process(self, config):
-        return DummyProcess(self, config)
+        return DummyProcess(config)
+
+    def make_group(self, config):
+        return DummyProcessGroup(config)
 
     def kill(self, pid, sig):
         if self.kill_error:
@@ -200,6 +200,9 @@ class DummyOptions:
         o = ServerOptions()
         return o.stripEscapes(data)
 
+    def mktempfile(self, prefix, suffix, dir):
+        return self.tempfile_name
+
 class DummyLogger:
     def __init__(self):
         self.reopened = False
@@ -220,11 +223,11 @@ class DummyLogger:
 
 
 class DummySupervisor:
-    def __init__(self, processes=None, state=None):
-        if processes is None:
-            processes = {}
-        self.processes = processes
+    def __init__(self, process_group_configs=None, state=None):
+        if process_group_configs is None:
+            process_group_configs = []
         self.options = DummyOptions()
+        self.options.process_group_configs = process_group_configs
         if state is None:
             from supervisor.supervisord import SupervisorStates
         self.state = SupervisorStates.ACTIVE
@@ -252,8 +255,7 @@ class DummyProcess:
     stderr_buffer = '' # buffer of characters from child stderr output to log
     stdin_buffer = '' # buffer of characters to send to child process' stdin
 
-    def __init__(self, options, config, state=None):
-        self.options = options
+    def __init__(self, config, state=None):
         self.config = config
         self.logsremoved = False
         self.stop_called = False
@@ -331,15 +333,16 @@ class DummyProcess:
         return program, commandargs
         
 class DummyPConfig:
-    def __init__(self, name, command, priority=999, autostart=True,
+    def __init__(self, options, name, command, priority=999, autostart=True,
                  autorestart=True, startsecs=10, startretries=999,
-                 uid=None, stdout_logfile=None, stdout_eventlogfile=None,
+                 uid=None, stdout_logfile=None, stdout_capturefile=None,
                  stdout_logfile_backups=0, stdout_logfile_maxbytes=0,
-                 stderr_logfile=None, stderr_eventlogfile=None,
+                 stderr_logfile=None, stderr_capturefile=None,
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10,
                  exitcodes=(0,2), environment=None):
+        self.options = options
         self.name = name
         self.command = command
         self.priority = priority
@@ -349,11 +352,11 @@ class DummyPConfig:
         self.startretries = startretries
         self.uid = uid
         self.stdout_logfile = stdout_logfile
-        self.stdout_eventlogfile = stdout_eventlogfile
+        self.stdout_capturefile = stdout_capturefile
         self.stdout_logfile_backups = stdout_logfile_backups
         self.stdout_logfile_maxbytes = stdout_logfile_maxbytes
         self.stderr_logfile = stderr_logfile
-        self.stderr_eventlogfile = stderr_eventlogfile
+        self.stderr_capturefile = stderr_capturefile
         self.stderr_logfile_backups = stderr_logfile_backups
         self.stderr_logfile_maxbytes = stderr_logfile_maxbytes
         self.redirect_stderr = redirect_stderr
@@ -364,6 +367,10 @@ class DummyPConfig:
         self.stopwaitsecs = stopwaitsecs
         self.exitcodes = exitcodes
         self.environment = environment
+        self.autochildlogs_created = False
+
+    def create_autochildlogs(self):
+        self.autochildlogs_created = True
 
 def makeExecutable(file, substitutions=None):
     import os
@@ -578,4 +585,35 @@ class DummySupervisorRPCNamespace:
     def getSupervisorVersion(self):
         return '3000'
 
+class DummyPGroupConfig:
+    def __init__(self, options, name='whatever', priority=999, pconfigs=None):
+        self.options = options
+        self.name = name
+        self.priority = priority
+        if pconfigs is None:
+            pconfigs = []
+        self.process_configs = pconfigs
+        self.after_setuid_called = False
 
+    def after_setuid(self):
+        self.after_setuid_called = True
+
+class DummyProcessGroup:
+    def __init__(self, config):
+        self.config = config
+        self.necessary_started = False
+        self.transitioned = False
+
+    def start_necessary(self):
+        self.necessary_started = True
+
+    def select(self):
+        return {}, [], [], []
+
+    def transition(self):
+        self.transitioned = True
+        
+
+def lstrip(s):
+    strings = [x.strip() for x in s.split('\n')]
+    return '\n'.join(strings)

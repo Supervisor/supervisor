@@ -2,9 +2,12 @@ import os
 import signal
 import time
 import unittest
+import sys
 
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
+from supervisor.tests.base import DummyProcess
+from supervisor.tests.base import DummyPGroupConfig
 
 class SubprocessTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -16,12 +19,12 @@ class SubprocessTests(unittest.TestCase):
 
     def test_ctor(self):
         options = DummyOptions()
-        config = DummyPConfig('cat', 'bin/cat',
+        config = DummyPConfig(options, 'cat', 'bin/cat',
                               stdout_logfile='/tmp/temp123.log',
                               stderr_logfile='/tmp/temp456.log')
-        instance = self._makeOne(options, config)
-        self.assertEqual(instance.options, options)
+        instance = self._makeOne(config)
         self.assertEqual(instance.config, config)
+        self.assertEqual(instance.config.options, options)
         self.assertEqual(instance.laststart, 0)
         self.assertEqual(instance.loggers['stdout'].childlog.args, (
             ('/tmp/temp123.log', 20, '%(message)s'),
@@ -43,10 +46,10 @@ class SubprocessTests(unittest.TestCase):
 
     def test_removelogs(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere',
+        config = DummyPConfig(options, 'notthere', '/notthere',
                               stdout_logfile='/tmp/foo',
                               stderr_logfile='/tmp/bar')
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         instance.removelogs()
         logger = instance.loggers['stdout']
         self.assertEqual(logger.childlog.handlers[0].reopened, True)
@@ -57,10 +60,10 @@ class SubprocessTests(unittest.TestCase):
 
     def test_reopenlogs(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere',
+        config = DummyPConfig(options, 'notthere', '/notthere',
                               stdout_logfile='/tmp/foo',
                               stderr_logfile='/tmp/bar')
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         instance.reopenlogs()
         logger = instance.loggers['stdout']
         self.assertEqual(logger.childlog.handlers[0].reopened, True)
@@ -71,10 +74,10 @@ class SubprocessTests(unittest.TestCase):
     def test_log_output(self):
         # stdout/stderr goes to the process log and the main log
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere',
+        config = DummyPConfig(options, 'notthere', '/notthere',
                               stdout_logfile='/tmp/foo',
                               stderr_logfile='/tmp/bar')
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         stdout_logger = instance.loggers['stdout']
         stderr_logger = instance.loggers['stderr']
         stdout_logger.output_buffer = 'stdout string longer than a token'
@@ -93,10 +96,10 @@ class SubprocessTests(unittest.TestCase):
 
     def test_log_output_no_loggers(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere',
+        config = DummyPConfig(options, 'notthere', '/notthere',
                               stdout_logfile=None,
                               stderr_logfile=None)
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         self.assertEqual(instance.loggers['stdout'], None)
         self.assertEqual(instance.loggers['stderr'], None)
         instance.log_output()
@@ -104,40 +107,42 @@ class SubprocessTests(unittest.TestCase):
 
     def test_drain_stdout(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test', stdout_logfile='/tmp/foo')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test',
+                              stdout_logfile='/tmp/foo')
+        instance = self._makeOne(config)
         instance.pipes['stdout'] = 'abc'
         instance.drain_stdout()
         self.assertEqual(instance.loggers['stdout'].output_buffer, 'abc')
 
     def test_drain_stdout_no_logger(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test', stdout_logfile=None)
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test', stdout_logfile=None)
+        instance = self._makeOne(config)
         instance.pipes['stdout'] = 'abc'
         instance.drain_stdout()
         self.assertEqual(instance.loggers['stdout'], None)
 
     def test_drain_stderr(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test', stderr_logfile='/tmp/foo')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test',
+                              stderr_logfile='/tmp/foo')
+        instance = self._makeOne(config)
         instance.pipes['stderr'] = 'abc'
         instance.drain_stderr()
         self.assertEqual(instance.loggers['stderr'].output_buffer, 'abc')
 
     def test_drain_stderr_no_logger(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test', stderr_logfile=None)
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test', stderr_logfile=None)
+        instance = self._makeOne(config)
         instance.pipes['stderr'] = 'abc'
         instance.drain_stderr()
         self.assertEqual(instance.loggers['stderr'], None)
 
     def test_drain_stdin_nodata(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
         self.assertEqual(instance.stdin_buffer, '')
         instance.drain_stdin()
         self.assertEqual(instance.stdin_buffer, '')
@@ -145,8 +150,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_drain_stdin_normal(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
         instance.spawn()
         instance.stdin_buffer = 'foo'
         instance.drain_stdin()
@@ -155,8 +160,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_drain_stdin_overhardcoded_limit(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
         instance.spawn()
         instance.stdin_buffer = 'a' * (2 << 17)
         instance.drain_stdin()
@@ -166,8 +171,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_drain_stdin_over_os_limit(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
         options.write_accept = 1
         instance.spawn()
         instance.stdin_buffer = 'a' * (2 << 16)
@@ -177,8 +182,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_drain_stdin_epipe(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
         import errno
         options.write_error = errno.EPIPE
         instance.stdin_buffer = 'foo'
@@ -190,8 +195,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_drain_stdin_uncaught_oserror(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
         import errno
         options.write_error = errno.EBADF
         instance.stdin_buffer = 'foo'
@@ -200,9 +205,10 @@ class SubprocessTests(unittest.TestCase):
 
     def test_drain(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test', stdout_logfile='/tmp/foo',
+        config = DummyPConfig(options, 'test', '/test',
+                              stdout_logfile='/tmp/foo',
                               stderr_logfile='/tmp/bar')
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         instance.pipes['stdout'] = 'abc'
         instance.pipes['stderr'] = 'def'
         instance.pipes['stdin'] = 'thename'
@@ -214,8 +220,8 @@ class SubprocessTests(unittest.TestCase):
         
     def test_get_output_drains(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
         instance.pipes['stdout'] = 'abc'
         instance.pipes['stderr'] = 'def'
 
@@ -231,37 +237,37 @@ class SubprocessTests(unittest.TestCase):
 
     def test_get_execv_args_abs_missing(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'notthere', '/notthere')
+        instance = self._makeOne(config)
         args = instance.get_execv_args()
         self.assertEqual(args, ('/notthere', ['/notthere']))
 
     def test_get_execv_args_abs_withquotes_missing(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere "an argument"')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'notthere', '/notthere "an argument"')
+        instance = self._makeOne(config)
         args = instance.get_execv_args()
         self.assertEqual(args, ('/notthere', ['/notthere', 'an argument']))
 
     def test_get_execv_args_rel_missing(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', 'notthere')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'notthere', 'notthere')
+        instance = self._makeOne(config)
         args = instance.get_execv_args()
         self.assertEqual(args, (None, ['notthere']))
 
     def test_get_execv_args_rel_withquotes_missing(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', 'notthere "an argument"')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'notthere', 'notthere "an argument"')
+        instance = self._makeOne(config)
         args = instance.get_execv_args()
         self.assertEqual(args, (None, ['notthere', 'an argument']))
 
     def test_get_execv_args_abs(self):
         executable = '/bin/sh foo'
         options = DummyOptions()
-        config = DummyPConfig('sh', executable)
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'sh', executable)
+        instance = self._makeOne(config)
         args = instance.get_execv_args()
         self.assertEqual(len(args), 2)
         self.assertEqual(args[0], '/bin/sh')
@@ -270,8 +276,8 @@ class SubprocessTests(unittest.TestCase):
     def test_get_execv_args_rel(self):
         executable = 'sh foo'
         options = DummyOptions()
-        config = DummyPConfig('sh', executable)
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'sh', executable)
+        instance = self._makeOne(config)
         args = instance.get_execv_args()
         self.assertEqual(len(args), 2)
         self.assertEqual(args[0], '/bin/sh')
@@ -279,8 +285,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_record_spawnerr(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
         instance.record_spawnerr('foo')
         self.assertEqual(instance.spawnerr, 'foo')
         self.assertEqual(options.logger.data[0], 'spawnerr: foo')
@@ -289,8 +295,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_spawn_already_running(self):
         options = DummyOptions()
-        config = DummyPConfig('sh', '/bin/sh')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'sh', '/bin/sh')
+        instance = self._makeOne(config)
         instance.pid = True
         result = instance.spawn()
         self.assertEqual(result, None)
@@ -298,8 +304,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_spawn_fail_check_execv_args(self):
         options = DummyOptions()
-        config = DummyPConfig('bad', '/bad/filename')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'bad', '/bad/filename')
+        instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr, 'bad filename')
@@ -311,8 +317,8 @@ class SubprocessTests(unittest.TestCase):
         options = DummyOptions()
         import errno
         options.make_pipes_error = errno.EMFILE
-        config = DummyPConfig('good', '/good/filename')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'good', '/good/filename')
+        instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr,
@@ -325,8 +331,8 @@ class SubprocessTests(unittest.TestCase):
     def test_spawn_fail_make_pipes_other(self):
         options = DummyOptions()
         options.make_pipes_error = 1
-        config = DummyPConfig('good', '/good/filename')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'good', '/good/filename')
+        instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
@@ -339,8 +345,8 @@ class SubprocessTests(unittest.TestCase):
         options = DummyOptions()
         import errno
         options.fork_error = errno.EAGAIN
-        config = DummyPConfig('good', '/good/filename')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'good', '/good/filename')
+        instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr,
@@ -355,8 +361,8 @@ class SubprocessTests(unittest.TestCase):
     def test_spawn_fork_fail_other(self):
         options = DummyOptions()
         options.fork_error = 1
-        config = DummyPConfig('good', '/good/filename')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'good', '/good/filename')
+        instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
@@ -370,8 +376,8 @@ class SubprocessTests(unittest.TestCase):
     def test_spawn_as_child_setuid_ok(self):
         options = DummyOptions()
         options.forkpid = 0
-        config = DummyPConfig('good', '/good/filename', uid=1)
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'good', '/good/filename', uid=1)
+        instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(options.parent_pipes_closed, None)
@@ -389,8 +395,8 @@ class SubprocessTests(unittest.TestCase):
         options = DummyOptions()
         options.forkpid = 0
         options.setuid_msg = 'screwed'
-        config = DummyPConfig('good', '/good/filename', uid=1)
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'good', '/good/filename', uid=1)
+        instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(options.parent_pipes_closed, None)
@@ -409,8 +415,8 @@ class SubprocessTests(unittest.TestCase):
         options = DummyOptions()
         options.forkpid = 0
         options.execv_error = 1
-        config = DummyPConfig('good', '/good/filename')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'good', '/good/filename')
+        instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(options.parent_pipes_closed, None)
@@ -427,8 +433,8 @@ class SubprocessTests(unittest.TestCase):
         options = DummyOptions()
         options.forkpid = 0
         options.execv_error = 2
-        config = DummyPConfig('good', '/good/filename')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'good', '/good/filename')
+        instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(options.parent_pipes_closed, None)
@@ -446,9 +452,9 @@ class SubprocessTests(unittest.TestCase):
     def test_spawn_as_child_uses_pconfig_environment(self):
         options = DummyOptions()
         options.forkpid = 0
-        config = DummyPConfig('cat', '/bin/cat',
+        config = DummyPConfig(options, 'cat', '/bin/cat',
                               environment={'_TEST_':'1'})
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(options.execv_args, ('/bin/cat', ['/bin/cat']) )
@@ -457,8 +463,8 @@ class SubprocessTests(unittest.TestCase):
     def test_spawn_as_parent(self):
         options = DummyOptions()
         options.forkpid = 10
-        config = DummyPConfig('good', '/good/filename')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'good', '/good/filename')
+        instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, 10)
         self.assertEqual(options.parent_pipes_closed, None)
@@ -466,13 +472,13 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.logger.data[0], "spawned: 'good' with pid 10")
         self.assertEqual(instance.spawnerr, None)
         self.failUnless(instance.delay)
-        self.assertEqual(instance.options.pidhistory[10], instance)
+        self.assertEqual(instance.config.options.pidhistory[10], instance)
 
     def test_write(self):
         executable = '/bin/cat'
         options = DummyOptions()
-        config = DummyPConfig('output', executable)
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'output', executable)
+        instance = self._makeOne(config)
         sent = 'a' * (1 << 13)
         self.assertRaises(IOError, instance.write, sent)
         options.forkpid = 1
@@ -493,8 +499,8 @@ class SubprocessTests(unittest.TestCase):
             signal.signal(signal.SIGCHLD, foo)
             executable = makeSpew()
             options = DummyOptions()
-            config = DummyPConfig('spew', executable)
-            instance = self._makeOne(options, config)
+            config = DummyPConfig(options, 'spew', executable)
+            instance = self._makeOne(config)
             result = instance.spawn()
             msg = options.logger.data[0]
             self.failUnless(msg.startswith("spawned: 'spew' with pid"))
@@ -528,8 +534,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_stop(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
         instance.pid = 11
         instance.stop()
         self.assertEqual(instance.administrative_stop, 1)
@@ -541,8 +547,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_kill_nopid(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
         instance.kill(signal.SIGTERM)
         self.assertEqual(options.logger.data[0],
               'attempted to kill test with sig SIGTERM but it wasn\'t running')
@@ -550,9 +556,9 @@ class SubprocessTests(unittest.TestCase):
 
     def test_kill_error(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
+        config = DummyPConfig(options, 'test', '/test')
         options.kill_error = 1
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         instance.pid = 11
         instance.kill(signal.SIGTERM)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
@@ -563,8 +569,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_kill(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
         instance.pid = 11
         instance.kill(signal.SIGTERM)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
@@ -574,11 +580,11 @@ class SubprocessTests(unittest.TestCase):
 
     def test_finish(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere',
+        config = DummyPConfig(options, 'notthere', '/notthere',
                               stdout_logfile='/tmp/foo')
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         instance.waitstatus = (123, 1) # pid, waitstatus
-        instance.options.pidhistory[123] = instance
+        instance.config.options.pidhistory[123] = instance
         instance.killing = 1
         pipes = {'stdout':'','stderr':''}
         instance.pipes = pipes
@@ -593,35 +599,35 @@ class SubprocessTests(unittest.TestCase):
 
     def test_set_uid_no_uid(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test')
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
         instance.set_uid()
         self.assertEqual(options.privsdropped, None)
 
     def test_set_uid(self):
         options = DummyOptions()
-        config = DummyPConfig('test', '/test', uid=1)
-        instance = self._makeOne(options, config)
+        config = DummyPConfig(options, 'test', '/test', uid=1)
+        instance = self._makeOne(config)
         msg = instance.set_uid()
         self.assertEqual(options.privsdropped, 1)
         self.assertEqual(msg, None)
 
     def test_cmp_bypriority(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere',
+        config = DummyPConfig(options, 'notthere', '/notthere',
                               stdout_logfile='/tmp/foo',
                               priority=1)
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
 
-        config = DummyPConfig('notthere1', '/notthere',
+        config = DummyPConfig(options, 'notthere1', '/notthere',
                               stdout_logfile='/tmp/foo',
                               priority=2)
-        instance1 = self._makeOne(options, config)
+        instance1 = self._makeOne(config)
 
-        config = DummyPConfig('notthere2', '/notthere',
+        config = DummyPConfig(options, 'notthere2', '/notthere',
                               stdout_logfile='/tmp/foo',
                               priority=3)
-        instance2 = self._makeOne(options, config)
+        instance2 = self._makeOne(config)
 
         L = [instance2, instance, instance1]
         L.sort()
@@ -630,50 +636,50 @@ class SubprocessTests(unittest.TestCase):
 
     def test_get_state(self):
         options = DummyOptions()
-        config = DummyPConfig('notthere', '/notthere',
+        config = DummyPConfig(options, 'notthere', '/notthere',
                               stdout_logfile='/tmp/foo')
         from supervisor.process import ProcessStates
 
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         instance.killing = True
         instance.laststart = 100
         self.assertEqual(instance.get_state(), ProcessStates.STOPPING)
 
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         instance.laststart = 1
         instance.delay = 1
         instance.pid = 1
         self.assertEqual(instance.get_state(), ProcessStates.STARTING)
 
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         instance.laststart = 1
         instance.pid = 11
         self.assertEqual(instance.get_state(), ProcessStates.RUNNING)
         
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         instance.system_stop = True
         instance.laststart = 100
         self.assertEqual(instance.get_state(), ProcessStates.FATAL)
 
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         instance.administrative_stop = True
         self.assertEqual(instance.get_state(), ProcessStates.STOPPED)
         
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         instance.laststart = 1
         instance.exitstatus = 1
         self.assertEqual(instance.get_state(), ProcessStates.EXITED)
 
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         instance.laststart = 1
         instance.delay = 1
         self.assertEqual(instance.get_state(), ProcessStates.BACKOFF)
 
-        instance = self._makeOne(options, config)
+        instance = self._makeOne(config)
         instance.laststart = 1
         self.assertEqual(instance.get_state(), ProcessStates.UNKNOWN)
 
-    def test_stdout_eventmode_switch(self):
+    def test_stdout_capturemode_switch(self):
         from supervisor.events import ProcessCommunicationEvent
         from supervisor.events import subscribe
         events = []
@@ -696,12 +702,12 @@ class SubprocessTests(unittest.TestCase):
         options = DummyOptions()
         from supervisor.options import getLogger
         options.getLogger = getLogger
-        config = DummyPConfig('output', executable,
+        config = DummyPConfig(options, 'output', executable,
                               stdout_logfile='/tmp/foo',
-                              stdout_eventlogfile='/tmp/bar')
+                              stdout_capturefile='/tmp/bar')
 
         try:
-            instance = self._makeOne(options, config)
+            instance = self._makeOne(config)
             logfile = instance.config.stdout_logfile
             logger = instance.loggers['stdout']
             logger.output_buffer = first
@@ -737,7 +743,7 @@ class SubprocessTests(unittest.TestCase):
             except (OSError, IOError):
                 pass
             try:
-                os.remove(instance.config.stdout_eventlogfile)
+                os.remove(instance.config.stdout_capturefile)
             except (OSError, IOError):
                 pass
 
@@ -747,14 +753,14 @@ class SubprocessTests(unittest.TestCase):
         from supervisor.options import getLogger
         options.getLogger = getLogger
         options.strip_ansi = True
-        config = DummyPConfig('output', executable,
+        config = DummyPConfig(options, 'output', executable,
                               stdout_logfile='/tmp/foo')
 
         ansi = '\x1b[34mHello world... this is longer than a token!\x1b[0m'
         noansi = 'Hello world... this is longer than a token!'
 
         try:
-            instance = self._makeOne(options, config)
+            instance = self._makeOne(config)
             instance.loggers['stdout'].output_buffer = ansi
             instance.log_output()
             [ x.flush() for x in instance.loggers['stdout'].childlog.handlers ]
@@ -768,7 +774,7 @@ class SubprocessTests(unittest.TestCase):
 
         try:
             options.strip_ansi = False
-            instance = self._makeOne(options, config)
+            instance = self._makeOne(config)
             instance.loggers['stdout'].output_buffer = ansi
             instance.log_output()
             [ x.flush() for x in instance.loggers['stdout'].childlog.handlers ]
@@ -780,6 +786,165 @@ class SubprocessTests(unittest.TestCase):
             except (OSError, IOError):
                 pass
 
+class ProcessGroupTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.process import ProcessGroup
+        return ProcessGroup
+
+    def _makeOne(self, *args, **kw):
+        return self._getTargetClass()(*args, **kw)
+
+    def test_transition(self):
+        options = DummyOptions()
+
+        from supervisor.process import ProcessStates
+
+        # this should go to FATAL via transition()
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.BACKOFF)
+        process1.backoff = 10000
+        process1.delay = 1
+        process1.system_stop = 0
+
+        # this should go to RUNNING via transition()
+        pconfig2 = DummyPConfig(options, 'process2', 'process2','/bin/process2')
+        process2 = DummyProcess(pconfig2, state=ProcessStates.STARTING)
+        process2.backoff = 1
+        process2.delay = 1
+        process2.system_stop = 0
+        process2.laststart = 1
+
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1, pconfig2])
+        group = self._makeOne(gconfig)
+        group.processes = { 'process1': process1, 'process2': process2 }
+
+        group.transition()
+
+        # this implies FATAL
+        self.assertEqual(process1.backoff, 0)
+        self.assertEqual(process1.delay, 0)
+        self.assertEqual(process1.system_stop, 1)
+
+        # this implies RUNNING
+        self.assertEqual(process2.backoff, 0)
+        self.assertEqual(process2.delay, 0)
+        self.assertEqual(process2.system_stop, 0)
+
+    def test_get_undead(self):
+        options = DummyOptions()
+        from supervisor.process import ProcessStates
+
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
+        process1.delay = time.time() - 1
+
+        pconfig2 = DummyPConfig(options, 'process2', 'process2','/bin/process2')
+        process2 = DummyProcess(pconfig2, state=ProcessStates.STOPPING)
+        process2.delay = time.time() + 1000
+
+        pconfig3 = DummyPConfig(options, 'process3', 'process3','/bin/process3')
+        process3 = DummyProcess(pconfig3, state=ProcessStates.RUNNING)
+
+        gconfig = DummyPGroupConfig(options,
+                                    pconfigs=[pconfig1, pconfig2, pconfig3])
+        group = self._makeOne(gconfig)
+        group.processes = { 'process1': process1, 'process2': process2,
+                            'process3':process3 }
+
+        undead = group.get_undead()
+        self.assertEqual(undead, [process1])
+
+    def test_kill_undead(self):
+        options = DummyOptions()
+        from supervisor.process import ProcessStates
+
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
+        process1.delay = time.time() - 1
+
+        pconfig2 = DummyPConfig(options, 'process2', 'process2','/bin/process2')
+        process2 = DummyProcess(pconfig2, state=ProcessStates.STOPPING)
+        process2.delay = time.time() + 1000
+
+        gconfig = DummyPGroupConfig(
+            options,
+            pconfigs=[pconfig1, pconfig2])
+        group = self._makeOne(gconfig)
+        group.processes = { 'process1': process1, 'process2': process2}
+
+        group.kill_undead()
+        self.assertEqual(process1.killed_with, signal.SIGKILL)
+
+    def test_start_necessary(self):
+        from supervisor.process import ProcessStates
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'killed', 'killed', '/bin/killed')
+        process1 = DummyProcess(pconfig1, ProcessStates.EXITED)
+        pconfig2 = DummyPConfig(options, 'error', 'error', '/bin/error')
+        process2 = DummyProcess(pconfig2, ProcessStates.FATAL)
+
+        pconfig3 = DummyPConfig(options, 'notstarted', 'notstarted',
+                                '/bin/notstarted', autostart=True)
+        process3 = DummyProcess(pconfig3, ProcessStates.STOPPED)
+        pconfig4 = DummyPConfig(options, 'wontstart', 'wonstart',
+                                '/bin/wontstart', autostart=True)
+        process4 = DummyProcess(pconfig4, ProcessStates.BACKOFF)
+        pconfig5 = DummyPConfig(options, 'backingoff', 'backingoff',
+                                '/bin/backingoff', autostart=True)
+        process5 = DummyProcess(pconfig5, ProcessStates.BACKOFF)
+        now = time.time()
+        process5.delay = now + 1000
+
+        gconfig = DummyPGroupConfig(
+            options,
+            pconfigs=[pconfig1, pconfig2, pconfig3, pconfig4, pconfig5])
+        group = self._makeOne(gconfig)
+        group.processes = {'killed': process1, 'error': process2,
+                           'notstarted':process3, 'wontstart':process4,
+                           'backingoff':process5}
+        group.start_necessary()
+        self.assertEqual(process1.spawned, True)
+        self.assertEqual(process2.spawned, False)
+        self.assertEqual(process3.spawned, True)
+        self.assertEqual(process4.spawned, True)
+        self.assertEqual(process5.spawned, False)
+
+    def test_stop_all(self):
+        from supervisor.process import ProcessStates
+        options = DummyOptions()
+
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPED)
+
+        pconfig2 = DummyPConfig(options, 'process2', 'process2','/bin/process2')
+        process2 = DummyProcess(pconfig2, state=ProcessStates.RUNNING)
+
+        pconfig3 = DummyPConfig(options, 'process3', 'process3','/bin/process3')
+        process3 = DummyProcess(pconfig3, state=ProcessStates.STARTING)
+        pconfig4 = DummyPConfig(options, 'process4', 'process4','/bin/process4')
+        process4 = DummyProcess(pconfig4, state=ProcessStates.BACKOFF)
+        process4.delay = 1000
+        process4.backoff = 10
+        gconfig = DummyPGroupConfig(
+            options,
+            pconfigs=[pconfig1, pconfig2, pconfig3, pconfig4])
+        group = self._makeOne(gconfig)
+        group.processes = {'process1': process1, 'process2': process2,
+                           'process3':process3, 'process4':process4}
+
+        group.stop_all()
+        self.assertEqual(process1.stop_called, False)
+        self.assertEqual(process2.stop_called, True)
+        self.assertEqual(process3.stop_called, True)
+        self.assertEqual(process4.stop_called, False)
+
+        self.assertEqual(process4.delay, 0)
+        self.assertEqual(process4.backoff, 0)
+        self.assertEqual(process4.system_stop, 1)
+
+        
+
+    
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

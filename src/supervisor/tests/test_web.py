@@ -1,3 +1,4 @@
+import sys
 import unittest
 
 from supervisor.tests.base import DummySupervisor

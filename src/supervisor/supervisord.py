@@ -50,7 +50,6 @@ import asyncore
 
 from supervisor.options import ServerOptions
 from supervisor.options import signame
-from supervisor.process import ProcessStates
 
 class SupervisorStates:
     ACTIVE = 0
@@ -69,6 +68,7 @@ class Supervisor:
 
     def __init__(self, options):
         self.options = options
+        self.process_groups = {}
 
     def main(self, args=None, test=False, first=False):
         self.options.realize(args)
@@ -90,18 +90,17 @@ class Supervisor:
             # clean up old automatic logs
             self.options.clear_autochildlogdir()
 
-        # delay "automatic" child log creation until after setuid because
-        # we want to use mkstemp, which needs to create the file eagerly
-        self.options.create_autochildlogs()
+        for config in self.options.process_group_configs:
+            config.after_setuid()
 
         self.run(test)
 
     def run(self, test=False):
-        self.processes = {}
-        for program in self.options.programs:
-            name = program.name
-            self.processes[name] = self.options.make_process(program)
+        self.process_groups = {} # clear
         try:
+            for config in self.options.process_group_configs:
+                name = config.name
+                self.process_groups[name] = self.options.make_group(config)
             self.options.process_environment()
             self.options.openhttpserver(self)
             self.options.setsignals()
@@ -121,18 +120,23 @@ class Supervisor:
 
         while 1:
             if self.mood > 0:
-                self.start_necessary()
+                for group in self.process_groups.values():
+                    group.start_necessary()
 
             r, w, x = [], [], []
 
             if self.mood < 1:
                 if not self.stopping:
-                    self.stop_all()
+                    for group in self.process_groups.values():
+                        group.stop_all()
                     self.stopping = True
 
                 # if there are no delayed processes (we're done killing
                 # everything), it's OK to stop or reload
-                delayprocs = self.get_delay_processes()
+                delayprocs = []
+                for group in self.process_groups.values():
+                    delayprocs.extend(group.get_delay_processes())
+
                 if delayprocs:
                     now = time.time()
                     if now > (self.lastdelayreport + 3): # every 3 secs
@@ -142,25 +146,17 @@ class Supervisor:
                                                  namestr)
                         self.lastdelayreport = now
                 else:
-                    break
+                    raise asyncore.ExitNow
 
-            process_map = {}
+            process_callbacks = {}
 
-            # process input and output
-            for proc in self.processes.values():
-                proc.log_output()
-
-                # process output fds
-                for fd, drain in proc.get_output_drains():
-                    r.append(fd)
-                    process_map[fd] = drain
-
-                # process input fds
-                if proc.stdin_buffer:
-                    input_drains = proc.get_input_drains()
-                    for fd, drain in input_drains:
-                        w.append(fd)
-                        process_map[fd] = drain
+            # subprocess input and output
+            for group in self.process_groups.values():
+                callbacks, group_r, group_w, group_x = group.select()
+                r.extend(group_r)
+                w.extend(group_w)
+                x.extend(group_x)
+                process_callbacks.update(callbacks)
 
             # medusa i/o fds
             for fd, dispatcher in socket_map.items():
@@ -181,10 +177,9 @@ class Supervisor:
                     raise
 
             for fd in r:
-                if process_map.has_key(fd):
-                    drain = process_map[fd]
-                    # drain the file descriptor data to the stdout/stderr_buffer
-                    drain()
+                if process_callbacks.has_key(fd):
+                    callback = process_callbacks[fd]
+                    callback()
 
                 if socket_map.has_key(fd):
                     try:
@@ -195,10 +190,9 @@ class Supervisor:
                         socket_map[fd].handle_error()
 
             for fd in w:
-                if process_map.has_key(fd):
-                    # drain the stdin_buffer by sending it to child's stdin
-                    drain = process_map[fd]
-                    drain()
+                if process_callbacks.has_key(fd):
+                    callback = process_map[fd]
+                    callback()
 
                 if socket_map.has_key(fd):
                     try:
@@ -208,115 +202,14 @@ class Supervisor:
                     except:
                         socket_map[fd].handle_error()
 
-            self.transition()
-            self.kill_undead()
+            for group in self.process_groups.values():
+                group.transition()
+
             self.reap()
             self.handle_signal()
 
             if test:
                 break
-
-    def start_necessary(self):
-        processes = self.processes.values()
-        processes.sort() # asc by priority
-        now = time.time()
-
-        for p in processes:
-            state = p.get_state()
-            if state == ProcessStates.STOPPED and not p.laststart:
-                if p.config.autostart:
-                    # STOPPED -> STARTING
-                    p.spawn()
-            elif state == ProcessStates.EXITED:
-                if p.config.autorestart:
-                    # EXITED -> STARTING
-                    p.spawn()
-            elif state == ProcessStates.BACKOFF:
-                if now > p.delay:
-                    # BACKOFF -> STARTING
-                    p.spawn()
-            
-    def stop_all(self):
-        processes = self.processes.values()
-        processes.sort()
-        processes.reverse() # stop in desc priority order
-
-        for proc in processes:
-            state = proc.get_state()
-            if state == ProcessStates.RUNNING:
-                # RUNNING -> STOPPING
-                proc.stop()
-            elif state == ProcessStates.STARTING:
-                # STARTING -> STOPPING (unceremoniously subvert the RUNNING
-                # state)
-                proc.stop()
-            elif state == ProcessStates.BACKOFF:
-                # BACKOFF -> FATAL
-                proc.delay = 0
-                proc.backoff = 0
-                proc.system_stop = 1
-
-    def transition(self):
-        now = time.time()
-        processes = self.processes.values()
-        for proc in processes:
-            state = proc.get_state()
-
-            # we need to transition processes between BACKOFF ->
-            # FATAL and STARTING -> RUNNING within here
-            
-            config = proc.config
-            logger = self.options.logger
-
-            if state == ProcessStates.BACKOFF:
-                if proc.backoff > config.startretries:
-                    # BACKOFF -> FATAL if the proc has exceeded its number
-                    # of retries
-                    proc.delay = 0
-                    proc.backoff = 0
-                    proc.system_stop = 1
-                    msg = ('entered FATAL state, too many start retries too '
-                           'quickly')
-                    logger.info('gave up: %s %s' % (config.name, msg))
-
-            elif state == ProcessStates.STARTING:
-                if now - proc.laststart > config.startsecs:
-                    # STARTING -> RUNNING if the proc has started
-                    # successfully and it has stayed up for at least
-                    # self.config.startsecs,
-                    proc.delay = 0
-                    proc.backoff = 0
-                    msg = ('entered RUNNING state, process has stayed up for '
-                           '> than %s seconds (startsecs)' % config.startsecs)
-                    logger.info('success: %s %s' % (config.name, msg))
-
-    def get_delay_processes(self):
-        """ Processes which are starting or stopping """
-        return [ x for x in self.processes.values() if x.delay ]
-
-    def get_undead(self):
-        """ Processes which we've attempted to stop but which haven't responded
-        to a kill request within a given amount of time (stopwaitsecs) """
-        now = time.time()
-        processes = self.processes.values()
-        undead = []
-
-        for proc in processes:
-            if proc.get_state() == ProcessStates.STOPPING:
-                time_left = proc.delay - now
-                if time_left <= 0:
-                    undead.append(proc)
-        return undead
-
-    def kill_undead(self):
-        for undead in self.get_undead():
-            # kill processes which are taking too long to stop with a final
-            # sigkill.  if this doesn't kill it, the process will be stuck
-            # in the STOPPING state forever.
-            self.options.logger.critical(
-                'killing %r (%s) with SIGKILL' % (undead.config.name,
-                                                  undead.pid))
-            undead.kill(signal.SIGKILL)
 
     def reap(self, once=False):
         pid, sts = self.options.waitpid()
@@ -327,6 +220,7 @@ class Supervisor:
             else:
                 name = process.config.name
                 process.finish(pid, sts)
+                del self.options.pidhistory[pid]
             if not once:
                 self.reap() # keep reaping until no more kids to reap
 
@@ -348,8 +242,8 @@ class Supervisor:
                 self.options.logger.info(
                     'received %s indicating log reopen request' % signame(sig))
                 self.options.reopenlogs()
-                for process in self.processes.values():
-                    process.reopenlogs()
+                for group in self.process_groups.values():
+                    group.reopenlogs()
             else:
                 self.options.logger.debug(
                     'received %s indicating nothing' % signame(sig))
@@ -368,14 +262,17 @@ def main(test=False):
         # the test argument just makes it possible to unit test this code
         options = ServerOptions()
         d = Supervisor(options)
-        d.main(None, test, first)
+        try:
+            d.main(None, test, first)
+        except asyncore.ExitNow:
+            pass
         first = False
         if test:
             return d
         if d.mood < 0:
             sys.exit(0)
-        for proc in d.processes.values():
-            proc.removelogs()
+        for group in d.process_groups.values():
+            group.removelogs()
         if d.options.httpserver:
             d.options.httpserver.close()
             

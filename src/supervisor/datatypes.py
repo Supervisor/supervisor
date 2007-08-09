@@ -39,11 +39,28 @@ def boolean(s):
     else:
         raise ValueError("not a valid boolean value: " + repr(s))
 
+def list_of_strings(arg):
+    if not arg:
+        return []
+    try:
+        return [x.strip() for x in arg.split(',')]
+    except:
+        raise ValueError("not a valid list of strings: " + repr(arg))
+
 def list_of_ints(arg):
     if not arg:
         return []
     else:
-        return map(int, arg.split(","))
+        try:
+            return map(int, arg.split(","))
+        except:
+            raise ValueError("not a valid list of ints: " + repr(arg))
+
+def list_of_exitcodes(arg):
+    try:
+        return list_of_ints(arg)
+    except:
+        raise ValueError("not a valid list of exit codes: " + repr(arg))
 
 def dict_of_key_value_pairs(arg):
     """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'} """
@@ -57,6 +74,17 @@ def dict_of_key_value_pairs(arg):
             raise ValueError('Unknown key/value pair %s' % pair)
         D[k] = v
     return D
+
+class Automatic:
+    pass
+
+def logfile_name(val):
+    if val in ('NONE', 'OFF'):
+        return None
+    elif val in (None, 'AUTO'):
+        return Automatic
+    else:
+        return existing_dirpath(val)
 
 class RangeCheckedConversion:
     """Conversion helper that range checks another conversion."""
@@ -136,6 +164,9 @@ def octal_type(arg):
     return int(arg, 8)
 
 def name_to_uid(name):
+    if name is None:
+        return None
+
     import pwd
     try:
 	uid = int(name)
@@ -250,7 +281,7 @@ def url(value):
         return value
     raise ValueError("value %s is not a URL" % value)
 
-def signal(value):
+def signal_number(value):
     import signal
     result = None
     try:

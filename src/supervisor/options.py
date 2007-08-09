@@ -35,7 +35,25 @@ import pkg_resources
 from fcntl import fcntl
 from fcntl import F_SETFL, F_GETFL
 
-from supervisor import datatypes
+from supervisor.datatypes import boolean
+from supervisor.datatypes import integer
+from supervisor.datatypes import name_to_uid
+from supervisor.datatypes import name_to_gid
+from supervisor.datatypes import gid_for_uid
+from supervisor.datatypes import existing_dirpath
+from supervisor.datatypes import byte_size
+from supervisor.datatypes import signal_number
+from supervisor.datatypes import list_of_exitcodes
+from supervisor.datatypes import dict_of_key_value_pairs
+from supervisor.datatypes import logfile_name
+from supervisor.datatypes import list_of_strings
+from supervisor.datatypes import octal_type
+from supervisor.datatypes import existing_directory
+from supervisor.datatypes import logging_level
+from supervisor.datatypes import dot_separated_user_group
+from supervisor.datatypes import SocketAddress
+from supervisor.datatypes import url
+from supervisor.datatypes import Automatic
 
 here = os.path.abspath(os.path.dirname(__file__))
 version_txt = os.path.join(here, 'version.txt')
@@ -457,7 +475,6 @@ class ServerOptions(Options):
     environment = None
     httpserver = None
     unlink_socketfile = True
-    AUTOMATIC = []
     TRACE = 5
     
     ANSI_ESCAPE_BEGIN = '\x1b['
@@ -473,26 +490,26 @@ class ServerOptions(Options):
                  default=0)
         self.add("user", "supervisord.user", "u:", "user=")
         self.add("umask", "supervisord.umask", "m:", "umask=",
-                 datatypes.octal_type, default='022')
+                 octal_type, default='022')
         self.add("directory", "supervisord.directory", "d:", "directory=",
-                 datatypes.existing_directory)
+                 existing_directory)
         self.add("logfile", "supervisord.logfile", "l:", "logfile=",
-                 datatypes.existing_dirpath, default="supervisord.log")
+                 existing_dirpath, default="supervisord.log")
         self.add("logfile_maxbytes", "supervisord.logfile_maxbytes",
-                 "y:", "logfile_maxbytes=", datatypes.byte_size,
+                 "y:", "logfile_maxbytes=", byte_size,
                  default=50 * 1024 * 1024) # 50MB
         self.add("logfile_backups", "supervisord.logfile_backups",
-                 "z:", "logfile_backups=", datatypes.integer, default=10)
+                 "z:", "logfile_backups=", integer, default=10)
         self.add("loglevel", "supervisord.loglevel", "e:", "loglevel=",
-                 datatypes.logging_level, default="info")
+                 logging_level, default="info")
         self.add("pidfile", "supervisord.pidfile", "j:", "pidfile=",
-                 datatypes.existing_dirpath, default="supervisord.pid")
+                 existing_dirpath, default="supervisord.pid")
         self.add("identifier", "supervisord.identifier", "i:", "identifier=",
-                 datatypes.existing_dirpath, default="supervisor")
+                 existing_dirpath, default="supervisor")
         self.add("childlogdir", "supervisord.childlogdir", "q:", "childlogdir=",
-                 datatypes.existing_directory, default=tempfile.gettempdir())
+                 existing_directory, default=tempfile.gettempdir())
         self.add("http_port", "supervisord.http_port", "w:", "http_port=",
-                 datatypes.SocketAddress, default=None)
+                 SocketAddress, default=None)
         self.add("http_username", "supervisord.http_username", "g:",
                  "http_username=", str, default=None)
         self.add("http_password", "supervisord.http_password", "r:",
@@ -506,11 +523,11 @@ class ServerOptions(Options):
         self.add("strip_ansi", "supervisord.strip_ansi",
                  "t", "strip_ansi", flag=1, default=0)
         self.add("sockchmod", "supervisord.sockchmod", "p:", "socket-mode=",
-                 datatypes.octal_type, default=0700)
+                 octal_type, default=0700)
         self.add("sockchown", "supervisord.sockchown", "o:", "socket-owner=",
-                 datatypes.dot_separated_user_group)
+                 dot_separated_user_group)
         self.add("environment", "supervisord.environment", "b:", "environment=",
-                 datatypes.dict_of_key_value_pairs)
+                 dict_of_key_value_pairs)
         self.pidhistory = {}
 
     def getLogger(self, filename, level, fmt, rotating=False,
@@ -535,48 +552,49 @@ class ServerOptions(Options):
 
     def realize(self, *arg, **kw):
         Options.realize(self, *arg, **kw)
+        section = self.configroot.supervisord
 
         # Additional checking of user option; set uid and gid
         if self.user is not None:
-            uid = datatypes.name_to_uid(self.user)
+            uid = name_to_uid(self.user)
             if uid is None:
                 self.usage("No such user %s" % self.user)
             self.uid = uid
-            self.gid = datatypes.gid_for_uid(uid)
+            self.gid = gid_for_uid(uid)
 
         if not self.logfile:
-            logfile = os.path.abspath(self.configroot.supervisord.logfile)
+            logfile = os.path.abspath(section.logfile)
         else:
             logfile = os.path.abspath(self.logfile)
 
         self.logfile = logfile
 
         if not self.loglevel:
-            self.loglevel = self.configroot.supervisord.loglevel
+            self.loglevel = section.loglevel
 
         if not self.pidfile:
-            self.pidfile = os.path.abspath(self.configroot.supervisord.pidfile)
+            self.pidfile = os.path.abspath(section.pidfile)
         else:
             self.pidfile = os.path.abspath(self.pidfile)
 
-        self.programs = self.configroot.supervisord.programs
+        self.process_group_configs = section.process_group_configs
 
         if not self.sockchown:
-            self.sockchown = self.configroot.supervisord.sockchown
+            self.sockchown = section.sockchown
 
-        self.identifier = self.configroot.supervisord.identifier
+        self.identifier = section.identifier
 
     def convert_sockchown(self, sockchown):
         # Convert chown stuff to uid/gid
         user = sockchown[0]
         group = sockchown[1]
-        uid = datatypes.name_to_uid(user)
+        uid = name_to_uid(user)
         if uid is None:
             self.usage("No such sockchown user %s" % user)
         if group is None:
-            gid = datatypes.gid_for_uid(uid)
+            gid = gid_for_uid(uid)
         else:
-            gid = datatypes.name_to_gid(group)
+            gid = name_to_gid(group)
             if gid is None:
                 self.usage("No such sockchown group %s" % group)
         return uid, gid
@@ -588,68 +606,43 @@ class ServerOptions(Options):
                 fp = open(fp, 'r')
             except (IOError, OSError):
                 raise ValueError("could not find config file %s" % fp)
-        config = UnhosedConfigParser()
-        config.readfp(fp)
-        sections = config.sections()
+        parser = UnhosedConfigParser()
+        parser.readfp(fp)
+
+        sections = parser.sections()
         if not 'supervisord' in sections:
             raise ValueError, '.ini file does not include supervisord section'
-        minfds = config.getdefault('minfds', 1024)
-        section.minfds = datatypes.integer(minfds)
-
-        minprocs = config.getdefault('minprocs', 200)
-        section.minprocs = datatypes.integer(minprocs)
+        get = parser.getdefault
+        section.minfds = integer(get('minfds', 1024))
+        section.minprocs = integer(get('minprocs', 200))
         
-        directory = config.getdefault('directory', None)
+        directory = get('directory', None)
         if directory is None:
             section.directory = None
         else:
-            directory = datatypes.existing_directory(directory)
-            section.directory = directory
+            section.directory = existing_directory(directory)
 
-        user = config.getdefault('user', None)
-        section.user = user
+        section.user = get('user', None)
+        section.umask = octal_type(get('umask', '022'))
+        section.logfile = existing_dirpath(get('logfile', 'supervisord.log'))
+        section.logfile_maxbytes = byte_size(get('logfile_maxbytes', '50MB'))
+        section.logfile_backups = integer(get('logfile_backups', 10))
+        section.loglevel = logging_level(get('loglevel', 'info'))
+        section.pidfile = existing_dirpath(get('pidfile', 'supervisord.pid'))
+        section.identifier = get('identifier', 'supervisor')
+        section.nodaemon = boolean(get('nodaemon', 'false'))
 
-        umask = datatypes.octal_type(config.getdefault('umask', '022'))
-        section.umask = umask
+        tempdir = tempfile.gettempdir()
+        section.childlogdir = existing_directory(get('childlogdir', tempdir))
 
-        logfile = config.getdefault('logfile', 'supervisord.log')
-        logfile = datatypes.existing_dirpath(logfile)
-        section.logfile = logfile
-
-        logfile_maxbytes = config.getdefault('logfile_maxbytes', '50MB')
-        logfile_maxbytes = datatypes.byte_size(logfile_maxbytes)
-        section.logfile_maxbytes = logfile_maxbytes
-
-        logfile_backups = config.getdefault('logfile_backups', 10)
-        logfile_backups = datatypes.integer(logfile_backups)
-        section.logfile_backups = logfile_backups
-
-        loglevel = config.getdefault('loglevel', 'info')
-        loglevel = datatypes.logging_level(loglevel)
-        section.loglevel = loglevel
-
-        pidfile = config.getdefault('pidfile', 'supervisord.pid')
-        pidfile = datatypes.existing_dirpath(pidfile)
-        section.pidfile = pidfile
-
-        identifier = config.getdefault('identifier', 'supervisor')
-        section.identifier = identifier
-
-        nodaemon = config.getdefault('nodaemon', 'false')
-        section.nodaemon = datatypes.boolean(nodaemon)
-
-        childlogdir = config.getdefault('childlogdir', tempfile.gettempdir())
-        childlogdir = datatypes.existing_directory(childlogdir)
-        section.childlogdir = childlogdir
-
-        http_port = config.getdefault('http_port', None)
+        http_port = get('http_port', None)
         if http_port is None:
             section.http_port = None
         else:
-            section.http_port = datatypes.SocketAddress(http_port)
+            section.http_port = SocketAddress(http_port)
 
-        http_password = config.getdefault('http_password', None)
-        http_username = config.getdefault('http_username', None)
+        http_password = get('http_password', None)
+        http_username = get('http_username', None)
         if http_password or http_username:
             if http_password is None:
                 raise ValueError('Must specify http_password if '
@@ -660,102 +653,138 @@ class ServerOptions(Options):
         section.http_password = http_password
         section.http_username = http_username
 
-        nocleanup = config.getdefault('nocleanup', 'false')
-        section.nocleanup = datatypes.boolean(nocleanup)
+        section.nocleanup = boolean(get('nocleanup', 'false'))
 
-        strip_ansi = config.getdefault('strip_ansi', 'false')
-        section.strip_ansi = datatypes.boolean(strip_ansi)
+        section.strip_ansi = boolean(get('strip_ansi', 'false'))
         
-        sockchown = config.getdefault('sockchown', None)
+        sockchown = get('sockchown', None)
         if sockchown is None:
             section.sockchown = (-1, -1)
         else:
             try:
-                section.sockchown = datatypes.dot_separated_user_group(
-                    sockchown)
+                section.sockchown = dot_separated_user_group(sockchown)
             except ValueError:
                 raise ValueError('Invalid sockchown value %s' % sockchown)
 
-        sockchmod = config.getdefault('sockchmod', None)
+        sockchmod = get('sockchmod', None)
         if sockchmod is None:
             section.sockchmod = 0700
         else:
             try:
-                section.sockchmod = datatypes.octal_type(sockchmod)
+                section.sockchmod = octal_type(sockchmod)
             except (TypeError, ValueError):
                 raise ValueError('Invalid sockchmod value %s' % sockchmod)
 
-        environment = config.getdefault('environment', '')
-        section.environment = datatypes.dict_of_key_value_pairs(environment)
-
-        section.programs = self.programs_from_config(config)
-        section.rpcinterface_factories = self.rpcinterfaces_from_config(config)
+        section.environment = dict_of_key_value_pairs(get('environment', ''))
+        section.process_group_configs = self.process_groups_from_parser(parser)
+        section.rpcinterface_factories = self.rpcinterfaces_from_parser(parser)
         return section
 
-    def programs_from_config(self, config):
-        programs = []
+    def process_groups_from_parser(self, parser):
+        groups = []
+        all_sections = parser.sections()
+        homogeneous_exclude = []
+        get = parser.saneget
 
-        for section in config.sections():
-            if not section.startswith('program:'):
+        # process heterogeneous groups
+        for section in all_sections:
+            if not section.startswith('group:'):
                 continue
-            name = section.split(':', 1)[1]
-            command = config.saneget(section, 'command', None)
-            if command is None:
-                raise ValueError, (
-                    'program section %s does not specify a command' % section)
-            priority = config.saneget(section, 'priority', 999)
-            priority = datatypes.integer(priority)
-            autostart = config.saneget(section, 'autostart', 'true')
-            autostart = datatypes.boolean(autostart)
-            autorestart = config.saneget(section, 'autorestart', 'true')
-            autorestart = datatypes.boolean(autorestart)
-            startsecs = config.saneget(section, 'startsecs', 1)
-            startsecs = datatypes.integer(startsecs)
-            startretries = config.saneget(section, 'startretries', 3)
-            startretries = datatypes.integer(startretries)
-            uid = config.saneget(section, 'user', None)
-            if uid is not None:
-                uid = datatypes.name_to_uid(uid)
+            group_name = section.split(':', 1)[1]
+            programs = list_of_strings(get(section, 'programs', None))
+            priority = integer(get(section, 'priority', 999))
+            group_processes = []
+            for program in programs:
+                program_section = "program:%s" % program
+                if not program_section in all_sections:
+                    raise ValueError(
+                        '[%s] names unknown program %s' % (section, program))
+                homogeneous_exclude.append(program_section)
+                processes = self.processes_from_section(parser, program_section,
+                                                        group_name)
+                group_processes.extend(processes)
+            groups.append(
+                ProcessGroupConfig(self, group_name, priority, group_processes)
+                )
+
+        # process homogeneous groups
+        for section in all_sections:
+            if ( (not section.startswith('program:') )
+                 or section in homogeneous_exclude ):
+                continue
+            program_name = section.split(':', 1)[1]
+            priority = integer(get(section, 'priority', 999))
+            processes=self.processes_from_section(parser, section, program_name)
+            groups.append(
+                ProcessGroupConfig(self, program_name, priority, processes)
+                )
+
+        groups.sort()
+        return groups
+
+    def processes_from_section(self, parser, section, group_name):
+        programs = []
+        get = parser.saneget
+        program_name = section.split(':', 1)[1]
+
+        priority = integer(get(section, 'priority', 999))
+        autostart = boolean(get(section, 'autostart', 'true'))
+        autorestart = boolean(get(section, 'autorestart', 'true'))
+        startsecs = integer(get(section, 'startsecs', 1))
+        startretries = integer(get(section, 'startretries', 3))
+        uid = name_to_uid(get(section, 'user', None))
+        stopsignal = signal_number(get(section, 'stopsignal', 'TERM'))
+        stopwaitsecs = integer(get(section, 'stopwaitsecs', 10))
+        exitcodes = list_of_exitcodes(get(section, 'exitcodes', '0,2'))
+        redirect_stderr = boolean(get(section, 'redirect_stderr','false'))
+        numprocs = integer(get(section, 'numprocs', 1))
+        process_name = get(section, 'process_name', '%(program_name)s')
+        environment_str = get(section, 'environment', '')
+
+        command = get(section, 'command', None)
+        if command is None:
+            raise ValueError, (
+                'program section %s does not specify a command' % section)
+
+        if numprocs > 1:
+            if process_name.find('%(process_num)') == -1:
+                # process_name needs to include process_num when we
+                # represent a group of processes
+                raise ValueError(
+                    '%(process_num) must be present within process_name when '
+                    'numprocs > 1')
+
+        for process_num in range(0, numprocs):
+
+            expansions = {'process_num':process_num,
+                          'program_name':program_name,
+                          'group_name':group_name}
+
+            environment = dict_of_key_value_pairs(
+                expand(environment_str, expansions, 'environment'))
 
             logfiles = {}
+
             for k in ('stdout', 'stderr'):
-                for n in ('%s_logfile' % k, '%s_eventlogfile' % k):
-                    val = config.saneget(section, n, None)
-                    if val in ('NONE', 'OFF'):
-                        val = None
-                    elif val in (None, 'AUTO'):
-                        val = self.AUTOMATIC
-                    else:
-                        val = datatypes.existing_dirpath(val)
+                for n in ('%s_logfile' % k, '%s_capturefile' % k):
+                    val = logfile_name(get(section, n, None))
+                    if isinstance(val, basestring):
+                        val = expand(val, expansions, n)
+                        
                     logfiles[n] = val
 
                 bu_key = '%s_logfile_backups' % k
-                backups = config.saneget(section, bu_key, 10)
-                backups = datatypes.integer(backups)
+                backups = integer(get(section, bu_key, 10))
                 logfiles[bu_key] = backups
 
                 mb_key = '%s_logfile_maxbytes' % k
-                maxbytes = config.saneget(section, mb_key, '50MB')
-                maxbytes = datatypes.byte_size(maxbytes)
+                maxbytes = byte_size(get(section, mb_key, '50MB'))
                 logfiles[mb_key] = maxbytes
 
-            stopsignal = config.saneget(section, 'stopsignal', 'TERM')
-            stopsignal = datatypes.signal(stopsignal)
-            stopwaitsecs = config.saneget(section, 'stopwaitsecs', 10)
-            stopwaitsecs = datatypes.integer(stopwaitsecs)
-            exitcodes = config.saneget(section, 'exitcodes', '0,2')
-            try:
-                exitcodes = datatypes.list_of_ints(exitcodes)
-            except:
-                raise ValueError("exitcodes must be a list of ints e.g. 1,2")
-            redirect_stderr = config.saneget(section, 'redirect_stderr','false')
-            redirect_stderr = datatypes.boolean(redirect_stderr)
-            environment = config.saneget(section, 'environment', '')
-            environment = datatypes.dict_of_key_value_pairs(environment)
-
             pconfig = ProcessConfig(
-                name=name,
-                command=command,
+                self,
+                name=expand(process_name, expansions, 'process_name'),
+                command=expand(command, expansions, 'command'),
                 priority=priority,
                 autostart=autostart,
                 autorestart=autorestart,
@@ -763,11 +792,11 @@ class ServerOptions(Options):
                 startretries=startretries,
                 uid=uid,
                 stdout_logfile=logfiles['stdout_logfile'],
-                stdout_eventlogfile=logfiles['stdout_eventlogfile'],
+                stdout_capturefile=logfiles['stdout_capturefile'],
                 stdout_logfile_backups=logfiles['stdout_logfile_backups'],
                 stdout_logfile_maxbytes=logfiles['stdout_logfile_maxbytes'],
                 stderr_logfile=logfiles['stderr_logfile'],
-                stderr_eventlogfile=logfiles['stderr_eventlogfile'],
+                stderr_capturefile=logfiles['stderr_capturefile'],
                 stderr_logfile_backups=logfiles['stderr_logfile_backups'],
                 stderr_logfile_maxbytes=logfiles['stderr_logfile_maxbytes'],
                 stopsignal=stopsignal,
@@ -775,25 +804,23 @@ class ServerOptions(Options):
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
                 environment=environment)
+
             programs.append(pconfig)
 
         programs.sort() # asc by priority
         return programs
 
-    def import_spec(self, spec):
-        return pkg_resources.EntryPoint.parse("x="+spec).load(False)
-
-    def rpcinterfaces_from_config(self, config):
+    def rpcinterfaces_from_parser(self, parser):
         factories = []
         factory_key = 'supervisor.rpcinterface_factory'
 
-        for section in config.sections():
+        for section in parser.sections():
             if not section.startswith('rpcinterface:'):
                 continue
-            options = config.options(section)
+            options = parser.options(section)
             name = section.split(':', 1)[1]
             realoptions = []
-            factory_spec = config.saneget(section, factory_key, None)
+            factory_spec = parser.saneget(section, factory_key, None)
             if factory_spec is None:
                 raise ValueError('section [%s] does not specify a %s'  %
                                  (section, factory_key))
@@ -802,11 +829,14 @@ class ServerOptions(Options):
             except ImportError:
                 raise ValueError('%s cannot be resolved within [%s]' % (
                     factory_spec, section))
-            items = config.items(section)
+            items = parser.items(section)
             items.remove((factory_key, factory_spec))
             factories.append((name, factory, dict(items)))
 
         return factories
+
+    def import_spec(self, spec):
+        return pkg_resources.EntryPoint.parse("x="+spec).load(False)
 
     def daemonize(self):
         # To daemonize, we need to become the leader of our own session
@@ -915,28 +945,6 @@ class ServerOptions(Options):
             self.unlink_socketfile = False
         except ValueError, why:
             self.usage(why[0])
-
-    def create_autochildlogs(self):
-        for program in self.programs:
-            # temporary logfiles which are erased at start time
-            if program.stdout_logfile is self.AUTOMATIC:
-                program.stdout_logfile = self._getautolog(program.name,
-                                                          self.identifier,
-                                                          'stdout')
-            if program.stderr_logfile is self.AUTOMATIC:
-                program.stderr_logfile = self._getautolog(program.name,
-                                                          self.identifier,
-                                                          'stderr')
-                
-
-    def _getautolog(self, name, identifier, channel):
-        prefix='%s-%s---%s-' % (name, channel, identifier)
-        fd, logfile = tempfile.mkstemp(
-            suffix='.log',
-            prefix=prefix,
-            dir=self.childlogdir)
-        os.close(fd)
-        return logfile
 
     def clear_autochildlogdir(self):
         # must be called after realize()
@@ -1147,7 +1155,11 @@ class ServerOptions(Options):
 
     def make_process(self, config):
         from supervisor.process import Subprocess
-        return Subprocess(self, config)
+        return Subprocess(config)
+
+    def make_group(self, config):
+        from supervisor.process import ProcessGroup
+        return ProcessGroup(config)
 
     def make_pipes(self, stderr=True):
         """ Create pipes for parent to child stdin/stdout/stderr
@@ -1213,6 +1225,11 @@ class ServerOptions(Options):
 
     def execve(self, filename, argv, env):
         return os.execve(filename, argv, env)
+
+    def mktempfile(self, suffix, prefix, dir):
+        fd, filename = tempfile.mkstemp(suffix, prefix, dir)
+        os.close(fd)
+        return filename
 
     def _exit(self, code):
         os._exit(code)
@@ -1282,8 +1299,7 @@ class ClientOptions(Options):
                  "interactive", flag=1, default=0)
         self.add("prompt", "supervisorctl.prompt", default="supervisor")
         self.add("serverurl", "supervisorctl.serverurl", "s:", "serverurl=",
-                 datatypes.url,
-                 default="http://localhost:9001")
+                 url, default="http://localhost:9001")
         self.add("username", "supervisorctl.username", "u:", "username=")
         self.add("password", "supervisorctl.password", "p:", "password=")
 
@@ -1339,6 +1355,11 @@ _marker = []
 
 class UnhosedConfigParser(ConfigParser.RawConfigParser):
     mysection = 'supervisord'
+    def read_string(self, s):
+        from StringIO import StringIO
+        s = StringIO(s)
+        return self.readfp(s)
+    
     def getdefault(self, option, default=_marker):
         try:
             return self.get(self.mysection, option)
@@ -1357,15 +1378,24 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
             else:
                 return default
 
-class ProcessConfig:
-    def __init__(self, name, command, priority, autostart,
+class Config:
+    def __cmp__(self, other):
+        return cmp(self.priority, other.priority)
+
+    def __repr__(self):
+        return '<%s instance at %s named %s>' % (self.__class__, id(self),
+                                                 self.name)
+    
+class ProcessConfig(Config):
+    def __init__(self, options, name, command, priority, autostart,
                  autorestart, startsecs, startretries, uid,
-                 stdout_logfile, stdout_eventlogfile,
+                 stdout_logfile, stdout_capturefile,
                  stdout_logfile_backups, stdout_logfile_maxbytes,
-                 stderr_logfile, stderr_eventlogfile,
+                 stderr_logfile, stderr_capturefile,
                  stderr_logfile_backups, stderr_logfile_maxbytes,
                  stopsignal, stopwaitsecs, exitcodes, redirect_stderr,
                  environment=None):
+        self.options = options
         self.name = name
         self.command = command
         self.priority = priority
@@ -1375,11 +1405,11 @@ class ProcessConfig:
         self.startretries = startretries
         self.uid = uid
         self.stdout_logfile = stdout_logfile
-        self.stdout_eventlogfile = stdout_eventlogfile
+        self.stdout_capturefile = stdout_capturefile
         self.stdout_logfile_backups = stdout_logfile_backups
         self.stdout_logfile_maxbytes = stdout_logfile_maxbytes
         self.stderr_logfile = stderr_logfile
-        self.stderr_eventlogfile = stderr_eventlogfile
+        self.stderr_capturefile = stderr_capturefile
         self.stderr_logfile_backups = stderr_logfile_backups
         self.stderr_logfile_maxbytes = stderr_logfile_maxbytes
         self.stopsignal = stopsignal
@@ -1388,9 +1418,45 @@ class ProcessConfig:
         self.redirect_stderr = redirect_stderr
         self.environment = environment
 
-    def __cmp__(self, other):
-        return cmp(self.priority, other.priority)
-    
+    def create_autochildlogs(self):
+        # temporary logfiles which are erased at start time
+        if self.stdout_logfile is Automatic:
+            self.stdout_logfile = self._getautolog(self.name,
+                                                  self.options.identifier,
+                                                  'stdout')
+        if self.stderr_logfile is Automatic:
+            self.stderr_logfile = self._getautolog(self.name,
+                                                   self.options.identifier,
+                                                   'stderr')
+        if self.stdout_capturefile is Automatic:
+            self.stdout_capturefile = self._getautolog(self.name,
+                                                       self.options.identifier,
+                                                       'stdout_capture')
+        if self.stderr_capturefile is Automatic:
+            self.stderr_capturefile = self._getautolog(self.name,
+                                                       self.options.identifier,
+                                                       'stderr_capture')
+            
+
+    def _getautolog(self, name, identifier, channel):
+        prefix='%s-%s---%s-' % (name, channel, identifier)
+        logfile = self.options.mktempfile(
+            suffix='.log',
+            prefix=prefix,
+            dir=self.options.childlogdir)
+        return logfile
+
+class ProcessGroupConfig(Config):
+    def __init__(self, options, name, priority, process_configs):
+        self.options = options
+        self.name = name
+        self.priority = priority
+        self.process_configs = process_configs
+
+    def after_setuid(self):
+        for config in self.process_configs:
+            config.create_autochildlogs()
+
 class BasicAuthTransport(xmlrpclib.Transport):
     """ A transport that understands basic auth and UNIX domain socket
     URLs """
@@ -1630,6 +1696,18 @@ def _init_signames():
         if k_startswith("SIG") and not k_startswith("SIG_"):
             d[v] = k
     _signames = d
+
+def expand(s, expansions, name):
+    try:
+        return s % expansions
+    except KeyError:
+        raise ValueError(
+            'Format string %r for %r contains names which cannot be '
+            'expanded' % (s, name))
+    except:
+        raise ValueError(
+            'Format string %r for %r is badly formatted' % (s, name)
+            )
 
 class ProcessException(Exception):
     """ Specialized exceptions used when attempting to start a process """

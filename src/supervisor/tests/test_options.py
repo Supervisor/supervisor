@@ -5,8 +5,11 @@ import sys
 import tempfile
 import socket
 import unittest
+import signal
 
 from supervisor.tests.base import DummyLogger
+from supervisor.tests.base import DummyOptions
+from supervisor.tests.base import lstrip
 
 class ServerOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -17,54 +20,61 @@ class ServerOptionsTests(unittest.TestCase):
         return self._getTargetClass()()
         
     def test_options(self):
-        s = """[supervisord]
-http_port=127.0.0.1:8999 ; (default is to run no xmlrpc server)
-http_username=chrism     ; (default is no username (open system))
-http_password=foo        ; (default is no password (open system))
-directory=%(tempdir)s     ; (default is not to cd during daemonization)
-backofflimit=10            ; (default 3)
-user=root                  ; (default is current user, required if root)
-umask=022                  ; (default 022)
-logfile=supervisord.log    ; (default supervisord.log)
-logfile_maxbytes=1000MB    ; (default 50MB)
-logfile_backups=5          ; (default 10)
-loglevel=error             ; (default info)
-pidfile=supervisord.pid    ; (default supervisord.pid)
-nodaemon=true              ; (default false)
-identifier=fleeb           ; (default supervisor)
-childlogdir=%(tempdir)s           ; (default tempfile.gettempdir())
-nocleanup=true             ; (default false)
-minfds=2048                ; (default 1024)
-minprocs=300               ; (default 200)
-
-[program:cat]
-command=/bin/cat
-priority=1
-autostart=true
-autorestart=true
-user=root
-stdout_logfile=/tmp/cat.log
-stopsignal=KILL
-stopwaitsecs=5
-startsecs=5
-startretries=10
-
-[program:cat2]
-command=/bin/cat
-autostart=true
-autorestart=false
-stdout_logfile_maxbytes = 1024
-stdout_logfile_backups = 2
-stdout_logfile = /tmp/cat2.log
-
-[program:cat3]
-command=/bin/cat
-exitcodes=0,1,127
-""" % {'tempdir':tempfile.gettempdir()}
+        s = lstrip("""[supervisord]
+        http_port=127.0.0.1:8999
+        http_username=chrism
+        http_password=foo   
+        directory=%(tempdir)s
+        backofflimit=10
+        user=root
+        umask=022
+        logfile=supervisord.log
+        logfile_maxbytes=1000MB
+        logfile_backups=5
+        loglevel=error
+        pidfile=supervisord.pid
+        nodaemon=true
+        identifier=fleeb
+        childlogdir=%(tempdir)s
+        nocleanup=true
+        minfds=2048
+        minprocs=300
+        
+        [program:cat1]
+        command=/bin/cat
+        priority=1
+        autostart=true
+        autorestart=true
+        user=root
+        stdout_logfile=/tmp/cat.log
+        stopsignal=KILL
+        stopwaitsecs=5
+        startsecs=5
+        startretries=10
+        
+        [program:cat2]
+        priority=2
+        command=/bin/cat
+        autostart=true
+        autorestart=false
+        stdout_logfile_maxbytes = 1024
+        stdout_logfile_backups = 2
+        stdout_logfile = /tmp/cat2.log
+        
+        [program:cat3]
+        priority=3
+        process_name = replaced
+        command=/bin/cat
+        exitcodes=0,1,127
+        
+        [program:cat4]
+        priority=4
+        process_name = fleeb_%%(process_num)s
+        numprocs = 2
+        command = /bin/cat
+        """ % {'tempdir':tempfile.gettempdir()})
 
         from supervisor import datatypes
-
-        import signal
 
         from StringIO import StringIO
         fp = StringIO(s)
@@ -90,57 +100,104 @@ exitcodes=0,1,127
         self.assertEqual(options.minfds, 2048)
         self.assertEqual(options.minprocs, 300)
         self.assertEqual(options.nocleanup, True)
-        self.assertEqual(len(options.programs), 3)
+        self.assertEqual(len(options.process_group_configs), 4)
 
-        cat = options.programs[0]
-        self.assertEqual(cat.name, 'cat')
-        self.assertEqual(cat.command, '/bin/cat')
-        self.assertEqual(cat.priority, 1)
-        self.assertEqual(cat.autostart, True)
-        self.assertEqual(cat.autorestart, True)
-        self.assertEqual(cat.startsecs, 5)
-        self.assertEqual(cat.startretries, 10)
-        self.assertEqual(cat.uid, 0)
-        self.assertEqual(cat.stdout_logfile, '/tmp/cat.log')
-        self.assertEqual(cat.stopsignal, signal.SIGKILL)
-        self.assertEqual(cat.stopwaitsecs, 5)
-        self.assertEqual(cat.stdout_logfile_maxbytes,
-                         datatypes.byte_size('50MB'))
-        self.assertEqual(cat.stdout_logfile_backups, 10)
-        self.assertEqual(cat.exitcodes, [0,2])
-
-        cat2 = options.programs[1]
-        self.assertEqual(cat2.name, 'cat2')
-        self.assertEqual(cat2.command, '/bin/cat')
-        self.assertEqual(cat2.priority, 999)
-        self.assertEqual(cat2.autostart, True)
-        self.assertEqual(cat2.autorestart, False)
-        self.assertEqual(cat2.uid, None)
-        self.assertEqual(cat2.stdout_logfile, '/tmp/cat2.log')
-        self.assertEqual(cat2.stopsignal, signal.SIGTERM)
-        self.assertEqual(cat2.stdout_logfile_maxbytes, 1024)
-        self.assertEqual(cat2.stdout_logfile_backups, 2)
-        self.assertEqual(cat2.exitcodes, [0,2])
-
-        cat3 = options.programs[2]
-        self.assertEqual(cat3.name, 'cat3')
-        self.assertEqual(cat3.command, '/bin/cat')
-        self.assertEqual(cat3.priority, 999)
-        self.assertEqual(cat3.autostart, True)
-        self.assertEqual(cat3.autorestart, True)
-        self.assertEqual(cat3.uid, None)
-        self.assertEqual(cat3.stdout_logfile, instance.AUTOMATIC)
-        self.assertEqual(cat3.stdout_logfile_maxbytes,
-                         datatypes.byte_size('50MB'))
-        self.assertEqual(cat3.stdout_logfile_backups, 10)
-        self.assertEqual(cat3.exitcodes, [0,1,127])
+        cat1 = options.process_group_configs[0]
+        self.assertEqual(cat1.name, 'cat1')
+        self.assertEqual(cat1.priority, 1)
+        self.assertEqual(len(cat1.process_configs), 1)
         
-        self.assertEqual(cat2.stopsignal, signal.SIGTERM)
+        proc1 = cat1.process_configs[0]
+        self.assertEqual(proc1.name, 'cat1')
+        self.assertEqual(proc1.command, '/bin/cat')
+        self.assertEqual(proc1.priority, 1)
+        self.assertEqual(proc1.autostart, True)
+        self.assertEqual(proc1.autorestart, True)
+        self.assertEqual(proc1.startsecs, 5)
+        self.assertEqual(proc1.startretries, 10)
+        self.assertEqual(proc1.uid, 0)
+        self.assertEqual(proc1.stdout_logfile, '/tmp/cat.log')
+        self.assertEqual(proc1.stopsignal, signal.SIGKILL)
+        self.assertEqual(proc1.stopwaitsecs, 5)
+        self.assertEqual(proc1.stdout_logfile_maxbytes,
+                         datatypes.byte_size('50MB'))
+        self.assertEqual(proc1.stdout_logfile_backups, 10)
+        self.assertEqual(proc1.exitcodes, [0,2])
+
+        cat2 = options.process_group_configs[1]
+        self.assertEqual(cat2.name, 'cat2')
+        self.assertEqual(cat2.priority, 2)
+        self.assertEqual(len(cat2.process_configs), 1)
+
+        proc2 = cat2.process_configs[0]
+        self.assertEqual(proc2.name, 'cat2')
+        self.assertEqual(proc2.command, '/bin/cat')
+        self.assertEqual(proc2.priority, 2)
+        self.assertEqual(proc2.autostart, True)
+        self.assertEqual(proc2.autorestart, False)
+        self.assertEqual(proc2.uid, None)
+        self.assertEqual(proc2.stdout_logfile, '/tmp/cat2.log')
+        self.assertEqual(proc2.stopsignal, signal.SIGTERM)
+        self.assertEqual(proc2.stdout_logfile_maxbytes, 1024)
+        self.assertEqual(proc2.stdout_logfile_backups, 2)
+        self.assertEqual(proc2.exitcodes, [0,2])
+
+        cat3 = options.process_group_configs[2]
+        self.assertEqual(cat3.name, 'cat3')
+        self.assertEqual(cat3.priority, 3)
+        self.assertEqual(len(cat3.process_configs), 1)
+
+        proc3 = cat3.process_configs[0]
+        self.assertEqual(proc3.name, 'replaced')
+        self.assertEqual(proc3.command, '/bin/cat')
+        self.assertEqual(proc3.priority, 3)
+        self.assertEqual(proc3.autostart, True)
+        self.assertEqual(proc3.autorestart, True)
+        self.assertEqual(proc3.uid, None)
+        self.assertEqual(proc3.stdout_logfile, datatypes.Automatic)
+        self.assertEqual(proc3.stdout_logfile_maxbytes,
+                         datatypes.byte_size('50MB'))
+        self.assertEqual(proc3.stdout_logfile_backups, 10)
+        self.assertEqual(proc3.exitcodes, [0,1,127])
+        self.assertEqual(proc3.stopsignal, signal.SIGTERM)
+
+        cat4 = options.process_group_configs[3]
+        self.assertEqual(cat4.name, 'cat4')
+        self.assertEqual(cat4.priority, 4)
+        self.assertEqual(len(cat4.process_configs), 2)
+
+        proc4_a = cat4.process_configs[0]
+        self.assertEqual(proc4_a.name, 'fleeb_0')
+        self.assertEqual(proc4_a.command, '/bin/cat')
+        self.assertEqual(proc4_a.priority, 4)
+        self.assertEqual(proc4_a.autostart, True)
+        self.assertEqual(proc4_a.autorestart, True)
+        self.assertEqual(proc4_a.uid, None)
+        self.assertEqual(proc4_a.stdout_logfile, datatypes.Automatic)
+        self.assertEqual(proc4_a.stdout_logfile_maxbytes,
+                         datatypes.byte_size('50MB'))
+        self.assertEqual(proc4_a.stdout_logfile_backups, 10)
+        self.assertEqual(proc4_a.exitcodes, [0,2])
+        self.assertEqual(proc4_a.stopsignal, signal.SIGTERM)
+
+        proc4_b = cat4.process_configs[1]
+        self.assertEqual(proc4_b.name, 'fleeb_1')
+        self.assertEqual(proc4_b.command, '/bin/cat')
+        self.assertEqual(proc4_b.priority, 4)
+        self.assertEqual(proc4_b.autostart, True)
+        self.assertEqual(proc4_b.autorestart, True)
+        self.assertEqual(proc4_b.uid, None)
+        self.assertEqual(proc4_b.stdout_logfile, datatypes.Automatic)
+        self.assertEqual(proc4_b.stdout_logfile_maxbytes,
+                         datatypes.byte_size('50MB'))
+        self.assertEqual(proc4_b.stdout_logfile_backups, 10)
+        self.assertEqual(proc4_b.exitcodes, [0,2])
+        self.assertEqual(proc4_b.stopsignal, signal.SIGTERM)
 
         here = os.path.abspath(os.getcwd())
         self.assertEqual(instance.uid, 0)
         self.assertEqual(instance.gid, 0)
-        self.assertEqual(instance.directory, '/tmp')
+        self.assertEqual(instance.directory, tempfile.gettempdir())
         self.assertEqual(instance.umask, 022)
         self.assertEqual(instance.logfile, os.path.join(here,'supervisord.log'))
         self.assertEqual(instance.logfile_maxbytes, 1000 * 1024 * 1024)
@@ -266,31 +323,37 @@ exitcodes=0,1,127
         instance.close_fd(outie)
         self.assertRaises(os.error, os.write, outie, 'foo')
 
-    def test_programs_from_config(self):
-        class DummyConfig:
-            command = '/bin/cat'
-            priority = 1
-            autostart = 'false'
-            autorestart = 'false'
-            startsecs = 100
-            startretries = 100
-            user = 'root'
-            stdout_logfile = 'NONE'
-            stdout_logfile_backups = 1
-            stdout_logfile_maxbytes = '100MB'
-            stopsignal = 'KILL'
-            stopwaitsecs = 100
-            exitcodes = '1,4'
-            redirect_stderr = 'false'
-            environment = 'KEY1=val1,KEY2=val2'
-            def sections(self):
-                return ['program:foo']
-            def saneget(self, section, name, default):
-                return getattr(self, name, default)
+    def test_processes_from_section(self):
         instance = self._makeOne()
-        pconfig = instance.programs_from_config(DummyConfig())[0]
-        import signal
-        self.assertEqual(pconfig.name, 'foo')
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/cat
+        priority = 1
+        autostart = false
+        autorestart = false
+        startsecs = 100
+        startretries = 100
+        user = root
+        stdout_logfile = NONE
+        stdout_capturelogfile = NONE
+        stdout_logfile_backups = 1
+        stdout_logfile_maxbytes = 100MB
+        stopsignal = KILL
+        stopwaitsecs = 100
+        exitcodes = 1,4
+        redirect_stderr = false
+        environment = KEY1=val1,KEY2=val2,KEY3=%(process_num)s
+        numprocs = 2
+        process_name = %(group_name)s_%(program_name)s_%(process_num)02d
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(len(pconfigs), 2)
+        pconfig = pconfigs[0]
+        from supervisor import datatypes
+        self.assertEqual(pconfig.name, 'bar_foo_00')
         self.assertEqual(pconfig.command, '/bin/cat')
         self.assertEqual(pconfig.autostart, False)
         self.assertEqual(pconfig.autorestart, False)
@@ -298,13 +361,234 @@ exitcodes=0,1,127
         self.assertEqual(pconfig.startretries, 100)
         self.assertEqual(pconfig.uid, 0)
         self.assertEqual(pconfig.stdout_logfile, None)
+        self.assertEqual(pconfig.stdout_capturefile, datatypes.Automatic)
         self.assertEqual(pconfig.stdout_logfile_maxbytes, 104857600)
         self.assertEqual(pconfig.stopsignal, signal.SIGKILL)
         self.assertEqual(pconfig.stopwaitsecs, 100)
         self.assertEqual(pconfig.exitcodes, [1,4])
         self.assertEqual(pconfig.redirect_stderr, False)
-        self.assertEqual(pconfig.environment, {'KEY1':'val1', 'KEY2':'val2'})
+        self.assertEqual(pconfig.environment,
+                         {'KEY1':'val1', 'KEY2':'val2', 'KEY3':'0'})
+
+    def test_processes_from_section_no_procnum_in_processname(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/cat
+        numprocs = 2
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        self.assertRaises(ValueError, instance.processes_from_section,
+                          config, 'program:foo', None)
+
+    def test_processes_from_section_no_command(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        numprocs = 2
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        self.assertRaises(ValueError, instance.processes_from_section,
+                          config, 'program:foo', None)
+
+    def test_missing_replacement_in_process_name(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/cat
+        process_name = %(not_there)s
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        self.assertRaises(ValueError, instance.processes_from_section,
+                          config, 'program:foo', None)
+
+    def test_bad_expression_in_process_name(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/cat
+        process_name = %(program_name)
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        self.assertRaises(ValueError, instance.processes_from_section,
+                          config, 'program:foo', None)
+
+    def test_homogeneous_process_groups_from_parser(self):
+        text = lstrip("""\
+        [program:many]
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/cat
+        numprocs = 2
+        priority = 1
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        gconfigs = instance.process_groups_from_parser(config)
+        self.assertEqual(len(gconfigs), 1)
+        gconfig = gconfigs[0]
+        self.assertEqual(gconfig.name, 'many')
+        self.assertEqual(gconfig.priority, 1)
+        self.assertEqual(len(gconfig.process_configs), 2)
         
+    def test_heterogeneous_process_groups_from_parser(self):
+        text = lstrip("""\
+        [program:one]
+        command = /bin/cat
+
+        [program:two]
+        command = /bin/cat
+
+        [group:thegroup]
+        programs = one,two
+        priority = 5
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        gconfigs = instance.process_groups_from_parser(config)
+        self.assertEqual(len(gconfigs), 1)
+        gconfig = gconfigs[0]
+        self.assertEqual(gconfig.name, 'thegroup')
+        self.assertEqual(gconfig.priority, 5)
+        self.assertEqual(len(gconfig.process_configs), 2)
+
+    def test_mixed_process_groups_from_parser1(self):
+        text = lstrip("""\
+        [program:one]
+        command = /bin/cat
+
+        [program:two]
+        command = /bin/cat
+
+        [program:many]
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/cat
+        numprocs = 2
+        priority = 1
+
+        [group:thegroup]
+        programs = one,two
+        priority = 5
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        gconfigs = instance.process_groups_from_parser(config)
+        self.assertEqual(len(gconfigs), 2)
+
+        manyconfig = gconfigs[0]
+        self.assertEqual(manyconfig.name, 'many')
+        self.assertEqual(manyconfig.priority, 1)
+        self.assertEqual(len(manyconfig.process_configs), 2)
+        
+        gconfig = gconfigs[1]
+        self.assertEqual(gconfig.name, 'thegroup')
+        self.assertEqual(gconfig.priority, 5)
+        self.assertEqual(len(gconfig.process_configs), 2)
+
+    def test_mixed_process_groups_from_parser2(self):
+        text = lstrip("""\
+        [program:one]
+        command = /bin/cat
+
+        [program:two]
+        command = /bin/cat
+
+        [program:many]
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/cat
+        numprocs = 2
+        priority = 1
+
+        [group:thegroup]
+        programs = one,two, many
+        priority = 5
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        gconfigs = instance.process_groups_from_parser(config)
+        self.assertEqual(len(gconfigs), 1)
+
+        gconfig = gconfigs[0]
+        self.assertEqual(gconfig.name, 'thegroup')
+        self.assertEqual(gconfig.priority, 5)
+        self.assertEqual(len(gconfig.process_configs), 4)
+
+    def test_unknown_program_in_heterogeneous_group(self):
+        text = lstrip("""\
+        [program:one]
+        command = /bin/cat
+
+        [group:foo]
+        programs = notthere
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError, instance.process_groups_from_parser,
+                          config)
+
+    def test_rpcinterfaces_from_parser(self):
+        text = lstrip("""\
+        [rpcinterface:dummy]
+        supervisor.rpcinterface_factory = %s
+        foo = bar
+        """ % __name__)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        factories = instance.rpcinterfaces_from_parser(config)
+        self.assertEqual(len(factories), 1)
+        factory = factories[0]
+        self.assertEqual(factory[0], 'dummy')
+        self.assertEqual(factory[1], sys.modules[__name__])
+        self.assertEqual(factory[2], {'foo':'bar'})
+        
+class TestProcessConfig(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.options import ProcessConfig
+        return ProcessConfig
+
+    def _makeOne(self, *arg, **kw):
+        defaults = {}
+        for name in ('name', 'command', 'priority', 'autostart', 'autorestart',
+                     'startsecs', 'startretries', 'uid',
+                     'stdout_logfile', 'stdout_capturefile',
+                     'stdout_logfile_backups', 'stdout_logfile_maxbytes',
+                     'stderr_logfile', 'stderr_capturefile',
+                     'stderr_logfile_backups', 'stderr_logfile_maxbytes',
+                     'stopsignal', 'stopwaitsecs', 'exitcodes',
+                     'redirect_stderr', 'environment'):
+            defaults[name] = name
+        defaults.update(kw)
+        return self._getTargetClass()(*arg, **defaults)
+
+    def test_create_autochildlogs(self):
+        options = DummyOptions()
+        instance = self._makeOne(options)
+        from supervisor.datatypes import Automatic
+        instance.stdout_logfile = Automatic
+        instance.stderr_logfile = Automatic
+        instance.create_autochildlogs()
+        self.assertEqual(instance.stdout_logfile, options.tempfile_name)
+        self.assertEqual(instance.stderr_logfile, options.tempfile_name)
+            
 class BasicAuthTransportTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import BasicAuthTransport

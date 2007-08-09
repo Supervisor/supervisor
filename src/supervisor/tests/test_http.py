@@ -1,3 +1,4 @@
+import sys
 import unittest
 
 from supervisor.tests.base import DummySupervisor
@@ -16,9 +17,9 @@ class LogtailHandlerTests(unittest.TestCase):
 
     def test_handle_request_stdout_logfile_none(self):
         supervisor = DummySupervisor()
-        pconfig = DummyPConfig('foo', 'foo', None)
         options = DummyOptions()
-        supervisor.processes = {'foo':DummyProcess(options, pconfig)}
+        pconfig = DummyPConfig(options, 'foo', 'foo', None)
+        supervisor.processes = {'foo':DummyProcess(pconfig)}
         handler = self._makeOne(supervisor)
         request = DummyRequest('/logtail/foo', None, None, None)
         handler.handle_request(request)
@@ -26,9 +27,9 @@ class LogtailHandlerTests(unittest.TestCase):
 
     def test_handle_request_stdout_logfile_missing(self):
         supervisor = DummySupervisor()
-        pconfig = DummyPConfig('foo', 'foo', 'it/is/missing')
         options = DummyOptions()
-        supervisor.processes = {'foo':DummyProcess(options, pconfig)}
+        pconfig = DummyPConfig(options, 'foo', 'foo', 'it/is/missing')
+        supervisor.processes = {'foo':DummyProcess(pconfig)}
         handler = self._makeOne(supervisor)
         request = DummyRequest('/logtail/foo', None, None, None)
         handler.handle_request(request)
@@ -42,8 +43,8 @@ class LogtailHandlerTests(unittest.TestCase):
         f = tempfile.NamedTemporaryFile()
         t = f.name
         options = DummyOptions()
-        pconfig = DummyPConfig('foo', 'foo', stdout_logfile=t)
-        supervisor.processes = {'foo':DummyProcess(options, pconfig)}
+        pconfig = DummyPConfig(options, 'foo', 'foo', stdout_logfile=t)
+        supervisor.processes = {'foo':DummyProcess(pconfig)}
         handler = self._makeOne(supervisor)
         request = DummyRequest('/logtail/foo', None, None, None)
         handler.handle_request(request)

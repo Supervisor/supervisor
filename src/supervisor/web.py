@@ -28,7 +28,7 @@ from medusa.http_server import get_header
 import meld3
 
 from supervisor import xmlrpc
-from supervisor.supervisord import ProcessStates
+from supervisor.process import ProcessStates
 from supervisor.http import NOT_DONE_YET
 
 class DeferredWebProducer:
