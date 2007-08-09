@@ -191,7 +191,7 @@ class Supervisor:
 
             for fd in w:
                 if process_callbacks.has_key(fd):
-                    callback = process_map[fd]
+                    callback = process_callbacks[fd]
                     callback()
 
                 if socket_map.has_key(fd):
