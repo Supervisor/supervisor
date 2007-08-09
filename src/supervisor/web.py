@@ -30,6 +30,8 @@ import meld3
 from supervisor import xmlrpc
 from supervisor.process import ProcessStates
 from supervisor.http import NOT_DONE_YET
+from supervisor.xmlrpc import SystemNamespaceRPCInterface
+from supervisor.rpcinterface import SupervisorNamespaceRPCInterface
 
 class DeferredWebProducer:
     """ A medusa producer that implements a deferred callback; requires
@@ -277,10 +279,10 @@ class StatusView(MeldView):
 
         # the rpc interface code is already written to deal properly in a
         # deferred world, so just use it
+        main =   ('supervisor', SupervisorNamespaceRPCInterface(supervisord))
+        system = ('system', SystemNamespaceRPCInterface(main))
 
-        supervisor_ns = ('supervisor', xmlrpc.SupervisorNamespaceRPCInterface(supervisord))
-        system_ns     = ('system',     xmlrpc.SystemNamespaceRPCInterface([supervisor_ns]))
-        rpcinterface = xmlrpc.RootRPCInterface([supervisor_ns, system_ns])
+        rpcinterface = xmlrpc.RootRPCInterface([main, system])
 
         if action:
 

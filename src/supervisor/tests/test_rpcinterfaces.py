@@ -54,8 +54,8 @@ class MainXMLRPCInterfaceTests(TestBase):
             
 class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def _getTargetClass(self):
-        from supervisor import xmlrpc
-        return xmlrpc.SupervisorNamespaceRPCInterface
+        from supervisor import rpcinterface
+        return rpcinterface.SupervisorNamespaceRPCInterface
 
     def _makeOne(self, *args, **kw):
         return self._getTargetClass()(*args, **kw)
@@ -847,9 +847,9 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
         return xmlrpc.SystemNamespaceRPCInterface
 
     def _makeOne(self):
-        from supervisor import xmlrpc
+        from supervisor import rpcinterface
         supervisord = DummySupervisor()
-        supervisor = xmlrpc.SupervisorNamespaceRPCInterface(supervisord)
+        supervisor = rpcinterface.SupervisorNamespaceRPCInterface(supervisord)
         return self._getTargetClass()(
             [('supervisor', supervisor),
              ]
