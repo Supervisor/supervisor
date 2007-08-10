@@ -977,6 +977,16 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process1 = supervisord.process_groups['process1'].processes['process1']
         self.assertEqual(process1.stdin_buffer, chars)
 
+    def test_sendProcessStdin_unicode_encoded_to_utf8(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'foo')
+        supervisord = PopulatedDummySupervisor(options, 'process1', pconfig1)
+        supervisord.set_procattr('process1', 'pid', 42)
+        interface   = self._makeOne(supervisord)
+        interface.sendProcessStdin('process1', u'fi\xed')
+        process1 = supervisord.process_groups['process1'].processes['process1']
+        self.assertEqual(process1.stdin_buffer, 'fi\xc3\xad')
+
 class SystemNamespaceXMLRPCInterfaceTests(TestBase):
     def _getTargetClass(self):
         from supervisor import xmlrpc
