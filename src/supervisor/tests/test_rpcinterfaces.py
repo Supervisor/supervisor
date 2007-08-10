@@ -380,8 +380,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.set_procattr('process2', 'state', ProcessStates.STOPPED)
         interface = self._makeOne(supervisord)
         callback = interface.startAllProcesses()
+
         from supervisor.http import NOT_DONE_YET
-        from supervisor.xmlrpc import Faults
 
         # create callbacks in startall()
         self.assertEqual(callback(), NOT_DONE_YET)
@@ -392,7 +392,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
         # wait for timeout 1
         time.sleep(.02)
-        result = callback()
+        self.assertEqual(callback(), NOT_DONE_YET)
 
         # wait for timeout 2
         time.sleep(.02)
@@ -400,12 +400,16 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
         self.assertEqual(len(result), 2)
 
-        self.assertEqual(result[0]['name'], 'process1')
+        from supervisor.xmlrpc import Faults
+
+        # XXX not sure about this ordering, I think process1 should
+        # probably show up first
+        self.assertEqual(result[0]['name'], 'process2')
         self.assertEqual(result[0]['group'], 'foo')
         self.assertEqual(result[0]['status'],  Faults.SUCCESS)
         self.assertEqual(result[0]['description'], 'OK')
 
-        self.assertEqual(result[1]['name'], 'process2')
+        self.assertEqual(result[1]['name'], 'process1')
         self.assertEqual(result[1]['group'], 'foo')
         self.assertEqual(result[1]['status'],  Faults.SUCCESS)
         self.assertEqual(result[1]['description'], 'OK')
@@ -419,14 +423,15 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_startAllProcesses_nowait(self):
         options = DummyOptions()
-        config = DummyPConfig(options, 'foo', __file__, priority=1,
-                               startsecs=.01)
-        config2 = DummyPConfig(options, 'foo2', __file__, priority=2,
-                               startsecs=.01)
+        pconfig1 = DummyPConfig(options, 'process1', __file__, priority=1,
+                                startsecs=.01)
+        pconfig2 = DummyPConfig(options, 'process2', __file__, priority=2,
+                                startsecs=.01)
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
+                                               pconfig2)
         from supervisor.process import ProcessStates
-        process = DummyProcess(config, ProcessStates.STOPPED)
-        process2 = DummyProcess(config2, ProcessStates.STOPPED)
-        supervisord = DummySupervisor({'foo':process, 'foo2':process2})
+        supervisord.set_procattr('process1', 'state', ProcessStates.STOPPED)
+        supervisord.set_procattr('process2', 'state', ProcessStates.STOPPED)
         interface = self._makeOne(supervisord)
         callback = interface.startAllProcesses(wait=False)
         from supervisor.http import NOT_DONE_YET
@@ -435,14 +440,17 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         # create callbacks in startall()
         self.assertEqual(callback(), NOT_DONE_YET)
 
+        # get a result
         result = callback()
 
         self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]['name'], 'foo')
+        self.assertEqual(result[0]['name'], 'process1')
+        self.assertEqual(result[0]['group'], 'foo')
         self.assertEqual(result[0]['status'],  Faults.SUCCESS)
         self.assertEqual(result[0]['description'], 'OK')
 
-        self.assertEqual(result[1]['name'], 'foo2')
+        self.assertEqual(result[1]['name'], 'process2')
+        self.assertEqual(result[1]['group'], 'foo')
         self.assertEqual(result[1]['status'],  Faults.SUCCESS)
         self.assertEqual(result[1]['description'], 'OK')
 
