@@ -90,6 +90,30 @@ class XMLRPCHandlerTests(unittest.TestCase):
         self.assertEqual(len(request.producers), 0)
         self.assertEqual(request._error, 500)
 
+class TraverseTests(unittest.TestCase):
+    def test_underscore(self):
+        from supervisor import xmlrpc
+        self.assertRaises(xmlrpc.RPCError, xmlrpc.traverse, None, '_', None)
+
+    def test_notfound(self):
+        from supervisor import xmlrpc
+        self.assertRaises(xmlrpc.RPCError, xmlrpc.traverse, None, 'foo', None)
+
+    def test_badparams(self):
+        from supervisor import xmlrpc
+        self.assertRaises(xmlrpc.RPCError, xmlrpc.traverse, self,
+                          'test_badparams', (1, 2, 3))
+
+    def test_success(self):
+        from supervisor import xmlrpc
+        L = []
+        class Dummy:
+            def foo(self, a):
+                L.append(a)
+        dummy = Dummy()
+        xmlrpc.traverse(dummy, 'foo', [1])
+        self.assertEqual(L, [1])
+
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
 
