@@ -142,16 +142,34 @@ class SupervisorNamespaceRPCInterface:
         self.supervisord.mood = 0
         return True
 
-    def startProcess(self, name, wait=True):
-        """ Start a process
+    def _getAllProcesses(self, lexical=False):
+        # if lexical is true, return processes sorted in lexical order,
+        # otherwise, sort in priority order
+        all_processes = []
 
-        @param string name Process name (or 'group:name')
-        @param boolean wait Wait for process to be fully started
-        @return boolean result     Always true unless error
+        if lexical:
+            group_names = self.supervisord.process_groups.keys()
+            group_names.sort()
+            for group_name in group_names:
+                group = self.supervisord.process_groups[group_name]
+                process_names = group.processes.keys()
+                process_names.sort()
+                for process_name in process_names:
+                    process = group.processes[process_name]
+                    all_processes.append((group, process))
+        else:
+            groups = self.supervisord.process_groups.values()
+            groups.sort() # asc by priority
 
-        """
-        self._update('startProcess')
+            for group in groups:
+                processes = group.processes.values()
+                processes.sort() # asc by priority
+                for process in processes:
+                    all_processes.append((group, process))
 
+        return all_processes
+
+    def _getGroupAndProcess(self, name):
         # get process to start from name
         group_name, process_name = split_namespec(name)
 
@@ -163,6 +181,20 @@ class SupervisorNamespaceRPCInterface:
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
         
+        return group, process
+        
+
+    def startProcess(self, name, wait=True):
+        """ Start a process
+
+        @param string name Process name (or 'group:name')
+        @param boolean wait Wait for process to be fully started
+        @return boolean result     Always true unless error
+
+        """
+        self._update('startProcess')
+        group, process = self._getGroupAndProcess(name)
+
         # test filespec, don't bother trying to spawn if we know it will
         # eventually fail
         try:
@@ -219,33 +251,6 @@ class SupervisorNamespaceRPCInterface:
         startit.delay = 0.05
         startit.rpcinterface = self
         return startit # deferred
-
-    def _getAllProcesses(self, lexical=False):
-        # if lexical is true, return processes sorted in lexical order,
-        # otherwise, sort in priority order
-        all_processes = []
-
-        if lexical:
-            group_names = self.supervisord.process_groups.keys()
-            group_names.sort()
-            for group_name in group_names:
-                group = self.supervisord.process_groups[group_name]
-                process_names = group.processes.keys()
-                process_names.sort()
-                for process_name in process_names:
-                    process = group.processes[process_name]
-                    all_processes.append((group, process))
-        else:
-            groups = self.supervisord.process_groups.values()
-            groups.sort() # asc by priority
-
-            for group in groups:
-                processes = group.processes.values()
-                processes.sort() # asc by priority
-                for process in processes:
-                    all_processes.append((group, process))
-
-        return all_processes
 
     def startAllProcesses(self, wait=True):
         """ Start all processes listed in the configuration file
@@ -327,17 +332,8 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('stopProcess')
 
-        # get process to start from name
-        group_name, process_name = split_namespec(name)
+        group, process = self._getGroupAndProcess(name)
 
-        group = self.supervisord.process_groups.get(group_name)
-        if group is None:
-            raise RPCError(Faults.BAD_NAME, name)
-
-        process = group.processes.get(process_name)
-        if process is None:
-            raise RPCError(Faults.BAD_NAME, name)
-        
         stopped = []
         called  = []
 
@@ -493,15 +489,7 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('getProcessInfo')
 
-        group_name, process_name = split_namespec(name)
-
-        group = self.supervisord.process_groups.get(group_name)
-        if group is None:
-            raise RPCError(Faults.BAD_NAME, name)
-        
-        process = group.processes.get(process_name)
-        if process is None:
-            raise RPCError(Faults.BAD_NAME, name)
+        group, process = self._getGroupAndProcess(name)
 
         start = int(process.laststart)
         stop = int(process.laststop)
@@ -554,14 +542,7 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('readProcessLog')
 
-        group_name, process_name = split_namespec(name)
-        group = self.supervisord.process_groups.get(group_name)
-        if group is None:
-            raise RPCError(Faults.BAD_NAME, name)
-
-        process = group.processes.get(process_name)
-        if process is None:
-            raise RPCError(Faults.BAD_NAME, name)
+        group, process = self._getGroupAndProcess(name)
 
         logfile = process.config.stdout_logfile
 
@@ -593,15 +574,7 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('tailProcessLog')
 
-        group_name, process_name = split_namespec(name)
-
-        group = self.supervisord.process_groups.get(group_name)
-        if group is None:
-            raise RPCError(Faults.BAD_NAME, name)
-
-        process = group.processes.get(process_name)
-        if process is None:
-            raise RPCError(Faults.BAD_NAME, name)
+        group, process = self._getGroupAndProcess(name)
 
         logfile = process.config.stdout_logfile
         
@@ -617,15 +590,8 @@ class SupervisorNamespaceRPCInterface:
         @return boolean result      Always True unless error
         """
         self._update('clearProcessLog')
-        group_name, process_name = split_namespec(name)
-        group = self.supervisord.process_groups.get(group_name)
 
-        if group is None:
-            raise RPCError(Faults.BAD_NAME, group_name)
-
-        process = group.processes.get(process_name)
-        if process is None:
-            raise RPCError(Faults.BAD_NAME, name)
+        group, process = self._getGroupAndProcess(name)
 
         try:
             # implies a reopen
