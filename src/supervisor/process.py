@@ -75,18 +75,18 @@ class Subprocess:
         self.loggers = {'stdout':None, 'stderr':None}
         if config.stdout_logfile:
             self.loggers['stdout'] = Logger(
+                options = config.options,
                 procname = config.name,
                 channel = 'stdout',
-                options = config.options,
                 logfile = config.stdout_logfile,
                 logfile_backups = config.stdout_logfile_backups,
                 logfile_maxbytes = config.stdout_logfile_maxbytes,
                 capturefile = config.stdout_capturefile)
         if config.stderr_logfile and not config.redirect_stderr:
             self.loggers['stderr'] = Logger(
+                options = config.options,
                 procname = config.name,
                 channel = 'stderr',
-                options = config.options,
                 logfile = config.stderr_logfile,
                 logfile_backups = config.stderr_logfile_backups,
                 logfile_maxbytes = config.stderr_logfile_maxbytes,
@@ -442,7 +442,9 @@ class Subprocess:
     def select(self):
         r, w, x = [], [], []
         callbacks = {}
-        self.log_output()
+
+        # self.log_output is required, we'd never log anything if it wasnt here
+        self.log_output() 
 
         # process output fds
         for fd, drain in self.get_output_drains():
@@ -600,16 +602,16 @@ class ProcessGroup:
 
 
 class Logger:
+    options = None # reference to options.ServerOptions instance
     procname = '' # process name which "owns" this logger
     channel = None # 'stdin' or 'stdout'
-    options = None # reference to options.ServerOptions instance
     capturemode = False # are we capturing process event data
     mainlog = None #  the process' "normal" log file
     capturelog = None # the log file while we're in capturemode
     childlog = None # the current logger (event or main)
     output_buffer = '' # data waiting to be logged
     
-    def __init__(self, procname, channel, options, logfile, logfile_backups,
+    def __init__(self, options, procname, channel, logfile, logfile_backups,
                  logfile_maxbytes, capturefile):
         self.procname = procname
         self.channel = channel
@@ -652,7 +654,7 @@ class Logger:
         data = self.output_buffer
         self.output_buffer = ''
 
-        if len(data) + len(self.output_buffer) <= len(token):
+        if len(data) <= len(token):
             self.output_buffer = data
             return # not enough data
 
@@ -669,19 +671,19 @@ class Logger:
             self.toggle_capturemode()
             self.output_buffer = after
 
-        if self.childlog:
+        if self.childlog and data:
             if self.options.strip_ansi:
                 data = self.options.stripEscapes(data)
             self.childlog.info(data)
 
-        msg = '%r %s output:\n%s' % (self.procname, self.channel, data)
-        self.options.logger.log(self.options.TRACE, msg)
+        if data:
+            msg = '%r %s output:\n%s' % (self.procname, self.channel, data)
+            self.options.logger.log(self.options.TRACE, msg)
 
         if after:
             self.log_output()
 
     def toggle_capturemode(self):
-        options = self.options
         self.capturemode = not self.capturemode
 
         if self.capturelog is not None:
@@ -692,7 +694,7 @@ class Logger:
                 for handler in self.capturelog.handlers:
                     handler.flush()
                 data = ''
-                f = open(capturefile, 'r')
+                f = self.options.open(capturefile, 'r')
                 while 1:
                     new = f.read(1<<20) # 1MB
                     data += new

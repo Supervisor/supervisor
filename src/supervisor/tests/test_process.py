@@ -44,56 +44,6 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.loggers['stdout'].output_buffer, '')
         self.assertEqual(instance.loggers['stderr'].output_buffer, '')
 
-    def test_removelogs(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'notthere', '/notthere',
-                              stdout_logfile='/tmp/foo',
-                              stderr_logfile='/tmp/bar')
-        instance = self._makeOne(config)
-        instance.removelogs()
-        logger = instance.loggers['stdout']
-        self.assertEqual(logger.childlog.handlers[0].reopened, True)
-        self.assertEqual(logger.childlog.handlers[0].removed, True)
-        logger = instance.loggers['stderr']
-        self.assertEqual(logger.childlog.handlers[0].reopened, True)
-        self.assertEqual(logger.childlog.handlers[0].removed, True)
-
-    def test_reopenlogs(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'notthere', '/notthere',
-                              stdout_logfile='/tmp/foo',
-                              stderr_logfile='/tmp/bar')
-        instance = self._makeOne(config)
-        instance.reopenlogs()
-        logger = instance.loggers['stdout']
-        self.assertEqual(logger.childlog.handlers[0].reopened, True)
-        logger = instance.loggers['stderr']
-        self.assertEqual(logger.childlog.handlers[0].reopened, True)
-        
-
-    def test_log_output(self):
-        # stdout/stderr goes to the process log and the main log
-        options = DummyOptions()
-        config = DummyPConfig(options, 'notthere', '/notthere',
-                              stdout_logfile='/tmp/foo',
-                              stderr_logfile='/tmp/bar')
-        instance = self._makeOne(config)
-        stdout_logger = instance.loggers['stdout']
-        stderr_logger = instance.loggers['stderr']
-        stdout_logger.output_buffer = 'stdout string longer than a token'
-        stderr_logger.output_buffer = 'stderr string longer than a token'
-        instance.log_output()
-        self.assertEqual(stdout_logger.childlog.data,
-                         ['stdout string longer than a token'])
-        self.assertEqual(stderr_logger.childlog.data,
-                         ['stderr string longer than a token'])
-        self.assertEqual(options.logger.data[0], 5)
-        self.assertEqual(options.logger.data[1],
-             "'notthere' stdout output:\nstdout string longer than a token")
-        self.assertEqual(options.logger.data[2], 5)
-        self.assertEqual(options.logger.data[3],
-             "'notthere' stderr output:\nstderr string longer than a token" )
-
     def test_log_output_no_loggers(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'notthere', '/notthere',
@@ -108,36 +58,22 @@ class SubprocessTests(unittest.TestCase):
     def test_drain_stdout(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test',
-                              stdout_logfile='/tmp/foo')
+                              stdout_logfile='/tmp/temp123.log',
+                              stderr_logfile='/tmp/temp456.log')
         instance = self._makeOne(config)
         instance.pipes['stdout'] = 'abc'
         instance.drain_stdout()
         self.assertEqual(instance.loggers['stdout'].output_buffer, 'abc')
 
-    def test_drain_stdout_no_logger(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'test', '/test', stdout_logfile=None)
-        instance = self._makeOne(config)
-        instance.pipes['stdout'] = 'abc'
-        instance.drain_stdout()
-        self.assertEqual(instance.loggers['stdout'], None)
-
     def test_drain_stderr(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test',
-                              stderr_logfile='/tmp/foo')
+                              stdout_logfile='/tmp/temp123.log',
+                              stderr_logfile='/tmp/temp456.log')
         instance = self._makeOne(config)
         instance.pipes['stderr'] = 'abc'
         instance.drain_stderr()
         self.assertEqual(instance.loggers['stderr'].output_buffer, 'abc')
-
-    def test_drain_stderr_no_logger(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'test', '/test', stderr_logfile=None)
-        instance = self._makeOne(config)
-        instance.pipes['stderr'] = 'abc'
-        instance.drain_stderr()
-        self.assertEqual(instance.loggers['stderr'], None)
 
     def test_drain_stdin_nodata(self):
         options = DummyOptions()
@@ -597,6 +533,24 @@ class SubprocessTests(unittest.TestCase):
                          '(terminated by SIGHUP)')
         self.assertEqual(instance.exitstatus, -1)
 
+    def test_finish_expected(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'notthere', '/notthere',
+                              stdout_logfile='/tmp/foo')
+        instance = self._makeOne(config)
+        instance.config.options.pidhistory[123] = instance
+        pipes = {'stdout':'','stderr':''}
+        instance.pipes = pipes
+        instance.config.exitcodes =[-1]
+        instance.finish(123, 1)
+        self.assertEqual(instance.killing, 0)
+        self.assertEqual(instance.pid, 0)
+        self.assertEqual(options.parent_pipes_closed, pipes)
+        self.assertEqual(instance.pipes, {})
+        self.assertEqual(options.logger.data[0],
+                         'exited: notthere (terminated by SIGHUP; expected)')
+        self.assertEqual(instance.exitstatus, -1)
+
     def test_set_uid_no_uid(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test')
@@ -679,74 +633,6 @@ class SubprocessTests(unittest.TestCase):
         instance.laststart = 1
         self.assertEqual(instance.get_state(), ProcessStates.UNKNOWN)
 
-    def test_stdout_capturemode_switch(self):
-        from supervisor.events import ProcessCommunicationEvent
-        from supervisor.events import subscribe
-        events = []
-        def doit(event):
-            events.append(event)
-        subscribe(ProcessCommunicationEvent, doit)
-        import string
-        letters = string.letters
-        digits = string.digits * 4
-        BEGIN_TOKEN = ProcessCommunicationEvent.BEGIN_TOKEN
-        END_TOKEN = ProcessCommunicationEvent.END_TOKEN
-        data = (letters +  BEGIN_TOKEN + digits + END_TOKEN + letters)
-        # boundaries that split tokens
-        broken = data.split(':')
-        first = broken[0] + ':'
-        second = broken[1] + ':'
-        third = broken[2]
-
-        executable = '/bin/cat'
-        options = DummyOptions()
-        from supervisor.options import getLogger
-        options.getLogger = getLogger
-        config = DummyPConfig(options, 'output', executable,
-                              stdout_logfile='/tmp/foo',
-                              stdout_capturefile='/tmp/bar')
-
-        try:
-            instance = self._makeOne(config)
-            logfile = instance.config.stdout_logfile
-            logger = instance.loggers['stdout']
-            logger.output_buffer = first
-            instance.log_output()
-            [ x.flush() for x in logger.childlog.handlers]
-            self.assertEqual(open(logfile, 'r').read(), letters)
-            self.assertEqual(logger.output_buffer, first[len(letters):])
-            self.assertEqual(len(events), 0)
-
-            logger.output_buffer += second
-            instance.log_output()
-            self.assertEqual(len(events), 0)
-            [ x.flush() for x in logger.childlog.handlers]
-            self.assertEqual(open(logfile, 'r').read(), letters)
-            self.assertEqual(logger.output_buffer, first[len(letters):])
-            self.assertEqual(len(events), 0)
-
-            logger.output_buffer += third
-            instance.log_output()
-            [ x.flush() for x in logger.childlog.handlers]
-            self.assertEqual(open(instance.config.stdout_logfile, 'r').read(),
-                             letters *2)
-            self.assertEqual(len(events), 1)
-            event = events[0]
-            self.assertEqual(event.__class__, ProcessCommunicationEvent)
-            self.assertEqual(event.process_name, 'output')
-            self.assertEqual(event.channel, 'stdout')
-            self.assertEqual(event.data, digits)
-
-        finally:
-            try:
-                os.remove(instance.config.stdout_logfile)
-            except (OSError, IOError):
-                pass
-            try:
-                os.remove(instance.config.stdout_capturefile)
-            except (OSError, IOError):
-                pass
-
     def test_strip_ansi(self):
         executable = '/bin/cat'
         options = DummyOptions()
@@ -785,6 +671,18 @@ class SubprocessTests(unittest.TestCase):
                 os.remove(instance.config.stdout_logfile)
             except (OSError, IOError):
                 pass
+
+    def test_select(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'notthere', '/notthere',
+                              stdout_logfile='/tmp/foo')
+        instance = self._makeOne(config)
+        instance.pipes = {'stdout':'abc', 'stdin':'def'}
+        instance.stdin_buffer = 'abc'
+        result = instance.select()
+        self.assertEqual(result[0].keys(), ['abc', 'def'])
+        self.assertEqual(result[1], ['abc'])
+        self.assertEqual(result[2], ['def'])
 
 class ProcessGroupTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -829,6 +727,19 @@ class ProcessGroupTests(unittest.TestCase):
         self.assertEqual(process2.backoff, 0)
         self.assertEqual(process2.delay, 0)
         self.assertEqual(process2.system_stop, 0)
+
+    def test_get_delay_processes(self):
+        options = DummyOptions()
+        from supervisor.process import ProcessStates
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
+        process1.delay = 1
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        group = self._makeOne(gconfig)
+        group.processes = { 'process1': process1 }
+        delayed = group.get_delay_processes()
+        self.assertEqual(delayed, [process1])
+        
 
     def test_get_undead(self):
         options = DummyOptions()
@@ -942,9 +853,141 @@ class ProcessGroupTests(unittest.TestCase):
         self.assertEqual(process4.backoff, 0)
         self.assertEqual(process4.system_stop, 1)
 
+    def test_select(self):
+        options = DummyOptions()
+        from supervisor.process import ProcessStates
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
+        process1.select_result = [{4:None}, [4], [], []]
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        group = self._makeOne(gconfig)
+        group.processes = { 'process1': process1 }
+        result= group.select()
+        self.assertEqual(result, ({4:None}, [4], [], []))
         
 
-    
+class LoggerTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.process import Logger
+        return Logger
+
+    def _makeOne(self, options, procname, channel, logfile, logfile_backups,
+                 logfile_maxbytes, capturefile):
+        return self._getTargetClass()(options, procname, channel, logfile,
+                                      logfile_backups, logfile_maxbytes,
+                                      capturefile)
+
+    def test_toggle_capturemode_buffer_overrun(self):
+        executable = '/bin/cat'
+        options = DummyOptions()
+        from StringIO import StringIO
+        options.openreturn = StringIO('a' * (3 << 20)) # > 2MB
+        instance = self._makeOne(options, 'whatever', 'stdout',
+                                 '/tmp/log', None, None, '/tmp/capture')
+        instance.capturemode = True
+        events = []
+        def doit(event):
+            events.append(event)
+        instance.toggle_capturemode()
+        result = options.logger.data[0]
+        self.failUnless(result.startswith('Truncated oversized'), result)
+
+    def test_removelogs(self):
+        options = DummyOptions()
+        instance = self._makeOne(options, 'whatever', 'stdout',
+                                 '/tmp/log', None, None, '/tmp/capture')
+        instance.removelogs()
+        self.assertEqual(instance.childlog.handlers[0].reopened, True)
+        self.assertEqual(instance.childlog.handlers[0].removed, True)
+        self.assertEqual(instance.childlog.handlers[0].reopened, True)
+        self.assertEqual(instance.childlog.handlers[0].removed, True)
+
+    def test_reopenlogs(self):
+        options = DummyOptions()
+        instance = self._makeOne(options, 'whatever', 'stdout',
+                                 '/tmp/log', None, None, '/tmp/capture')
+        instance.reopenlogs()
+        self.assertEqual(instance.childlog.handlers[0].reopened, True)
+
+    def test_log_output(self):
+        # stdout/stderr goes to the process log and the main log
+        options = DummyOptions()
+        instance = self._makeOne(options, 'whatever', 'stdout',
+                                 '/tmp/log', None, 100, '/tmp/capture')
+        instance.output_buffer = 'stdout string longer than a token'
+        instance.log_output()
+        self.assertEqual(instance.childlog.data,
+                         ['stdout string longer than a token'])
+        self.assertEqual(options.logger.data[0], 5)
+        self.assertEqual(options.logger.data[1],
+             "'whatever' stdout output:\nstdout string longer than a token")
+
+    def test_stdout_capturemode_switch(self):
+        from supervisor.events import ProcessCommunicationEvent
+        from supervisor.events import subscribe
+        events = []
+        def doit(event):
+            events.append(event)
+        subscribe(ProcessCommunicationEvent, doit)
+        import string
+        letters = string.letters
+        digits = string.digits * 4
+        BEGIN_TOKEN = ProcessCommunicationEvent.BEGIN_TOKEN
+        END_TOKEN = ProcessCommunicationEvent.END_TOKEN
+        data = (letters +  BEGIN_TOKEN + digits + END_TOKEN + letters)
+
+        # boundaries that split tokens
+        broken = data.split(':')
+        first = broken[0] + ':'
+        second = broken[1] + ':'
+        third = broken[2]
+
+        executable = '/bin/cat'
+        options = DummyOptions()
+        from supervisor.options import getLogger
+        options.getLogger = getLogger
+        logfile = '/tmp/log'
+        capturefile = '/tmp/capture'
+        instance = self._makeOne(options, 'whatever', 'stdout',
+                                 logfile, None, None, capturefile)
+
+        try:
+            instance.output_buffer = first
+            instance.log_output()
+            [ x.flush() for x in instance.childlog.handlers]
+            self.assertEqual(open(logfile, 'r').read(), letters)
+            self.assertEqual(instance.output_buffer, first[len(letters):])
+            self.assertEqual(len(events), 0)
+
+            instance.output_buffer += second
+            instance.log_output()
+            self.assertEqual(len(events), 0)
+            [ x.flush() for x in instance.childlog.handlers]
+            self.assertEqual(open(logfile, 'r').read(), letters)
+            self.assertEqual(instance.output_buffer, first[len(letters):])
+            self.assertEqual(len(events), 0)
+
+            instance.output_buffer += third
+            instance.log_output()
+            [ x.flush() for x in instance.childlog.handlers]
+            self.assertEqual(open(logfile, 'r').read(), letters *2)
+            self.assertEqual(len(events), 1)
+            event = events[0]
+            self.assertEqual(event.__class__, ProcessCommunicationEvent)
+            self.assertEqual(event.process_name, 'whatever')
+            self.assertEqual(event.channel, 'stdout')
+            self.assertEqual(event.data, digits)
+
+        finally:
+            try:
+                os.remove(logfile)
+            except (OSError, IOError):
+                pass
+            try:
+                os.remove(capturefile)
+            except (OSError, IOError):
+                pass
+
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

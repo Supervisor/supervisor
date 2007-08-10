@@ -1283,6 +1283,9 @@ class ServerOptions(Options):
 
     def process_environment(self):
         os.environ.update(self.environment or {})
+
+    def open(self, fn, mode='r'):
+        return open(fn, mode)
         
 
 class ClientOptions(Options):

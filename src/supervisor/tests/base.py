@@ -61,6 +61,7 @@ class DummyOptions:
         self.remove_error = None
         self.removed = []
         self.existing = []
+        self.openreturn = None
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -225,6 +226,11 @@ class DummyOptions:
             return True
         return False
 
+    def open(self, name, mode='r'):
+        if self.openreturn:
+            return self.openreturn
+        return open(name, mode)
+
 class DummyLogger:
     def __init__(self):
         self.reopened = False
@@ -242,6 +248,8 @@ class DummyLogger:
         self.closed = True
     def remove(self):
         self.removed = True
+    def flush(self):
+        self.flushed = True
 
 
 class DummySupervisor:
@@ -304,6 +312,7 @@ class DummyProcess:
         self.finished = None
         self.logs_reopened = False
         self.execv_arg_exception = None
+        self.select_result = {}, [], [], []
 
     def reopenlogs(self):
         self.logs_reopened = True
@@ -359,6 +368,9 @@ class DummyProcess:
         commandargs = shlex.split(self.config.command)
         program = commandargs[0]
         return program, commandargs
+
+    def select(self):
+        return self.select_result
         
 class DummyPConfig:
     def __init__(self, options, name, command, priority=999, autostart=True,
