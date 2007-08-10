@@ -1188,7 +1188,7 @@ class ServerOptions(Options):
             for fd in (pipes['stdout'], pipes['stderr'], pipes['stdin']):
                 if fd is not None:
                     fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | os.O_NDELAY)
-            return pipes
+            return pipes, dictreverse(pipes)
         except OSError:
             for fd in pipes.values():
                 if fd is not None:
@@ -1741,6 +1741,12 @@ def split_namespec(namespec):
         # group name is same as process name
         group_name, process_name = namespec, namespec
     return group_name, process_name
+
+def dictreverse(d):
+    new = {}
+    for k, v in d.items():
+        new[v] = k
+    return new
 
 class ProcessException(Exception):
     """ Specialized exceptions used when attempting to start a process """

@@ -58,7 +58,9 @@ class Subprocess:
     system_stop = 0 # true if the process has been stopped by the system
     killing = 0 # flag determining whether we are trying to kill this proc
     backoff = 0 # backoff counter (to startretries)
-    pipes = None # mapping of pipe descriptor purpose to file descriptor
+    pipes = None # mapping of channel name to pipe fd number
+    rpipes = None # mapping of pipe fd number to channel name
+    dispatchers = None # asnycore output dispatchers (keyed by fd)
     stdout_logger = None # Logger instance representing stdout
     stderr_logger = None # Logger instance representing stderr
     stdin_buffer = '' # buffer of characters to be sent to child's stdin
@@ -72,6 +74,8 @@ class Subprocess:
         """
         self.config = config
         self.pipes = {}
+        self.rpipes = {}
+        self.dispatchers = {}
         self.loggers = {'stdout':None, 'stderr':None}
         if config.stdout_logfile:
             self.loggers['stdout'] = Logger(
@@ -107,43 +111,15 @@ class Subprocess:
             if logger is not None:
                 logger.log_output()
 
-    def _drain_output_pipe(self, name):
-        fd = self.pipes[name]
-        if fd is None:
-            return
+    def drain_output_fd(self, fd):
         output = self.config.options.readfd(fd)
-        if self.loggers[name] is not None:
-            self.loggers[name].output_buffer += output
+        name = self.rpipes[fd]
+        self.loggers[name].output_buffer += output
 
-    def drain_stdout(self):
-        return self._drain_output_pipe('stdout')
-
-    def drain_stderr(self):
-        return self._drain_output_pipe('stderr')
-
-    def get_output_drains(self):
-        drains = []
-        stdout_pipe = self.pipes.get('stdout', None)
-        stderr_pipe = self.pipes.get('stderr', None)
-        if stdout_pipe is not None:
-            drains.append((stdout_pipe, self.drain_stdout))
-        if stderr_pipe is not None:
-            drains.append((stderr_pipe, self.drain_stderr))
-        return drains
-
-    def get_input_drains(self):
-        return [(self.pipes['stdin'], self.drain_stdin)]
-
-    def write(self, chars):
-        if not self.pid or self.killing:
-            raise IOError(errno.EPIPE, "Process already closed")
-        self.stdin_buffer = self.stdin_buffer + chars
-
-    def drain_stdin(self):
+    def drain_input_fd(self, fd):
         if self.stdin_buffer:
-            to_send = self.stdin_buffer[:2<<16]
             try:
-                sent = self.config.options.write(self.pipes['stdin'], to_send)
+                sent = self.config.options.write(fd, self.stdin_buffer)
                 self.stdin_buffer = self.stdin_buffer[sent:]
             except OSError, why:
                 if why[0] == errno.EPIPE:
@@ -154,9 +130,20 @@ class Subprocess:
                     raise
 
     def drain(self):
-        self.drain_stdout()
-        self.drain_stderr()
-        self.drain_stdin()
+        stdout = self.pipes.get('stdout')
+        stderr = self.pipes.get('stderr')
+        stdin = self.pipes.get('stdin')
+        if stdout is not None:
+            self.drain_output_fd(stdout)
+        if stderr is not None:
+            self.drain_output_fd(stderr)
+        if stdin is not None:
+            self.drain_input_fd(stdin)
+
+    def write(self, chars):
+        if not self.pid or self.killing:
+            raise IOError(errno.EPIPE, "Process already closed")
+        self.stdin_buffer = self.stdin_buffer + chars
 
     def get_execv_args(self):
         """Internal: turn a program name into a file name, using $PATH,
@@ -229,7 +216,14 @@ class Subprocess:
 
         try:
             use_stderr = not self.config.redirect_stderr
-            self.pipes = options.make_pipes(use_stderr)
+            self.pipes, self.rpipes = options.make_pipes(use_stderr)
+            p = self.pipes
+            stdout_fd,stderr_fd,stdin_fd = p['stdout'],p['stderr'],p['stdin']
+            self.dispatchers = {} # clear
+            self.dispatchers[stdout_fd] = POutputDispatcher(self, stdout_fd)
+            if stderr_fd is not None:
+                self.dispatchers[stderr_fd] = POutputDispatcher(self,stderr_fd)
+            self.dispatchers[stdin_fd] = PInputDispatcher(self, stdin_fd)
         except OSError, why:
             code = why[0]
             if code == errno.EMFILE:
@@ -401,6 +395,8 @@ class Subprocess:
         self.pid = 0
         self.config.options.close_parent_pipes(self.pipes)
         self.pipes = {}
+        self.rpipes = {}
+        self.dispatchers = {}
 
     def set_uid(self):
         if self.config.uid is None:
@@ -439,26 +435,6 @@ class Subprocess:
             return ProcessStates.RUNNING
         return ProcessStates.UNKNOWN
 
-    def select(self):
-        r, w, x = [], [], []
-        callbacks = {}
-
-        # self.log_output is required, we'd never log anything if it wasnt here
-        self.log_output() 
-
-        # process output fds
-        for fd, drain in self.get_output_drains():
-            r.append(fd)
-            callbacks[fd] = drain
-
-        # process input fds
-        if self.stdin_buffer:
-            for fd, drain in self.get_input_drains():
-                w.append(fd)
-                callbacks[fd] = drain
-
-        return callbacks, r, w, x
-
 class ProcessGroup:
     def __init__(self, config):
         self.config = config
@@ -482,19 +458,6 @@ class ProcessGroup:
     def reopenlogs(self):
         for process in self.processes.values():
             process.reopenlogs()
-
-    def select(self):
-        r, w, x = [], [], []
-        callbacks = {}
-
-        for proc in self.processes.values():
-            proc_callbacks, proc_r, proc_w, proc_x = proc.select()
-            callbacks.update(proc_callbacks)
-            r.extend(proc_r)
-            w.extend(proc_w)
-            x.extend(proc_x)
-
-        return callbacks, r, w, x
 
     def start_necessary(self):
         processes = self.processes.values()
@@ -541,6 +504,7 @@ class ProcessGroup:
         now = time.time()
 
         for proc in self.processes.values():
+            proc.log_output()
             state = proc.get_state()
 
             # we need to transition processes between BACKOFF ->
@@ -599,7 +563,12 @@ class ProcessGroup:
                                                   undead.pid))
             undead.kill(signal.SIGKILL)
 
-
+    def get_dispatchers(self):
+        dispatchers = {}
+        for process in self.processes.values():
+            dispatchers.update(process.dispatchers)
+        return dispatchers
+        
 
 class Logger:
     options = None # reference to options.ServerOptions instance
@@ -724,4 +693,44 @@ def find_prefix_at_end(haystack, needle):
     while l and not haystack.endswith(needle[:l]):
         l -= 1
     return l
+
+class PDispatcher:
+    """ Asyncore dispatcher for mainloop, representing a process channel
+    (stdin, stdout, or stderr) """
+    def __init__(self, process, fd):
+        self.process = process
+        self.fd = fd
+
+    def readable(self):
+        return False
+
+    def writable(self):
+        return False
+
+    def handle_read_event(self):
+        pass
+
+    def handle_write_event(self):
+        pass
+
+    def handle_error(self):
+        raise IOError
+
+class POutputDispatcher(PDispatcher):
+    """ Output (stdout/stderr) dispatcher """
+    def readable(self):
+        return True
+
+    def handle_read_event(self):
+        self.process.drain_output_fd(self.fd)
+
+class PInputDispatcher(PDispatcher):
+    """ Input (stdin) dispatcher """
+    def writable(self):
+        if self.process.stdin_buffer:
+            return True
+        return False
+
+    def handle_write_event(self):
+        self.process.drain_input_fd(self.fd)
 

@@ -64,7 +64,7 @@ def getSupervisorStateDescription(code):
 class Supervisor:
     mood = 1 # 1: up, 0: restarting, -1: suicidal
     stopping = False # set after we detect that we are handling a stop request
-    lastdelayreport = 0 # while we're stopping, if delayed, last time we tried
+    lastdelayreport = 0 # throttle for delayed process error reports at stop
 
     def __init__(self, options):
         self.options = options
@@ -113,55 +113,61 @@ class Supervisor:
         finally:
             self.options.cleanup()
 
+    def get_process_map(self):
+        process_map = {}
+        pgroups = self.process_groups.values()
+        for group in pgroups:
+            process_map.update(group.get_dispatchers())
+        return process_map
+
+    def get_delay_processes(self):
+        delayprocs = []
+
+        pgroups = self.process_groups.values()
+        for group in pgroups:
+            delayprocs.extend(group.get_delay_processes())
+
+        if delayprocs:
+            # throttle 'waiting for x to die' reports
+            now = time.time()
+            if now > (self.lastdelayreport + 3): # every 3 secs
+                names = [ p.config.name for p in delayprocs]
+                namestr = ', '.join(names)
+                self.options.logger.info('waiting for %s to die' %
+                                         namestr)
+                self.lastdelayreport = now
+
+        return delayprocs
+
     def runforever(self, test=False):
         timeout = 1
 
         socket_map = self.options.get_socket_map()
 
         while 1:
+            combined_map = {}
+            combined_map.update(socket_map)
+            combined_map.update(self.get_process_map())
+
             pgroups = self.process_groups.values()
 
             if self.mood > 0:
-                for group in pgroups:
-                    group.start_necessary()
+                [ group.start_necessary() for group in pgroups ]
+            elif self.mood < 1:
+                [ group.stop_all() for group in pgroups ]
 
             r, w, x = [], [], []
 
             if self.mood < 1:
                 if not self.stopping:
-                    for group in pgroups:
-                        group.stop_all()
                     self.stopping = True
 
-                # if there are no delayed processes (we're done killing
-                # everything), it's OK to stop or reload
-                delayprocs = []
-                for group in pgroups:
-                    delayprocs.extend(group.get_delay_processes())
-
-                if delayprocs:
-                    now = time.time()
-                    if now > (self.lastdelayreport + 3): # every 3 secs
-                        names = [ p.config.name for p in delayprocs]
-                        namestr = ', '.join(names)
-                        self.options.logger.info('waiting for %s to die' %
-                                                 namestr)
-                        self.lastdelayreport = now
-                else:
+                if not self.get_delay_processes():
+                    # if there are no delayed processes (we're done killing
+                    # everything), it's OK to stop or reload
                     raise asyncore.ExitNow
 
-            process_callbacks = {}
-
-            # subprocess input and output
-            for group in pgroups:
-                callbacks, group_r, group_w, group_x = group.select()
-                r.extend(group_r)
-                w.extend(group_w)
-                x.extend(group_x)
-                process_callbacks.update(callbacks)
-
-            # medusa i/o fds
-            for fd, dispatcher in socket_map.items():
+            for fd, dispatcher in combined_map.items():
                 if dispatcher.readable():
                     r.append(fd)
                 if dispatcher.writable():
@@ -174,38 +180,28 @@ class Supervisor:
                 if err[0] == errno.EINTR:
                     self.options.logger.log(self.options.TRACE,
                                             'EINTR encountered in select')
-                    
                 else:
                     raise
 
             for fd in r:
-                if process_callbacks.has_key(fd):
-                    callback = process_callbacks[fd]
-                    callback()
-
-                if socket_map.has_key(fd):
+                if combined_map.has_key(fd):
                     try:
-                        socket_map[fd].handle_read_event()
+                        combined_map[fd].handle_read_event()
                     except asyncore.ExitNow:
                         raise
                     except:
-                        socket_map[fd].handle_error()
+                        combined_map[fd].handle_error()
 
             for fd in w:
-                if process_callbacks.has_key(fd):
-                    callback = process_callbacks[fd]
-                    callback()
-
-                if socket_map.has_key(fd):
+                if combined_map.has_key(fd):
                     try:
-                        socket_map[fd].handle_write_event()
+                        combined_map[fd].handle_write_event()
                     except asyncore.ExitNow:
                         raise
                     except:
-                        socket_map[fd].handle_error()
+                        combined_map[fd].handle_error()
 
-            for group in pgroups:
-                group.transition()
+            [ group.transition() for group  in pgroups ]
 
             self.reap()
             self.handle_signal()
@@ -274,6 +270,7 @@ def main(test=False):
         if d.mood < 0:
             sys.exit(0)
         for group in d.process_groups.values():
+            # XXX why do I do this?
             group.removelogs()
         if d.options.httpserver:
             d.options.httpserver.close()

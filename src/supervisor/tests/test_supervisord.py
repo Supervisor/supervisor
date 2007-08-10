@@ -8,6 +8,7 @@ from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyPGroupConfig
 from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummyProcessGroup
+from supervisor.tests.base import DummyDispatcher
 
 class SupervisordTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -144,23 +145,39 @@ class SupervisordTests(unittest.TestCase):
         import select
         self.assertRaises(select.error, supervisord.runforever, test=True)
 
-    def test_one_process_group_select(self):
+    def test_runforever_select_dispatchers(self):
         options = DummyOptions()
         supervisord = self._makeOne(options)
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
         process = DummyProcess(pconfig)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
         pgroup = DummyProcessGroup(gconfig)
-        L = []
-        def callback():
-            L.append(1)
-        pgroup.select_result = {6:callback, 7:callback}, [6], [7], []
+        readable = DummyDispatcher(readable=True)
+        writable = DummyDispatcher(writable=True)
+        error = DummyDispatcher(writable=True, error=OSError)
+        pgroup.dispatchers = {6:readable, 7:writable, 8:error}
         supervisord.process_groups = {'foo': pgroup}
-        options.select_result = [6], [7], []
+        options.select_result = [6], [7, 8], []
         supervisord.runforever(test=True)
         self.assertEqual(pgroup.necessary_started, True)
         self.assertEqual(pgroup.transitioned, True)
-        self.assertEqual(L, [1, 1])
+        self.assertEqual(readable.read_event_handled, True)
+        self.assertEqual(writable.write_event_handled, True)
+        self.assertEqual(error.error_handled, True)
+
+    def test_runforever_select_dispatcher_exitnow(self):
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
+        process = DummyProcess(pconfig)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
+        pgroup = DummyProcessGroup(gconfig)
+        import asyncore
+        exitnow = DummyDispatcher(readable=True, error=asyncore.ExitNow)
+        pgroup.dispatchers = {6:exitnow}
+        supervisord.process_groups = {'foo': pgroup}
+        options.select_result = [6], [], []
+        self.assertRaises(asyncore.ExitNow, supervisord.runforever, test=True)
         
     def test_exit(self):
         options = DummyOptions()

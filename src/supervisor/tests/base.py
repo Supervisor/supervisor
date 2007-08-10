@@ -53,15 +53,16 @@ class DummyOptions:
         self.privsdropped = None
         self.logs_reopened = False
         self.environment_processed = False
+        self.select_result = [], [], []
+        self.select_error = None
         self.write_accept = None
         self.write_error = None
         self.tempfile_name = '/foo/bar'
-        self.select_result = [], [], []
-        self.select_error = None
         self.remove_error = None
         self.removed = []
         self.existing = []
         self.openreturn = None
+        self.readfd_result = ''
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -143,7 +144,8 @@ class DummyOptions:
             pipes['stderr'], pipes['child_stderr'] = (7, 8)
         else:
             pipes['stderr'], pipes['child_stderr'] = None, None
-        return pipes
+        from supervisor.options import dictreverse
+        return pipes, dictreverse(pipes)
 
     def write(self, fd, chars):
         if self.write_error:
@@ -193,7 +195,7 @@ class DummyOptions:
         self.privsdropped = uid
 
     def readfd(self, fd):
-        return fd
+        return self.readfd_result
 
     def reopenlogs(self):
         self.logs_reopened = True
@@ -284,6 +286,8 @@ class DummyProcess:
     waitstatus = None
     exitstatus = None
     pipes = None
+    rpipes = None
+    dispatchers = None
     stdout_logged = ''
     stderr_logged = ''
     spawnerr = None
@@ -309,10 +313,11 @@ class DummyProcess:
         self.stdout_logged = ''
         self.stderr_logged = ''
         self.pipes = {}
+        self.rpipes = {}
+        self.dispatchers = {}
         self.finished = None
         self.logs_reopened = False
         self.execv_arg_exception = None
-        self.select_result = {}, [], [], []
 
     def reopenlogs(self):
         self.logs_reopened = True
@@ -342,9 +347,6 @@ class DummyProcess:
     def drain(self):
         self.drained = True
 
-    def get_output_drains(self):
-        return []
-
     def __cmp__(self, other):
         return cmp(self.config.priority, other.config.priority)
 
@@ -369,9 +371,6 @@ class DummyProcess:
         program = commandargs[0]
         return program, commandargs
 
-    def select(self):
-        return self.select_result
-        
 class DummyPConfig:
     def __init__(self, options, name, command, priority=999, autostart=True,
                  autorestart=True, startsecs=10, startretries=999,
@@ -645,7 +644,7 @@ class DummyProcessGroup:
         self.transitioned = False
         self.all_stopped = False
         self.delay_processes = []
-        self.select_result = {}, [], [], []
+        self.dispatchers = {}
 
     def start_necessary(self):
         self.necessary_started = True
@@ -661,6 +660,9 @@ class DummyProcessGroup:
 
     def get_delay_processes(self):
         return self.delay_processes
+
+    def get_dispatchers(self):
+        return self.dispatchers
 
 class PopulatedDummySupervisor(DummySupervisor):
     def __init__(self, options, group_name, *pconfigs):
@@ -681,6 +683,34 @@ class PopulatedDummySupervisor(DummySupervisor):
             group_name = self.group_name
         process = self.process_groups[group_name].processes[process_name]
         setattr(process, attr_name, val)
+
+class DummyProcessLogger:
+    def __init__(self):
+        self.output_buffer = ''
+
+class DummyDispatcher:
+    write_event_handled = False
+    read_event_handled = False
+    error_handled = False
+    def __init__(self, readable=False, writable=False, error=False):
+        self._readable = readable
+        self._writable = writable
+        self._error = error
+    def readable(self):
+        return self._readable
+    def writable(self):
+        return self._writable
+    def handle_write_event(self):
+        if self._error:
+            raise self._error
+        self.write_event_handled = True
+    def handle_read_event(self):
+        if self._error:
+            raise self._error
+        self.read_event_handled = True
+    def handle_error(self):
+        self.error_handled = True
+                
         
 def lstrip(s):
     strings = [x.strip() for x in s.split('\n')]
