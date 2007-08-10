@@ -696,28 +696,31 @@ def find_prefix_at_end(haystack, needle):
 
 class PDispatcher:
     """ Asyncore dispatcher for mainloop, representing a process channel
-    (stdin, stdout, or stderr) """
+    (stdin, stdout, or stderr).  This class is abstract. """
     def __init__(self, process, fd):
         self.process = process
         self.fd = fd
 
     def readable(self):
-        return False
+        raise NotImplementedError
 
     def writable(self):
-        return False
+        raise NotImplementedError
 
     def handle_read_event(self):
-        pass
+        raise NotImplementedError
 
     def handle_write_event(self):
-        pass
+        raise NotImplementedError
 
     def handle_error(self):
-        raise IOError
+        raise NotImplementedError
 
 class POutputDispatcher(PDispatcher):
     """ Output (stdout/stderr) dispatcher """
+    def writable(self):
+        return False
+    
     def readable(self):
         return True
 
@@ -731,6 +734,9 @@ class PInputDispatcher(PDispatcher):
             return True
         return False
 
+    def readable(self):
+        return False
+    
     def handle_write_event(self):
         self.process.drain_input_fd(self.fd)
 

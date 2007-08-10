@@ -318,6 +318,8 @@ class DummyProcess:
         self.finished = None
         self.logs_reopened = False
         self.execv_arg_exception = None
+        self.input_fd_drained = None
+        self.output_fd_drained = None
 
     def reopenlogs(self):
         self.logs_reopened = True
@@ -370,6 +372,12 @@ class DummyProcess:
         commandargs = shlex.split(self.config.command)
         program = commandargs[0]
         return program, commandargs
+
+    def drain_output_fd(self, fd):
+        self.output_fd_drained = fd
+
+    def drain_input_fd(self, fd):
+        self.input_fd_drained = fd
 
 class DummyPConfig:
     def __init__(self, options, name, command, priority=999, autostart=True,

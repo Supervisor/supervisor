@@ -974,6 +974,71 @@ class LoggingRecorderTests(unittest.TestCase):
             except (OSError, IOError):
                 pass
 
+class POutputDispatcherTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.process import POutputDispatcher
+        return POutputDispatcher
+
+    def _makeOne(self):
+        process = DummyProcess(None)
+        return self._getTargetClass()(process, 0)
+
+    def test_writable(self):
+        dispatcher = self._makeOne()
+        self.assertEqual(dispatcher.writable(), False)
+        
+    def test_readable(self):
+        dispatcher = self._makeOne()
+        self.assertEqual(dispatcher.readable(), True)
+
+    def test_handle_write_event(self):
+        dispatcher = self._makeOne()
+        self.assertRaises(NotImplementedError, dispatcher.handle_write_event)
+
+    def test_handle_read_event(self):
+        dispatcher = self._makeOne()
+        self.assertEqual(dispatcher.handle_read_event(), None)
+        self.assertEqual(dispatcher.process.output_fd_drained, 0)
+        
+    def test_handle_error(self):
+        dispatcher = self._makeOne()
+        self.assertRaises(NotImplementedError, dispatcher.handle_error)
+
+class PInputDispatcherTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.process import PInputDispatcher
+        return PInputDispatcher
+
+    def _makeOne(self):
+        process = DummyProcess(None)
+        return self._getTargetClass()(process, 0)
+
+    def test_writable_nodata(self):
+        dispatcher = self._makeOne()
+        dispatcher.process.stdin_buffer = 'a'
+        self.assertEqual(dispatcher.writable(), True)
+
+    def test_writable_withdata(self):
+        dispatcher = self._makeOne()
+        dispatcher.process.stdin_buffer = ''
+        self.assertEqual(dispatcher.writable(), False)
+
+    def test_readable(self):
+        dispatcher = self._makeOne()
+        self.assertEqual(dispatcher.readable(), False)
+
+    def test_handle_write_event(self):
+        dispatcher = self._makeOne()
+        self.assertEqual(dispatcher.handle_write_event(), None)
+        self.assertEqual(dispatcher.process.input_fd_drained, 0)
+
+    def test_handle_read_event(self):
+        dispatcher = self._makeOne()
+        self.assertRaises(NotImplementedError, dispatcher.handle_read_event)
+        
+    def test_handle_error(self):
+        dispatcher = self._makeOne()
+        self.assertRaises(NotImplementedError, dispatcher.handle_error)
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
