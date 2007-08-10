@@ -15,6 +15,8 @@
 import os
 import sys
 
+# I dont know why we bother, this doesn't run on Windows, but just
+# in case it ever does, avoid this bug magnet by leaving it.
 if sys.platform[:3] == "win":
     DEFAULT_HOST = "localhost"
 else:
