@@ -309,6 +309,7 @@ class DummyProcess:
         self.stderr_buffer = ''
         self.stdout_logged = ''
         self.stderr_logged = ''
+        self.stdin_buffer = ''
         self.pipes = {}
         self.rpipes = {}
         self.dispatchers = {}
@@ -375,6 +376,9 @@ class DummyProcess:
 
     def drain_input_fd(self, fd):
         self.input_fd_drained = fd
+
+    def write(self, chars):
+        self.stdin_buffer += chars
 
 class DummyPConfig:
     def __init__(self, options, name, command, priority=999, autostart=True,

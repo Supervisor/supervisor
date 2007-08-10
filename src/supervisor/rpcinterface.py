@@ -646,6 +646,36 @@ class SupervisorNamespaceRPCInterface:
         clearall.rpcinterface = self
         return clearall # deferred
 
+    def sendProcessStdin(self, name, chars):
+        """ Send a string of chars to the stdin of the process name.
+        If non-7-bit data is sent (unicode), it is encoded to utf-8 before
+        being sent to the process' stdin.  If chars is not a string
+        or is not unicode, raise INCORRECT_PARAMETERS.
+
+        @param string name        The process name to send to (or 'group:name')
+        @param string chars       The character data to send to the process
+        @return boolean result    Always return True unless error
+        """
+        self._update('sendProcessStdin')
+
+        if isinstance(chars, unicode):
+            chars = chars.encode('utf-8')
+
+        if not isinstance(chars, basestring):
+            raise RPCError(Faults.INCORRECT_PARAMETERS, chars)
+
+        group, process = self._getGroupAndProcess(name)
+
+        if process is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
+        if not process.pid or process.killing:
+            raise RPCError(Faults.ALREADY_TERMINATED, name)
+
+        process.write(chars)
+
+        return True
+
 # this is not used in code but referenced via an entry point in the conf file
 def make_main_rpcinterface(supervisord):
     return SupervisorNamespaceRPCInterface(supervisord)
