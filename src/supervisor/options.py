@@ -1182,10 +1182,6 @@ class ServerOptions(Options):
         for msg in info_messages:
             self.logger.info(msg)
 
-    def make_process(self, config):
-        from supervisor.process import Subprocess
-        return Subprocess(config)
-
     def make_pipes(self, stderr=True):
         """ Create pipes for parent to child stdin/stdout/stderr
         communications.  Open fd in nonblocking mode so we can read them
@@ -1504,6 +1500,10 @@ class ProcessConfig(Config):
                 logfile_maxbytes = self.stdout_logfile_maxbytes,
                 capturefile = self.stdout_capturefile)
 
+    def make_process(self):
+        from supervisor.process import Subprocess
+        return Subprocess(self)
+
 class ProcessGroupConfig(Config):
     def __init__(self, options, name, priority, process_configs):
         self.options = options
@@ -1532,8 +1532,8 @@ class EventListenerPoolConfig(Config):
             config.create_autochildlogs()
 
     def make_group(self):
-        from supervisor.process import ProcessGroup
-        return ProcessGroup(self)
+        from supervisor.process import EventListenerPool
+        return EventListenerPool(self)
 
 class BasicAuthTransport(xmlrpclib.Transport):
     """ A transport that understands basic auth and UNIX domain socket

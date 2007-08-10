@@ -111,9 +111,6 @@ class DummyOptions:
     def waitpid(self):
         return self.waitpid_return
 
-    def make_process(self, config):
-        return DummyProcess(config)
-
     def kill(self, pid, sig):
         if self.kill_error:
             raise OSError(self.kill_error)
@@ -425,6 +422,10 @@ class DummyPConfig:
 
     def make_stderr_recorder(self):
         return DummyRecorder()
+
+    def make_process(self):
+        return DummyProcess(self)
+
 
 def makeExecutable(file, substitutions=None):
     import os

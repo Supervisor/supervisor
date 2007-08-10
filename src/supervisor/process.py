@@ -416,13 +416,13 @@ class Subprocess:
             return ProcessStates.RUNNING
         return ProcessStates.UNKNOWN
 
-class ProcessGroup:
+
+class ProcessGroupBase:
     def __init__(self, config):
         self.config = config
         self.processes = {}
         for pconfig in self.config.process_configs:
-            options = self.config.options
-            self.processes[pconfig.name] = options.make_process(pconfig)
+            self.processes[pconfig.name] = pconfig.make_process()
         
 
     def __cmp__(self, other):
@@ -549,6 +549,12 @@ class ProcessGroup:
         for process in self.processes.values():
             dispatchers.update(process.dispatchers)
         return dispatchers
+
+class ProcessGroup(ProcessGroupBase):
+    pass
+
+class EventListenerPool(ProcessGroupBase):
+    pass
 
 class PDispatcher:
     """ Asyncore dispatcher for mainloop, representing a process channel

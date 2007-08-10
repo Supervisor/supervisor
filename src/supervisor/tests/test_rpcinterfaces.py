@@ -868,7 +868,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         self.assertRaises(xmlrpc.RPCError, interface.clearProcessLog, 'foo')
         
-
     def test_clearAllProcessLogs(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', 'foo')

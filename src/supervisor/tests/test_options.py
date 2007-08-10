@@ -715,6 +715,13 @@ class TestProcessConfig(unittest.TestCase):
         from supervisor.recorders import LoggingRecorder
         self.assertEqual(recorder.capturelog, None)
 
+    def test_make_process(self):
+        options = DummyOptions()
+        instance = self._makeOne(options)
+        process = instance.make_process()
+        from supervisor.process import Subprocess
+        self.assertEqual(process.__class__, Subprocess)
+
 class ProcessGroupConfigTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ProcessGroupConfig
