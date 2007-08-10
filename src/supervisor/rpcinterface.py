@@ -1,5 +1,4 @@
 import os
-import re
 import time
 import datetime
 
@@ -23,8 +22,6 @@ from supervisor.process import getProcessStateDescription
 API_VERSION  = '2.0'
 
 class SupervisorNamespaceRPCInterface:
-    COMMAND_SEPARATOR = re.compile('\s+')
-
     def __init__(self, supervisord):
         self.supervisord = supervisord
 
