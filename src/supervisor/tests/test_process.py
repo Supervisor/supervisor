@@ -8,7 +8,7 @@ from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummyPGroupConfig
-from supervisor.tests.base import DummyProcessLogger
+from supervisor.tests.base import DummyRecorder
 
 class SubprocessTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -27,10 +27,10 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.config, config)
         self.assertEqual(instance.config.options, options)
         self.assertEqual(instance.laststart, 0)
-        self.assertEqual(instance.loggers['stdout'].childlog.args, (
+        self.assertEqual(instance.stdout_recorder.childlog.args, (
             ('/tmp/temp123.log', 20, '%(message)s'),
             {'rotating': False, 'backups': 0, 'maxbytes': 0}))
-        self.assertEqual(instance.loggers['stderr'].childlog.args, (
+        self.assertEqual(instance.stderr_recorder.childlog.args, (
             ('/tmp/temp456.log', 20, '%(message)s'),
             {'rotating': False, 'backups': 0, 'maxbytes': 0}))
         self.assertEqual(instance.pid, 0)
@@ -42,18 +42,18 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.backoff, 0)
         self.assertEqual(instance.pipes, {})
         self.assertEqual(instance.spawnerr, None)
-        self.assertEqual(instance.loggers['stdout'].output_buffer, '')
-        self.assertEqual(instance.loggers['stderr'].output_buffer, '')
+        self.assertEqual(instance.stdout_recorder.output_buffer, '')
+        self.assertEqual(instance.stderr_recorder.output_buffer, '')
 
-    def test_log_output_no_loggers(self):
+    def test_record_output_no_recorders(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'notthere', '/notthere',
                               stdout_logfile=None,
                               stderr_logfile=None)
         instance = self._makeOne(config)
-        self.assertEqual(instance.loggers['stdout'], None)
-        self.assertEqual(instance.loggers['stderr'], None)
-        instance.log_output()
+        self.assertEqual(instance.stdout_recorder, None)
+        self.assertEqual(instance.stderr_recorder, None)
+        instance.record_output()
         self.assertEqual(options.logger.data, [])
 
     def test_drain(self):
@@ -71,8 +71,8 @@ class SubprocessTests(unittest.TestCase):
         instance.stdin_buffer = 'foo'
         options.readfd_result = 'abc'
         instance.drain()
-        self.assertEqual(instance.loggers['stdout'].output_buffer, 'abc')
-        self.assertEqual(instance.loggers['stderr'].output_buffer, 'abc')
+        self.assertEqual(instance.stdout_recorder.output_buffer, 'abc')
+        self.assertEqual(instance.stderr_recorder.output_buffer, 'abc')
         self.assertEqual(options.written[3], 'foo')
         
     def test_get_execv_args_abs_missing(self):
@@ -569,9 +569,9 @@ class SubprocessTests(unittest.TestCase):
 
         try:
             instance = self._makeOne(config)
-            instance.loggers['stdout'].output_buffer = ansi
-            instance.log_output()
-            [ x.flush() for x in instance.loggers['stdout'].childlog.handlers ]
+            instance.stdout_recorder.output_buffer = ansi
+            instance.record_output()
+            [ x.flush() for x in instance.stdout_recorder.childlog.handlers ]
             self.assertEqual(
                 open(instance.config.stdout_logfile, 'r').read(), noansi)
         finally:
@@ -583,9 +583,9 @@ class SubprocessTests(unittest.TestCase):
         try:
             options.strip_ansi = False
             instance = self._makeOne(config)
-            instance.loggers['stdout'].output_buffer = ansi
-            instance.log_output()
-            [ x.flush() for x in instance.loggers['stdout'].childlog.handlers ]
+            instance.stdout_recorder.output_buffer = ansi
+            instance.record_output()
+            [ x.flush() for x in instance.stdout_recorder.childlog.handlers ]
             self.assertEqual(
                 open(instance.config.stdout_logfile, 'r').read(), ansi)
         finally:
@@ -600,11 +600,11 @@ class SubprocessTests(unittest.TestCase):
         instance = self._makeOne(config)
         instance.rpipes[0] = 'stdout'
         instance.pipes['stdout'] = 0
-        logger = DummyProcessLogger()
-        instance.loggers['stdout'] = logger
+        recorder = DummyRecorder()
+        instance.stdout_recorder = recorder
         options.readfd_result = 'hello'
         instance.drain_output_fd(0)
-        self.assertEqual(logger.output_buffer, 'hello')
+        self.assertEqual(recorder.output_buffer, 'hello')
 
     def test_drain_input_fd(self):
         options = DummyOptions()
@@ -852,10 +852,10 @@ class ProcessGroupTests(unittest.TestCase):
         self.assertEqual(result, {4:None, 5:None})
         
 
-class LoggerTests(unittest.TestCase):
+class LoggingRecorderTests(unittest.TestCase):
     def _getTargetClass(self):
-        from supervisor.process import Logger
-        return Logger
+        from supervisor.process import LoggingRecorder
+        return LoggingRecorder
 
     def _makeOne(self, options, procname, channel, logfile, logfile_backups,
                  logfile_maxbytes, capturefile):
@@ -895,13 +895,13 @@ class LoggerTests(unittest.TestCase):
         instance.reopenlogs()
         self.assertEqual(instance.childlog.handlers[0].reopened, True)
 
-    def test_log_output(self):
+    def test_record_output(self):
         # stdout/stderr goes to the process log and the main log
         options = DummyOptions()
         instance = self._makeOne(options, 'whatever', 'stdout',
                                  '/tmp/log', None, 100, '/tmp/capture')
         instance.output_buffer = 'stdout string longer than a token'
-        instance.log_output()
+        instance.record_output()
         self.assertEqual(instance.childlog.data,
                          ['stdout string longer than a token'])
         self.assertEqual(options.logger.data[0], 5)
@@ -939,14 +939,14 @@ class LoggerTests(unittest.TestCase):
 
         try:
             instance.output_buffer = first
-            instance.log_output()
+            instance.record_output()
             [ x.flush() for x in instance.childlog.handlers]
             self.assertEqual(open(logfile, 'r').read(), letters)
             self.assertEqual(instance.output_buffer, first[len(letters):])
             self.assertEqual(len(events), 0)
 
             instance.output_buffer += second
-            instance.log_output()
+            instance.record_output()
             self.assertEqual(len(events), 0)
             [ x.flush() for x in instance.childlog.handlers]
             self.assertEqual(open(logfile, 'r').read(), letters)
@@ -954,7 +954,7 @@ class LoggerTests(unittest.TestCase):
             self.assertEqual(len(events), 0)
 
             instance.output_buffer += third
-            instance.log_output()
+            instance.record_output()
             [ x.flush() for x in instance.childlog.handlers]
             self.assertEqual(open(logfile, 'r').read(), letters *2)
             self.assertEqual(len(events), 1)

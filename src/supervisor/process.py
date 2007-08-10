@@ -61,8 +61,8 @@ class Subprocess:
     pipes = None # mapping of channel name to pipe fd number
     rpipes = None # mapping of pipe fd number to channel name
     dispatchers = None # asnycore output dispatchers (keyed by fd)
-    stdout_logger = None # Logger instance representing stdout
-    stderr_logger = None # Logger instance representing stderr
+    stdout_recorder = None # object that records stdout output
+    stderr_recorder = None # object that records stderr output
     stdin_buffer = '' # buffer of characters to be sent to child's stdin
     exitstatus = None # status attached to dead process by finsh()
     spawnerr = None # error message attached by spawn() if any
@@ -76,9 +76,8 @@ class Subprocess:
         self.pipes = {}
         self.rpipes = {}
         self.dispatchers = {}
-        self.loggers = {'stdout':None, 'stderr':None}
         if config.stdout_logfile:
-            self.loggers['stdout'] = Logger(
+            self.stdout_recorder = LoggingRecorder(
                 options = config.options,
                 procname = config.name,
                 channel = 'stdout',
@@ -87,7 +86,7 @@ class Subprocess:
                 logfile_maxbytes = config.stdout_logfile_maxbytes,
                 capturefile = config.stdout_capturefile)
         if config.stderr_logfile and not config.redirect_stderr:
-            self.loggers['stderr'] = Logger(
+            self.stderr_recorder = LoggingRecorder(
                 options = config.options,
                 procname = config.name,
                 channel = 'stderr',
@@ -97,24 +96,26 @@ class Subprocess:
                 capturefile = config.stderr_capturefile)
 
     def removelogs(self):
-        for logger in (self.loggers['stdout'], self.loggers['stderr']):
-            if logger is not None:
-                logger.removelogs()
+        for recorder in self.stdout_recorder, self.stderr_recorder:
+            if recorder is not None:
+                if hasatrr(recorder, 'removelogs'):
+                    recorder.removelogs()
 
     def reopenlogs(self):
-        for logger in (self.loggers['stdout'], self.loggers['stderr']):
-            if logger is not None:
-                logger.reopenlogs()
+        for recorder in self.stdout_recorder, self.stderr_recorder:
+            if recorder is not None:
+                if hasattr(recorder, 'reopenlogs'):
+                    recorder.reopenlogs()
 
-    def log_output(self):
-        for logger in (self.loggers['stdout'], self.loggers['stderr']):
-            if logger is not None:
-                logger.log_output()
+    def record_output(self):
+        for recorder in self.stdout_recorder, self.stderr_recorder:
+            if recorder is not None:
+                recorder.record_output()
 
     def drain_output_fd(self, fd):
         output = self.config.options.readfd(fd)
-        name = self.rpipes[fd]
-        self.loggers[name].output_buffer += output
+        name = '%s_recorder' % self.rpipes[fd]
+        getattr(self, name).output_buffer += output
 
     def drain_input_fd(self, fd):
         if self.stdin_buffer:
@@ -350,7 +351,7 @@ class Subprocess:
         """ The process was reaped and we need to report and manage its state
         """
         self.drain()
-        self.log_output()
+        self.record_output()
 
         es, msg = decode_wait_status(sts)
 
@@ -504,7 +505,7 @@ class ProcessGroup:
         now = time.time()
 
         for proc in self.processes.values():
-            proc.log_output()
+            proc.record_output()
             state = proc.get_state()
 
             # we need to transition processes between BACKOFF ->
@@ -568,9 +569,8 @@ class ProcessGroup:
         for process in self.processes.values():
             dispatchers.update(process.dispatchers)
         return dispatchers
-        
 
-class Logger:
+class LoggingRecorder:
     options = None # reference to options.ServerOptions instance
     procname = '' # process name which "owns" this logger
     channel = None # 'stdin' or 'stdout'
@@ -614,7 +614,7 @@ class Logger:
                 for handler in log.handlers:
                     handler.reopen()
 
-    def log_output(self):
+    def record_output(self):
         if self.capturemode:
             token = ProcessCommunicationEvent.END_TOKEN
         else:
@@ -650,7 +650,7 @@ class Logger:
             self.options.logger.log(self.options.TRACE, msg)
 
         if after:
-            self.log_output()
+            self.record_output()
 
     def toggle_capturemode(self):
         self.capturemode = not self.capturemode

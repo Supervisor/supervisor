@@ -353,7 +353,7 @@ class DummyProcess:
     def readable_fds(self):
         return []
 
-    def log_output(self):
+    def record_output(self):
         self.stdout_logged += self.stdout_buffer
         self.stdout_buffer = ''
 
@@ -684,7 +684,7 @@ class PopulatedDummySupervisor(DummySupervisor):
         process = self.process_groups[group_name].processes[process_name]
         setattr(process, attr_name, val)
 
-class DummyProcessLogger:
+class DummyRecorder:
     def __init__(self):
         self.output_buffer = ''
 
