@@ -36,7 +36,7 @@ Options:
 -g/--http_username STR -- the username for HTTP auth
 -r/--http_password STR -- the password for HTTP auth
 -a/--minfds NUM -- the minimum number of file descriptors for start success
--t/--strip_ansi -- strip ansi escape codes from output
+-t/--strip_ansi -- strip ansi escape codes from process output
 --minprocs NUM  -- the minimum number of processes available for start success
 """
 
