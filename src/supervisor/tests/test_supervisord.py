@@ -136,6 +136,14 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(options.logger.data[0], 5)
         self.assertEqual(options.logger.data[1], 'EINTR encountered in select')
 
+    def test_runforever_select_uncaught_exception(self):
+        options = DummyOptions()
+        import errno
+        options.select_error = errno.EBADF
+        supervisord = self._makeOne(options)
+        import select
+        self.assertRaises(select.error, supervisord.runforever, test=True)
+
     def test_one_process_group_select(self):
         options = DummyOptions()
         supervisord = self._makeOne(options)
@@ -169,6 +177,29 @@ class SupervisordTests(unittest.TestCase):
         import asyncore
         self.assertRaises(asyncore.ExitNow, supervisord.runforever, test=True)
         self.assertEqual(pgroup.all_stopped, True)
+
+    def test_exit_delayed(self):
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
+        process = DummyProcess(pconfig)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
+        pgroup = DummyProcessGroup(gconfig)
+        pgroup.delay_processes = [process]
+        L = []
+        def callback():
+            L.append(1)
+        supervisord.process_groups = {'foo': pgroup}
+        supervisord.mood = 0
+        import asyncore
+        supervisord.runforever(test=True)
+        self.assertNotEqual(supervisord.lastdelayreport, 0)
+
+    def test_getSupervisorStateDescription(self):
+        from supervisor.supervisord import getSupervisorStateDescription
+        from supervisor.supervisord import SupervisorStates
+        result = getSupervisorStateDescription(SupervisorStates.ACTIVE)
+        self.assertEqual(result, 'ACTIVE')
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
