@@ -322,7 +322,7 @@ class SupervisorNamespaceRPCInterface:
     def stopProcess(self, name):
         """ Stop a process named by name
 
-        @param string name  The name of the process to stop
+        @param string name  The name of the process to stop (or 'group:name')
         @return boolean result     Always return True unless error
         """
         self._update('stopProcess')
@@ -488,7 +488,7 @@ class SupervisorNamespaceRPCInterface:
     def getProcessInfo(self, name):
         """ Get info about a process named name
 
-        @param string name The name of the process
+        @param string name The name of the process (or 'group:name')
         @return struct result     A structure containing data about the process
         """
         self._update('getProcessInfo')
@@ -547,7 +547,7 @@ class SupervisorNamespaceRPCInterface:
     def readProcessLog(self, name, offset, length):
         """ Read length bytes from name's log starting at offset
 
-        @param string name        the name of the process
+        @param string name        the name of the process (or 'group:name')
         @param int offset         offset to start reading from.
         @param int length         number of bytes to read from the log.
         @return string result     Bytes of log
@@ -586,7 +586,7 @@ class SupervisorNamespaceRPCInterface:
         bytes are available, the maximum number of available bytes will be 
         returned.  (offset) returned is always the last offset in the log +1.
 
-        @param string name         the name of the process
+        @param string name         the name of the process (or 'group:name')
         @param int offset          offset to start reading from
         @param int length          maximum number of bytes to return
         @return array result       [string bytes, int offset, bool overflow]
