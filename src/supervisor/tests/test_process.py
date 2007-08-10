@@ -27,12 +27,6 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.config, config)
         self.assertEqual(instance.config.options, options)
         self.assertEqual(instance.laststart, 0)
-        self.assertEqual(instance.stdout_recorder.childlog.args, (
-            ('/tmp/temp123.log', 20, '%(message)s'),
-            {'rotating': False, 'backups': 0, 'maxbytes': 0}))
-        self.assertEqual(instance.stderr_recorder.childlog.args, (
-            ('/tmp/temp456.log', 20, '%(message)s'),
-            {'rotating': False, 'backups': 0, 'maxbytes': 0}))
         self.assertEqual(instance.pid, 0)
         self.assertEqual(instance.laststart, 0)
         self.assertEqual(instance.laststop, 0)
@@ -45,14 +39,12 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.stdout_recorder.output_buffer, '')
         self.assertEqual(instance.stderr_recorder.output_buffer, '')
 
-    def test_record_output_no_recorders(self):
+    def test_record_output_no_recorders_doesnt_barf(self):
         options = DummyOptions()
-        config = DummyPConfig(options, 'notthere', '/notthere',
-                              stdout_logfile=None,
-                              stderr_logfile=None)
+        config = DummyPConfig(options, 'notthere', '/notthere')
         instance = self._makeOne(config)
-        self.assertEqual(instance.stdout_recorder, None)
-        self.assertEqual(instance.stderr_recorder, None)
+        instance.stdout_recorder = None
+        instance.stderr_recorder = None
         instance.record_output()
         self.assertEqual(options.logger.data, [])
 
@@ -555,45 +547,6 @@ class SubprocessTests(unittest.TestCase):
         instance.laststart = 1
         self.assertEqual(instance.get_state(), ProcessStates.UNKNOWN)
 
-    def test_strip_ansi(self):
-        executable = '/bin/cat'
-        options = DummyOptions()
-        from supervisor.options import getLogger
-        options.getLogger = getLogger
-        options.strip_ansi = True
-        config = DummyPConfig(options, 'output', executable,
-                              stdout_logfile='/tmp/foo')
-
-        ansi = '\x1b[34mHello world... this is longer than a token!\x1b[0m'
-        noansi = 'Hello world... this is longer than a token!'
-
-        try:
-            instance = self._makeOne(config)
-            instance.stdout_recorder.output_buffer = ansi
-            instance.record_output()
-            [ x.flush() for x in instance.stdout_recorder.childlog.handlers ]
-            self.assertEqual(
-                open(instance.config.stdout_logfile, 'r').read(), noansi)
-        finally:
-            try:
-                os.remove(instance.config.stdout_logfile)
-            except (OSError, IOError):
-                pass
-
-        try:
-            options.strip_ansi = False
-            instance = self._makeOne(config)
-            instance.stdout_recorder.output_buffer = ansi
-            instance.record_output()
-            [ x.flush() for x in instance.stdout_recorder.childlog.handlers ]
-            self.assertEqual(
-                open(instance.config.stdout_logfile, 'r').read(), ansi)
-        finally:
-            try:
-                os.remove(instance.config.stdout_logfile)
-            except (OSError, IOError):
-                pass
-
     def test_drain_output_fd(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test')
@@ -854,7 +807,7 @@ class ProcessGroupTests(unittest.TestCase):
 
 class LoggingRecorderTests(unittest.TestCase):
     def _getTargetClass(self):
-        from supervisor.process import LoggingRecorder
+        from supervisor.recorders import LoggingRecorder
         return LoggingRecorder
 
     def _makeOne(self, options, procname, channel, logfile, logfile_backups,
@@ -973,6 +926,26 @@ class LoggingRecorderTests(unittest.TestCase):
                 os.remove(capturefile)
             except (OSError, IOError):
                 pass
+
+    def test_strip_ansi(self):
+        options = DummyOptions()
+        options.strip_ansi = True
+        instance = self._makeOne(options, 'whatever', 'stdout',
+                                 '/tmp/log', None, 100, '/tmp/capture')
+        ansi = '\x1b[34mHello world... this is longer than a token!\x1b[0m'
+        noansi = 'Hello world... this is longer than a token!'
+
+        instance.output_buffer = ansi
+        instance.record_output()
+        self.assertEqual(len(instance.childlog.data), 1)
+        self.assertEqual(instance.childlog.data[0], noansi)
+
+        options.strip_ansi = False
+
+        instance.output_buffer = ansi
+        instance.record_output()
+        self.assertEqual(len(instance.childlog.data), 2)
+        self.assertEqual(instance.childlog.data[1], ansi)
 
 class POutputDispatcherTests(unittest.TestCase):
     def _getTargetClass(self):

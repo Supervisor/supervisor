@@ -588,6 +588,69 @@ class TestProcessConfig(unittest.TestCase):
         instance.create_autochildlogs()
         self.assertEqual(instance.stdout_logfile, options.tempfile_name)
         self.assertEqual(instance.stderr_logfile, options.tempfile_name)
+
+    def test_make_stderr_recorder(self):
+        options = DummyOptions()
+        instance = self._makeOne(options)
+        instance.redirect_stderr = False
+        recorder = instance.make_stderr_recorder()
+        from supervisor.recorders import LoggingRecorder
+        self.assertEqual(recorder.__class__, LoggingRecorder)
+        self.assertEqual(recorder.procname, 'name')
+        self.assertEqual(recorder.channel, 'stderr')
+        self.assertEqual(recorder.options, options)
+        self.assertEqual(recorder.mainlog.__class__, DummyLogger)
+        self.assertEqual(recorder.mainlog.args, (
+            ('stderr_logfile', 20, '%(message)s'),
+            {'rotating': True,
+             'backups': 'stderr_logfile_backups',
+             'maxbytes': 'stderr_logfile_maxbytes'}
+            ))
+        self.assertEqual(recorder.childlog, recorder.mainlog)
+        self.assertEqual(recorder.capturelog.__class__, DummyLogger)
+        self.assertEqual(recorder.capturelog.args,
+                         (('stderr_capturefile', 20, '%(message)s'),
+                          {'rotating': False}))
+
+    def test_make_stderr_recorder_nocapture(self):
+        options = DummyOptions()
+        instance = self._makeOne(options)
+        instance.redirect_stderr = False
+        instance.stderr_capturefile = None
+        recorder = instance.make_stderr_recorder()
+        from supervisor.recorders import LoggingRecorder
+        self.assertEqual(recorder.capturelog, None)
+
+    def test_make_stdout_recorder(self):
+        options = DummyOptions()
+        instance = self._makeOne(options)
+        recorder = instance.make_stdout_recorder()
+        from supervisor.recorders import LoggingRecorder
+        self.assertEqual(recorder.__class__, LoggingRecorder)
+        self.assertEqual(recorder.procname, 'name')
+        self.assertEqual(recorder.channel, 'stdout')
+        self.assertEqual(recorder.options, options)
+        self.assertEqual(recorder.mainlog.__class__, DummyLogger)
+        self.assertEqual(recorder.mainlog.args, (
+            ('stdout_logfile', 20, '%(message)s'),
+            {'rotating': True,
+             'backups': 'stdout_logfile_backups',
+             'maxbytes': 'stdout_logfile_maxbytes'}
+            ))
+        self.assertEqual(recorder.childlog, recorder.mainlog)
+        self.assertEqual(recorder.capturelog.__class__, DummyLogger)
+        self.assertEqual(recorder.capturelog.args,
+                         (('stdout_capturefile', 20, '%(message)s'),
+                          {'rotating': False}))
+
+    def test_make_stdout_recorder_nocapture(self):
+        options = DummyOptions()
+        instance = self._makeOne(options)
+        instance.redirect_stderr = False
+        instance.stdout_capturefile = None
+        recorder = instance.make_stdout_recorder()
+        from supervisor.recorders import LoggingRecorder
+        self.assertEqual(recorder.capturelog, None)
             
 class BasicAuthTransportTests(unittest.TestCase):
     def _getTargetClass(self):

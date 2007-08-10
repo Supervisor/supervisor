@@ -419,6 +419,12 @@ class DummyPConfig:
     def create_autochildlogs(self):
         self.autochildlogs_created = True
 
+    def make_stdout_recorder(self):
+        return DummyRecorder()
+
+    def make_stderr_recorder(self):
+        return DummyRecorder()
+
 def makeExecutable(file, substitutions=None):
     import os
     import sys
@@ -695,6 +701,13 @@ class PopulatedDummySupervisor(DummySupervisor):
 class DummyRecorder:
     def __init__(self):
         self.output_buffer = ''
+        self.childlog = DummyLogger()
+        self.mainlog = self.childlog
+        self.output_buffer = ''
+        self.output_recorded = ''
+
+    def record_output(self):
+        self.output_recorded += self.output_buffer
 
 class DummyDispatcher:
     write_event_handled = False

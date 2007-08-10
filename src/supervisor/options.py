@@ -1459,6 +1459,30 @@ class ProcessConfig(Config):
             dir=self.options.childlogdir)
         return logfile
 
+    def make_stderr_recorder(self):
+        from supervisor.recorders import LoggingRecorder
+        if self.stderr_logfile and not self.redirect_stderr:
+            return LoggingRecorder(
+                options = self.options,
+                procname = self.name,
+                channel = 'stderr',
+                logfile = self.stderr_logfile,
+                logfile_backups = self.stderr_logfile_backups,
+                logfile_maxbytes = self.stderr_logfile_maxbytes,
+                capturefile = self.stderr_capturefile)
+
+    def make_stdout_recorder(self):
+        from supervisor.recorders import LoggingRecorder
+        if self.stdout_logfile:
+            return LoggingRecorder(
+                options = self.options,
+                procname = self.name,
+                channel = 'stdout',
+                logfile = self.stdout_logfile,
+                logfile_backups = self.stdout_logfile_backups,
+                logfile_maxbytes = self.stdout_logfile_maxbytes,
+                capturefile = self.stdout_capturefile)
+
 class ProcessGroupConfig(Config):
     def __init__(self, options, name, priority, process_configs):
         self.options = options
