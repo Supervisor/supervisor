@@ -708,7 +708,7 @@ class ServerOptions(Options):
                 ProcessGroupConfig(self, group_name, priority, group_processes)
                 )
 
-        # process homogeneous groups
+        # process "normal" homogeneous groups
         for section in all_sections:
             if ( (not section.startswith('program:') )
                  or section in homogeneous_exclude ):
@@ -718,6 +718,31 @@ class ServerOptions(Options):
             processes=self.processes_from_section(parser, section, program_name)
             groups.append(
                 ProcessGroupConfig(self, program_name, priority, processes)
+                )
+
+        # process "event listener" homogeneous groups
+        for section in all_sections:
+            if not section.startswith('eventlistener:'):
+                 continue
+            pool_name = section.split(':', 1)[1]
+            priority = integer(get(section, 'priority', 999))
+            pool_event_names = [x.upper() for x in
+                                list_of_strings(get(section, 'events', ''))]
+            if not pool_event_names:
+                raise ValueError('[%s] section requires an "events" line' %
+                                 section)
+            from supervisor.events import EVENT_NAMES
+            pool_events = []
+            for pool_event_name in pool_event_names:
+                pool_event = EVENT_NAMES.get(pool_event_name)
+                if pool_event is None:
+                    raise ValueError('Unknown event type %s in [%s] events' %
+                                     (pool_event_name, section))
+                pool_events.append(pool_event)
+            processes=self.processes_from_section(parser, section, pool_name)
+            groups.append(
+                EventListenerPoolConfig(self, pool_name, priority, processes,
+                                        pool_events)
                 )
 
         groups.sort()
@@ -1161,10 +1186,6 @@ class ServerOptions(Options):
         from supervisor.process import Subprocess
         return Subprocess(config)
 
-    def make_group(self, config):
-        from supervisor.process import ProcessGroup
-        return ProcessGroup(config)
-
     def make_pipes(self, stderr=True):
         """ Create pipes for parent to child stdin/stdout/stderr
         communications.  Open fd in nonblocking mode so we can read them
@@ -1493,6 +1514,26 @@ class ProcessGroupConfig(Config):
     def after_setuid(self):
         for config in self.process_configs:
             config.create_autochildlogs()
+
+    def make_group(self):
+        from supervisor.process import ProcessGroup
+        return ProcessGroup(self)
+
+class EventListenerPoolConfig(Config):
+    def __init__(self, options, name, priority, process_configs, pool_events):
+        self.options = options
+        self.name = name
+        self.priority = priority
+        self.process_configs = process_configs
+        self.pool_events = pool_events
+
+    def after_setuid(self):
+        for config in self.process_configs:
+            config.create_autochildlogs()
+
+    def make_group(self):
+        from supervisor.process import ProcessGroup
+        return ProcessGroup(self)
 
 class BasicAuthTransport(xmlrpclib.Transport):
     """ A transport that understands basic auth and UNIX domain socket

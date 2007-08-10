@@ -9,6 +9,7 @@ import signal
 
 from supervisor.tests.base import DummyLogger
 from supervisor.tests.base import DummyOptions
+from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import lstrip
 
 class ServerOptionsTests(unittest.TestCase):
@@ -439,7 +440,69 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(gconfig.name, 'many')
         self.assertEqual(gconfig.priority, 1)
         self.assertEqual(len(gconfig.process_configs), 2)
-        
+
+    def test_event_listener_pools_from_parser(self):
+        text = lstrip("""\
+        [eventlistener:dog]
+        events=PROCESS_COMMUNICATION_EVENT
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/dog
+        numprocs = 2
+        priority = 1
+
+        [eventlistener:cat]
+        events=PROCESS_COMMUNICATION_EVENT
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/cat
+        numprocs = 3
+        priority = 1
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        gconfigs = instance.process_groups_from_parser(config)
+        self.assertEqual(len(gconfigs), 2)
+
+        gconfig1 = gconfigs[0]
+        self.assertEqual(gconfig1.name, 'dog')
+        self.assertEqual(gconfig1.priority, 1)
+        self.assertEqual(len(gconfig1.process_configs), 2)
+
+        gconfig1 = gconfigs[1]
+        self.assertEqual(gconfig1.name, 'cat')
+        self.assertEqual(gconfig1.priority, 1)
+        self.assertEqual(len(gconfig1.process_configs), 3)
+
+    def test_event_listener_pool_noeventsline(self):
+        text = lstrip("""\
+        [eventlistener:dog]
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/dog
+        numprocs = 2
+        priority = 1
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError,instance.process_groups_from_parser,config)
+
+    def test_event_listener_pool_unknown_eventtype(self):
+        text = lstrip("""\
+        [eventlistener:dog]
+        events=PROCESS_COMMUNICATION_EVENT,THIS_EVENT_TYPE_DOESNT_EXIST
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/dog
+        numprocs = 2
+        priority = 1
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError,instance.process_groups_from_parser,config)
+
     def test_heterogeneous_process_groups_from_parser(self):
         text = lstrip("""\
         [program:one]
@@ -651,6 +714,37 @@ class TestProcessConfig(unittest.TestCase):
         recorder = instance.make_stdout_recorder()
         from supervisor.recorders import LoggingRecorder
         self.assertEqual(recorder.capturelog, None)
+
+class ProcessGroupConfigTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.options import ProcessGroupConfig
+        return ProcessGroupConfig
+
+    def _makeOne(self, options, name, priority, pconfigs):
+        return self._getTargetClass()(options, name, priority, pconfigs)
+
+    def test_ctor(self):
+        options = DummyOptions()
+        instance = self._makeOne(options, 'whatever', 999, [])
+        self.assertEqual(instance.options, options)
+        self.assertEqual(instance.name, 'whatever')
+        self.assertEqual(instance.priority, 999)
+        self.assertEqual(instance.process_configs, [])
+    
+    def test_after_setuid(self):
+        options = DummyOptions()
+        pconfigs = [DummyPConfig(options, 'process1', '/bin/process1')]
+        instance = self._makeOne(options, 'whatever', 999, pconfigs)
+        instance.after_setuid()
+        self.assertEqual(pconfigs[0].autochildlogs_created, True)
+
+    def test_make_group(self):
+        options = DummyOptions()
+        pconfigs = [DummyPConfig(options, 'process1', '/bin/process1')]
+        instance = self._makeOne(options, 'whatever', 999, pconfigs)
+        group = instance.make_group()
+        from supervisor.process import ProcessGroup
+        self.assertEqual(group.__class__, ProcessGroup)
             
 class BasicAuthTransportTests(unittest.TestCase):
     def _getTargetClass(self):

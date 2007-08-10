@@ -100,7 +100,7 @@ class Supervisor:
         try:
             for config in self.options.process_group_configs:
                 name = config.name
-                self.process_groups[name] = self.options.make_group(config)
+                self.process_groups[name] = config.make_group()
             self.options.process_environment()
             self.options.openhttpserver(self)
             self.options.setsignals()

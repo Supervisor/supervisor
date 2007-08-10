@@ -114,9 +114,6 @@ class DummyOptions:
     def make_process(self, config):
         return DummyProcess(config)
 
-    def make_group(self, config):
-        return DummyProcessGroup(config)
-
     def kill(self, pid, sig):
         if self.kill_error:
             raise OSError(self.kill_error)
@@ -650,6 +647,9 @@ class DummyPGroupConfig:
 
     def after_setuid(self):
         self.after_setuid_called = True
+
+    def make_group(self):
+        return DummyProcessGroup(self)
 
 class DummyProcessGroup:
     def __init__(self, config):

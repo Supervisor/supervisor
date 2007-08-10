@@ -30,3 +30,7 @@ class ProcessCommunicationEvent:
         self.process_name = process_name
         self.channel = channel
         self.data = data
+
+EVENT_NAMES = {
+    'PROCESS_COMMUNICATION_EVENT':ProcessCommunicationEvent,
+    }
