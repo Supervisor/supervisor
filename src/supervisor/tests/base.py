@@ -102,6 +102,9 @@ class DummyOptions:
     def clear_autochildlogdir(self):
         self.autochildlogdir_cleared = True
 
+    def get_autochildlog_name(self, *ignored):
+        return self.tempfile_name
+
     def cleanup(self):
         self.cleaned_up = True
 

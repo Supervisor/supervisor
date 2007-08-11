@@ -780,6 +780,16 @@ class ServerOptions(Options):
                     '%(process_num) must be present within process_name when '
                     'numprocs > 1')
 
+        for n in ('stdout_logfile', 'stderr_logfile'):
+            lf_name = logfile_name(get(section, n, None))
+            mb_key = '%s_maxbytes' % n
+            maxbytes = byte_size(get(section, mb_key, '50MB'))
+            if not maxbytes and lf_name is Automatic:
+                self.logger.warn(
+                    'For [%s], AUTO logging used for %s without '
+                    'rollover, set maxbytes > 0 to avoid filling up '
+                    'filesystem unintentionally' % (section, n))
+                
         for process_num in range(0, numprocs):
 
             expansions = {'process_num':process_num,
@@ -971,6 +981,14 @@ class ServerOptions(Options):
             self.unlink_socketfile = False
         except ValueError, why:
             self.usage(why[0])
+
+    def get_autochildlog_name(self, name, identifier, channel):
+        prefix='%s-%s---%s-' % (name, channel, identifier)
+        logfile = self.mktempfile(
+            suffix='.log',
+            prefix=prefix,
+            dir=self.childlogdir)
+        return logfile
 
     def clear_autochildlogdir(self):
         # must be called after realize()
@@ -1450,32 +1468,18 @@ class ProcessConfig(Config):
 
     def create_autochildlogs(self):
         # temporary logfiles which are erased at start time
+        get_autoname = self.options.get_autochildlog_name
+        sid = self.options.identifier
+        name = self.name
         if self.stdout_logfile is Automatic:
-            self.stdout_logfile = self._getautolog(self.name,
-                                                  self.options.identifier,
-                                                  'stdout')
+            self.stdout_logfile = get_autoname(name, sid, 'stdout')
         if self.stderr_logfile is Automatic:
-            self.stderr_logfile = self._getautolog(self.name,
-                                                   self.options.identifier,
-                                                   'stderr')
+            self.stderr_logfile = get_autoname(name, sid, 'stderr')
         if self.stdout_capturefile is Automatic:
-            self.stdout_capturefile = self._getautolog(self.name,
-                                                       self.options.identifier,
-                                                       'stdout_capture')
+            self.stdout_capturefile = get_autoname(name, sid, 'stdout_capture')
         if self.stderr_capturefile is Automatic:
-            self.stderr_capturefile = self._getautolog(self.name,
-                                                       self.options.identifier,
-                                                       'stderr_capture')
+            self.stderr_capturefile = get_autoname(name, sid, 'stderr_capture')
             
-
-    def _getautolog(self, name, identifier, channel):
-        prefix='%s-%s---%s-' % (name, channel, identifier)
-        logfile = self.options.mktempfile(
-            suffix='.log',
-            prefix=prefix,
-            dir=self.options.childlogdir)
-        return logfile
-
     def make_stderr_recorder(self):
         from supervisor.recorders import LoggingRecorder
         if self.stderr_logfile and not self.redirect_stderr:

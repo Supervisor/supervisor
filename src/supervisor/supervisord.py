@@ -31,7 +31,7 @@ Options:
 -i/--identifier STR -- identifier used for this instance of supervisord
 -q/--childlogdir DIRECTORY -- the log directory for child process logs
 -k/--nocleanup --  prevent the process from performing cleanup (removal of
-                   orphaned child log files, etc.) at startup.
+                   old automatic child log files) at startup.
 -w/--http_port SOCKET -- the host/port that the HTTP server should listen on
 -g/--http_username STR -- the username for HTTP auth
 -r/--http_password STR -- the password for HTTP auth

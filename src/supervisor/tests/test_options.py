@@ -6,6 +6,7 @@ import tempfile
 import socket
 import unittest
 import signal
+import shutil
 
 from supervisor.tests.base import DummyLogger
 from supervisor.tests.base import DummyOptions
@@ -396,7 +397,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertRaises(ValueError, instance.processes_from_section,
                           config, 'program:foo', None)
 
-    def test_missing_replacement_in_process_name(self):
+    def test_processes_from_section_missing_replacement_in_process_name(self):
         instance = self._makeOne()
         text = lstrip("""\
         [program:foo]
@@ -409,7 +410,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertRaises(ValueError, instance.processes_from_section,
                           config, 'program:foo', None)
 
-    def test_bad_expression_in_process_name(self):
+    def test_processes_from_section_bad_expression_in_process_name(self):
         instance = self._makeOne()
         text = lstrip("""\
         [program:foo]
@@ -422,6 +423,30 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertRaises(ValueError, instance.processes_from_section,
                           config, 'program:foo', None)
 
+    def test_processes_from_autolog_without_rollover(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo
+        stdout_logfile = AUTO
+        stdout_logfile_maxbytes = 0
+        stderr_logfile = AUTO
+        stderr_logfile_maxbytes = 0
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        instance.logger = DummyLogger()
+        config.read_string(text)
+        processes = instance.processes_from_section(config, 'program:foo', None)
+        self.assertEqual(instance.logger.data[0],
+             'For [program:foo], AUTO logging used for stdout_logfile '
+             'without rollover, set maxbytes > 0 to avoid filling up '
+              'filesystem unintentionally')
+        self.assertEqual(instance.logger.data[1],
+             'For [program:foo], AUTO logging used for stderr_logfile '
+             'without rollover, set maxbytes > 0 to avoid filling up '
+              'filesystem unintentionally')
+        
     def test_homogeneous_process_groups_from_parser(self):
         text = lstrip("""\
         [program:many]
@@ -622,7 +647,33 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(factory[0], 'dummy')
         self.assertEqual(factory[1], sys.modules[__name__])
         self.assertEqual(factory[2], {'foo':'bar'})
-        
+
+    def test_clear_autochildlogdir(self):
+        dn = tempfile.mkdtemp()
+        try:
+            instance = self._makeOne()
+            instance.childlogdir = dn
+            sid = 'supervisor'
+            instance.identifier = sid
+            logfn = instance.get_autochildlog_name('foo', sid,'stdout')
+            first = logfn + '.1'
+            second = logfn + '.2'
+            open(first, 'w')
+            open(second, 'w')
+            instance.clear_autochildlogdir()
+            self.failIf(os.path.exists(logfn))
+            self.failIf(os.path.exists(first))
+            self.failIf(os.path.exists(second))
+        finally:
+            shutil.rmtree(dn)
+
+    def test_clear_autochildlog_oserror(self):
+        instance = self._makeOne()
+        instance.childlogdir = '/tmp/this/cant/possibly/existjjjj'
+        instance.logger = DummyLogger()
+        instance.clear_autochildlogdir()
+        self.assertEqual(instance.logger.data, ['Could not clear childlog dir'])
+
 class TestProcessConfig(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ProcessConfig
