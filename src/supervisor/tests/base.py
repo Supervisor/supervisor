@@ -141,8 +141,7 @@ class DummyOptions:
             pipes['stderr'], pipes['child_stderr'] = (7, 8)
         else:
             pipes['stderr'], pipes['child_stderr'] = None, None
-        from supervisor.options import dictreverse
-        return pipes, dictreverse(pipes)
+        return pipes
 
     def write(self, fd, chars):
         if self.write_error:
@@ -420,15 +419,22 @@ class DummyPConfig:
     def create_autochildlogs(self):
         self.autochildlogs_created = True
 
-    def make_stdout_recorder(self):
-        return DummyRecorder()
-
-    def make_stderr_recorder(self):
-        return DummyRecorder()
-
     def make_process(self):
         return DummyProcess(self)
 
+    def make_dispatchers(self, proc):
+        use_stderr = not self.redirect_stderr
+        pipes = self.options.make_pipes(use_stderr)
+        stdout_fd,stderr_fd,stdin_fd = (pipes['stdout'],pipes['stderr'],
+                                        pipes['stdin'])
+        dispatchers = {}
+        if stdout_fd is not None:
+            dispatchers[stdout_fd] = DummyDispatcher(readable=True)
+        if stderr_fd is not None:
+            dispatchers[stderr_fd] = DummyDispatcher(readable=True)
+        if stdin_fd is not None:
+            dispatchers[stdin_fd] = DummyDispatcher(writable=True)
+        return dispatchers, pipes
 
 def makeExecutable(file, substitutions=None):
     import os
@@ -706,17 +712,6 @@ class PopulatedDummySupervisor(DummySupervisor):
         process = self.process_groups[group_name].processes[process_name]
         setattr(process, attr_name, val)
 
-class DummyRecorder:
-    def __init__(self):
-        self.output_buffer = ''
-        self.childlog = DummyLogger()
-        self.mainlog = self.childlog
-        self.output_buffer = ''
-        self.output_recorded = ''
-
-    def record_output(self):
-        self.output_recorded += self.output_buffer
-
 class DummyDispatcher:
     write_event_handled = False
     read_event_handled = False
@@ -725,6 +720,7 @@ class DummyDispatcher:
         self._readable = readable
         self._writable = writable
         self._error = error
+        self.input_buffer = ''
     def readable(self):
         return self._readable
     def writable(self):

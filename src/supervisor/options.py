@@ -1200,47 +1200,6 @@ class ServerOptions(Options):
         for msg in info_messages:
             self.logger.info(msg)
 
-    def make_pipes(self, stderr=True):
-        """ Create pipes for parent to child stdin/stdout/stderr
-        communications.  Open fd in nonblocking mode so we can read them
-        in the mainloop without blocking.  If stderr is False, don't
-        create a pipe for stderr. """
-
-        pipes = {'child_stdin':None,
-                 'stdin':None,
-                 'stdout':None,
-                 'child_stdout':None,
-                 'stderr':None,
-                 'child_stderr':None}
-        try:
-            stdin, child_stdin = os.pipe()
-            pipes['child_stdin'], pipes['stdin'] = stdin, child_stdin
-            stdout, child_stdout = os.pipe()
-            pipes['stdout'], pipes['child_stdout'] = stdout, child_stdout
-            if stderr:
-                stderr, child_stderr = os.pipe()
-                pipes['stderr'], pipes['child_stderr'] = stderr, child_stderr
-            for fd in (pipes['stdout'], pipes['stderr'], pipes['stdin']):
-                if fd is not None:
-                    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | os.O_NDELAY)
-            return pipes, dictreverse(pipes)
-        except OSError:
-            for fd in pipes.values():
-                if fd is not None:
-                    self.close_fd(fd)
-
-    def close_parent_pipes(self, pipes):
-        for fdname in ('stdin', 'stdout', 'stderr'):
-            fd = pipes[fdname]
-            if fd is not None:
-                self.close_fd(fd)
-
-    def close_child_pipes(self, pipes):
-        for fdname in ('child_stdin', 'child_stdout', 'child_stderr'):
-            fd = pipes[fdname]
-            if fd is not None:
-                self.close_fd(fd)
-
     def close_fd(self, fd):
         try:
             os.close(fd)
@@ -1322,6 +1281,46 @@ class ServerOptions(Options):
     def open(self, fn, mode='r'):
         return open(fn, mode)
         
+    def make_pipes(self, stderr=True):
+        """ Create pipes for parent to child stdin/stdout/stderr
+        communications.  Open fd in nonblocking mode so we can read them
+        in the mainloop without blocking.  If stderr is False, don't
+        create a pipe for stderr. """
+
+        pipes = {'child_stdin':None,
+                 'stdin':None,
+                 'stdout':None,
+                 'child_stdout':None,
+                 'stderr':None,
+                 'child_stderr':None}
+        try:
+            stdin, child_stdin = os.pipe()
+            pipes['child_stdin'], pipes['stdin'] = stdin, child_stdin
+            stdout, child_stdout = os.pipe()
+            pipes['stdout'], pipes['child_stdout'] = stdout, child_stdout
+            if stderr:
+                stderr, child_stderr = os.pipe()
+                pipes['stderr'], pipes['child_stderr'] = stderr, child_stderr
+            for fd in (pipes['stdout'], pipes['stderr'], pipes['stdin']):
+                if fd is not None:
+                    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | os.O_NDELAY)
+            return pipes
+        except OSError:
+            for fd in pipes.values():
+                if fd is not None:
+                    self.close_fd(fd)
+
+    def close_parent_pipes(self, pipes):
+        for fdname in ('stdin', 'stdout', 'stderr'):
+            fd = pipes[fdname]
+            if fd is not None:
+                self.close_fd(fd)
+
+    def close_child_pipes(self, pipes):
+        for fdname in ('child_stdin', 'child_stdout', 'child_stderr'):
+            fd = pipes[fdname]
+            if fd is not None:
+                self.close_fd(fd)
 
 class ClientOptions(Options):
     positional_args_allowed = 1
@@ -1480,33 +1479,24 @@ class ProcessConfig(Config):
         if self.stderr_capturefile is Automatic:
             self.stderr_capturefile = get_autoname(name, sid, 'stderr_capture')
             
-    def make_stderr_recorder(self):
-        from supervisor.recorders import LoggingRecorder
-        if self.stderr_logfile and not self.redirect_stderr:
-            return LoggingRecorder(
-                options = self.options,
-                procname = self.name,
-                channel = 'stderr',
-                logfile = self.stderr_logfile,
-                logfile_backups = self.stderr_logfile_backups,
-                logfile_maxbytes = self.stderr_logfile_maxbytes,
-                capturefile = self.stderr_capturefile)
-
-    def make_stdout_recorder(self):
-        from supervisor.recorders import LoggingRecorder
-        if self.stdout_logfile:
-            return LoggingRecorder(
-                options = self.options,
-                procname = self.name,
-                channel = 'stdout',
-                logfile = self.stdout_logfile,
-                logfile_backups = self.stdout_logfile_backups,
-                logfile_maxbytes = self.stdout_logfile_maxbytes,
-                capturefile = self.stdout_capturefile)
-
     def make_process(self):
         from supervisor.process import Subprocess
         return Subprocess(self)
+
+    def make_dispatchers(self, proc):
+        use_stderr = not self.redirect_stderr
+        p = self.options.make_pipes(use_stderr)
+        stdout_fd,stderr_fd,stdin_fd = p['stdout'],p['stderr'],p['stdin']
+        dispatchers = {}
+        from supervisor.dispatchers import POutputDispatcher
+        from supervisor.dispatchers import PInputDispatcher
+        if stdout_fd is not None:
+            dispatchers[stdout_fd] = POutputDispatcher(proc,'stdout', stdout_fd)
+        if stderr_fd is not None:
+            dispatchers[stderr_fd] = POutputDispatcher(proc,'stderr', stderr_fd)
+        if stdin_fd is not None:
+            dispatchers[stdin_fd] = PInputDispatcher(proc, 'stdin', stdin_fd)
+        return dispatchers, p
 
 class ProcessGroupConfig(Config):
     def __init__(self, options, name, priority, process_configs):
@@ -1810,12 +1800,6 @@ def split_namespec(namespec):
         # group name is same as process name
         group_name, process_name = namespec, namespec
     return group_name, process_name
-
-def dictreverse(d):
-    new = {}
-    for k, v in d.items():
-        new[v] = k
-    return new
 
 class ProcessException(Exception):
     """ Specialized exceptions used when attempting to start a process """

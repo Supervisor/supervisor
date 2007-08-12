@@ -8,7 +8,7 @@ from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummyPGroupConfig
-from supervisor.tests.base import DummyRecorder
+from supervisor.tests.base import DummyDispatcher
 
 class SubprocessTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -35,18 +35,8 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.killing, 0)
         self.assertEqual(instance.backoff, 0)
         self.assertEqual(instance.pipes, {})
+        self.assertEqual(instance.dispatchers, {})
         self.assertEqual(instance.spawnerr, None)
-        self.assertEqual(instance.stdout_recorder.output_buffer, '')
-        self.assertEqual(instance.stderr_recorder.output_buffer, '')
-
-    def test_record_output_no_recorders_doesnt_barf(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'notthere', '/notthere')
-        instance = self._makeOne(config)
-        instance.stdout_recorder = None
-        instance.stderr_recorder = None
-        instance.record_output()
-        self.assertEqual(options.logger.data, [])
 
     def test_drain(self):
         options = DummyOptions()
@@ -54,18 +44,11 @@ class SubprocessTests(unittest.TestCase):
                               stdout_logfile='/tmp/foo',
                               stderr_logfile='/tmp/bar')
         instance = self._makeOne(config)
-        instance.pipes['stdout'] = 1
-        instance.pipes['stderr'] = 2
-        instance.pipes['stdin'] = 3
-        instance.rpipes[1] = 'stdout'
-        instance.rpipes[2] = 'stderr'
-        instance.rpipes[3] = 'stdin'
-        instance.stdin_buffer = 'foo'
-        options.readfd_result = 'abc'
+        instance.dispatchers = {0:DummyDispatcher(readable=True),
+                                1:DummyDispatcher(writable=True)}
         instance.drain()
-        self.assertEqual(instance.stdout_recorder.output_buffer, 'abc')
-        self.assertEqual(instance.stderr_recorder.output_buffer, 'abc')
-        self.assertEqual(options.written[3], 'foo')
+        self.assertTrue(instance.dispatchers[0].read_event_handled)
+        self.assertTrue(instance.dispatchers[1].write_event_handled)
         
     def test_get_execv_args_abs_missing(self):
         options = DummyOptions()
@@ -299,16 +282,12 @@ class SubprocessTests(unittest.TestCase):
         instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, 10)
-        from supervisor.process import PInputDispatcher, POutputDispatcher
-        self.assertEqual(instance.dispatchers[4].__class__, PInputDispatcher)
-        self.assertEqual(instance.dispatchers[5].__class__, POutputDispatcher)
-        self.assertEqual(instance.dispatchers[7].__class__, POutputDispatcher)
+        self.assertEqual(instance.dispatchers[4].__class__, DummyDispatcher)
+        self.assertEqual(instance.dispatchers[5].__class__, DummyDispatcher)
+        self.assertEqual(instance.dispatchers[7].__class__, DummyDispatcher)
         self.assertEqual(instance.pipes['stdin'], 4)
         self.assertEqual(instance.pipes['stdout'], 5)
         self.assertEqual(instance.pipes['stderr'], 7)
-        self.assertEqual(instance.rpipes[4], 'stdin')
-        self.assertEqual(instance.rpipes[5], 'stdout')
-        self.assertEqual(instance.rpipes[7], 'stderr')
         self.assertEqual(options.parent_pipes_closed, None)
         self.assertEqual(len(options.child_pipes_closed), 6)
         self.assertEqual(options.logger.data[0], "spawned: 'good' with pid 10")
@@ -326,8 +305,8 @@ class SubprocessTests(unittest.TestCase):
         options.forkpid = 1
         result = instance.spawn()
         instance.write(sent)
-        received = instance.stdin_buffer
-        self.assertEqual(sent, received)
+        stdin_fd = instance.pipes['stdin']
+        self.assertEqual(sent, instance.dispatchers[stdin_fd].input_buffer)
         instance.killing = True
         self.assertRaises(IOError, instance.write, sent)
 
@@ -430,14 +409,11 @@ class SubprocessTests(unittest.TestCase):
         instance.killing = 1
         pipes = {'stdout':'','stderr':''}
         instance.pipes = pipes
-        from supervisor.options import dictreverse
-        instance.rpipes = dictreverse(pipes)
         instance.finish(123, 1)
         self.assertEqual(instance.killing, 0)
         self.assertEqual(instance.pid, 0)
         self.assertEqual(options.parent_pipes_closed, pipes)
         self.assertEqual(instance.pipes, {})
-        self.assertEqual(instance.rpipes, {})
         self.assertEqual(instance.dispatchers, {})
         self.assertEqual(options.logger.data[0], 'stopped: notthere '
                          '(terminated by SIGHUP)')
@@ -451,15 +427,12 @@ class SubprocessTests(unittest.TestCase):
         instance.config.options.pidhistory[123] = instance
         pipes = {'stdout':'','stderr':''}
         instance.pipes = pipes
-        from supervisor.options import dictreverse
-        instance.rpipes = dictreverse(pipes)
         instance.config.exitcodes =[-1]
         instance.finish(123, 1)
         self.assertEqual(instance.killing, 0)
         self.assertEqual(instance.pid, 0)
         self.assertEqual(options.parent_pipes_closed, pipes)
         self.assertEqual(instance.pipes, {})
-        self.assertEqual(instance.rpipes, {})
         self.assertEqual(instance.dispatchers, {})
         self.assertEqual(options.logger.data[0],
                          'exited: notthere (terminated by SIGHUP; expected)')
@@ -547,71 +520,6 @@ class SubprocessTests(unittest.TestCase):
         instance.laststart = 1
         self.assertEqual(instance.get_state(), ProcessStates.UNKNOWN)
 
-    def test_drain_output_fd(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'test', '/test')
-        instance = self._makeOne(config)
-        instance.rpipes[0] = 'stdout'
-        instance.pipes['stdout'] = 0
-        recorder = DummyRecorder()
-        instance.stdout_recorder = recorder
-        options.readfd_result = 'hello'
-        instance.drain_output_fd(0)
-        self.assertEqual(recorder.output_buffer, 'hello')
-
-    def test_drain_input_fd(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'test', '/test')
-        instance = self._makeOne(config)
-        instance.stdin_buffer = 'halloooo'
-        instance.drain_input_fd(0)
-        self.assertEqual(options.written[0], 'halloooo')
-        
-    def test_drain_input_fd_nodata(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'test', '/test')
-        instance = self._makeOne(config)
-        self.assertEqual(instance.stdin_buffer, '')
-        instance.drain_input_fd(0)
-        self.assertEqual(instance.stdin_buffer, '')
-        self.assertEqual(options.written, {})
-
-    def test_drain_input_fd_epipe_raised(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'test', '/test')
-        instance = self._makeOne(config)
-        instance.stdin_buffer = 'halloooo'
-        import errno
-        options.write_error = errno.EPIPE
-        instance.drain_input_fd(0)
-        self.assertEqual(instance.stdin_buffer, '')
-        self.assertEqual(options.logger.data,
-            ["failed write to process 'test' stdin"])
-
-    def xtest_drain_input_fd_uncaught_raised(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'test', '/test')
-        instance = self._makeOne(config)
-        instance.stdin_buffer = 'halloooo'
-        import errno
-        options.write_error = errno.EBADF
-        self.assertRaises(OSError, instance.drain_input_fd, 0)
-        instance.drain_input_fd(0)
-        self.assertEqual(instance.stdin_buffer, '')
-        self.assertEqual(options.logger.data,
-            ["failed write to process 'test' stdin"])
-
-    def test_drain_input_fd_over_os_limit(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'test', '/test')
-        instance = self._makeOne(config)
-        options.write_accept = 1
-        instance.stdin_buffer = 'a' * (2 << 16)
-        instance.drain_input_fd(0)
-        self.assertEqual(len(instance.stdin_buffer), (2<<16) - 1)
-        self.assertEqual(options.written[0], 'a')
-
-
 class ProcessGroupTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.process import ProcessGroup
@@ -654,15 +562,11 @@ class ProcessGroupTests(unittest.TestCase):
         self.assertEqual(process1.backoff, 0)
         self.assertEqual(process1.delay, 0)
         self.assertEqual(process1.system_stop, 1)
-        self.assertEqual(process1.stdout_logged, 'abc')
-        self.assertEqual(process1.stderr_logged, 'def')
 
         # this implies RUNNING
         self.assertEqual(process2.backoff, 0)
         self.assertEqual(process2.delay, 0)
         self.assertEqual(process2.system_stop, 0)
-        self.assertEqual(process2.stdout_logged, 'abc')
-        self.assertEqual(process2.stderr_logged, 'def')
 
     def test_get_delay_processes(self):
         options = DummyOptions()
@@ -804,72 +708,6 @@ class ProcessGroupTests(unittest.TestCase):
         result= group.get_dispatchers()
         self.assertEqual(result, {4:None, 5:None})
         
-
-class POutputDispatcherTests(unittest.TestCase):
-    def _getTargetClass(self):
-        from supervisor.process import POutputDispatcher
-        return POutputDispatcher
-
-    def _makeOne(self):
-        process = DummyProcess(None)
-        return self._getTargetClass()(process, 0)
-
-    def test_writable(self):
-        dispatcher = self._makeOne()
-        self.assertEqual(dispatcher.writable(), False)
-        
-    def test_readable(self):
-        dispatcher = self._makeOne()
-        self.assertEqual(dispatcher.readable(), True)
-
-    def test_handle_write_event(self):
-        dispatcher = self._makeOne()
-        self.assertRaises(NotImplementedError, dispatcher.handle_write_event)
-
-    def test_handle_read_event(self):
-        dispatcher = self._makeOne()
-        self.assertEqual(dispatcher.handle_read_event(), None)
-        self.assertEqual(dispatcher.process.output_fd_drained, 0)
-        
-    def test_handle_error(self):
-        dispatcher = self._makeOne()
-        self.assertRaises(NotImplementedError, dispatcher.handle_error)
-
-class PInputDispatcherTests(unittest.TestCase):
-    def _getTargetClass(self):
-        from supervisor.process import PInputDispatcher
-        return PInputDispatcher
-
-    def _makeOne(self):
-        process = DummyProcess(None)
-        return self._getTargetClass()(process, 0)
-
-    def test_writable_nodata(self):
-        dispatcher = self._makeOne()
-        dispatcher.process.stdin_buffer = 'a'
-        self.assertEqual(dispatcher.writable(), True)
-
-    def test_writable_withdata(self):
-        dispatcher = self._makeOne()
-        dispatcher.process.stdin_buffer = ''
-        self.assertEqual(dispatcher.writable(), False)
-
-    def test_readable(self):
-        dispatcher = self._makeOne()
-        self.assertEqual(dispatcher.readable(), False)
-
-    def test_handle_write_event(self):
-        dispatcher = self._makeOne()
-        self.assertEqual(dispatcher.handle_write_event(), None)
-        self.assertEqual(dispatcher.process.input_fd_drained, 0)
-
-    def test_handle_read_event(self):
-        dispatcher = self._makeOne()
-        self.assertRaises(NotImplementedError, dispatcher.handle_read_event)
-        
-    def test_handle_error(self):
-        dispatcher = self._makeOne()
-        self.assertRaises(NotImplementedError, dispatcher.handle_error)
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

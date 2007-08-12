@@ -12,6 +12,8 @@
 #
 ##############################################################################
 
+
+
 callbacks = []
 
 def subscribe(type, callback):
@@ -34,3 +36,8 @@ class ProcessCommunicationEvent:
 EVENT_NAMES = {
     'PROCESS_COMMUNICATION_EVENT':ProcessCommunicationEvent,
     }
+
+class EventListenerStates:
+    READY = 10
+    BUSY = 20
+    

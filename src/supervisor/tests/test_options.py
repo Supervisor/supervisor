@@ -11,6 +11,7 @@ import shutil
 from supervisor.tests.base import DummyLogger
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
+from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import lstrip
 
 class ServerOptionsTests(unittest.TestCase):
@@ -703,75 +704,32 @@ class TestProcessConfig(unittest.TestCase):
         self.assertEqual(instance.stdout_logfile, options.tempfile_name)
         self.assertEqual(instance.stderr_logfile, options.tempfile_name)
 
-    def test_make_stderr_recorder(self):
-        options = DummyOptions()
-        instance = self._makeOne(options)
-        instance.redirect_stderr = False
-        recorder = instance.make_stderr_recorder()
-        from supervisor.recorders import LoggingRecorder
-        self.assertEqual(recorder.__class__, LoggingRecorder)
-        self.assertEqual(recorder.procname, 'name')
-        self.assertEqual(recorder.channel, 'stderr')
-        self.assertEqual(recorder.options, options)
-        self.assertEqual(recorder.mainlog.__class__, DummyLogger)
-        self.assertEqual(recorder.mainlog.args, (
-            ('stderr_logfile', 20, '%(message)s'),
-            {'rotating': True,
-             'backups': 'stderr_logfile_backups',
-             'maxbytes': 'stderr_logfile_maxbytes'}
-            ))
-        self.assertEqual(recorder.childlog, recorder.mainlog)
-        self.assertEqual(recorder.capturelog.__class__, DummyLogger)
-        self.assertEqual(recorder.capturelog.args,
-                         (('stderr_capturefile', 20, '%(message)s'),
-                          {'rotating': False}))
-
-    def test_make_stderr_recorder_nocapture(self):
-        options = DummyOptions()
-        instance = self._makeOne(options)
-        instance.redirect_stderr = False
-        instance.stderr_capturefile = None
-        recorder = instance.make_stderr_recorder()
-        from supervisor.recorders import LoggingRecorder
-        self.assertEqual(recorder.capturelog, None)
-
-    def test_make_stdout_recorder(self):
-        options = DummyOptions()
-        instance = self._makeOne(options)
-        recorder = instance.make_stdout_recorder()
-        from supervisor.recorders import LoggingRecorder
-        self.assertEqual(recorder.__class__, LoggingRecorder)
-        self.assertEqual(recorder.procname, 'name')
-        self.assertEqual(recorder.channel, 'stdout')
-        self.assertEqual(recorder.options, options)
-        self.assertEqual(recorder.mainlog.__class__, DummyLogger)
-        self.assertEqual(recorder.mainlog.args, (
-            ('stdout_logfile', 20, '%(message)s'),
-            {'rotating': True,
-             'backups': 'stdout_logfile_backups',
-             'maxbytes': 'stdout_logfile_maxbytes'}
-            ))
-        self.assertEqual(recorder.childlog, recorder.mainlog)
-        self.assertEqual(recorder.capturelog.__class__, DummyLogger)
-        self.assertEqual(recorder.capturelog.args,
-                         (('stdout_capturefile', 20, '%(message)s'),
-                          {'rotating': False}))
-
-    def test_make_stdout_recorder_nocapture(self):
-        options = DummyOptions()
-        instance = self._makeOne(options)
-        instance.redirect_stderr = False
-        instance.stdout_capturefile = None
-        recorder = instance.make_stdout_recorder()
-        from supervisor.recorders import LoggingRecorder
-        self.assertEqual(recorder.capturelog, None)
-
     def test_make_process(self):
         options = DummyOptions()
         instance = self._makeOne(options)
         process = instance.make_process()
         from supervisor.process import Subprocess
         self.assertEqual(process.__class__, Subprocess)
+
+    def test_make_dispatchers_stderr_not_redirected(self):
+        options = DummyOptions()
+        instance = self._makeOne(options)
+        instance.redirect_stderr = False
+        process1 = DummyProcess(instance)
+        dispatchers, pipes = instance.make_dispatchers(process1)
+        self.assertEqual(dispatchers[5].channel, 'stdout')
+        self.assertEqual(pipes['stdout'], 5)
+        self.assertEqual(dispatchers[7].channel, 'stderr')
+        self.assertEqual(pipes['stderr'], 7)
+        
+    def test_make_dispatchers_stderr_redirected(self):
+        options = DummyOptions()
+        instance = self._makeOne(options)
+        process1 = DummyProcess(instance)
+        dispatchers, pipes = instance.make_dispatchers(process1)
+        self.assertEqual(dispatchers[5].channel, 'stdout')
+        self.assertEqual(pipes['stdout'], 5)
+        self.assertEqual(pipes['stderr'], None)
 
 class ProcessGroupConfigTests(unittest.TestCase):
     def _getTargetClass(self):

@@ -24,6 +24,8 @@ import signal
 from supervisor.options import decode_wait_status
 from supervisor.options import signame
 from supervisor.options import ProcessException
+from supervisor.dispatchers import POutputDispatcher
+from supervisor.dispatchers import PInputDispatcher
 
 class ProcessStates:
     STOPPED = 0
@@ -54,12 +56,8 @@ class Subprocess:
     system_stop = 0 # true if the process has been stopped by the system
     killing = 0 # flag determining whether we are trying to kill this proc
     backoff = 0 # backoff counter (to startretries)
-    pipes = None # mapping of channel name to pipe fd number
-    rpipes = None # mapping of pipe fd number to channel name
     dispatchers = None # asnycore output dispatchers (keyed by fd)
-    stdout_recorder = None # object that records stdout output
-    stderr_recorder = None # object that records stderr output
-    stdin_buffer = '' # buffer of characters to be sent to child's stdin
+    pipes = None # map of channel name to file descriptor #
     exitstatus = None # status attached to dead process by finsh()
     spawnerr = None # error message attached by spawn() if any
     
@@ -69,62 +67,33 @@ class Subprocess:
         Argument is a ProcessConfig instance.
         """
         self.config = config
-        self.pipes = {}
-        self.rpipes = {}
         self.dispatchers = {}
-        self.stdout_recorder = self.config.make_stdout_recorder()
-        self.stderr_recorder = self.config.make_stderr_recorder()
+        self.pipes = {}
 
     def removelogs(self):
-        for recorder in self.stdout_recorder, self.stderr_recorder:
-            if recorder is not None:
-                if hasattr(recorder, 'removelogs'):
-                    recorder.removelogs()
+        for dispatchers in self.dispatchers.values():
+            if dispatcher.readable():
+                dispatcher.removelogs()
 
     def reopenlogs(self):
-        for recorder in self.stdout_recorder, self.stderr_recorder:
-            if recorder is not None:
-                if hasattr(recorder, 'reopenlogs'):
-                    recorder.reopenlogs()
-
-    def record_output(self):
-        for recorder in self.stdout_recorder, self.stderr_recorder:
-            if recorder is not None:
-                recorder.record_output()
-
-    def drain_output_fd(self, fd):
-        output = self.config.options.readfd(fd)
-        name = '%s_recorder' % self.rpipes[fd]
-        getattr(self, name).output_buffer += output
-
-    def drain_input_fd(self, fd):
-        if self.stdin_buffer:
-            try:
-                sent = self.config.options.write(fd, self.stdin_buffer)
-                self.stdin_buffer = self.stdin_buffer[sent:]
-            except OSError, why:
-                if why[0] == errno.EPIPE:
-                    msg = 'failed write to process %r stdin' % self.config.name
-                    self.stdin_buffer = ''
-                    self.config.options.logger.info(msg)
-                else:
-                    raise
+        for dispatchers in self.dispatchers.values():
+            if dispatcher.readable():
+                dispatcher.reopenlogs()
 
     def drain(self):
-        stdout = self.pipes.get('stdout')
-        stderr = self.pipes.get('stderr')
-        stdin = self.pipes.get('stdin')
-        if stdout is not None:
-            self.drain_output_fd(stdout)
-        if stderr is not None:
-            self.drain_output_fd(stderr)
-        if stdin is not None:
-            self.drain_input_fd(stdin)
-
+        for dispatcher in self.dispatchers.values():
+            if dispatcher.readable():
+                dispatcher.handle_read_event()
+            if dispatcher.writable():
+                dispatcher.handle_write_event()
+                
     def write(self, chars):
         if not self.pid or self.killing:
             raise IOError(errno.EPIPE, "Process already closed")
-        self.stdin_buffer = self.stdin_buffer + chars
+        stdin_fd = self.pipes['stdin']
+        if stdin_fd is not None:
+            dispatcher = self.dispatchers[stdin_fd]
+            dispatcher.input_buffer += chars
 
     def get_execv_args(self):
         """Internal: turn a program name into a file name, using $PATH,
@@ -196,15 +165,7 @@ class Subprocess:
             return
 
         try:
-            use_stderr = not self.config.redirect_stderr
-            self.pipes, self.rpipes = options.make_pipes(use_stderr)
-            p = self.pipes
-            stdout_fd,stderr_fd,stdin_fd = p['stdout'],p['stderr'],p['stdin']
-            self.dispatchers = {} # clear
-            self.dispatchers[stdout_fd] = POutputDispatcher(self, stdout_fd)
-            if stderr_fd is not None:
-                self.dispatchers[stderr_fd] = POutputDispatcher(self,stderr_fd)
-            self.dispatchers[stdin_fd] = PInputDispatcher(self, stdin_fd)
+            self.dispatchers, self.pipes = self.config.make_dispatchers(self)
         except OSError, why:
             code = why[0]
             if code == errno.EMFILE:
@@ -331,7 +292,6 @@ class Subprocess:
         """ The process was reaped and we need to report and manage its state
         """
         self.drain()
-        self.record_output()
 
         es, msg = decode_wait_status(sts)
 
@@ -376,7 +336,6 @@ class Subprocess:
         self.pid = 0
         self.config.options.close_parent_pipes(self.pipes)
         self.pipes = {}
-        self.rpipes = {}
         self.dispatchers = {}
 
     def set_uid(self):
@@ -480,42 +439,6 @@ class ProcessGroupBase:
                 proc.backoff = 0
                 proc.system_stop = 1
 
-    def transition(self):
-        self.kill_undead()
-        now = time.time()
-
-        for proc in self.processes.values():
-            proc.record_output()
-            state = proc.get_state()
-
-            # we need to transition processes between BACKOFF ->
-            # FATAL and STARTING -> RUNNING within here
-            
-            logger = self.config.options.logger
-
-            if state == ProcessStates.BACKOFF:
-                if proc.backoff > proc.config.startretries:
-                    # BACKOFF -> FATAL if the proc has exceeded its number
-                    # of retries
-                    proc.delay = 0
-                    proc.backoff = 0
-                    proc.system_stop = 1
-                    msg = ('entered FATAL state, too many start retries too '
-                           'quickly')
-                    logger.info('gave up: %s %s' % (proc.config.name, msg))
-
-            elif state == ProcessStates.STARTING:
-                if now - proc.laststart > proc.config.startsecs:
-                    # STARTING -> RUNNING if the proc has started
-                    # successfully and it has stayed up for at least
-                    # proc.config.startsecs,
-                    proc.delay = 0
-                    proc.backoff = 0
-                    msg = (
-                        'entered RUNNING state, process has stayed up for '
-                        '> than %s seconds (startsecs)' % proc.config.startsecs)
-                    logger.info('success: %s %s' % (proc.config.name, msg))
-
     def get_delay_processes(self):
         """ Processes which are starting or stopping """
         return [ x for x in self.processes.values() if x.delay ]
@@ -550,55 +473,47 @@ class ProcessGroupBase:
             dispatchers.update(process.dispatchers)
         return dispatchers
 
+    def _transition_subprocess_supervisor_states(self):
+        now = time.time()
+
+        for proc in self.processes.values():
+            state = proc.get_state()
+
+            # we need to transition processes between BACKOFF ->
+            # FATAL and STARTING -> RUNNING within here
+            
+            logger = self.config.options.logger
+
+            if state == ProcessStates.BACKOFF:
+                if proc.backoff > proc.config.startretries:
+                    # BACKOFF -> FATAL if the proc has exceeded its number
+                    # of retries
+                    proc.delay = 0
+                    proc.backoff = 0
+                    proc.system_stop = 1
+                    msg = ('entered FATAL state, too many start retries too '
+                           'quickly')
+                    logger.info('gave up: %s %s' % (proc.config.name, msg))
+
+            elif state == ProcessStates.STARTING:
+                if now - proc.laststart > proc.config.startsecs:
+                    # STARTING -> RUNNING if the proc has started
+                    # successfully and it has stayed up for at least
+                    # proc.config.startsecs,
+                    proc.delay = 0
+                    proc.backoff = 0
+                    msg = (
+                        'entered RUNNING state, process has stayed up for '
+                        '> than %s seconds (startsecs)' % proc.config.startsecs)
+                    logger.info('success: %s %s' % (proc.config.name, msg))
+
 class ProcessGroup(ProcessGroupBase):
-    pass
+    def transition(self):
+        self.kill_undead()
+        self._transition_subprocess_supervisor_states()
 
 class EventListenerPool(ProcessGroupBase):
-    pass
-
-class PDispatcher:
-    """ Asyncore dispatcher for mainloop, representing a process channel
-    (stdin, stdout, or stderr).  This class is abstract. """
-    def __init__(self, process, fd):
-        self.process = process
-        self.fd = fd
-
-    def readable(self):
-        raise NotImplementedError
-
-    def writable(self):
-        raise NotImplementedError
-
-    def handle_read_event(self):
-        raise NotImplementedError
-
-    def handle_write_event(self):
-        raise NotImplementedError
-
-    def handle_error(self):
-        raise NotImplementedError
-
-class POutputDispatcher(PDispatcher):
-    """ Output (stdout/stderr) dispatcher """
-    def writable(self):
-        return False
-    
-    def readable(self):
-        return True
-
-    def handle_read_event(self):
-        self.process.drain_output_fd(self.fd)
-
-class PInputDispatcher(PDispatcher):
-    """ Input (stdin) dispatcher """
-    def writable(self):
-        if self.process.stdin_buffer:
-            return True
-        return False
-
-    def readable(self):
-        return False
-    
-    def handle_write_event(self):
-        self.process.drain_input_fd(self.fd)
+    def transition(self):
+        self.kill_undead()
+        self._transition_subprocess_supervisor_states()
 
