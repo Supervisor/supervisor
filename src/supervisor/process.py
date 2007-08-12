@@ -71,12 +71,12 @@ class Subprocess:
         self.pipes = {}
 
     def removelogs(self):
-        for dispatchers in self.dispatchers.values():
+        for dispatcher in self.dispatchers.values():
             if dispatcher.readable():
                 dispatcher.removelogs()
 
     def reopenlogs(self):
-        for dispatchers in self.dispatchers.values():
+        for dispatcher in self.dispatchers.values():
             if dispatcher.readable():
                 dispatcher.reopenlogs()
 

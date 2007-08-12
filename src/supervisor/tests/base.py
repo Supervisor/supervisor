@@ -716,6 +716,8 @@ class DummyDispatcher:
     write_event_handled = False
     read_event_handled = False
     error_handled = False
+    logs_reopened = False
+    logs_removed = False
     def __init__(self, readable=False, writable=False, error=False):
         self._readable = readable
         self._writable = writable
@@ -735,6 +737,10 @@ class DummyDispatcher:
         self.read_event_handled = True
     def handle_error(self):
         self.error_handled = True
+    def reopenlogs(self):
+        self.logs_reopened = True
+    def removelogs(self):
+        self.logs_removed = True
                 
         
 def lstrip(s):

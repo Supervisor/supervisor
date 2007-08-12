@@ -18,6 +18,12 @@ class SubprocessTests(unittest.TestCase):
     def _makeOne(self, *arg, **kw):
         return self._getTargetClass()(*arg, **kw)
 
+    def test_getProcessStateDescription(self):
+        from supervisor.process import ProcessStates
+        from supervisor.process import getProcessStateDescription
+        for statename, code in ProcessStates.__dict__.items():
+            self.assertEqual(getProcessStateDescription(code), statename)
+
     def test_ctor(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'cat', 'bin/cat',
@@ -37,6 +43,34 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.pipes, {})
         self.assertEqual(instance.dispatchers, {})
         self.assertEqual(instance.spawnerr, None)
+
+    def test_repr(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'cat', 'bin/cat')
+        instance = self._makeOne(config)
+        s = repr(instance)
+        self.assertTrue(s.startswith('<Subprocess at'))
+        self.assertTrue(s.endswith('with name cat in state STOPPED>'))
+
+    def test_reopenlogs(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        instance.dispatchers = {0:DummyDispatcher(readable=True),
+                                1:DummyDispatcher(writable=True)}
+        instance.reopenlogs()
+        self.assertEqual(instance.dispatchers[0].logs_reopened, True)
+        self.assertEqual(instance.dispatchers[1].logs_reopened, False)
+        
+    def test_removelogs(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        instance.dispatchers = {0:DummyDispatcher(readable=True),
+                                1:DummyDispatcher(writable=True)}
+        instance.removelogs()
+        self.assertEqual(instance.dispatchers[0].logs_removed, True)
+        self.assertEqual(instance.dispatchers[1].logs_removed, False)
 
     def test_drain(self):
         options = DummyOptions()
@@ -295,6 +329,20 @@ class SubprocessTests(unittest.TestCase):
         self.failUnless(instance.delay)
         self.assertEqual(instance.config.options.pidhistory[10], instance)
 
+    def test_spawn_redirect_stderr(self):
+        options = DummyOptions()
+        options.forkpid = 10
+        config = DummyPConfig(options, 'good', '/good/filename',
+                              redirect_stderr=True)
+        instance = self._makeOne(config)
+        result = instance.spawn()
+        self.assertEqual(result, 10)
+        self.assertEqual(instance.dispatchers[4].__class__, DummyDispatcher)
+        self.assertEqual(instance.dispatchers[5].__class__, DummyDispatcher)
+        self.assertEqual(instance.pipes['stdin'], 4)
+        self.assertEqual(instance.pipes['stdout'], 5)
+        self.assertEqual(instance.pipes['stderr'], None)
+
     def test_write(self):
         executable = '/bin/cat'
         options = DummyOptions()
@@ -528,6 +576,16 @@ class ProcessGroupTests(unittest.TestCase):
     def _makeOne(self, *args, **kw):
         return self._getTargetClass()(*args, **kw)
 
+    def test_repr(self):
+        options = DummyOptions()
+        gconfig = DummyPGroupConfig(options)
+        group = self._makeOne(gconfig)
+        s = repr(group)
+        self.assertTrue(s.startswith(
+            '<supervisor.process.ProcessGroup instance at'))
+        self.assertTrue(s.endswith('named whatever>'))
+
+
     def test_transition(self):
         options = DummyOptions()
 
@@ -707,6 +765,45 @@ class ProcessGroupTests(unittest.TestCase):
         group.processes = { 'process1': process1, 'process2': process2 }
         result= group.get_dispatchers()
         self.assertEqual(result, {4:None, 5:None})
+        
+    def test_reopenlogs(self):
+        options = DummyOptions()
+        from supervisor.process import ProcessStates
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        group = self._makeOne(gconfig)
+        group.processes = {'process1': process1}
+        group.reopenlogs()
+        self.assertEqual(process1.logs_reopened, True)
+
+    def test_removelogs(self):
+        options = DummyOptions()
+        from supervisor.process import ProcessStates
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        group = self._makeOne(gconfig)
+        group.processes = {'process1': process1}
+        group.removelogs()
+        self.assertEqual(process1.logsremoved, True)
+
+    def test_cmp(self):
+        options = DummyOptions()
+        gconfig1 = DummyPGroupConfig(options)
+        group1 = self._makeOne(gconfig1)
+        
+        gconfig2 = DummyPGroupConfig(options)
+        group2 = self._makeOne(gconfig2)
+
+        group1.priority = 5
+        group2.priority = 1
+
+        L = [group1, group2]
+        L.sort()
+
+        self.assertEqual(L, [group2, group1])
+
         
 
 def test_suite():
