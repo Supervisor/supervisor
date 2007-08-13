@@ -568,6 +568,54 @@ class SubprocessTests(unittest.TestCase):
         instance.laststart = 1
         self.assertEqual(instance.get_state(), ProcessStates.UNKNOWN)
 
+    def test_transition(self):
+        options = DummyOptions()
+
+        from supervisor.process import ProcessStates
+
+        # this should go from BACKOFF to FATAL via transition()
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = self._makeOne(pconfig1)
+        process1.laststart = 1
+        process1.backoff = 10000
+        process1.delay = 1
+        process1.system_stop = 0
+        process1.stdout_buffer = 'abc'
+        process1.stderr_buffer = 'def'
+
+        # this should go from STARTING to RUNNING via transition()
+        pconfig2 = DummyPConfig(options, 'process2', 'process2','/bin/process2')
+        process2 = self._makeOne(pconfig2)
+        process2.backoff = 1
+        process2.delay = 1
+        process2.system_stop = 0
+        process2.laststart = 1
+        process2.pid = 1
+        process2.stdout_buffer = 'abc'
+        process2.stderr_buffer = 'def'
+
+        process1.transition()
+
+        # this implies FATAL
+        self.assertEqual(process1.backoff, 0)
+        self.assertEqual(process1.delay, 0)
+        self.assertEqual(process1.system_stop, 1)
+        self.assertEqual(options.logger.data[0],
+                         'gave up: process1 entered FATAL state, too many start'
+                         ' retries too quickly')
+
+
+        process2.transition()
+
+        # this implies RUNNING
+        self.assertEqual(process2.backoff, 0)
+        self.assertEqual(process2.delay, 0)
+        self.assertEqual(process2.system_stop, 0)
+        self.assertEqual(options.logger.data[1],
+                         'success: process2 entered RUNNING state, process has '
+                         'stayed up for > than 10 seconds (startsecs)')
+
+
 class ProcessGroupTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.process import ProcessGroup
@@ -585,46 +633,6 @@ class ProcessGroupTests(unittest.TestCase):
             '<supervisor.process.ProcessGroup instance at'))
         self.assertTrue(s.endswith('named whatever>'))
 
-
-    def test_transition(self):
-        options = DummyOptions()
-
-        from supervisor.process import ProcessStates
-
-        # this should go to FATAL via transition()
-        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
-        process1 = DummyProcess(pconfig1, state=ProcessStates.BACKOFF)
-        process1.backoff = 10000
-        process1.delay = 1
-        process1.system_stop = 0
-        process1.stdout_buffer = 'abc'
-        process1.stderr_buffer = 'def'
-
-        # this should go to RUNNING via transition()
-        pconfig2 = DummyPConfig(options, 'process2', 'process2','/bin/process2')
-        process2 = DummyProcess(pconfig2, state=ProcessStates.STARTING)
-        process2.backoff = 1
-        process2.delay = 1
-        process2.system_stop = 0
-        process2.laststart = 1
-        process2.stdout_buffer = 'abc'
-        process2.stderr_buffer = 'def'
-
-        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1, pconfig2])
-        group = self._makeOne(gconfig)
-        group.processes = { 'process1': process1, 'process2': process2 }
-
-        group.transition()
-
-        # this implies FATAL
-        self.assertEqual(process1.backoff, 0)
-        self.assertEqual(process1.delay, 0)
-        self.assertEqual(process1.system_stop, 1)
-
-        # this implies RUNNING
-        self.assertEqual(process2.backoff, 0)
-        self.assertEqual(process2.delay, 0)
-        self.assertEqual(process2.system_stop, 0)
 
     def test_get_delay_processes(self):
         options = DummyOptions()
