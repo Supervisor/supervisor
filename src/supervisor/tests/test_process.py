@@ -18,6 +18,10 @@ class SubprocessTests(unittest.TestCase):
     def _makeOne(self, *arg, **kw):
         return self._getTargetClass()(*arg, **kw)
 
+    def tearDown(self):
+        from supervisor.events import clear
+        clear()
+
     def test_getProcessStateDescription(self):
         from supervisor.process import ProcessStates
         from supervisor.process import getProcessStateDescription
@@ -147,20 +151,32 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig(options, 'sh', '/bin/sh')
         instance = self._makeOne(config)
         instance.pid = True
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.RUNNING
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(options.logger.data[0], "process 'sh' already running")
+        self.assertEqual(instance.state, ProcessStates.RUNNING)
 
     def test_spawn_fail_check_execv_args(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'bad', '/bad/filename')
         instance = self._makeOne(config)
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.BACKOFF
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr, 'bad filename')
         self.assertEqual(options.logger.data[0], "spawnerr: bad filename")
         self.failUnless(instance.delay)
         self.failUnless(instance.backoff)
+        from supervisor.states import ProcessStates
+        self.assertEqual(instance.state, ProcessStates.BACKOFF)
+        self.assertEqual(L[0].__class__, events.StartingFromBackoffEvent)
+        self.assertEqual(L[1].__class__, events.BackoffFromStartingEvent)
 
     def test_spawn_fail_make_pipes_emfile(self):
         options = DummyOptions()
@@ -168,6 +184,11 @@ class SubprocessTests(unittest.TestCase):
         options.make_pipes_error = errno.EMFILE
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.BACKOFF
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr,
@@ -176,12 +197,21 @@ class SubprocessTests(unittest.TestCase):
                          "spawnerr: too many open files to spawn 'good'")
         self.failUnless(instance.delay)
         self.failUnless(instance.backoff)
+        from supervisor.states import ProcessStates
+        self.assertEqual(instance.state, ProcessStates.BACKOFF)
+        self.assertEqual(L[0].__class__, events.StartingFromBackoffEvent)
+        self.assertEqual(L[1].__class__, events.BackoffFromStartingEvent)
 
     def test_spawn_fail_make_pipes_other(self):
         options = DummyOptions()
         options.make_pipes_error = 1
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.BACKOFF
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
@@ -189,6 +219,10 @@ class SubprocessTests(unittest.TestCase):
                          "spawnerr: unknown error: EPERM")
         self.failUnless(instance.delay)
         self.failUnless(instance.backoff)
+        from supervisor.states import ProcessStates
+        self.assertEqual(instance.state, ProcessStates.BACKOFF)
+        self.assertEqual(L[0].__class__, events.StartingFromBackoffEvent)
+        self.assertEqual(L[1].__class__, events.BackoffFromStartingEvent)
 
     def test_spawn_fork_fail_eagain(self):
         options = DummyOptions()
@@ -196,6 +230,11 @@ class SubprocessTests(unittest.TestCase):
         options.fork_error = errno.EAGAIN
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.BACKOFF
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr,
@@ -206,12 +245,21 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.child_pipes_closed), 6)
         self.failUnless(instance.delay)
         self.failUnless(instance.backoff)
+        from supervisor.states import ProcessStates
+        self.assertEqual(instance.state, ProcessStates.BACKOFF)
+        self.assertEqual(L[0].__class__, events.StartingFromBackoffEvent)
+        self.assertEqual(L[1].__class__, events.BackoffFromStartingEvent)
 
     def test_spawn_fork_fail_other(self):
         options = DummyOptions()
         options.fork_error = 1
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.BACKOFF
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
@@ -221,6 +269,10 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.child_pipes_closed), 6)
         self.failUnless(instance.delay)
         self.failUnless(instance.backoff)
+        from supervisor.states import ProcessStates
+        self.assertEqual(instance.state, ProcessStates.BACKOFF)
+        self.assertEqual(L[0].__class__, events.StartingFromBackoffEvent)
+        self.assertEqual(L[1].__class__, events.BackoffFromStartingEvent)
 
     def test_spawn_as_child_setuid_ok(self):
         options = DummyOptions()
@@ -328,6 +380,8 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.spawnerr, None)
         self.failUnless(instance.delay)
         self.assertEqual(instance.config.options.pidhistory[10], instance)
+        from supervisor.states import ProcessStates
+        self.assertEqual(instance.state, ProcessStates.STARTING)
 
     def test_spawn_redirect_stderr(self):
         options = DummyOptions()
@@ -406,6 +460,10 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig(options, 'test', '/test')
         instance = self._makeOne(config)
         instance.pid = 11
+        dispatcher = DummyDispatcher(writable=True)
+        instance.dispatchers = {'foo':dispatcher}
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.RUNNING
         instance.stop()
         self.assertEqual(instance.administrative_stop, 1)
         self.failUnless(instance.delay)
@@ -413,6 +471,23 @@ class SubprocessTests(unittest.TestCase):
                          'signal SIGTERM')
         self.assertEqual(instance.killing, 1)
         self.assertEqual(options.kills[11], signal.SIGTERM)
+        self.assertEqual(dispatcher.write_event_handled, True)
+
+    def test_fatal(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        L = []
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        events.subscribe(events.FatalFromBackoffEvent, lambda x: L.append(x))
+        instance.state = ProcessStates.BACKOFF
+        instance.fatal()
+        self.assertEqual(instance.system_stop, 1)
+        self.assertFalse(instance.delay)
+        self.assertFalse(instance.backoff)
+        self.assertEqual(instance.state, ProcessStates.FATAL)
+        self.assertEqual(L[0].__class__, events.FatalFromBackoffEvent)
 
     def test_kill_nopid(self):
         options = DummyOptions()
@@ -428,24 +503,57 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig(options, 'test', '/test')
         options.kill_error = 1
         instance = self._makeOne(config)
+        L = []
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        events.subscribe(events.ProcessStateChangeEvent,
+                         lambda x: L.append(x))
         instance.pid = 11
+        instance.state = ProcessStates.RUNNING
         instance.kill(signal.SIGTERM)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
                          'signal SIGTERM')
         self.failUnless(options.logger.data[1].startswith(
             'unknown problem killing test'))
         self.assertEqual(instance.killing, 0)
+        self.assertEqual(L[0].__class__, events.StoppingFromRunningEvent)
+        self.assertEqual(L[1].__class__, events.ToUnknownEvent)
 
-    def test_kill(self):
+    def test_kill_from_starting(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test')
         instance = self._makeOne(config)
         instance.pid = 11
+        L = []
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        events.subscribe(events.StoppingFromStartingEvent,lambda x: L.append(x))
+        from supervisor.process import ProcessStates
+        instance.state = ProcessStates.STARTING
         instance.kill(signal.SIGTERM)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
                          'signal SIGTERM')
         self.assertEqual(instance.killing, 1)
         self.assertEqual(options.kills[11], signal.SIGTERM)
+        self.assertEqual(L[0].__class__, events.StoppingFromStartingEvent)
+
+    def test_kill_from_running(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        instance.pid = 11
+        L = []
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        events.subscribe(events.StoppingFromRunningEvent, lambda x: L.append(x))
+        from supervisor.process import ProcessStates
+        instance.state = ProcessStates.RUNNING
+        instance.kill(signal.SIGTERM)
+        self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
+                         'signal SIGTERM')
+        self.assertEqual(instance.killing, 1)
+        self.assertEqual(options.kills[11], signal.SIGTERM)
+        self.assertEqual(L[0].__class__, events.StoppingFromRunningEvent)
 
     def test_finish(self):
         options = DummyOptions()
@@ -457,6 +565,11 @@ class SubprocessTests(unittest.TestCase):
         instance.killing = 1
         pipes = {'stdout':'','stderr':''}
         instance.pipes = pipes
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        instance.state = ProcessStates.STOPPING
+        L = []
+        events.subscribe(events.StoppedFromStoppingEvent, lambda x: L.append(x))
         instance.finish(123, 1)
         self.assertEqual(instance.killing, 0)
         self.assertEqual(instance.pid, 0)
@@ -466,6 +579,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.logger.data[0], 'stopped: notthere '
                          '(terminated by SIGHUP)')
         self.assertEqual(instance.exitstatus, -1)
+        self.assertEqual(L[0].__class__, events.StoppedFromStoppingEvent)
 
     def test_finish_expected(self):
         options = DummyOptions()
@@ -476,6 +590,11 @@ class SubprocessTests(unittest.TestCase):
         pipes = {'stdout':'','stderr':''}
         instance.pipes = pipes
         instance.config.exitcodes =[-1]
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        instance.state = ProcessStates.RUNNING
+        L = []
+        events.subscribe(events.ExitedFromRunningEvent, lambda x: L.append(x))
         instance.finish(123, 1)
         self.assertEqual(instance.killing, 0)
         self.assertEqual(instance.pid, 0)
@@ -485,6 +604,34 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.logger.data[0],
                          'exited: notthere (terminated by SIGHUP; expected)')
         self.assertEqual(instance.exitstatus, -1)
+        self.assertEqual(L[0].__class__, events.ExitedFromRunningEvent)
+
+    def test_finish_unexpected(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'notthere', '/notthere',
+                              stdout_logfile='/tmp/foo', startsecs=10)
+        instance = self._makeOne(config)
+        instance.config.options.pidhistory[123] = instance
+        pipes = {'stdout':'','stderr':''}
+        instance.pipes = pipes
+        instance.config.exitcodes =[-1]
+        import time
+        instance.laststart = time.time()
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        instance.state = ProcessStates.STARTING
+        L = []
+        events.subscribe(events.BackoffFromStartingEvent, lambda x: L.append(x))
+        instance.finish(123, 1)
+        self.assertEqual(instance.killing, 0)
+        self.assertEqual(instance.pid, 0)
+        self.assertEqual(options.parent_pipes_closed, pipes)
+        self.assertEqual(instance.pipes, {})
+        self.assertEqual(instance.dispatchers, {})
+        self.assertEqual(options.logger.data[0],
+                      'exited: notthere (terminated by SIGHUP; not expected)')
+        self.assertEqual(instance.exitstatus, None)
+        self.assertEqual(L[0].__class__, events.BackoffFromStartingEvent)
 
     def test_set_uid_no_uid(self):
         options = DummyOptions()
@@ -523,51 +670,6 @@ class SubprocessTests(unittest.TestCase):
 
         self.assertEqual(L, [instance, instance1, instance2])
 
-    def test_get_state(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'notthere', '/notthere',
-                              stdout_logfile='/tmp/foo')
-        from supervisor.process import ProcessStates
-
-        instance = self._makeOne(config)
-        instance.killing = True
-        instance.laststart = 100
-        self.assertEqual(instance.get_state(), ProcessStates.STOPPING)
-
-        instance = self._makeOne(config)
-        instance.laststart = 1
-        instance.delay = 1
-        instance.pid = 1
-        self.assertEqual(instance.get_state(), ProcessStates.STARTING)
-
-        instance = self._makeOne(config)
-        instance.laststart = 1
-        instance.pid = 11
-        self.assertEqual(instance.get_state(), ProcessStates.RUNNING)
-        
-        instance = self._makeOne(config)
-        instance.system_stop = True
-        instance.laststart = 100
-        self.assertEqual(instance.get_state(), ProcessStates.FATAL)
-
-        instance = self._makeOne(config)
-        instance.administrative_stop = True
-        self.assertEqual(instance.get_state(), ProcessStates.STOPPED)
-        
-        instance = self._makeOne(config)
-        instance.laststart = 1
-        instance.exitstatus = 1
-        self.assertEqual(instance.get_state(), ProcessStates.EXITED)
-
-        instance = self._makeOne(config)
-        instance.laststart = 1
-        instance.delay = 1
-        self.assertEqual(instance.get_state(), ProcessStates.BACKOFF)
-
-        instance = self._makeOne(config)
-        instance.laststart = 1
-        self.assertEqual(instance.get_state(), ProcessStates.UNKNOWN)
-
     def test_transition(self):
         options = DummyOptions()
 
@@ -582,6 +684,23 @@ class SubprocessTests(unittest.TestCase):
         process1.system_stop = 0
         process1.stdout_buffer = 'abc'
         process1.stderr_buffer = 'def'
+        process1.state = ProcessStates.BACKOFF
+
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
+
+        process1.transition()
+
+        # this implies FATAL
+        self.assertEqual(process1.backoff, 0)
+        self.assertEqual(process1.delay, 0)
+        self.assertEqual(process1.system_stop, 1)
+        self.assertEqual(options.logger.data[0],
+                         'gave up: process1 entered FATAL state, too many start'
+                         ' retries too quickly')
+        self.assertEqual(L[0].__class__, events.FatalFromBackoffEvent)
+
 
         # this should go from STARTING to RUNNING via transition()
         pconfig2 = DummyPConfig(options, 'process2', 'process2','/bin/process2')
@@ -593,17 +712,7 @@ class SubprocessTests(unittest.TestCase):
         process2.pid = 1
         process2.stdout_buffer = 'abc'
         process2.stderr_buffer = 'def'
-
-        process1.transition()
-
-        # this implies FATAL
-        self.assertEqual(process1.backoff, 0)
-        self.assertEqual(process1.delay, 0)
-        self.assertEqual(process1.system_stop, 1)
-        self.assertEqual(options.logger.data[0],
-                         'gave up: process1 entered FATAL state, too many start'
-                         ' retries too quickly')
-
+        process2.state = ProcessStates.STARTING
 
         process2.transition()
 
@@ -614,6 +723,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.logger.data[1],
                          'success: process2 entered RUNNING state, process has '
                          'stayed up for > than 10 seconds (startsecs)')
+        self.assertEqual(L[1].__class__, events.RunningFromStartingEvent)
 
 
 class ProcessGroupTests(unittest.TestCase):
@@ -754,10 +864,7 @@ class ProcessGroupTests(unittest.TestCase):
         self.assertEqual(process2.stop_called, True)
         self.assertEqual(process3.stop_called, True)
         self.assertEqual(process4.stop_called, False)
-
-        self.assertEqual(process4.delay, 0)
-        self.assertEqual(process4.backoff, 0)
-        self.assertEqual(process4.system_stop, 1)
+        self.assertEqual(process4.state, ProcessStates.FATAL)
 
     def test_get_dispatchers(self):
         options = DummyOptions()

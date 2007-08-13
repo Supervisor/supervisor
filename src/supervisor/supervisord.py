@@ -50,16 +50,8 @@ import asyncore
 
 from supervisor.options import ServerOptions
 from supervisor.options import signame
-
-class SupervisorStates:
-    ACTIVE = 0
-    SHUTDOWN = 1
-
-def getSupervisorStateDescription(code):
-    for statename in SupervisorStates.__dict__:
-        if getattr(SupervisorStates, statename) == code:
-            return statename
-
+from supervisor import events
+from supervisor.states import SupervisorStates
 
 class Supervisor:
     mood = 1 # 1: up, 0: restarting, -1: suicidal
@@ -98,6 +90,7 @@ class Supervisor:
 
     def run(self, test=False):
         self.process_groups = {} # clear
+        events.clear()
         try:
             for config in self.options.process_group_configs:
                 name = config.name
@@ -141,6 +134,7 @@ class Supervisor:
         return delayprocs
 
     def runforever(self, test=False):
+        events.notify(events.SupervisorRunningEvent())
         timeout = 1
 
         socket_map = self.options.get_socket_map()
@@ -154,19 +148,20 @@ class Supervisor:
 
             if self.mood > 0:
                 [ group.start_necessary() for group in pgroups ]
+
             elif self.mood < 1:
-                [ group.stop_all() for group in pgroups ]
-
-            r, w, x = [], [], []
-
-            if self.mood < 1:
                 if not self.stopping:
+                    # first time, do a notification
+                    events.notify(events.SupervisorStoppingEvent())
                     self.stopping = True
+                [ group.stop_all() for group in pgroups ]
 
                 if not self.get_delay_processes():
                     # if there are no delayed processes (we're done killing
                     # everything), it's OK to stop or reload
                     raise asyncore.ExitNow
+
+            r, w, x = [], [], []
 
             for fd, dispatcher in combined_map.items():
                 if dispatcher.readable():
@@ -275,6 +270,7 @@ def main(test=False):
             group.removelogs()
         if d.options.httpserver:
             d.options.httpserver.close()
+    events.notify(events.SupervisorExitingEvent())
             
 
 if __name__ == "__main__":

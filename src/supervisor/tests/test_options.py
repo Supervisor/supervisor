@@ -470,14 +470,14 @@ class ServerOptionsTests(unittest.TestCase):
     def test_event_listener_pools_from_parser(self):
         text = lstrip("""\
         [eventlistener:dog]
-        events=PROCESS_COMMUNICATION_EVENT
+        events=PROCESS_COMMUNICATION
         process_name = %(program_name)s_%(process_num)s
         command = /bin/dog
         numprocs = 2
         priority = 1
 
         [eventlistener:cat]
-        events=PROCESS_COMMUNICATION_EVENT
+        events=PROCESS_COMMUNICATION
         process_name = %(program_name)s_%(process_num)s
         command = /bin/cat
         numprocs = 3
@@ -517,7 +517,7 @@ class ServerOptionsTests(unittest.TestCase):
     def test_event_listener_pool_unknown_eventtype(self):
         text = lstrip("""\
         [eventlistener:dog]
-        events=PROCESS_COMMUNICATION_EVENT,THIS_EVENT_TYPE_DOESNT_EXIST
+        events=PROCESS_COMMUNICATION,THIS_EVENT_TYPE_DOESNT_EXIST
         process_name = %(program_name)s_%(process_num)s
         command = /bin/dog
         numprocs = 2
@@ -718,8 +718,14 @@ class TestProcessConfig(unittest.TestCase):
         process1 = DummyProcess(instance)
         dispatchers, pipes = instance.make_dispatchers(process1)
         self.assertEqual(dispatchers[5].channel, 'stdout')
+        from supervisor.events import ProcessCommunicationStdoutEvent
+        self.assertEqual(dispatchers[5].event_type,
+                         ProcessCommunicationStdoutEvent)
         self.assertEqual(pipes['stdout'], 5)
         self.assertEqual(dispatchers[7].channel, 'stderr')
+        from supervisor.events import ProcessCommunicationStderrEvent
+        self.assertEqual(dispatchers[7].event_type,
+                         ProcessCommunicationStderrEvent)
         self.assertEqual(pipes['stderr'], 7)
         
     def test_make_dispatchers_stderr_redirected(self):

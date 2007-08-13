@@ -13,8 +13,9 @@ class POutputDispatcherTests(unittest.TestCase):
         return POutputDispatcher
 
     def _makeOne(self, process):
-        channel = 'stdout'
-        return self._getTargetClass()(process, channel, 0)
+        from supervisor.events import ProcessCommunicationStdoutEvent
+        return self._getTargetClass()(process,
+                                      ProcessCommunicationStdoutEvent, 0)
 
     def test_writable(self):
         options = DummyOptions()
@@ -163,8 +164,9 @@ class POutputDispatcherTests(unittest.TestCase):
             self.assertEqual(open(logfile, 'r').read(), letters *2)
             self.assertEqual(len(events), 1)
             event = events[0]
-            self.assertEqual(event.__class__, ProcessCommunicationEvent)
-            self.assertEqual(event.process_name, 'process1')
+            from supervisor.events import ProcessCommunicationStdoutEvent
+            self.assertEqual(event.__class__, ProcessCommunicationStdoutEvent)
+            self.assertEqual(event.process, process)
             self.assertEqual(event.channel, 'stdout')
             self.assertEqual(event.data, digits)
 

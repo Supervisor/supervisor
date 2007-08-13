@@ -106,7 +106,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(interface.update_text, 'getIdentification')
 
     def test_getState(self):
-        from supervisor.supervisord import getSupervisorStateDescription
+        from supervisor.states import getSupervisorStateDescription
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
         stateinfo = interface.getState()

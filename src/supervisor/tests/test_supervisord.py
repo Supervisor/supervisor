@@ -11,6 +11,10 @@ from supervisor.tests.base import DummyProcessGroup
 from supervisor.tests.base import DummyDispatcher
 
 class SupervisordTests(unittest.TestCase):
+    def tearDown(self):
+        from supervisor.events import clear
+        clear()
+        
     def _getTargetClass(self):
         from supervisor.supervisord import Supervisor
         return Supervisor
@@ -128,6 +132,28 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(options.logger.data[0],
                          'received SIGUSR1 indicating nothing')
 
+    def test_runforever_emits_generic_startup_event(self):
+        from supervisor import events
+        L = []
+        def callback(event):
+            L.append(1)
+        events.subscribe(events.SupervisorStateChangeEvent, callback)
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+        supervisord.runforever(test=True)
+        self.assertEqual(L, [1])
+
+    def test_runforever_emits_generic_specific_event(self):
+        from supervisor import events
+        L = []
+        def callback(event):
+            L.append(2)
+        events.subscribe(events.SupervisorRunningEvent, callback)
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+        supervisord.runforever(test=True)
+        self.assertEqual(L, [2])
+
     def test_runforever_select_eintr(self):
         options = DummyOptions()
         import errno
@@ -178,6 +204,26 @@ class SupervisordTests(unittest.TestCase):
         supervisord.process_groups = {'foo': pgroup}
         options.select_result = [6], [], []
         self.assertRaises(asyncore.ExitNow, supervisord.runforever, test=True)
+
+    def test_runforever_stopping_emits_events(self):
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+        gconfig = DummyPGroupConfig(options)
+        pgroup = DummyProcessGroup(gconfig)
+        supervisord.process_groups = {'foo': pgroup}
+        supervisord.mood = -1
+        L = []
+        def callback(event):
+            L.append(event)
+        from supervisor import events
+        events.subscribe(events.SupervisorStateChangeEvent, callback)
+        import asyncore
+        self.assertRaises(asyncore.ExitNow, supervisord.runforever, test=True)
+        self.assertTrue(pgroup.all_stopped)
+        self.assertTrue(isinstance(L[0], events.SupervisorRunningEvent))
+        self.assertTrue(isinstance(L[0], events.SupervisorStateChangeEvent))
+        self.assertTrue(isinstance(L[1], events.SupervisorStoppingEvent))
+        self.assertTrue(isinstance(L[1], events.SupervisorStateChangeEvent))
         
     def test_exit(self):
         options = DummyOptions()
@@ -213,8 +259,8 @@ class SupervisordTests(unittest.TestCase):
         self.assertNotEqual(supervisord.lastdelayreport, 0)
 
     def test_getSupervisorStateDescription(self):
-        from supervisor.supervisord import getSupervisorStateDescription
-        from supervisor.supervisord import SupervisorStates
+        from supervisor.states import getSupervisorStateDescription
+        from supervisor.states import SupervisorStates
         result = getSupervisorStateDescription(SupervisorStates.ACTIVE)
         self.assertEqual(result, 'ACTIVE')
 

@@ -14,10 +14,10 @@ from supervisor.http import NOT_DONE_YET
 from supervisor.xmlrpc import Faults
 from supervisor.xmlrpc import RPCError
 
-from supervisor.supervisord import SupervisorStates
-from supervisor.supervisord import getSupervisorStateDescription
-from supervisor.process import ProcessStates
-from supervisor.process import getProcessStateDescription
+from supervisor.states import SupervisorStates
+from supervisor.states import getSupervisorStateDescription
+from supervisor.states import ProcessStates
+from supervisor.states import getProcessStateDescription
 
 API_VERSION  = '2.0'
 

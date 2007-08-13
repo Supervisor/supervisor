@@ -21,24 +21,20 @@ import StringIO
 import traceback
 import signal
 
+from supervisor.states import ProcessStates
+from supervisor.states import getProcessStateDescription
+
 from supervisor.options import decode_wait_status
 from supervisor.options import signame
 from supervisor.options import ProcessException
 
-class ProcessStates:
-    STOPPED = 0
-    STARTING = 10
-    RUNNING = 20
-    BACKOFF = 30
-    STOPPING = 40
-    EXITED = 100
-    FATAL = 200
-    UNKNOWN = 1000
+from supervisor.dispatchers import EventListenerStates
+from supervisor.events import getEventNameByType
+from supervisor.events import EventBufferOverflowEvent
+from supervisor.events import notify
+from supervisor.events import subscribe
+from supervisor import events
 
-def getProcessStateDescription(code):
-    for statename in ProcessStates.__dict__:
-        if getattr(ProcessStates, statename) == code:
-            return statename
 
 class Subprocess:
 
@@ -47,6 +43,8 @@ class Subprocess:
     # Initial state; overridden by instance variables
 
     pid = 0 # Subprocess pid; 0 when not running
+    config = None # ProcessConfig instance
+    state = None # process state code
     laststart = 0 # Last time the subprocess was started; 0 if never
     laststop = 0  # Last time the subprocess was stopped; 0 if never
     delay = 0 # If nonzero, delay starting or killing until this time
@@ -67,6 +65,7 @@ class Subprocess:
         self.config = config
         self.dispatchers = {}
         self.pipes = {}
+        self.state = ProcessStates.STOPPED
 
     def removelogs(self):
         for dispatcher in self.dispatchers.values():
@@ -128,6 +127,14 @@ class Subprocess:
 
         return filename, commandargs
 
+    def change_state(self, new_state):
+        old_state = self.state
+        if new_state is old_state:
+            return
+        event_type = events.getProcessStateChangeEventType(old_state, new_state)
+        notify(event_type(self))
+        self.state = new_state
+
     def record_spawnerr(self, msg):
         now = time.time()
         self.spawnerr = msg
@@ -156,10 +163,16 @@ class Subprocess:
         
         self.laststart = time.time()
 
+        assert(self.state in [ProcessStates.EXITED, ProcessStates.FATAL,
+                              ProcessStates.BACKOFF, ProcessStates.STOPPED])
+        self.change_state(ProcessStates.STARTING)
+
         try:
             filename, argv = self.get_execv_args()
         except ProcessException, what:
             self.record_spawnerr(what.args[0])
+            assert(self.state == ProcessStates.STARTING)
+            self.change_state(ProcessStates.BACKOFF)
             return
 
         try:
@@ -172,6 +185,8 @@ class Subprocess:
             else:
                 msg = 'unknown error: %s' % errno.errorcode.get(code, code)
             self.record_spawnerr(msg)
+            assert(self.state == ProcessStates.STARTING)
+            self.change_state(ProcessStates.BACKOFF)
             return
 
         try:
@@ -185,6 +200,8 @@ class Subprocess:
                 msg = 'unknown error: %s' % errno.errorcode.get(code, code)
 
             self.record_spawnerr(msg)
+            assert(self.state == ProcessStates.STARTING)
+            self.change_state(ProcessStates.BACKOFF)
             options.close_parent_pipes(self.pipes)
             options.close_child_pipes(self.pipes)
             return
@@ -195,8 +212,6 @@ class Subprocess:
             options.close_child_pipes(self.pipes)
             options.logger.info('spawned: %r with pid %s' % (pname, pid))
             self.spawnerr = None
-            # we use self.delay here as a mechanism to indicate that we're in
-            # the STARTING state.
             self.delay = time.time() + self.config.startsecs
             options.pidhistory[pid] = self
             return pid
@@ -247,8 +262,16 @@ class Subprocess:
 
     def stop(self):
         """ Administrative stop """
+        self.drain()
         self.administrative_stop = 1
         return self.kill(self.config.stopsignal)
+
+    def fatal(self):
+        self.delay = 0
+        self.backoff = 0
+        self.system_stop = 1
+        assert(self.state == ProcessStates.BACKOFF)
+        self.change_state(ProcessStates.FATAL)
 
     def kill(self, sig):
         """Send a signal to the subprocess.  This may or may not kill it.
@@ -271,7 +294,13 @@ class Subprocess:
             # RUNNING -> STOPPING
             self.killing = 1
             self.delay = now + self.config.stopwaitsecs
+            assert(self.state in [ProcessStates.RUNNING,ProcessStates.STARTING])
+            self.change_state(ProcessStates.STOPPING)
             options.kill(self.pid, sig)
+        except (AssertionError, NotImplementedError):
+            # AssertionError is raised above, NotImplementedError potentially
+            # raised by change_state
+            raise
         except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
@@ -279,6 +308,7 @@ class Subprocess:
             msg = 'unknown problem killing %s (%s):%s' % (self.config.name,
                                                           self.pid, tb)
             options.logger.critical(msg)
+            self.change_state(ProcessStates.UNKNOWN)
             self.pid = 0
             self.killing = 0
             self.delay = 0
@@ -308,6 +338,8 @@ class Subprocess:
             self.delay = 0
             self.exitstatus = es
             msg = "stopped: %s (%s)" % (processname, msg)
+            assert(self.state == ProcessStates.STOPPING)
+            self.change_state(ProcessStates.STOPPED)
         elif expected:
             # this finish was not the result of a stop request, but
             # was otherwise expected
@@ -316,9 +348,12 @@ class Subprocess:
             self.backoff = 0
             self.exitstatus = es
             msg = "exited: %s (%s)" % (processname, msg + "; expected")
+            assert(self.state == ProcessStates.RUNNING)
+            self.change_state(ProcessStates.EXITED)
         else:
             # the program did not stay up long enough or exited with
             # an unexpected exit code
+            # implies STARTING -> BACKOFF
             self.exitstatus = None
             self.backoff = self.backoff + 1
             self.delay = now + self.backoff
@@ -328,6 +363,8 @@ class Subprocess:
             elif badexit:
                 self.spawnerr = 'Bad exit code %s' % es
             msg = "exited: %s (%s)" % (processname, msg + "; not expected")
+            assert(self.state == ProcessStates.STARTING)
+            self.change_state(ProcessStates.BACKOFF)
 
         self.config.options.logger.info(msg)
 
@@ -353,25 +390,7 @@ class Subprocess:
             getProcessStateDescription(self.get_state()))
 
     def get_state(self):
-        if not self.laststart:
-            return ProcessStates.STOPPED
-        elif self.killing:
-            return ProcessStates.STOPPING
-        elif self.system_stop:
-            return ProcessStates.FATAL
-        elif self.exitstatus is not None:
-            if self.administrative_stop:
-                return ProcessStates.STOPPED
-            else:
-                return ProcessStates.EXITED
-        elif self.delay:
-            if self.pid:
-                return ProcessStates.STARTING
-            else:
-                return ProcessStates.BACKOFF
-        elif self.pid:
-            return ProcessStates.RUNNING
-        return ProcessStates.UNKNOWN
+        return self.state
 
     def transition(self):
         now = time.time()
@@ -386,9 +405,7 @@ class Subprocess:
             if self.backoff > self.config.startretries:
                 # BACKOFF -> FATAL if the proc has exceeded its number
                 # of retries
-                self.delay = 0
-                self.backoff = 0
-                self.system_stop = 1
+                self.fatal()
                 msg = ('entered FATAL state, too many start retries too '
                        'quickly')
                 logger.info('gave up: %s %s' % (self.config.name, msg))
@@ -404,6 +421,8 @@ class Subprocess:
                     'entered RUNNING state, process has stayed up for '
                     '> than %s seconds (startsecs)' % self.config.startsecs)
                 logger.info('success: %s %s' % (self.config.name, msg))
+                assert(self.state == ProcessStates.STARTING)
+                self.change_state(ProcessStates.RUNNING)
         
 class ProcessGroupBase:
     def __init__(self, config):
@@ -459,14 +478,11 @@ class ProcessGroupBase:
                 # RUNNING -> STOPPING
                 proc.stop()
             elif state == ProcessStates.STARTING:
-                # STARTING -> STOPPING (unceremoniously subvert the RUNNING
-                # state)
+                # STARTING -> STOPPING
                 proc.stop()
             elif state == ProcessStates.BACKOFF:
                 # BACKOFF -> FATAL
-                proc.delay = 0
-                proc.backoff = 0
-                proc.system_stop = 1
+                proc.fatal()
 
     def get_delay_processes(self):
         """ Processes which are starting or stopping """
@@ -509,9 +525,84 @@ class ProcessGroup(ProcessGroupBase):
             proc.transition()
 
 class EventListenerPool(ProcessGroupBase):
+    serializers = {}
+    def __init__(self, config):
+        ProcessGroupBase.__init__(self, config)
+        self.event_buffer = []
+        for event_type in self.config.pool_events:
+            subscribe(event_type, self._dispatchEvent)
+        subscribe(events.EventRejectedEvent, self.handle_rejected)
+
+    def handle_rejected(self, event):
+        process = event.process
+        procs = self.processes.values()
+        if process in procs: # this is one of our processes
+            # rebuffer the event
+            self._bufferEvent(event.event)
+
     def transition(self):
         self.kill_undead()
         for proc in self.processes.values():
             proc.transition()
+        if self.event_buffer:
+            # resend the oldest buffered event (dont rebuffer though, maintain
+            # order oldest (leftmost) to newest (rightmost) in list)
+            event = self.event_buffer.pop(0)
+            ok = self._dispatchEvent(event, buffer=False)
+            if not ok:
+                self.event_buffer.insert(0, event)
 
+    def _eventEnvelope(self, event, payload):
+        D = {'ver':'3.0',
+             'len':len(payload),
+             'event_name':getEventNameByType(event),
+             'payload':payload}
+        return 'SUPERVISORD%(ver)s %(event_name)s %(len)s\n%(payload)s' % D
+
+    def _bufferEvent(self, event):
+        if isinstance(EventBufferOverflowEvent, event):
+            return # don't ever buffer EventBufferOverflowEvents
+        if len(self.event_buffer) >= self.config.buffer_size:
+            discarded_event = self.event_buffer.pop(0)
+            notify(EventBufferOverflowEvent(self, discarded_event))
+        self.event_buffer.append(event)
+
+    def _dispatchEvent(self, event, buffer=True):
+        # events are required to be instances
+        etype = event.__class__
+        serializer = self.serializers.get(etype, None)
+        if serializer is None:
+            # this is a system programming error, we must handle
+            # all events
+            raise NotImplementedError(etype)
+        for process in self.processes.values():
+            if process.listener_state == EventListenerStates.READY:
+                payload = serializer(event)
+                process.write(self._eventEnvelope(event, payload))
+                process.listener_state = EventListenerStates.BUSY
+                process.event = event
+                return True
+
+        if buffer:
+            self._bufferEvent(event)
+        return False
+
+    def serialize_pcomm_event(self, event):
+         return 'process_name: %s\nchannel: %s\n%s' % (
+             event.process_name,
+             event.channel,
+             event.data)
+    serializers[events.ProcessCommunicationEvent] = serialize_pcomm_event
+
+    def serialize_overflow_event(self, event):
+        name = event.group.config.name
+        typ = getEventNameByType(event.event)
+        return 'group_name: %s\nevent_type: %s' % (name, typ)
+    serializers[events.EventBufferOverflowEvent] = serialize_overflow_event
+
+    def serialize_statechange_event(self, event):
+        pass
+    serializers[events.ProcessStateChangeEvent] = serialize_statechange_event
+
+            
     

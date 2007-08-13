@@ -726,15 +726,17 @@ class ServerOptions(Options):
                  continue
             pool_name = section.split(':', 1)[1]
             priority = integer(get(section, 'priority', 999))
+            buffer_size = integer(get(section, 'buffer_size', 10))
             pool_event_names = [x.upper() for x in
                                 list_of_strings(get(section, 'events', ''))]
+            pool_event_names = dedupe(pool_event_names)
             if not pool_event_names:
                 raise ValueError('[%s] section requires an "events" line' %
                                  section)
-            from supervisor.events import EVENT_NAMES
+            from supervisor.events import EventTypes
             pool_events = []
             for pool_event_name in pool_event_names:
-                pool_event = EVENT_NAMES.get(pool_event_name)
+                pool_event = getattr(EventTypes, pool_event_name, None)
                 if pool_event is None:
                     raise ValueError('Unknown event type %s in [%s] events' %
                                      (pool_event_name, section))
@@ -742,7 +744,7 @@ class ServerOptions(Options):
             processes=self.processes_from_section(parser, section, pool_name)
             groups.append(
                 EventListenerPoolConfig(self, pool_name, priority, processes,
-                                        pool_events)
+                                        buffer_size, pool_events)
                 )
 
         groups.sort()
@@ -1490,10 +1492,13 @@ class ProcessConfig(Config):
         dispatchers = {}
         from supervisor.dispatchers import POutputDispatcher
         from supervisor.dispatchers import PInputDispatcher
+        from supervisor import events
         if stdout_fd is not None:
-            dispatchers[stdout_fd] = POutputDispatcher(proc,'stdout', stdout_fd)
+            etype = events.ProcessCommunicationStdoutEvent
+            dispatchers[stdout_fd] = POutputDispatcher(proc, etype, stdout_fd)
         if stderr_fd is not None:
-            dispatchers[stderr_fd] = POutputDispatcher(proc,'stderr', stderr_fd)
+            etype = events.ProcessCommunicationStderrEvent
+            dispatchers[stderr_fd] = POutputDispatcher(proc,etype, stderr_fd)
         if stdin_fd is not None:
             dispatchers[stdin_fd] = PInputDispatcher(proc, 'stdin', stdin_fd)
         return dispatchers, p
@@ -1514,11 +1519,13 @@ class ProcessGroupConfig(Config):
         return ProcessGroup(self)
 
 class EventListenerPoolConfig(Config):
-    def __init__(self, options, name, priority, process_configs, pool_events):
+    def __init__(self, options, name, priority, process_configs, buffer_size,
+                 pool_events):
         self.options = options
         self.name = name
         self.priority = priority
         self.process_configs = process_configs
+        self.buffer_size = buffer_size
         self.pool_events = pool_events
 
     def after_setuid(self):
@@ -1801,6 +1808,13 @@ def split_namespec(namespec):
         group_name, process_name = namespec, namespec
     return group_name, process_name
 
+def dedupe(L):
+    # cant use sets, they dont exist in 2.3
+    D = {}
+    for thing in L:
+        D[thing] = 1
+    return D.keys()
+
 class ProcessException(Exception):
     """ Specialized exceptions used when attempting to start a process """
 
@@ -1816,5 +1830,4 @@ class NoPermission(ProcessException):
     """ Indicates that the file cannot be executed because the supervisor
     process does not possess the appropriate UNIX filesystem permission
     to execute the file. """
-
 

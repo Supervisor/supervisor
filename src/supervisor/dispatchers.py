@@ -1,8 +1,9 @@
 import logging
 import errno
 
-from supervisor.events import ProcessCommunicationEvent
 from supervisor.events import notify
+from supervisor.events import EventRejectedEvent
+from supervisor.states import EventListenerStates
 
 def find_prefix_at_end(haystack, needle):
     l = len(needle) - 1
@@ -43,10 +44,11 @@ class POutputDispatcher(PDispatcher):
     childlog = None # the current logger (event or main)
     output_buffer = '' # data waiting to be logged
 
-    def __init__(self, process, channel, fd):
+    def __init__(self, process, event_type, fd):
         self.process = process
-        self.channel = channel
+        self.event_type = event_type
         self.fd = fd
+        self.channel = channel = self.event_type.channel
 
         logfile = getattr(process.config, '%s_logfile' % channel)
         capturefile = getattr(process.config, '%s_capturefile' % channel)
@@ -88,9 +90,9 @@ class POutputDispatcher(PDispatcher):
 
     def record_output(self):
         if self.capturemode:
-            token = ProcessCommunicationEvent.END_TOKEN
+            token = self.event_type.END_TOKEN
         else:
-            token = ProcessCommunicationEvent.BEGIN_TOKEN
+            token = self.event_type.BEGIN_TOKEN
 
         data = self.output_buffer
         self.output_buffer = ''
@@ -152,7 +154,8 @@ class POutputDispatcher(PDispatcher):
 
                 channel = self.channel
                 procname = self.process.config.name
-                notify(ProcessCommunicationEvent(procname, channel, data))
+                event = self.event_type(self.process, data)
+                notify(event)
                                         
                 msg = "%r %s emitted a comm event" % (procname, channel)
                 TRACE = self.process.config.options.TRACE
@@ -189,8 +192,9 @@ class PEventListenerDispatcher(PDispatcher):
         self.process = process
         # the initial state of our listener is ACKNOWLEDGED; this is a
         # "busy" state that implies we're awaiting a READY_FOR_EVENTS
-        # token
+        # token.
         self.process.listener_state = EventListenerStates.ACKNOWLEDGED
+        self.process.event = None
         self.channel = channel
         self.fd = fd
 
@@ -268,11 +272,13 @@ class PEventListenerDispatcher(PDispatcher):
                 self._trace(msg)
                 process.listener_state = EventListenerStates.READY
                 self.state_buffer = self.state_buffer[tokenlen:]
+                process.event = None
             else:
                 msg = '%s: ACKNOWLEDGED -> UNKNOWN' % procname
                 self._trace(msg)
                 process.listener_state = EventListenerStates.UNKNOWN
                 self.state_buffer = ''
+                process.event = None
             return
 
         elif state == EventListenerStates.READY:
@@ -281,6 +287,7 @@ class PEventListenerDispatcher(PDispatcher):
             self._trace(msg)
             process.listener_state = EventListenerStates.UNKNOWN
             self.state_buffer = ''
+            process.event = None
             return
                 
         elif state == EventListenerStates.BUSY:
@@ -293,18 +300,20 @@ class PEventListenerDispatcher(PDispatcher):
                 tokenlen = len(self.EVENT_PROCESSED_TOKEN)
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.listener_state = EventListenerStates.ACKNOWLEDGED
+                process.event = None
             elif data.startswith(self.EVENT_REJECTED_TOKEN):
                 msg = '%s: BUSY -> ACKNOWLEDGED (rejected)' % procname
                 self._trace(msg)
-                # XXX push the event back into the notification queue
                 tokenlen = len(self.EVENT_REJECTED_TOKEN)
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.listener_state = EventListenerStates.ACKNOWLEDGED
+                process.event = None
             else:
                 msg = '%s: BUSY -> UNKNOWN' % procname
                 self._trace(msg)
                 process.listener_state = EventListenerStates.UNKNOWN
                 self.state_buffer = ''
+                process.event = None
             return
 
 class PInputDispatcher(PDispatcher):
@@ -341,15 +350,4 @@ class PInputDispatcher(PDispatcher):
                     self.process.config.options.logger.info(msg)
                 else:
                     raise
-
-class EventListenerStates:
-    READY = 10 # the process ready to be sent an event from supervisor
-    BUSY = 20 # event listener is processing an event sent to it by supervisor
-    ACKNOWLEDGED = 30 # the event listener processed an event
-    UNKNOWN = 40 # the event listener is in an unknown state
-
-def getEventListenerStateDescription(code):
-    for statename in EventListenerStates.__dict__:
-        if getattr(EventListenerStates, statename) == code:
-            return statename
 

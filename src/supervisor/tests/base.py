@@ -362,6 +362,10 @@ class DummyProcess:
     def finish(self, pid, sts):
         self.finished = pid, sts
 
+    def fatal(self):
+        from supervisor.process import ProcessStates
+        self.state = ProcessStates.FATAL
+
     def get_execv_args(self):
         if self.execv_arg_exception:
             raise self.execv_arg_exception('whatever')
