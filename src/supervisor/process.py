@@ -375,7 +375,38 @@ class Subprocess:
             return ProcessStates.RUNNING
         return ProcessStates.UNKNOWN
 
+    def transition(self):
+        now = time.time()
 
+        state = self.get_state()
+
+        # we need to transition processes between BACKOFF ->
+        # FATAL and STARTING -> RUNNING within here
+        logger = self.config.options.logger
+
+        if state == ProcessStates.BACKOFF:
+            if self.backoff > self.config.startretries:
+                # BACKOFF -> FATAL if the proc has exceeded its number
+                # of retries
+                self.delay = 0
+                self.backoff = 0
+                self.system_stop = 1
+                msg = ('entered FATAL state, too many start retries too '
+                       'quickly')
+                logger.info('gave up: %s %s' % (self.config.name, msg))
+
+        elif state == ProcessStates.STARTING:
+            if now - self.laststart > self.config.startsecs:
+                # STARTING -> RUNNING if the proc has started
+                # successfully and it has stayed up for at least
+                # proc.config.startsecs,
+                self.delay = 0
+                self.backoff = 0
+                msg = (
+                    'entered RUNNING state, process has stayed up for '
+                    '> than %s seconds (startsecs)' % self.config.startsecs)
+                logger.info('success: %s %s' % (self.config.name, msg))
+        
 class ProcessGroupBase:
     def __init__(self, config):
         self.config = config
@@ -473,47 +504,15 @@ class ProcessGroupBase:
             dispatchers.update(process.dispatchers)
         return dispatchers
 
-    def _transition_subprocess_supervisor_states(self):
-        now = time.time()
-
-        for proc in self.processes.values():
-            state = proc.get_state()
-
-            # we need to transition processes between BACKOFF ->
-            # FATAL and STARTING -> RUNNING within here
-            
-            logger = self.config.options.logger
-
-            if state == ProcessStates.BACKOFF:
-                if proc.backoff > proc.config.startretries:
-                    # BACKOFF -> FATAL if the proc has exceeded its number
-                    # of retries
-                    proc.delay = 0
-                    proc.backoff = 0
-                    proc.system_stop = 1
-                    msg = ('entered FATAL state, too many start retries too '
-                           'quickly')
-                    logger.info('gave up: %s %s' % (proc.config.name, msg))
-
-            elif state == ProcessStates.STARTING:
-                if now - proc.laststart > proc.config.startsecs:
-                    # STARTING -> RUNNING if the proc has started
-                    # successfully and it has stayed up for at least
-                    # proc.config.startsecs,
-                    proc.delay = 0
-                    proc.backoff = 0
-                    msg = (
-                        'entered RUNNING state, process has stayed up for '
-                        '> than %s seconds (startsecs)' % proc.config.startsecs)
-                    logger.info('success: %s %s' % (proc.config.name, msg))
-
 class ProcessGroup(ProcessGroupBase):
     def transition(self):
         self.kill_undead()
-        self._transition_subprocess_supervisor_states()
+        for proc in self.processes.values():
+            proc.transition()
 
 class EventListenerPool(ProcessGroupBase):
     def transition(self):
         self.kill_undead()
-        self._transition_subprocess_supervisor_states()
+        for proc in self.processes.values():
+            proc.transition()
 
