@@ -65,6 +65,7 @@ class Supervisor:
     mood = 1 # 1: up, 0: restarting, -1: suicidal
     stopping = False # set after we detect that we are handling a stop request
     lastdelayreport = 0 # throttle for delayed process error reports at stop
+    process_groups = None # map of process group name to process group object
 
     def __init__(self, options):
         self.options = options
