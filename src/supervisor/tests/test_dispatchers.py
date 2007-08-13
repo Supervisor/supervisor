@@ -346,6 +346,283 @@ class PInputDispatcherTests(unittest.TestCase):
 
 
 
+class PEventListenerDispatcherTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.dispatchers import PEventListenerDispatcher
+        return PEventListenerDispatcher
+
+    def _makeOne(self, process):
+        channel = 'stdout'
+        return self._getTargetClass()(process, channel, 0)
+
+    def test_writable(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertEqual(dispatcher.writable(), False)
+        
+    def test_readable(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertEqual(dispatcher.readable(), True)
+
+    def test_handle_write_event(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertRaises(NotImplementedError, dispatcher.handle_write_event)
+
+    def test_handle_read_event_nodata(self):
+        options = DummyOptions()
+        options.readfd_result = ''
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertEqual(dispatcher.handle_read_event(), None)
+        self.assertEqual(dispatcher.state_buffer, '')
+        from supervisor.dispatchers import EventListenerStates
+        self.assertEqual(dispatcher.process.listener_state,
+                         EventListenerStates.ACKNOWLEDGED)
+
+    def test_handle_read_event_logging_nologs(self):
+        options = DummyOptions()
+        options.readfd_result = 'supercalifragilisticexpialidocious'
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        # just make sure there are no errors if a child logger doesnt
+        # exist
+        self.assertEqual(dispatcher.handle_read_event(), None)
+        self.assertEqual(dispatcher.childlog, None)
+
+    def test_handle_read_event_logging_childlog(self):
+        options = DummyOptions()
+        options.readfd_result = 'supercalifragilisticexpialidocious'
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile='/tmp/foo')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertEqual(dispatcher.handle_read_event(), None)
+        self.assertEqual(len(dispatcher.childlog.data), 1)
+        self.assertEqual(dispatcher.childlog.data[0],
+                         'supercalifragilisticexpialidocious')
+
+    def test_handle_read_event_calls_handle_listener_state_change(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile='/tmp/foo')
+        process = DummyProcess(config)
+        from supervisor.dispatchers import EventListenerStates
+        process.listener_state = EventListenerStates.ACKNOWLEDGED
+        dispatcher = self._makeOne(process)
+        options.readfd_result = dispatcher.READY_FOR_EVENTS_TOKEN + 'abc'
+        self.assertEqual(dispatcher.handle_read_event(), None)
+        self.assertEqual(process.listener_state, EventListenerStates.READY)
+        self.assertEqual(dispatcher.state_buffer, 'abc')
+        self.assertEqual(len(dispatcher.childlog.data), 1)
+        self.assertEqual(dispatcher.childlog.data[0],
+                         dispatcher.READY_FOR_EVENTS_TOKEN + 'abc')
+
+    def test_handle_listener_state_change_from_unknown(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        from supervisor.dispatchers import EventListenerStates
+        dispatcher = self._makeOne(process)
+        process.listener_state = EventListenerStates.UNKNOWN
+        dispatcher.state_buffer = 'whatever'
+        self.assertEqual(dispatcher.handle_listener_state_change(), None)
+        self.assertEqual(dispatcher.state_buffer, '')
+        self.assertEqual(options.logger.data, [])
+        self.assertEqual(process.listener_state, EventListenerStates.UNKNOWN)
+
+    def test_handle_listener_state_change_acknowledged_to_ready(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        from supervisor.dispatchers import EventListenerStates
+        dispatcher = self._makeOne(process)
+        process.listener_state = EventListenerStates.ACKNOWLEDGED
+        dispatcher.state_buffer = 'READY\nabc'
+        self.assertEqual(dispatcher.handle_listener_state_change(), None)
+        self.assertEqual(dispatcher.state_buffer, 'abc')
+        self.assertEqual(options.logger.data,
+                         [5, 'process1: ACKNOWLEDGED -> READY'])
+        self.assertEqual(process.listener_state, EventListenerStates.READY)
+
+    def test_handle_listener_state_change_acknowledged_to_insufficient(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        from supervisor.dispatchers import EventListenerStates
+        dispatcher = self._makeOne(process)
+        process.listener_state = EventListenerStates.ACKNOWLEDGED
+        dispatcher.state_buffer = 'RE'
+        self.assertEqual(dispatcher.handle_listener_state_change(), None)
+        self.assertEqual(dispatcher.state_buffer, 'RE')
+        self.assertEqual(options.logger.data, [])
+        self.assertEqual(process.listener_state,
+                         EventListenerStates.ACKNOWLEDGED)
+
+    def test_handle_listener_state_change_acknowledged_to_unknown(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        from supervisor.dispatchers import EventListenerStates
+        dispatcher = self._makeOne(process)
+        process.listener_state = EventListenerStates.ACKNOWLEDGED
+        dispatcher.state_buffer = 'bogus data yo'
+        self.assertEqual(dispatcher.handle_listener_state_change(), None)
+        self.assertEqual(dispatcher.state_buffer, '')
+        self.assertEqual(options.logger.data,
+                         [5, 'process1: ACKNOWLEDGED -> UNKNOWN'])
+        self.assertEqual(process.listener_state, EventListenerStates.UNKNOWN)
+
+    def test_handle_listener_state_change_ready_to_unknown(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        from supervisor.dispatchers import EventListenerStates
+        dispatcher = self._makeOne(process)
+        process.listener_state = EventListenerStates.READY
+        dispatcher.state_buffer = 'bogus data yo'
+        self.assertEqual(dispatcher.handle_listener_state_change(), None)
+        self.assertEqual(dispatcher.state_buffer, '')
+        self.assertEqual(options.logger.data,
+                         [5, 'process1: READY -> UNKNOWN'])
+        self.assertEqual(process.listener_state, EventListenerStates.UNKNOWN)
+
+    def test_handle_listener_state_change_busy_to_insufficient(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        from supervisor.dispatchers import EventListenerStates
+        dispatcher = self._makeOne(process)
+        process.listener_state = EventListenerStates.BUSY
+        dispatcher.state_buffer = 'bogus data yo'
+        self.assertEqual(dispatcher.handle_listener_state_change(), None)
+        self.assertEqual(dispatcher.state_buffer, 'bogus data yo')
+        self.assertEqual(process.listener_state, EventListenerStates.BUSY)
+
+    def test_handle_listener_state_change_busy_to_acknowledged_procd(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        from supervisor.dispatchers import EventListenerStates
+        dispatcher = self._makeOne(process)
+        process.listener_state = EventListenerStates.BUSY
+        dispatcher.state_buffer = dispatcher.EVENT_PROCESSED_TOKEN + 'abc'
+        self.assertEqual(dispatcher.handle_listener_state_change(), None)
+        self.assertEqual(dispatcher.state_buffer, 'abc')
+        self.assertEqual(options.logger.data,
+                         [5, 'process1: BUSY -> ACKNOWLEDGED (processed)'])
+        self.assertEqual(process.listener_state,
+                         EventListenerStates.ACKNOWLEDGED)
+
+    def test_handle_listener_state_change_busy_to_acknowledged_rejected(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        from supervisor.dispatchers import EventListenerStates
+        dispatcher = self._makeOne(process)
+        process.listener_state = EventListenerStates.BUSY
+        dispatcher.state_buffer = dispatcher.EVENT_REJECTED_TOKEN + 'abc'
+        self.assertEqual(dispatcher.handle_listener_state_change(), None)
+        self.assertEqual(dispatcher.state_buffer, 'abc')
+        self.assertEqual(options.logger.data,
+                         [5, 'process1: BUSY -> ACKNOWLEDGED (rejected)'])
+        self.assertEqual(process.listener_state,
+                         EventListenerStates.ACKNOWLEDGED)
+
+    def test_handle_listener_state_change_busy_to_unknown(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        from supervisor.dispatchers import EventListenerStates
+        dispatcher = self._makeOne(process)
+        process.listener_state = EventListenerStates.BUSY
+        dispatcher.state_buffer = 'bogus data\n'
+        self.assertEqual(dispatcher.handle_listener_state_change(), None)
+        self.assertEqual(dispatcher.state_buffer, '')
+        self.assertEqual(options.logger.data,
+                         [5, 'process1: BUSY -> UNKNOWN'])
+        self.assertEqual(process.listener_state,
+                         EventListenerStates.UNKNOWN)
+
+    def test_handle_error(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertRaises(NotImplementedError, dispatcher.handle_error)
+
+    def test_removelogs(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile='/tmp/foo')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        dispatcher.removelogs()
+        self.assertEqual(dispatcher.childlog.handlers[0].reopened, True)
+        self.assertEqual(dispatcher.childlog.handlers[0].removed, True)
+
+    def test_reopenlogs(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile='/tmp/foo')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        dispatcher.reopenlogs()
+        self.assertEqual(dispatcher.childlog.handlers[0].reopened, True)
+
+    def test_strip_ansi(self):
+        options = DummyOptions()
+        options.strip_ansi = True
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile='/tmp/foo')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        ansi = '\x1b[34mHello world... this is longer than a token!\x1b[0m'
+        noansi = 'Hello world... this is longer than a token!'
+
+        options.readfd_result = ansi
+        dispatcher.handle_read_event()
+        self.assertEqual(len(dispatcher.childlog.data), 1)
+        self.assertEqual(dispatcher.childlog.data[0], noansi)
+
+        options.strip_ansi = False
+
+        options.readfd_result = ansi
+        dispatcher.handle_read_event()
+        self.assertEqual(len(dispatcher.childlog.data), 2)
+        self.assertEqual(dispatcher.childlog.data[1], ansi)
+
+    def test_ctor_nologfiles(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertEqual(dispatcher.process, process)
+        self.assertEqual(dispatcher.channel, 'stdout')
+        self.assertEqual(dispatcher.fd, 0)
+        self.assertEqual(dispatcher.childlog, None)
+
+    def test_ctor_logfile_only(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile='/tmp/foo')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertEqual(dispatcher.process, process)
+        self.assertEqual(dispatcher.channel, 'stdout')
+        self.assertEqual(dispatcher.fd, 0)
+        self.assertEqual(dispatcher.childlog.__class__, DummyLogger)
+
+    
 
 
 def test_suite():

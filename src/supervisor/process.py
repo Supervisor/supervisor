@@ -24,8 +24,6 @@ import signal
 from supervisor.options import decode_wait_status
 from supervisor.options import signame
 from supervisor.options import ProcessException
-from supervisor.dispatchers import POutputDispatcher
-from supervisor.dispatchers import PInputDispatcher
 
 class ProcessStates:
     STOPPED = 0
@@ -516,3 +514,4 @@ class EventListenerPool(ProcessGroupBase):
         for proc in self.processes.values():
             proc.transition()
 
+    

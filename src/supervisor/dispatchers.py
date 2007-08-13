@@ -30,7 +30,9 @@ class PDispatcher:
         raise NotImplementedError
 
 class POutputDispatcher(PDispatcher):
-    """ Output (stdout/stderr) dispatcher """
+    """ Output (stdout/stderr) dispatcher, capture output sent within
+    <!--XSUPERVISOR:BEGIN--><!--XSUPERVISOR:END--> tags and notify
+    with a ProcessCommunicationEvent """
 
     process = None # process which "owns" this dispatcher
     channel = None # 'stderr' or 'stdout'
@@ -172,6 +174,139 @@ class POutputDispatcher(PDispatcher):
         self.output_buffer += data
         self.record_output()
 
+class PEventListenerDispatcher(PDispatcher):
+    """ An output dispatcher that monitors and changes listener_states """
+    process = None # process which "owns" this dispatcher
+    channel = None # 'stderr' or 'stdout'
+    childlog = None # the logger
+    state_buffer = ''  # data waiting to be reviewed for state changes
+
+    READY_FOR_EVENTS_TOKEN = 'READY\n'
+    EVENT_PROCESSED_TOKEN = 'OK\n'
+    EVENT_REJECTED_TOKEN = 'FAIL\n'
+
+    def __init__(self, process, channel, fd):
+        self.process = process
+        # the initial state of our listener is ACKNOWLEDGED; this is a
+        # "busy" state that implies we're awaiting a READY_FOR_EVENTS
+        # token
+        self.process.listener_state = EventListenerStates.ACKNOWLEDGED
+        self.channel = channel
+        self.fd = fd
+
+        logfile = getattr(process.config, '%s_logfile' % channel)
+
+        if logfile:
+            maxbytes = getattr(process.config, '%s_logfile_maxbytes' % channel)
+            backups = getattr(process.config, '%s_logfile_backups' % channel)
+            self.childlog = process.config.options.getLogger(
+                logfile,
+                logging.INFO,
+                '%(message)s',
+                rotating=not not maxbytes, # optimization
+                maxbytes=maxbytes,
+                backups=backups)
+    
+    def removelogs(self):
+        if self.childlog is not None:
+            for handler in self.childlog.handlers:
+                handler.remove()
+                handler.reopen()
+
+    def reopenlogs(self):
+        if self.childlog is not None:
+            for handler in self.childlog.handlers:
+                handler.reopen()
+
+
+    def writable(self):
+        return False
+    
+    def readable(self):
+        return True
+
+    def handle_read_event(self):
+        data = self.process.config.options.readfd(self.fd)
+        if data:
+            self.state_buffer += data
+            procname = self.process.config.name
+            msg = '%r %s output:\n%s' % (procname, self.channel, data)
+            self._trace(msg)
+
+            if self.childlog:
+                if self.process.config.options.strip_ansi:
+                    data = self.process.config.options.stripEscapes(data)
+                self.childlog.info(data)
+
+        self.handle_listener_state_change()
+
+    def _trace(self, msg):
+        TRACE = self.process.config.options.TRACE
+        self.process.config.options.logger.log(TRACE, msg)
+        
+    def handle_listener_state_change(self):
+        process = self.process
+        procname = process.config.name
+        state = process.listener_state
+        data = self.state_buffer
+
+        if not data:
+            return
+
+        if state == EventListenerStates.UNKNOWN:
+            # this is a fatal state
+            self.state_buffer = ''
+            return
+
+        if state == EventListenerStates.ACKNOWLEDGED:
+            tokenlen = len(self.READY_FOR_EVENTS_TOKEN)
+            if len(data) < tokenlen:
+                # not enough info to make a decision
+                return
+            elif data.startswith(self.READY_FOR_EVENTS_TOKEN):
+                msg = '%s: ACKNOWLEDGED -> READY' % procname
+                self._trace(msg)
+                process.listener_state = EventListenerStates.READY
+                self.state_buffer = self.state_buffer[tokenlen:]
+            else:
+                msg = '%s: ACKNOWLEDGED -> UNKNOWN' % procname
+                self._trace(msg)
+                process.listener_state = EventListenerStates.UNKNOWN
+                self.state_buffer = ''
+            return
+
+        elif state == EventListenerStates.READY:
+            # the process sent some spurious data, be a hardass about it
+            msg = '%s: READY -> UNKNOWN' % procname
+            self._trace(msg)
+            process.listener_state = EventListenerStates.UNKNOWN
+            self.state_buffer = ''
+            return
+                
+        elif state == EventListenerStates.BUSY:
+            if data.find('\n') == -1:
+                # we can't make a determination yet
+                return
+            elif data.startswith(self.EVENT_PROCESSED_TOKEN):
+                msg = '%s: BUSY -> ACKNOWLEDGED (processed)' % procname
+                self._trace(msg)
+                tokenlen = len(self.EVENT_PROCESSED_TOKEN)
+                self.state_buffer = self.state_buffer[tokenlen:]
+                process.listener_state = EventListenerStates.ACKNOWLEDGED
+            elif data.startswith(self.EVENT_REJECTED_TOKEN):
+                msg = '%s: BUSY -> ACKNOWLEDGED (rejected)' % procname
+                self._trace(msg)
+                # XXX push the event back into the notification queue
+                tokenlen = len(self.EVENT_REJECTED_TOKEN)
+                self.state_buffer = self.state_buffer[tokenlen:]
+                process.listener_state = EventListenerStates.ACKNOWLEDGED
+            else:
+                msg = '%s: BUSY -> UNKNOWN' % procname
+                self._trace(msg)
+                process.listener_state = EventListenerStates.UNKNOWN
+                self.state_buffer = ''
+            return
+
 class PInputDispatcher(PDispatcher):
     """ Input (stdin) dispatcher """
     process = None # process which "owns" this dispatcher
@@ -206,4 +341,15 @@ class PInputDispatcher(PDispatcher):
                     self.process.config.options.logger.info(msg)
                 else:
                     raise
+
+class EventListenerStates:
+    READY = 10 # the process ready to be sent an event from supervisor
+    BUSY = 20 # event listener is processing an event sent to it by supervisor
+    ACKNOWLEDGED = 30 # the event listener processed an event
+    UNKNOWN = 40 # the event listener is in an unknown state
+
+def getEventListenerStateDescription(code):
+    for statename in EventListenerStates.__dict__:
+        if getattr(EventListenerStates, statename) == code:
+            return statename
 
