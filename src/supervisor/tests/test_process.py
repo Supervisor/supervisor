@@ -361,6 +361,25 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.execv_args, ('/bin/cat', ['/bin/cat']) )
         self.assertEqual(options.execv_environment['_TEST_'], '1')
 
+    def test_spawn_as_child_stderr_redirected(self):
+        options = DummyOptions()
+        options.forkpid = 0
+        config = DummyPConfig(options, 'good', '/good/filename', uid=1)
+        config.redirect_stderr = True
+        instance = self._makeOne(config)
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(options.parent_pipes_closed, None)
+        self.assertEqual(options.child_pipes_closed, None)
+        self.assertEqual(options.pgrp_set, True)
+        self.assertEqual(len(options.duped), 2)
+        self.assertEqual(len(options.fds_closed), options.minfds - 3)
+        self.assertEqual(options.written, {})
+        self.assertEqual(options.privsdropped, 1)
+        self.assertEqual(options.execv_args,
+                         ('/good/filename', ['/good/filename']) )
+        self.assertEqual(options._exitcode, 127)
+
     def test_spawn_as_parent(self):
         options = DummyOptions()
         options.forkpid = 10
@@ -725,24 +744,20 @@ class SubprocessTests(unittest.TestCase):
                          'stayed up for > than 10 seconds (startsecs)')
         self.assertEqual(L[1].__class__, events.RunningFromStartingEvent)
 
+    def test_change_state_doesnt_notify_if_no_state_change(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        instance.state = 10
+        self.assertEqual(instance.change_state(10), False)
 
-class ProcessGroupTests(unittest.TestCase):
+class ProcessGroupBaseTests(unittest.TestCase):
     def _getTargetClass(self):
-        from supervisor.process import ProcessGroup
-        return ProcessGroup
+        from supervisor.process import ProcessGroupBase
+        return ProcessGroupBase
 
     def _makeOne(self, *args, **kw):
         return self._getTargetClass()(*args, **kw)
-
-    def test_repr(self):
-        options = DummyOptions()
-        gconfig = DummyPGroupConfig(options)
-        group = self._makeOne(gconfig)
-        s = repr(group)
-        self.assertTrue(s.startswith(
-            '<supervisor.process.ProcessGroup instance at'))
-        self.assertTrue(s.endswith('named whatever>'))
-
 
     def test_get_delay_processes(self):
         options = DummyOptions()
@@ -756,7 +771,6 @@ class ProcessGroupTests(unittest.TestCase):
         delayed = group.get_delay_processes()
         self.assertEqual(delayed, [process1])
         
-
     def test_get_undead(self):
         options = DummyOptions()
         from supervisor.process import ProcessStates
@@ -919,7 +933,223 @@ class ProcessGroupTests(unittest.TestCase):
 
         self.assertEqual(L, [group2, group1])
 
+class ProcessGroupTests(ProcessGroupBaseTests):
+    def _getTargetClass(self):
+        from supervisor.process import ProcessGroup
+        return ProcessGroup
+
+    def test_repr(self):
+        options = DummyOptions()
+        gconfig = DummyPGroupConfig(options)
+        group = self._makeOne(gconfig)
+        s = repr(group)
+        self.assertTrue(s.startswith(
+            '<supervisor.process.ProcessGroup instance at'), s)
+        self.assertTrue(s.endswith('named whatever>'), s)
+
+    def test_transition(self):
+        options = DummyOptions()
+        from supervisor.process import ProcessStates
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        group = self._makeOne(gconfig)
+        group.processes = {'process1': process1}
+        group.transition()
+        self.assertEqual(process1.transitioned, True)
         
+class EventListenerPoolTests(ProcessGroupBaseTests):
+    def setUp(self):
+        from supervisor.events import clear
+        clear()
+
+    def tearDown(self):
+        from supervisor.events import clear
+        clear()
+        
+    def _getTargetClass(self):
+        from supervisor.process import EventListenerPool
+        return EventListenerPool
+
+    def test_ctor(self):
+        options = DummyOptions()
+        gconfig = DummyPGroupConfig(options)
+        class EventType:
+            pass
+        gconfig.pool_events = (EventType,)
+        pool = self._makeOne(gconfig)
+        from supervisor import events
+        self.assertEqual(len(events.callbacks), 2)
+        self.assertEqual(events.callbacks[0], 
+            (EventType, pool._dispatchEvent))
+        self.assertEqual(events.callbacks[1], 
+            (events.EventRejectedEvent, pool.handle_rejected))
+
+    def test_handle_rejected(self):
+        options = DummyOptions()
+        gconfig = DummyPGroupConfig(options)
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        pool = self._makeOne(gconfig)
+        pool.processes = {'process1': process1}
+        class DummyEvent1:
+            pass
+        class DummyEvent2:
+            process = process1
+            event = DummyEvent1()
+        dummyevent = DummyEvent2()
+        pool.handle_rejected(dummyevent)
+        self.assertEqual(pool.event_buffer, [dummyevent.event])
+        
+    def test_handle_rejected_event_buffer_overflowed(self):
+        options = DummyOptions()
+        gconfig = DummyPGroupConfig(options)
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        gconfig.buffer_size = 1
+        pool = self._makeOne(gconfig)
+        pool.processes = {'process1': process1}
+        class DummyEvent1:
+            pass
+        class DummyEvent2:
+            process = process1
+            event = DummyEvent1()
+        dummyevent_a = DummyEvent2()
+        dummyevent_b = DummyEvent2()
+        pool.event_buffer = [dummyevent_a]
+        pool.handle_rejected(dummyevent_b)
+        self.assertEqual(pool.event_buffer, [dummyevent_b.event])
+        self.assertTrue(pool.config.options.logger.data[0].startswith(
+            'pool whatever event buffer overflowed, discarding'))
+
+    def test__bufferEvent_doesnt_rebufer_overflow_events(self):
+        options = DummyOptions()
+        gconfig = DummyPGroupConfig(options)
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        pool = self._makeOne(gconfig)
+        pool.event_buffer = [1]
+        from supervisor.events import EventBufferOverflowEvent
+        overflow = EventBufferOverflowEvent(pool, None)
+        pool._bufferEvent(overflow)
+        self.assertEqual(pool.event_buffer, [1])
+
+    def test__dispatchEvent_pipe_error(self):
+        options = DummyOptions()
+        gconfig = DummyPGroupConfig(options)
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        from supervisor.states import EventListenerStates
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        pool = self._makeOne(gconfig)
+        process1 = pool.processes['process1']
+        import errno
+        process1.write_error = errno.EPIPE
+        process1.listener_state = EventListenerStates.READY
+        from supervisor.events import StartingFromStoppedEvent
+        event = StartingFromStoppedEvent(process1)
+        pool._dispatchEvent(event)
+        self.assertEqual(process1.stdin_buffer, '')
+        self.assertEqual(process1.listener_state, EventListenerStates.READY)
+
+    def test_repr(self):
+        options = DummyOptions()
+        gconfig = DummyPGroupConfig(options)
+        pool = self._makeOne(gconfig)
+        s = repr(pool)
+        self.assertTrue(s.startswith(
+            '<supervisor.process.EventListenerPool instance at'))
+        self.assertTrue(s.endswith('named whatever>'))
+
+    def test_transition_nobody_listenening(self):
+        options = DummyOptions()
+        from supervisor.process import ProcessStates
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.STARTING)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        pool = self._makeOne(gconfig)
+        pool.processes = {'process1': process1}
+        from supervisor.events import StartingFromStoppedEvent
+        from supervisor.states import EventListenerStates
+        event = StartingFromStoppedEvent(process1)
+        process1.listener_state = EventListenerStates.BUSY
+        pool.event_buffer = [event]
+        pool.transition()
+        self.assertEqual(process1.transitioned, True)
+        self.assertEqual(pool.event_buffer, [event])
+        self.assertEqual(pool.config.options.logger.data[0], 5)
+        self.assertTrue(pool.config.options.logger.data[1].startswith(
+            'Failed sending buffered event'))
+    
+    def test_transition_event_handled(self):
+        options = DummyOptions()
+        from supervisor.process import ProcessStates
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.STARTING)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        pool = self._makeOne(gconfig)
+        pool.processes = {'process1': process1}
+        from supervisor.events import StartingFromStoppedEvent
+        from supervisor.states import EventListenerStates
+        event = StartingFromStoppedEvent(process1)
+        process1.listener_state = EventListenerStates.READY
+        pool.event_buffer = [event]
+        pool.transition()
+        self.assertEqual(process1.transitioned, True)
+        self.assertEqual(pool.event_buffer, [])
+        self.assertEqual(
+            process1.stdin_buffer,
+            'SUPERVISORD3.0 STARTING_FROM_STOPPED 22\nprocess_name: process1')
+        self.assertEqual(process1.listener_state, EventListenerStates.BUSY)
+        self.assertEqual(process1.event, event)
+
+class TestSerializers(unittest.TestCase):
+    def test_pcomm_event(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1)
+        class DummyPCommEvent:
+            process = process1
+            channel = 'stdout'
+            data = 'yo'
+        event = DummyPCommEvent()
+        from supervisor.process import pcomm_event
+        self.assertEqual(pcomm_event(event),
+                         'process_name: process1\nchannel: stdout\nyo'
+                         )
+            
+    def test_overflow_event(self):
+        class DummyConfig:
+            name = 'foo'
+        class DummyGroup:
+            config = DummyConfig()
+        from supervisor.events import StartingFromStoppedEvent
+        class DummyOverflowEvent:
+            group = DummyGroup()
+            event = StartingFromStoppedEvent(None)
+        event = DummyOverflowEvent()
+        from supervisor.process import overflow_event
+        self.assertEqual(overflow_event(event),
+                         'group_name: foo\nevent_type: None')
+
+    def test_pcomm_event(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1)
+        class DummyStateChangeEvent:
+            process = process1
+        event = DummyStateChangeEvent()
+        from supervisor.process import proc_sc_event
+        self.assertEqual(proc_sc_event(event), 'process_name: process1')
+
+    def test_supervisor_sc_event(self):
+        class DummyEvent:
+            pass
+        event = DummyEvent()
+        from supervisor.process import supervisor_sc_event
+        self.assertEqual(supervisor_sc_event(event), '')
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

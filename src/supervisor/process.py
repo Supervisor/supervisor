@@ -131,7 +131,7 @@ class Subprocess:
     def change_state(self, new_state):
         old_state = self.state
         if new_state is old_state:
-            return
+            return False
         event_type = events.getProcessStateChangeEventType(old_state, new_state)
         notify(event_type(self))
         self.state = new_state
@@ -583,8 +583,12 @@ class EventListenerPool(ProcessGroupBase):
         if isinstance(event, EventBufferOverflowEvent):
             return # don't ever buffer EventBufferOverflowEvents
         if len(self.event_buffer) >= self.config.buffer_size:
-            discarded_event = self.event_buffer.pop(0)
-            notify(EventBufferOverflowEvent(self, discarded_event))
+            if self.event_buffer:
+                discarded_event = self.event_buffer.pop(0)
+                notify(EventBufferOverflowEvent(self, discarded_event))
+                self.config.options.logger.info(
+                    'pool %s event buffer overflowed, discarding %s' % (
+                    (self.config.name, discarded_event)))
         self.config.options.logger.log(self.config.options.TRACE,
                                        'pool %s busy, buffering event %s' % (
                                            (self.config.name, event)))
@@ -608,8 +612,9 @@ class EventListenerPool(ProcessGroupBase):
                     envelope = self._eventEnvelope(event_type, payload)
                     process.write(envelope)
                 except IOError, why:
-                    if why[0] == errno.EPIPE:
-                        continue
+                    if why[0] != errno.EPIPE:
+                        raise
+                    continue
                 process.listener_state = EventListenerStates.BUSY
                 process.event = event
                 return True
@@ -633,7 +638,7 @@ def overflow_event(event):
 serializers[events.EventBufferOverflowEvent] = overflow_event
 
 def proc_sc_event(event):
-    return 'process_name: %s\n' % event.process.config.name
+    return 'process_name: %s' % event.process.config.name
 
 serializers[events.ProcessStateChangeEvent] = proc_sc_event
 

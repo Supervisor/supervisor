@@ -290,6 +290,7 @@ class DummyProcess:
     stdout_buffer = '' # buffer of characters from child stdout output to log
     stderr_buffer = '' # buffer of characters from child stderr output to log
     stdin_buffer = '' # buffer of characters to send to child process' stdin
+    listener_state = None
 
     def __init__(self, config, state=None):
         self.config = config
@@ -317,6 +318,8 @@ class DummyProcess:
         self.execv_arg_exception = None
         self.input_fd_drained = None
         self.output_fd_drained = None
+        self.transitioned = False
+        self.write_error = None
 
     def reopenlogs(self):
         self.logs_reopened = True
@@ -381,7 +384,12 @@ class DummyProcess:
         self.input_fd_drained = fd
 
     def write(self, chars):
+        if self.write_error:
+            raise IOError(self.write_error)
         self.stdin_buffer += chars
+
+    def transition(self):
+        self.transitioned = True
 
 class DummyPConfig:
     def __init__(self, options, name, command, priority=999, autostart=True,
@@ -662,6 +670,8 @@ class DummyPGroupConfig:
             pconfigs = []
         self.process_configs = pconfigs
         self.after_setuid_called = False
+        self.pool_events = []
+        self.buffer_size = 10
 
     def after_setuid(self):
         self.after_setuid_called = True
