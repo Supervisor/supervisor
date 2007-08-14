@@ -58,6 +58,7 @@ class Subprocess:
     pipes = None # map of channel name to file descriptor #
     exitstatus = None # status attached to dead process by finsh()
     spawnerr = None # error message attached by spawn() if any
+    group = None # ProcessGroup instance if process is in the group
     
     def __init__(self, config):
         """Constructor.
@@ -447,7 +448,7 @@ class ProcessGroupBase:
         self.config = config
         self.processes = {}
         for pconfig in self.config.process_configs:
-            self.processes[pconfig.name] = pconfig.make_process()
+            self.processes[pconfig.name] = pconfig.make_process(self)
         
 
     def __cmp__(self, other):

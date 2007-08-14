@@ -710,6 +710,15 @@ class TestProcessConfig(unittest.TestCase):
         process = instance.make_process()
         from supervisor.process import Subprocess
         self.assertEqual(process.__class__, Subprocess)
+        self.assertEqual(process.group, None)
+
+    def test_make_process_with_group(self):
+        options = DummyOptions()
+        instance = self._makeOne(options)
+        process = instance.make_process('abc')
+        from supervisor.process import Subprocess
+        self.assertEqual(process.__class__, Subprocess)
+        self.assertEqual(process.group, 'abc')
 
     def test_make_dispatchers_stderr_not_redirected(self):
         options = DummyOptions()

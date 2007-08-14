@@ -54,8 +54,12 @@ class ProcessCommunicationEvent(Event):
         self.data = data
 
     def __str__(self):
-        return 'process_name: %s\nchannel: %s\n%s' % (
+        groupname = ''
+        if self.process.group is not None:
+            groupname = self.process.group.config.name
+        return 'process_name: %s\ngroup_name: %s\nchannel: %s\n%s' % (
             self.process.config.name,
+            groupname,
             self.channel,
             self.data)
 
@@ -73,7 +77,11 @@ class ProcessStateChangeEvent(Event):
         self.process = process
 
     def __str__(self):
-        return 'process_name: %s' % self.process.config.name
+        groupname = ''
+        if self.process.group is not None:
+            groupname = self.process.group.config.name
+        return 'process_name: %s\ngroup_name: %s' % (self.process.config.name,
+                                                     groupname)
 
 
 class StartingFromStoppedEvent(ProcessStateChangeEvent):

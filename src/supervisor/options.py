@@ -1488,9 +1488,11 @@ class ProcessConfig(Config):
         if self.stderr_capturefile is Automatic:
             self.stderr_capturefile = get_autoname(name, sid, 'stderr_capture')
             
-    def make_process(self):
+    def make_process(self, group=None):
         from supervisor.process import Subprocess
-        return Subprocess(self)
+        process = Subprocess(self)
+        process.group = group
+        return process
 
     def make_dispatchers(self, proc):
         use_stderr = not self.redirect_stderr

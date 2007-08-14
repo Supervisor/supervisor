@@ -291,6 +291,7 @@ class DummyProcess:
     stderr_buffer = '' # buffer of characters from child stderr output to log
     stdin_buffer = '' # buffer of characters to send to child process' stdin
     listener_state = None
+    group = None
 
     def __init__(self, config, state=None):
         self.config = config
@@ -431,8 +432,10 @@ class DummyPConfig:
     def create_autochildlogs(self):
         self.autochildlogs_created = True
 
-    def make_process(self):
-        return DummyProcess(self)
+    def make_process(self, group=None):
+        process = DummyProcess(self)
+        process.group = group
+        return process
 
     def make_dispatchers(self, proc):
         use_stderr = not self.redirect_stderr
