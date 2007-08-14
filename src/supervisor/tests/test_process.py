@@ -994,11 +994,12 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool = self._makeOne(gconfig)
         pool.processes = {'process1': process1}
         class DummyEvent1:
-            pass
+            serial = 'abc'
         class DummyEvent2:
             process = process1
             event = DummyEvent1()
         dummyevent = DummyEvent2()
+        dummyevent.serial = 1
         pool.handle_rejected(dummyevent)
         self.assertEqual(pool.event_buffer, [dummyevent.event])
         
@@ -1012,17 +1013,19 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool = self._makeOne(gconfig)
         pool.processes = {'process1': process1}
         class DummyEvent1:
-            pass
+            serial = 'abc'
         class DummyEvent2:
             process = process1
             event = DummyEvent1()
         dummyevent_a = DummyEvent2()
         dummyevent_b = DummyEvent2()
+        dummyevent_a.serial = 1
+        dummyevent_b.serial = 2
         pool.event_buffer = [dummyevent_a]
         pool.handle_rejected(dummyevent_b)
         self.assertEqual(pool.event_buffer, [dummyevent_b.event])
-        self.assertTrue(pool.config.options.logger.data[0].startswith(
-            'pool whatever event buffer overflowed, discarding'))
+        self.assertEqual(pool.config.options.logger.data[0],
+            'pool whatever event buffer overflowed, discarding event 1')
 
     def test__bufferEvent_doesnt_rebufer_overflow_events(self):
         options = DummyOptions()

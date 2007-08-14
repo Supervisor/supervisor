@@ -567,7 +567,7 @@ class EventListenerPool(ProcessGroupBase):
             if not ok:
                 self.config.options.logger.log(self.config.options.TRACE,
                                                'Failed sending buffered event '
-                                               '%s' % event)
+                                               '%s' % event.serial)
                 self.event_buffer.insert(0, event)
 
     def _eventEnvelope(self, event_type, serial, payload):
@@ -588,11 +588,11 @@ class EventListenerPool(ProcessGroupBase):
                 discarded_event = self.event_buffer.pop(0)
                 notify(EventBufferOverflowEvent(self, discarded_event))
                 self.config.options.logger.info(
-                    'pool %s event buffer overflowed, discarding %s' % (
-                    (self.config.name, discarded_event)))
+                    'pool %s event buffer overflowed, discarding event %s' % (
+                    (self.config.name, discarded_event.serial)))
         self.config.options.logger.log(self.config.options.TRACE,
                                        'pool %s busy, buffering event %s' % (
-                                           (self.config.name, event)))
+                                           (self.config.name, event.serial)))
         self.event_buffer.append(event)
 
     def _dispatchEvent(self, event, buffer=True):
@@ -621,10 +621,13 @@ class EventListenerPool(ProcessGroupBase):
                     if why[0] != errno.EPIPE:
                         raise
                     continue
+                
                 process.listener_state = EventListenerStates.BUSY
                 process.event = event
+                self.config.options.logger.log(
+                    self.config.options.TRACE,
+                    'event %s sent to listener' % event.serial)
                 return True
-
         if buffer:
             self._bufferEvent(event)
         return False
