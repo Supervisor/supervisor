@@ -226,6 +226,7 @@ class PEventListenerDispatcher(PDispatcher):
         return False
     
     def readable(self):
+        self.handle_listener_state_change()
         return True
 
     def handle_read_event(self):
@@ -309,12 +310,14 @@ class PEventListenerDispatcher(PDispatcher):
                 tokenlen = len(self.EVENT_REJECTED_TOKEN)
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.listener_state = EventListenerStates.ACKNOWLEDGED
+                notify(EventRejectedEvent(process, process.event))
                 process.event = None
             else:
                 msg = '%s: BUSY -> UNKNOWN' % procname
                 self._trace(msg)
                 process.listener_state = EventListenerStates.UNKNOWN
                 self.state_buffer = ''
+                notify(EventRejectedEvent(process, process.event))
                 process.event = None
             if self.state_buffer:
                 # keep going til its too short

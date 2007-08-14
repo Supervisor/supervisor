@@ -1518,15 +1518,14 @@ class EventListenerConfig(ProcessConfig):
         dispatchers = {}
         from supervisor.dispatchers import PEventListenerDispatcher
         from supervisor.dispatchers import PInputDispatcher
+        from supervisor.dispatchers import POutputDispatcher
         from supervisor import events
         if stdout_fd is not None:
-            etype = events.ProcessCommunicationStdoutEvent
             dispatchers[stdout_fd] = PEventListenerDispatcher(proc, 'stdout',
                                                               stdout_fd)
         if stderr_fd is not None:
             etype = events.ProcessCommunicationStderrEvent
-            dispatchers[stderr_fd] = PEventListenerDispatcher(proc, 'stderr',
-                                                              stderr_fd)
+            dispatchers[stderr_fd] = POutputDispatcher(proc, etype, stderr_fd)
         if stdin_fd is not None:
             dispatchers[stdin_fd] = PInputDispatcher(proc, 'stdin', stdin_fd)
         return dispatchers, p

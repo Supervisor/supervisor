@@ -564,10 +564,12 @@ class EventListenerPool(ProcessGroupBase):
                                                '%s' % event)
                 self.event_buffer.insert(0, event)
 
-    def _eventEnvelope(self, event, payload):
+    def _eventEnvelope(self, event_type, payload):
+        event_name = getEventNameByType(event_type)
+        payload_len = len(payload)
         D = {'ver':'3.0',
-             'len':len(payload),
-             'event_name':getEventNameByType(event),
+             'len':payload_len,
+             'event_name':event_name,
              'payload':payload}
         return 'SUPERVISORD%(ver)s %(event_name)s %(len)s\n%(payload)s' % D
 
@@ -585,6 +587,7 @@ class EventListenerPool(ProcessGroupBase):
     def _dispatchEvent(self, event, buffer=True):
         # events are required to be instances
         serializer = None
+        event_type = event.__class__
         for klass, callback in serializers.items():
             if isinstance(event, klass):
                 serializer = callback
@@ -596,7 +599,8 @@ class EventListenerPool(ProcessGroupBase):
             if process.listener_state == EventListenerStates.READY:
                 payload = serializer(event)
                 try:
-                    process.write(self._eventEnvelope(event, payload))
+                    envelope = self._eventEnvelope(event_type, payload)
+                    process.write(envelope)
                 except IOError, why:
                     if why[0] == errno.EPIPE:
                         continue
@@ -623,7 +627,8 @@ def overflow_event(event):
 serializers[events.EventBufferOverflowEvent] = overflow_event
 
 def proc_sc_event(event):
-    return ''
+    return 'process_name: %s\n' % event.process.config.name
+
 serializers[events.ProcessStateChangeEvent] = proc_sc_event
 
 def supervisor_sc_event(event):
