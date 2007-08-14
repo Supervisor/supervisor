@@ -1093,9 +1093,10 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [event])
-        self.assertEqual(pool.config.options.logger.data[0], 5)
-        self.assertTrue(pool.config.options.logger.data[1].startswith(
-            'Failed sending buffered event'))
+        data = pool.config.options.logger.data
+        self.assertEqual(data[0], 5)
+        self.assertTrue(data[1].startswith(
+            'whatever: Failed sending buffered event'), data[1])
     
     def test_transition_event_proc_not_running(self):
         options = DummyOptions()
