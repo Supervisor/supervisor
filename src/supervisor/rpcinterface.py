@@ -23,7 +23,7 @@ RUNNING_STATES = (ProcessStates.RUNNING,
                   ProcessStates.BACKOFF,
                   ProcessStates.STARTING)
 
-API_VERSION  = '2.0'
+API_VERSION  = '3.0'
 
 class SupervisorNamespaceRPCInterface:
     def __init__(self, supervisord):
