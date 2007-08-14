@@ -256,6 +256,7 @@ class Subprocess:
                     env = os.environ.copy()
                     if self.config.environment is not None:
                         env.update(self.config.environment)
+                    env['SUPERVISOR_PROCESS_NAME'] = self.config.name
                     options.execve(filename, argv, env)
                 except OSError, why:
                     code = why[0]
