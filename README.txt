@@ -584,9 +584,9 @@ Process States
                           /       |
                          |        |
                          |        |
-                    STOPPING      |
-                     ^            V
-                     |       STARTING <-----> BACKOFF
+                   STOPPING       |
+                     ^ ^          V
+                     |  \--- STARTING <-----> BACKOFF
                      |      /     ^            |
                      |     V      |            |
                      \-- RUNNING / \           |
