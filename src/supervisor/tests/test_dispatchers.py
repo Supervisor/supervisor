@@ -421,13 +421,13 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         from supervisor.dispatchers import EventListenerStates
         process.listener_state = EventListenerStates.ACKNOWLEDGED
         dispatcher = self._makeOne(process)
-        options.readfd_result = dispatcher.READY_FOR_EVENTS_TOKEN + 'abc'
+        options.readfd_result = dispatcher.READY_FOR_EVENTS_TOKEN
         self.assertEqual(dispatcher.handle_read_event(), None)
         self.assertEqual(process.listener_state, EventListenerStates.READY)
-        self.assertEqual(dispatcher.state_buffer, 'abc')
+        self.assertEqual(dispatcher.state_buffer, '')
         self.assertEqual(len(dispatcher.childlog.data), 1)
         self.assertEqual(dispatcher.childlog.data[0],
-                         dispatcher.READY_FOR_EVENTS_TOKEN + 'abc')
+                         dispatcher.READY_FOR_EVENTS_TOKEN)
 
     def test_handle_listener_state_change_from_unknown(self):
         options = DummyOptions()
@@ -449,9 +449,9 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         from supervisor.dispatchers import EventListenerStates
         dispatcher = self._makeOne(process)
         process.listener_state = EventListenerStates.ACKNOWLEDGED
-        dispatcher.state_buffer = 'READY\nabc'
+        dispatcher.state_buffer = 'READY\n'
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
-        self.assertEqual(dispatcher.state_buffer, 'abc')
+        self.assertEqual(dispatcher.state_buffer, '')
         self.assertEqual(options.logger.data,
                          [5, 'process1: ACKNOWLEDGED -> READY'])
         self.assertEqual(process.listener_state, EventListenerStates.READY)

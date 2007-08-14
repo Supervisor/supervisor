@@ -191,8 +191,7 @@ class PEventListenerDispatcher(PDispatcher):
     def __init__(self, process, channel, fd):
         self.process = process
         # the initial state of our listener is ACKNOWLEDGED; this is a
-        # "busy" state that implies we're awaiting a READY_FOR_EVENTS
-        # token.
+        # "busy" state that implies we're awaiting a READY_FOR_EVENTS_TOKEN
         self.process.listener_state = EventListenerStates.ACKNOWLEDGED
         self.process.event = None
         self.channel = channel
@@ -241,7 +240,6 @@ class PEventListenerDispatcher(PDispatcher):
                 if self.process.config.options.strip_ansi:
                     data = self.process.config.options.stripEscapes(data)
                 self.childlog.info(data)
-
         self.handle_listener_state_change()
 
     def _trace(self, msg):
@@ -279,7 +277,11 @@ class PEventListenerDispatcher(PDispatcher):
                 process.listener_state = EventListenerStates.UNKNOWN
                 self.state_buffer = ''
                 process.event = None
-            return
+            if self.state_buffer:
+                # keep going til its too short
+                self.handle_listener_state_change()
+            else:
+                return
 
         elif state == EventListenerStates.READY:
             # the process sent some spurious data, be a hardass about it
@@ -314,7 +316,11 @@ class PEventListenerDispatcher(PDispatcher):
                 process.listener_state = EventListenerStates.UNKNOWN
                 self.state_buffer = ''
                 process.event = None
-            return
+            if self.state_buffer:
+                # keep going til its too short
+                self.handle_listener_state_change()
+            else:
+                return
 
 class PInputDispatcher(PDispatcher):
     """ Input (stdin) dispatcher """

@@ -212,7 +212,6 @@ class Supervisor:
             if process is None:
                 self.options.logger.critical('reaped unknown pid %s)' % pid)
             else:
-                name = process.config.name
                 process.finish(pid, sts)
                 del self.options.pidhistory[pid]
             if not once:

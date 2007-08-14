@@ -741,7 +741,8 @@ class ServerOptions(Options):
                     raise ValueError('Unknown event type %s in [%s] events' %
                                      (pool_event_name, section))
                 pool_events.append(pool_event)
-            processes=self.processes_from_section(parser, section, pool_name)
+            processes=self.processes_from_section(parser, section, pool_name,
+                                                  listener=True)
             groups.append(
                 EventListenerPoolConfig(self, pool_name, priority, processes,
                                         buffer_size, pool_events)
@@ -750,7 +751,8 @@ class ServerOptions(Options):
         groups.sort()
         return groups
 
-    def processes_from_section(self, parser, section, group_name):
+    def processes_from_section(self, parser, section, group_name,
+                               listener=False):
         programs = []
         get = parser.saneget
         program_name = section.split(':', 1)[1]
@@ -819,7 +821,12 @@ class ServerOptions(Options):
                 maxbytes = byte_size(get(section, mb_key, '50MB'))
                 logfiles[mb_key] = maxbytes
 
-            pconfig = ProcessConfig(
+            if listener:
+                klass = EventListenerConfig
+            else:
+                klass = ProcessConfig
+
+            pconfig = klass(
                 self,
                 name=expand(process_name, expansions, 'process_name'),
                 command=expand(command, expansions, 'command'),
@@ -1499,6 +1506,27 @@ class ProcessConfig(Config):
         if stderr_fd is not None:
             etype = events.ProcessCommunicationStderrEvent
             dispatchers[stderr_fd] = POutputDispatcher(proc,etype, stderr_fd)
+        if stdin_fd is not None:
+            dispatchers[stdin_fd] = PInputDispatcher(proc, 'stdin', stdin_fd)
+        return dispatchers, p
+
+class EventListenerConfig(ProcessConfig):
+    def make_dispatchers(self, proc):
+        use_stderr = not self.redirect_stderr
+        p = self.options.make_pipes(use_stderr)
+        stdout_fd,stderr_fd,stdin_fd = p['stdout'],p['stderr'],p['stdin']
+        dispatchers = {}
+        from supervisor.dispatchers import PEventListenerDispatcher
+        from supervisor.dispatchers import PInputDispatcher
+        from supervisor import events
+        if stdout_fd is not None:
+            etype = events.ProcessCommunicationStdoutEvent
+            dispatchers[stdout_fd] = PEventListenerDispatcher(proc, 'stdout',
+                                                              stdout_fd)
+        if stderr_fd is not None:
+            etype = events.ProcessCommunicationStderrEvent
+            dispatchers[stderr_fd] = PEventListenerDispatcher(proc, 'stderr',
+                                                              stderr_fd)
         if stdin_fd is not None:
             dispatchers[stdin_fd] = PInputDispatcher(proc, 'stdin', stdin_fd)
         return dispatchers, p
