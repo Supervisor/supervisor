@@ -39,13 +39,25 @@ class EventBufferOverflowEvent(Event):
         self.group = group
         self.event = event
 
+    def __str__(self):
+        name = self.group.config.name
+        typ = getEventNameByType(self.event)
+        return 'group_name: %s\nevent_type: %s' % (name, typ)
+
 class ProcessCommunicationEvent(Event):
     # event mode tokens
     BEGIN_TOKEN = '<!--XSUPERVISOR:BEGIN-->'
     END_TOKEN   = '<!--XSUPERVISOR:END-->'
+    channel = None # this is abstract
     def __init__(self, process, data):
         self.process = process
         self.data = data
+
+    def __str__(self):
+        return 'process_name: %s\nchannel: %s\n%s' % (
+            self.process.config.name,
+            self.channel,
+            self.data)
 
 class ProcessCommunicationStdoutEvent(ProcessCommunicationEvent):
     channel = 'stdout'
@@ -59,6 +71,10 @@ class ProcessStateChangeEvent(Event):
     to = None
     def __init__(self, process):
         self.process = process
+
+    def __str__(self):
+        return 'process_name: %s' % self.process.config.name
+
 
 class StartingFromStoppedEvent(ProcessStateChangeEvent):
     frm = ProcessStates.STOPPED
@@ -117,6 +133,8 @@ class ToUnknownEvent(ProcessStateChangeEvent):
 
 class SupervisorStateChangeEvent(Event):
     """ Abstract class """
+    def __str__(self):
+        return ''
 
 class SupervisorRunningEvent(SupervisorStateChangeEvent):
     pass
@@ -185,3 +203,4 @@ def getProcessStateChangeEventType(old_state, new_state):
     return typ
         
         
+

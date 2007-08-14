@@ -1,6 +1,10 @@
 import sys
 import unittest
 
+from supervisor.tests.base import DummyOptions
+from supervisor.tests.base import DummyPConfig
+from supervisor.tests.base import DummyProcess
+
 class EventSubscriptionNotificationTests(unittest.TestCase):
     def setUp(self):
         from supervisor import events
@@ -91,6 +95,49 @@ class TestEventTypes(unittest.TestCase):
         inst = ProcessStateChangeEvent(1)
         self.assertEqual(inst.process, 1)
         
+class TestSerializations(unittest.TestCase):
+    def test_pcomm_stdout_event(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1)
+        from supervisor.events import ProcessCommunicationStdoutEvent
+        event = ProcessCommunicationStdoutEvent(process1, 'yo')
+        self.assertEqual(str(event),
+                         'process_name: process1\nchannel: stdout\nyo'
+                         )
+            
+    def test_pcomm_stderr_event(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1)
+        from supervisor.events import ProcessCommunicationStderrEvent
+        event = ProcessCommunicationStderrEvent(process1, 'yo')
+        self.assertEqual(str(event),
+                         'process_name: process1\nchannel: stderr\nyo'
+                         )
+
+    def test_overflow_event(self):
+        from supervisor import events
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'foo', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1)
+        wrapped = events.ProcessCommunicationStderrEvent(process1, 'yo')
+        event = events.EventBufferOverflowEvent(process1, wrapped)
+        self.assertEqual(str(event), 'group_name: foo\nevent_type: None')
+
+    def test_process_sc_event(self):
+        from supervisor import events
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1)
+        event = events.StartingFromStoppedEvent(process1)
+        self.assertEqual(str(event), 'process_name: process1')
+
+    def test_supervisor_sc_event(self):
+        from supervisor import events
+        event = events.SupervisorRunningEvent()
+        self.assertEqual(str(event), '')
+
 class TestUtilityFunctions(unittest.TestCase):
     def test_getEventNameByType(self):
         from supervisor import events

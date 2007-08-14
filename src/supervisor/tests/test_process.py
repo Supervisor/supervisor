@@ -1127,52 +1127,6 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         self.assertEqual(process1.listener_state, EventListenerStates.BUSY)
         self.assertEqual(process1.event, event)
 
-class TestSerializers(unittest.TestCase):
-    def test_pcomm_event(self):
-        options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
-        process1 = DummyProcess(pconfig1)
-        class DummyPCommEvent:
-            process = process1
-            channel = 'stdout'
-            data = 'yo'
-        event = DummyPCommEvent()
-        from supervisor.process import pcomm_event
-        self.assertEqual(pcomm_event(event),
-                         'process_name: process1\nchannel: stdout\nyo'
-                         )
-            
-    def test_overflow_event(self):
-        class DummyConfig:
-            name = 'foo'
-        class DummyGroup:
-            config = DummyConfig()
-        from supervisor.events import StartingFromStoppedEvent
-        class DummyOverflowEvent:
-            group = DummyGroup()
-            event = StartingFromStoppedEvent(None)
-        event = DummyOverflowEvent()
-        from supervisor.process import overflow_event
-        self.assertEqual(overflow_event(event),
-                         'group_name: foo\nevent_type: None')
-
-    def test_pcomm_event(self):
-        options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
-        process1 = DummyProcess(pconfig1)
-        class DummyStateChangeEvent:
-            process = process1
-        event = DummyStateChangeEvent()
-        from supervisor.process import proc_sc_event
-        self.assertEqual(proc_sc_event(event), 'process_name: process1')
-
-    def test_supervisor_sc_event(self):
-        class DummyEvent:
-            pass
-        event = DummyEvent()
-        from supervisor.process import supervisor_sc_event
-        self.assertEqual(supervisor_sc_event(event), '')
-
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
 
