@@ -357,6 +357,12 @@ class Subprocess:
             self.backoff = 0
             self.exitstatus = es
             msg = "exited: %s (%s)" % (processname, msg + "; expected")
+            if self.state == ProcessStates.STARTING:
+                # XXX I dont know under which circumstances this happens,
+                # but in the wild, there is a transition that subverts
+                # the RUNNING state (directly from STARTING to EXITED),
+                # so we perform the transition here.
+                self.change_state(ProcessStates.RUNNING)
             self._assertInState(ProcessStates.RUNNING)
             self.change_state(ProcessStates.EXITED)
         else:
