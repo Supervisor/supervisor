@@ -456,6 +456,22 @@ class PEventListenerDispatcherTests(unittest.TestCase):
                          [5, 'process1: ACKNOWLEDGED -> READY'])
         self.assertEqual(process.listener_state, EventListenerStates.READY)
 
+    def test_handle_listener_state_change_acknowledged_gobbles(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        from supervisor.dispatchers import EventListenerStates
+        dispatcher = self._makeOne(process)
+        process.listener_state = EventListenerStates.ACKNOWLEDGED
+        dispatcher.state_buffer = 'READY\ngarbage\n'
+        self.assertEqual(dispatcher.handle_listener_state_change(), None)
+        self.assertEqual(dispatcher.state_buffer, '')
+        self.assertEqual(options.logger.data[0:2],
+                         [5, 'process1: ACKNOWLEDGED -> READY'])
+        self.assertEqual(options.logger.data[2:4],
+                         [5, 'process1: READY -> UNKNOWN'])
+        self.assertEqual(process.listener_state, EventListenerStates.UNKNOWN)
+
     def test_handle_listener_state_change_acknowledged_to_insufficient(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'process1', '/bin/process1')
@@ -552,6 +568,23 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.state_buffer, '')
         self.assertEqual(options.logger.data,
                          [5, 'process1: BUSY -> UNKNOWN'])
+        self.assertEqual(process.listener_state,
+                         EventListenerStates.UNKNOWN)
+
+    def test_handle_listener_state_busy_gobbles(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        from supervisor.dispatchers import EventListenerStates
+        dispatcher = self._makeOne(process)
+        process.listener_state = EventListenerStates.BUSY
+        dispatcher.state_buffer = 'OK\nbogus data\n'
+        self.assertEqual(dispatcher.handle_listener_state_change(), None)
+        self.assertEqual(dispatcher.state_buffer, '')
+        self.assertEqual(options.logger.data[0:2],
+                         [5, 'process1: BUSY -> ACKNOWLEDGED (processed)'])
+        self.assertEqual(options.logger.data[2:4],
+                         [5, 'process1: ACKNOWLEDGED -> UNKNOWN'])
         self.assertEqual(process.listener_state,
                          EventListenerStates.UNKNOWN)
 
