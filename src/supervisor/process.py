@@ -45,7 +45,7 @@ class Subprocess:
     pid = 0 # Subprocess pid; 0 when not running
     config = None # ProcessConfig instance
     state = None # process state code
-    listener_state = None # listener state code
+    listener_state = None # listener state code (if we're an event listener)
     laststart = 0 # Last time the subprocess was started; 0 if never
     laststop = 0  # Last time the subprocess was stopped; 0 if never
     delay = 0 # If nonzero, delay starting or killing until this time
@@ -606,6 +606,8 @@ class EventListenerPool(ProcessGroupBase):
             # all events
             raise NotImplementedError(etype)
         for process in self.processes.values():
+            if process.state != ProcessStates.RUNNING:
+                continue
             if process.listener_state == EventListenerStates.READY:
                 payload = serializer(event)
                 try:

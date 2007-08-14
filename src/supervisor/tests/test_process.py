@@ -1083,11 +1083,30 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         self.assertTrue(pool.config.options.logger.data[1].startswith(
             'Failed sending buffered event'))
     
-    def test_transition_event_handled(self):
+    def test_transition_event_proc_not_running(self):
         options = DummyOptions()
         from supervisor.process import ProcessStates
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
         process1 = DummyProcess(pconfig1, state=ProcessStates.STARTING)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        pool = self._makeOne(gconfig)
+        pool.processes = {'process1': process1}
+        from supervisor.events import StartingFromStoppedEvent
+        from supervisor.states import EventListenerStates
+        event = StartingFromStoppedEvent(process1)
+        process1.listener_state = EventListenerStates.READY
+        pool.event_buffer = [event]
+        pool.transition()
+        self.assertEqual(process1.transitioned, True)
+        self.assertEqual(pool.event_buffer, [event])
+        self.assertEqual(process1.stdin_buffer, '')
+        self.assertEqual(process1.listener_state, EventListenerStates.READY)
+
+    def test_transition_event_proc_running(self):
+        options = DummyOptions()
+        from supervisor.process import ProcessStates
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.RUNNING)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
         pool = self._makeOne(gconfig)
         pool.processes = {'process1': process1}
