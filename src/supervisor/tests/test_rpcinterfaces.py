@@ -367,6 +367,101 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         from supervisor import xmlrpc
         self._assertRPCError(xmlrpc.Faults.ABNORMAL_TERMINATION, callback)
 
+    def test_startProcessGroup(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', __file__, priority=1,
+                                startsecs=.01)
+        pconfig2 = DummyPConfig(options, 'process2', __file__, priority=2,
+                                startsecs=.01)
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
+                                               pconfig2)
+        from supervisor.process import ProcessStates
+        supervisord.set_procattr('process1', 'state', ProcessStates.STOPPED)
+        supervisord.set_procattr('process2', 'state', ProcessStates.STOPPED)
+        interface = self._makeOne(supervisord)
+        callback = interface.startProcessGroup('foo')
+
+        from supervisor.http import NOT_DONE_YET
+
+        # create callbacks in startall()
+        self.assertEqual(callback(), NOT_DONE_YET)
+        # start first process
+        self.assertEqual(callback(), NOT_DONE_YET)
+        # start second process
+        self.assertEqual(callback(), NOT_DONE_YET)
+
+        # wait for timeout 1
+        time.sleep(.02)
+        self.assertEqual(callback(), NOT_DONE_YET)
+
+        # wait for timeout 2
+        time.sleep(.02)
+        result = callback()
+
+        self.assertEqual(len(result), 2)
+
+        from supervisor.xmlrpc import Faults
+
+        # XXX not sure about this ordering, I think process1 should
+        # probably show up first
+        self.assertEqual(result[0]['name'], 'process2')
+        self.assertEqual(result[0]['group'], 'foo')
+        self.assertEqual(result[0]['status'],  Faults.SUCCESS)
+        self.assertEqual(result[0]['description'], 'OK')
+
+        self.assertEqual(result[1]['name'], 'process1')
+        self.assertEqual(result[1]['group'], 'foo')
+        self.assertEqual(result[1]['status'],  Faults.SUCCESS)
+        self.assertEqual(result[1]['description'], 'OK')
+
+        self.assertEqual(interface.update_text, 'startProcess')
+
+        process1 = supervisord.process_groups['foo'].processes['process1']
+        self.assertEqual(process1.spawned, True)
+        process2 = supervisord.process_groups['foo'].processes['process2']
+        self.assertEqual(process2.spawned, True)
+
+    def test_startProcessGroup_nowait(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', __file__, priority=1,
+                                startsecs=.01)
+        pconfig2 = DummyPConfig(options, 'process2', __file__, priority=2,
+                                startsecs=.01)
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
+                                               pconfig2)
+        from supervisor.process import ProcessStates
+        supervisord.set_procattr('process1', 'state', ProcessStates.STOPPED)
+        supervisord.set_procattr('process2', 'state', ProcessStates.STOPPED)
+        interface = self._makeOne(supervisord)
+        callback = interface.startProcessGroup('foo', wait=False)
+        from supervisor.http import NOT_DONE_YET
+        from supervisor.xmlrpc import Faults
+
+        # create callbacks in startall()
+        self.assertEqual(callback(), NOT_DONE_YET)
+
+        # get a result
+        result = callback()
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]['name'], 'process1')
+        self.assertEqual(result[0]['group'], 'foo')
+        self.assertEqual(result[0]['status'],  Faults.SUCCESS)
+        self.assertEqual(result[0]['description'], 'OK')
+
+        self.assertEqual(result[1]['name'], 'process2')
+        self.assertEqual(result[1]['group'], 'foo')
+        self.assertEqual(result[1]['status'],  Faults.SUCCESS)
+        self.assertEqual(result[1]['description'], 'OK')
+
+    def test_startProcessGroup_badname(self):
+        from supervisor import xmlrpc
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
+                             interface.startProcessGroup, 'foo')
+
+
     def test_startAllProcesses(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', __file__, priority=1,
@@ -481,6 +576,41 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(callback(), True)
         self.assertEqual(len(supervisord.process_groups['foo'].processes), 1)
         self.assertEqual(interface.update_text, 'stopProcess')
+
+    def test_stopProcessGroup(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
+        pconfig2 = DummyPConfig(options, 'process2', '/bin/foo2')
+        from supervisor.process import ProcessStates
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
+                                               pconfig2)
+        supervisord.set_procattr('process1', 'state', ProcessStates.RUNNING)
+        supervisord.set_procattr('process2', 'state', ProcessStates.RUNNING)
+        interface = self._makeOne(supervisord)
+        callback = interface.stopProcessGroup('foo')
+        self.assertEqual(interface.update_text, 'stopProcessGroup')
+        from supervisor import http
+        value = http.NOT_DONE_YET
+        while 1:
+            value = callback()
+            if value is not http.NOT_DONE_YET:
+                break
+
+        self.assertEqual(value, [
+            {'status':80,'group':'foo','name': 'process1','description': 'OK'},
+            {'status':80,'group':'foo','name': 'process2','description': 'OK'},
+            ] )
+        process1 = supervisord.process_groups['foo'].processes['process1']
+        self.assertEqual(process1.stop_called, True)
+        process2 = supervisord.process_groups['foo'].processes['process2']
+        self.assertEqual(process2.stop_called, True)
+
+    def test_stopProcessGroup_badname(self):
+        from supervisor import xmlrpc
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
+                             interface.stopProcessGroup, 'foo')
 
     def test_stopAllProcesses(self):
         options = DummyOptions()
