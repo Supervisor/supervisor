@@ -14,6 +14,7 @@
 
 import asyncore
 import os
+import sys
 import time
 import errno
 import shlex
@@ -632,6 +633,8 @@ _num = 0
 def new_serial():
     global _num
     val = _num
+    if _num == sys.maxint:
+        _num = -1
     _num = _num + 1
     return val
 
