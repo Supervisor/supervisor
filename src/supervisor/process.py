@@ -615,7 +615,7 @@ class EventListenerPool(ProcessGroupBase):
 serializers = {}
 def pcomm_event(event):
     return 'process_name: %s\nchannel: %s\n%s' % (
-        event.process_name,
+        event.process.config.name,
         event.channel,
         event.data)
 serializers[events.ProcessCommunicationEvent] = pcomm_event
