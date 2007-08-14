@@ -21,6 +21,10 @@ Next Release
   - The XML-RPC method supervisor.startProcess() now checks that
     the file exists and is executable (Mike Naberezny).
 
+  - An environment variable "SUPERVISOR_PROCESS_NAME" is set in the
+    environment of child processes, representing the name of
+    the process in supervisor's configuration.
+
 2.2b1
 
   - Individual program configuration sections can now specify an
