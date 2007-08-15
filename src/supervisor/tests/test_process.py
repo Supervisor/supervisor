@@ -366,11 +366,17 @@ class SubprocessTests(unittest.TestCase):
         options.forkpid = 0
         config = DummyPConfig(options, 'cat', '/bin/cat')
         instance = self._makeOne(config)
+        class Dummy:
+            name = 'dummy'
+        instance.group = Dummy()
+        instance.group.config = Dummy()
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(options.execv_args, ('/bin/cat', ['/bin/cat']) )
         self.assertEqual(
             options.execv_environment['SUPERVISOR_PROCESS_NAME'], 'cat')
+        self.assertEqual(
+            options.execv_environment['SUPERVISOR_GROUP_NAME'], 'dummy')
 
     def test_spawn_as_child_stderr_redirected(self):
         options = DummyOptions()

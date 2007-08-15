@@ -256,9 +256,11 @@ class Subprocess:
                     options.write(1, "(%s)\n" % msg)
                 try:
                     env = os.environ.copy()
+                    env['SUPERVISOR_PROCESS_NAME'] = self.config.name
+                    if self.group:
+                        env['SUPERVISOR_GROUP_NAME'] = self.group.config.name
                     if self.config.environment is not None:
                         env.update(self.config.environment)
-                    env['SUPERVISOR_PROCESS_NAME'] = self.config.name
                     options.execve(filename, argv, env)
                 except OSError, why:
                     code = why[0]
