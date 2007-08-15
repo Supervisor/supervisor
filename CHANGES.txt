@@ -1,4 +1,4 @@
-Next Release
+3.0a1
 
   - Default config file comment documented 10 secs as default for
     'startsecs' value in process config, in reality it was 1 sec.
@@ -21,9 +21,79 @@ Next Release
   - The XML-RPC method supervisor.startProcess() now checks that
     the file exists and is executable (Mike Naberezny).
 
-  - An environment variable "SUPERVISOR_PROCESS_NAME" is set in the
-    environment of child processes, representing the name of
-    the process in supervisor's configuration.
+  - Two environment variables, "SUPERVISOR_PROCESS_NAME" and
+    "SUPERVISOR_PROCESS_GROUP" are set in the environment of child
+    processes, representing the name of the process and group in
+    supervisor's configuration.
+
+  - Process state map change: a process may now move directly from the
+    STARTING state to the STOPPING state (as a result of a stop
+    request).
+
+  - Behavior change: if 'autorestart' is true, even if a process exits
+    with an "expected" exit code, it will still be restarted.  In the
+    immediately prior release of supervisor, this was true anyway, and
+    no one complained, so we're going to consider that the "officially
+    correct" behavior from now on.
+
+  - Supervisor now logs subprocess stdout and stderr independently.
+    The old program config keys "logfile", "logfile_backups" and
+    "logfile_maxbytes" are superseded by "stdout_logfile",
+    "stdout_logfile_backups", and "stdout_logfile_maxbytes".  Added
+    keys include "stderr_logfile", "stderr_logfile_backups", and
+    "stderr_logfile_maxbytes".  An additional "redirect_stderr" key is
+    used to cause program stderr output to be sent to its stdin
+    channel.  The keys "log_stderr" and "log_stdout" have been
+    removed.
+
+  - '[program:x]' config file sections now represent "homgeneous
+    process groups" instead of single processes.  A "numprocs" key in
+    the section represents the number of processes that are in the
+    group.  A "process_name" key in the section allows composition of
+    the each process' name within the homogeneous group.
+
+  - A new kind of config file section, '[group:x]' now exists,
+    allowing users to group heterogeneous processes together into a
+    process group that can be controlled as a unit from a client.
+
+  - Supervisord now emits "events" at certain points in its normal
+    operation.  These events include supervisor state change events,
+    process state change events, and "process communication events".
+
+  - A new kind of config file section '[eventlistener:x]' now exists.
+    Each section represents an "event listener pool", which is a
+    special kind of homogeneous process group.  Each process in the
+    pool is meant to receive supervisor "events" via its stdin and
+    perform some notification (e.g. send a mail, log, make an http
+    request, etc.)
+
+  - Supervisord can now capture data between special tokens in
+    subprocess stdout/stderr output and emit a "process communications
+    event" as a result.
+
+  - Supervisor's XML-RPC interface may be extended arbitrarily by
+    programmers.  Additional top-level namespace XML-RPC interfaces
+    can be added using the '[rpcinterface:foo]' declaration in the
+    configuration file.
+
+  - New 'supervisor'-namespace XML-RPC methods have been added:
+    getAPIVersion (returns the XML-RPC API version, the older
+    "getVersion" is now deprecated), "startProcessGroup" (starts all
+    processes in a supervisor process group), "stopProcessGroup"
+    (stops all processes in a supervisor process group), and
+    "sendProcessStdin" (sends data to a process' stdin file
+    descriptor).
+
+  - 'supervisor'-namespace XML-RPC methods which previously accepted
+    ony a process name as "name" (startProcess, stopProcess,
+    getProcessInfo, readProcessLog, tailProcessLog, and
+    clearProcessLog) now accept a "name" which may contain both the
+    process name and the process group name in the form
+    'groupname:procname'.  For backwards compatibility purposes,
+    "simple" names will also be accepted but will be expanded
+    internally (e.g. if "foo" is sent as a name, it will be expanded
+    to "foo:foo", representing the foo process within the foo process
+    group).
 
 2.2b1
 
