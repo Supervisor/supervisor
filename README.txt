@@ -130,9 +130,9 @@ Components
 
     The server piece of the supervisor is named "supervisord".  It is
     responsible for responding to commands from the client process as
-    well as restarting crashed processes.  It is meant to be run as
-    the root user in most production setups.  NOTE: see "Security
-    Notes" at the end of this document for caveats!
+    well as restarting crashed or exited processes.  It is meant to be
+    run as the root user in most production setups.  NOTE: see
+    "Security Notes" at the end of this document for caveats!
 
     The server process uses a configuration file.  This is typically
     located in "/etc/supervisord.conf".  This configuration file is an
@@ -352,27 +352,26 @@ Configuration File '[program:x]' Section Settings
   'autostart' -- If true, this program will start automatically when
   supervisord is started.  Default: true.
 
-  'autorestart' -- If true, when the program exits "unexpectedly",
-  supervisor will restart it automatically.  "unexpected" exits are
-  those which happen when the program exits with an "unexpected" exit
-  code (see 'exitcodes').  Default: true.
+  'autorestart' -- If true, when the program exits (either expectedly
+  or unexpectedly), supervisor will restart it automatically.
+  Default: true.
 
   'startsecs' -- The total number of seconds which the program needs
   to stay running after a startup to consider the start successful.
   If the program does not stay up for this many seconds after it is
-  started, even if it exits with an "expected" exit code, the startup
-  will be considered a failure.  Set to 0 to indicate that the program
-  needn't stay running for any particular amount of time.  Default: 1
+  started, even if it exits with an "expected" exit code (see
+  "exitcodes"), the startup will be considered a failure.  Set to 0
+  to indicate that the program needn't stay running for any particular
+  amount of time.  Default: 1
 
   'startretries' -- The number of serial failure attempts that
   supervisord will allow when attempting to start the program before
   giving up and puting the process into an ERROR state. Default: 3.
 
   'exitcodes' -- The list of 'expected' exit codes for this program.
-  A program is considered 'failed' (and will be restarted, if
-  autorestart is set true) if it exits with an exit code which is not
-  in this list and a stop of the program has not been explicitly
-  requested.  Default: 0,2.
+  Supervisor log messages will note if the program exits with an exit
+  code which is not in this list and a stop of the program has not
+  been explicitly requested.  Default: 0,2.
 
   'stopsignal' -- The signal used to kill the program when a stop is
   requested.  This can be any of TERM, HUP, INT, QUIT, KILL, USR1, or
@@ -568,13 +567,16 @@ Process States
 
   RUNNING  (20)  -- The process is running.
 
-  BACKOFF (30) -- The process is waiting to restart after a nonfatal error.
+  BACKOFF (30) -- The process entered the STARTING state but
+                  subsequently exited too quickly to move to the
+                  RUNNING state.
 
   STOPPING (40) -- The process is stopping due to a stop request.
 
-  EXITED  (100) -- The process exited with an expected exit code.
+  EXITED  (100) -- The process exited from the RUNNING state (expectedly 
+                   or unexpectedly).
 
-  FATAL  (200) -- The process could not be started successfully.
+  FATAL (200) -- The process could not be started successfully.
 
   UNKNOWN  (1000) -- The process is in an unknown state (programming error).
 
