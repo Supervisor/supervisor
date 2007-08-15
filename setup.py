@@ -65,6 +65,8 @@ dist = setup(
     package_dir = {'':'src'},
     packages = find_packages(os.path.join(here, 'src')),
     scripts=['src/supervisor/supervisord', 'src/supervisor/supervisorctl'],
+    install_requires = ['medusa >= 0.5.4', 'meld3 >= 0.6',
+                        'elementtree >= 1.2.6'],
     include_package_data = True,
     zip_safe = False,
     namespace_packages = ['supervisor'],
