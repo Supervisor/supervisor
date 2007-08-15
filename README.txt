@@ -8,6 +8,8 @@ History
 
   3/31/2007: updated for version 2.2
 
+  8/15/2007: updated for version 3.0
+
 Introduction
 
   The supervisor is a client/server system that allows its users to
@@ -73,7 +75,10 @@ Supported Platforms
 
 Installing
 
-  Run "python setup.py install", then copy the "sample.conf" file to
+  Run "python setup.py install".  This will download and install all
+  distributions depended upon by supervisor and finally install
+  supervisor itself.  Once that's done, copy the "sample.conf" file
+  you'll find in the same directory as this file to
   /etc/supervisord.conf and modify to your liking.  If you'd rather
   not put the supervisord.conf file in /etc, you can place it anywhere
   and start supervisord and point it at the configuration file via the
@@ -89,6 +94,32 @@ Installing
   "/usr/local/python/bin".  Python interpreters on different platforms
   use different $BINDIRs.  Look at the output of "setup.py install" if
   you can't figure out where yours is.
+
+Installing Without Internet Access
+
+  Since "setup.py install" performs downloads of dependent software,
+  it will not work on machines without internet access.  To install to
+  a machine which is not internet connected, obtain the following
+  dependencies on a machine which is internet-connected::
+
+  - setuptools (latest) from http://pypi.python.org/pypi/setuptools
+  - meld3 (0.6) from http://www.plope.com/software/meld3/
+  - medusa (0.5.4) from http://www.amk.ca/python/code/medusa.html
+  - elementtree (1.2.6) from http://effbot.org/downloads#elementtree
+
+  And then copy these files to removable media and put them on the
+  target machine.  Install each onto the target machine as per its
+  instructions.
+
+  *Note* -- if the machine you're installing on does not have a C
+  compiler, meld3's "setup.py install" probably won't work because
+  meld3 uses C extensions, but you can either copy the meld3/meld3
+  directory into your Python's site-packages directory, or you can
+  build a binary distribution for your platform on a similar machine
+  that does have a C compiler before shipping it over by doing "python
+  setup.py bdist".
+
+  Finally, run supervisor's "python setup.py install".
   
 Running Supervisord
 
@@ -238,9 +269,9 @@ Configuration File '[supervisord]' Section Settings
 
   'loglevel' -- The logging level, dictating what is written to the
   activity log.  One of 'critical', 'error', 'warn', 'info', 'debug'
-  or 'trace'.  At log level 'trace', the supervisord log file will
-  record the stderr/stdout output of its child processes, which is
-  useful for debugging.  Default: info.
+  or 'trace'.  Note that at log level 'trace', the supervisord log
+  file will record the stderr/stdout output of its child processes,
+  which is useful for debugging.  Default: info.
 
   'pidfile' -- The location in which supervisord keeps its pid file.
 
@@ -254,8 +285,8 @@ Configuration File '[supervisord]' Section Settings
   'minprocs' -- The minimum nymber of process descriptors that must be
   available before supervisord will start successfully.  Default: 200.
 
-  'nocleanup' -- prevent supervisord from clearing old "AUTO" log
-  files at startup time.  Default: false.
+  'nocleanup' -- prevent supervisord from clearing any existing "AUTO"
+  log files at startup time.  Default: false.
 
   'http_username' -- the username required for authentication to our
   HTTP server.  Default: none.
@@ -274,14 +305,20 @@ Configuration File '[supervisord]' Section Settings
   'directory' -- When supervisord daemonizes, switch to this
   directory.  Default: do not cd.
 
+  'strip_ansi' -- Strip all ANSI escape sequences from process log
+  files.
+
   'environment' -- A list of key/value pairs in the form
-   "KEY=val,KEY2=val2" that will be placed in the supervisord process'
-   environment (and as a result in all of its child process'
-   environments).  Default: none.  **Note** that subprocesses will
-   inherit the environment variables of the shell used to start
-   "supervisord" except for the ones overridden here and within the
-   program's "environment" configuration stanza.  See "Subprocess
-   Environment" below.
+  "KEY=val,KEY2=val2" that will be placed in the supervisord process'
+  environment (and as a result in all of its child process'
+  environments).  Default: none.  **Note** that subprocesses will
+  inherit the environment variables of the shell used to start
+  "supervisord" except for the ones overridden here and within the
+  program's "environment" configuration stanza.  See "Subprocess
+  Environment" below.
+
+  'identifier' -- The identifier for this supervisor server, used by
+  the RPC interface.  Default: 'supervisor'.
 
 Configuration File '[supervisorctl]' Section Settings
 
@@ -309,8 +346,10 @@ Configuration File '[program:x]' Section Settings
   A sample program section has the following structure, the options of
   which are described below it::
 
-    [program:programname]
-    command=/path/to/programname
+    [program:foo]
+    command=/path/to/foo
+    process_name = %(program_name)s
+    numprocs=1
     priority=1
     autostart=true
     autorestart=true
@@ -320,16 +359,21 @@ Configuration File '[program:x]' Section Settings
     stopsignal=TERM
     stopwaitsecs=10
     user=nobody
-    log_stdout=true
-    log_stderr=false
-    logfile=/tmp/programname.log
-    logfile_maxbytes=10MB
-    logfile_backups=2
+    redirect_stderr=false
+    stdout_logfile=AUTO
+    stdout_logfile_maxbytes=50MB
+    stdout_logfile_backups=10
+    stdout_capturefile=AUTO
+    stderr_logfile=AUTO
+    stderr_logfile_maxbytes=50MB
+    stderr_logfile_backups=10
+    stderr_capturefile=AUTO
     environment=A=1,B=2
 
-  '[program:programname]' -- the section header, required for each
-  program.  'programname' is a descriptive name (arbitrary) used to
-  describe the program being run.
+  '[program:foo]' -- the section header, required for each program.
+  'programname' is a descriptive name (arbitrary) used to describe the
+  program being run.  It must not include a colon character or a
+  bracket character.
 
   'command' -- the command that will be run when this program is
   started.  The command can be either absolute,
@@ -338,9 +382,27 @@ Configuration File '[program:x]' Section Settings
   can accept arguments, e.g. ('/path/to/program foo bar').  The
   command line can used double quotes to group arguments with spaces
   in them to pass to the program, e.g. ('/path/to/program/name -p "foo
-  bar"').  Controlled programs should themselves not be daemons, as
-  supervisord assumes it is responsible for daemonizing its
-  subprocesses.
+  bar"').  Note that the value of 'command' may include Python string
+  expressions, e.g. "/path/to/programname --port=80%(process_num)02d"
+  might expand to "/path/to/programname --port=8000" at runtime.
+  String expressions are evaluated against a dictionary containing
+  "group_name", "process_num" and "program_name".  **Controlled
+  programs should themselves not be daemons, as supervisord assumes it
+  is responsible for daemonizing its subprocesses (see "Nondaemonizing
+  of Subprocesses" later in this document).**
+
+  'process_name' -- a Python string expression that is used to compose
+  the supervisor process name for this process.  You usually don't
+  need to worry about setting this unless you change 'numprocs'.  The
+  string expression is evaluated against a dictionary that includes
+  "group_name", "process_num" and "program_name".  Default:
+  %(program_name)s.
+
+  'numprocs' -- Supervisor will start as many instances of this
+  program as named by numprocs.  Note that if numprocs > 1, the
+  'process_name' expression must include '%(process_num)s' (or any
+  other valid Python string expression that includes 'process_num')
+  within it.  Default: 1.
 
   'priority' -- the relative priority of the program in the start and
   shutdown ordering.  Lower priorities indicate programs that start
@@ -388,30 +450,47 @@ Configuration File '[program:x]' Section Settings
   is not running as root, this option has no effect.  Defaut: do not
   switch users.
 
-  'log_stdout' -- Send process stdout output to the process logfile.
-  Default: true.
+  'redirect_stderr' -- If true, cause the process' stderr output to be
+  sent back to supervisor on it's stdout file descriptor (in UNIX
+  shell terms, this is the equivalent of executing "/the/program
+  2>&1". Default: false.
 
-  'log_stderr' -- Send process stderr output to the process logfile.
-  Default: false.
+  'stdout_logfile' -- Put process stdout output in this file (and if
+  redirect_stderr is true, also place stderr output in this file).  If
+  'stdout_logfile' is unset or set to 'AUTO', supervisor will
+  automatically choose a file location.  If this is set to 'NONE',
+  supervisord will create no log file.  AUTO log files and their
+  backups will be deleted when supervisord restarts.  Default: AUTO.
 
-  'logfile' -- Keep process output as determined by log_stdout and
-  log_stderr in this file.  NOTE: if both log_stderr and log_stdout
-  are true, chunks of output from the process' stderr and stdout will
-  be intermingled more or less randomly in the log.  If 'logfile' is
-  unset or set to 'AUTO', supervisor will automatically choose a file
-  location.  If this is set to 'NONE', supervisord will create no log
-  file.  AUTO log files and their backups will be deleted when
-  supervisord restarts.  Default: AUTO.
+  'stdout_logfile_maxbytes' -- The maximum number of bytes that may be
+  consumed by stdout_logfile before it is rotated (suffix multipliers
+  like "KB", "MB", and "GB" can be used in the value).  Set this value
+  to 0 to indicate an unlimited log size.  Default: 50MB.
 
-  'logfile_maxbytes' -- The maximum number of bytes that may be
-  consumed by the process log file before it is rotated (suffix
-  multipliers like "KB", "MB", and "GB" can be used in the value).
-  Set this value to 0 to indicate an unlimited log size.  Default:
-  50MB.
+  'stdout_logfile_backups' -- The number of stdout_logfile backups to
+  keep around resulting from process stdout log file rotation.  Set
+  this to 0 to indicate an unlimited number of backups.  Default: 10.
 
-  'logfile_backups' -- The number of backups to keep around resulting
-  from process log file rotation.  Set this to 0 to indicate an
-  unlimited number of backups.  Default: 10.
+  'stdout_capturefile' -- file written to when process is in "stdout
+  capture mode" (see "Capture Mode and Process Communication Events"
+  later in this document).  May be a file path, NONE, or AUTO.
+  Default: AUTO.
+
+  'stderr_logfile' -- Put process stderr output in this file unless
+  redirect_stderr is true.  Accepts the same value types as
+  "stdout_logfile".  Default: AUTO.
+
+  'stderr_logfile_maxbytes' -- The maximum number of bytes before
+  logfile rotation for stderr_logfile.  Accepts the same value types
+  as "stdout_logfile_maxbytes".  Default: 50MB.
+
+  'stderr_logfile_backups' -- The number of backups to keep around
+  resulting from process stderr log file rotation.  Default: 10.
+
+  'stderr_capturefile' -- file written to when process is in "stderr
+  capture mode" (see "Capture Mode and Process Communication Events"
+  later in this document).  May be a file path, NONE, or AUTO.
+  Default: AUTO.
 
   'environment' -- A list of key/value pairs in the form
   "KEY=val,KEY2=val2" that will be placed in the child process'
@@ -419,6 +498,14 @@ Configuration File '[program:x]' Section Settings
   inherit the environment variables of the shell used to start
   "supervisord" except for the ones overridden here.  See "Subprocess
   Environment" below.
+
+Configuration File '[group:x]' Section Settings
+
+  XXX TODO
+
+Configuration File '[eventlistener:x]' Section Settings
+
+  XXX TODO
 
 Configuration File '[rpcinterface:x]' Section Settings (ADVANCED)
 
@@ -545,7 +632,7 @@ Examples of Program Configurations
     command=/path/to/postmaster
     ; we use the "fast" shutdown signal SIGINT
     stopsignal=INT
-    log_stderr=true
+    redirect_stderr=true
  
   Zope 2.8 instances and ZEO::
 
@@ -556,12 +643,12 @@ Examples of Program Configurations
     [program:zope1]
     command=/path/to/instance/home/bin/runzope
     priority=2
-    log_stderr=true
+    redirect_stderr=true
 
     [program:zope2]
     command=/path/to/another/instance/home/bin/runzope
     priority=2
-    log_stderr=true
+    redirect_stderr=true
 
   OpenLDAP slapd::
 
@@ -650,6 +737,18 @@ Process States
   All other state transitions are managed by supervisord
   automatically.
 
+Supervisor Events
+
+  XXX TODO
+
+Event Listeners
+
+  XXX TODO
+
+Capture Mode and Process Communication Events
+
+  XXX TODO
+
 Signals
 
   Killing supervisord with SIGHUP will stop all processes, reload the
@@ -708,7 +807,7 @@ Other Notes
    command=/path/to/pidproxy /path/to/pidfile /path/to/mysqld_safe
 
   The pidproxy program is named 'pidproxy.py' and is in the
-  distribution.
+  supervisor distribution.
 
 FAQ
 
