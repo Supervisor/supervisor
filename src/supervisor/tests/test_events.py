@@ -106,8 +106,7 @@ class TestSerializations(unittest.TestCase):
         process1.group = DummyGroup
         event = ProcessCommunicationStdoutEvent(process1, 'yo')
         self.assertEqual(str(event),
-                         'process_name: process1\ngroup_name: process1\n'
-                         'channel: stdout\nyo'
+                         'process_name: process1\ngroup_name: process1\nyo'
                          )
             
     def test_pcomm_stderr_event(self):
@@ -120,8 +119,7 @@ class TestSerializations(unittest.TestCase):
         from supervisor.events import ProcessCommunicationStderrEvent
         event = ProcessCommunicationStderrEvent(process1, 'yo')
         self.assertEqual(str(event),
-                         'process_name: process1\ngroup_name: process1\n'
-                         'channel: stderr\nyo'
+                         'process_name: process1\ngroup_name: process1\nyo'
                          )
 
     def test_overflow_event(self):

@@ -48,7 +48,6 @@ class ProcessCommunicationEvent(Event):
     # event mode tokens
     BEGIN_TOKEN = '<!--XSUPERVISOR:BEGIN-->'
     END_TOKEN   = '<!--XSUPERVISOR:END-->'
-    channel = None # this is abstract
     def __init__(self, process, data):
         self.process = process
         self.data = data
@@ -57,10 +56,9 @@ class ProcessCommunicationEvent(Event):
         groupname = ''
         if self.process.group is not None:
             groupname = self.process.group.config.name
-        return 'process_name: %s\ngroup_name: %s\nchannel: %s\n%s' % (
+        return 'process_name: %s\ngroup_name: %s\n%s' % (
             self.process.config.name,
             groupname,
-            self.channel,
             self.data)
 
 class ProcessCommunicationStdoutEvent(ProcessCommunicationEvent):
