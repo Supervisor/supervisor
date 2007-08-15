@@ -654,7 +654,7 @@ class SupervisorNamespaceRPCInterface:
         state = process.get_state()
         spawnerr = process.spawnerr or ''
         exitstatus = process.exitstatus or 0
-        logfile = process.config.stdout_logfile or 'NONE'
+        logfile = process.config.stdout_logfile or ''
 
         info = {
             'name':process.config.name,

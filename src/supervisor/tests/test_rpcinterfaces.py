@@ -749,7 +749,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         data = interface.getProcessInfo('foo')
 
-        self.assertEqual(data['logfile'], 'NONE')
+        self.assertEqual(data['logfile'], '')
 
     def test_getAllProcessInfo(self):
         from supervisor.process import ProcessStates
