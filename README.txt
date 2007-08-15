@@ -480,12 +480,20 @@ Nondaemonizing of Subprocesses
 Subprocess Environment
 
   Subprocesses will inherit the environment of the shell used to start
-  the supervisord program.  These environment variables may be
-  overridden within the "environment" global config option (applies to
-  all subprocesses) or within the per-program "environment" config
-  option (applies only to the subprocess specified within the
-  "program" section).  These "environment" settings are additive.  In
-  other words, each subprocess' environment will consist of::
+  the supervisord program.  Several environment variables will be set
+  by supervisor itself in the child's environment also, including
+  "SUPERVISOR_ENABLED" (a flag indicating the process is under
+  supervisor control), "SUPERVISOR_PROCESS_NAME" (the
+  config-file-specified process name for this process) and
+  "SUPERVISOR_GROUP_NAME" (the config-file-specified process group name
+  for the child process).
+
+  These environment variables may be overridden within the
+  "environment" global config option (applies to all subprocesses) or
+  within the per-program "environment" config option (applies only to
+  the subprocess specified within the "program" section).  These
+  "environment" settings are additive.  In other words, each
+  subprocess' environment will consist of::
 
     The environment variables set within the shell used to start
     supervisord...
@@ -494,6 +502,12 @@ Subprocess Environment
 
     ... the environment variables set within the "environment" global
     config option ...
+
+    ... added-to/overridden-by ...
+
+    ... supervisor-specific environment variables
+     ("SUPERVISOR_ENABLED", "SUPERVISOR_PROCESS_NAME",
+     "SUPERVISOR_GROUP_NAME") ..
 
     ... added-to/overridden-by ...
 
