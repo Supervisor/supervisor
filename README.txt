@@ -823,7 +823,7 @@ Supervisor Events
 
     PROCESS_COMMUNICATION -- an event type raised when any process
     attempts to send information between <!--XSUPERVISOR:BEGIN--> and
-    <--XSUPERVISOR:END--> tags in its output.  Subscribing to this
+    <!--XSUPERVISOR:END--> tags in its output.  Subscribing to this
     event type will cause a subscriber to receive event notifications
     of all the types listed below in "Subtypes of
     PROCESS_COMMUNICATION".
