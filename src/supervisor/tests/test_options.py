@@ -481,7 +481,6 @@ class ServerOptionsTests(unittest.TestCase):
         process_name = %(program_name)s_%(process_num)s
         command = /bin/cat
         numprocs = 3
-        priority = 1
         """)
         from supervisor.options import UnhosedConfigParser
         config = UnhosedConfigParser()
@@ -491,14 +490,14 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(len(gconfigs), 2)
 
         gconfig1 = gconfigs[0]
+        self.assertEqual(gconfig1.name, 'cat')
+        self.assertEqual(gconfig1.priority, -1)
+        self.assertEqual(len(gconfig1.process_configs), 3)
+
+        gconfig1 = gconfigs[1]
         self.assertEqual(gconfig1.name, 'dog')
         self.assertEqual(gconfig1.priority, 1)
         self.assertEqual(len(gconfig1.process_configs), 2)
-
-        gconfig1 = gconfigs[1]
-        self.assertEqual(gconfig1.name, 'cat')
-        self.assertEqual(gconfig1.priority, 1)
-        self.assertEqual(len(gconfig1.process_configs), 3)
 
     def test_event_listener_pool_noeventsline(self):
         text = lstrip("""\
