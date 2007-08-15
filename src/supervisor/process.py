@@ -310,8 +310,8 @@ class Subprocess:
             self.change_state(ProcessStates.STOPPING)
             options.kill(self.pid, sig)
         except (AssertionError, NotImplementedError):
-            # AssertionError is raised above, NotImplementedError potentially
-            # raised by change_state
+            # AssertionError may be raised by _assertInState,
+            # NotImplementedError potentially raised by change_state
             raise
         except:
             io = StringIO.StringIO()
@@ -340,8 +340,7 @@ class Subprocess:
         processname = self.config.name
 
         tooquickly = now - self.laststart < self.config.startsecs
-        badexit = not es in self.config.exitcodes
-        expected = not (tooquickly or badexit)
+        exit_expected = es in self.config.exitcodes
 
         if self.killing:
             # likely the result of a stop request
@@ -349,41 +348,48 @@ class Subprocess:
             self.killing = 0
             self.delay = 0
             self.exitstatus = es
+
             msg = "stopped: %s (%s)" % (processname, msg)
             self._assertInState(ProcessStates.STOPPING)
             self.change_state(ProcessStates.STOPPED)
-        elif expected:
-            # this finish was not the result of a stop request, but
-            # was otherwise expected
+
+        elif tooquickly:
+            # the program did not stay up long enough to make it to RUNNING
+            # implies STARTING -> BACKOFF
+            self.exitstatus = None
+            self.backoff = self.backoff + 1
+            self.delay = now + self.backoff
+
+            self.spawnerr = 'Exited too quickly (process log may have details)'
+            msg = "exited: %s (%s)" % (processname, msg + "; not expected")
+            self._assertInState(ProcessStates.STARTING)
+            self.change_state(ProcessStates.BACKOFF)
+
+        else:
+            # this finish was not the result of a stop request,
+            # the program was in the RUNNING state but exited
             # implies RUNNING -> EXITED
             self.delay = 0
             self.backoff = 0
             self.exitstatus = es
-            msg = "exited: %s (%s)" % (processname, msg + "; expected")
+
             if self.state == ProcessStates.STARTING:
                 # XXX I dont know under which circumstances this happens,
                 # but in the wild, there is a transition that subverts
                 # the RUNNING state (directly from STARTING to EXITED),
-                # so we perform the transition here.
+                # so we perform the correct transition here.
                 self.change_state(ProcessStates.RUNNING)
+
+            if exit_expected:
+                # expected exit code
+                msg = "exited: %s (%s)" % (processname, msg + "; expected")
+            else:
+                # unexpected exit code
+                self.spawnerr = 'Bad exit code %s' % es
+                msg = "exited: %s (%s)" % (processname, msg + "; not expected")
+
             self._assertInState(ProcessStates.RUNNING)
             self.change_state(ProcessStates.EXITED)
-        else:
-            # the program did not stay up long enough or exited with
-            # an unexpected exit code
-            self.exitstatus = None
-            self.backoff = self.backoff + 1
-            self.delay = now + self.backoff
-            if tooquickly:
-                self.spawnerr = (
-                    'Exited too quickly (process log may have details)')
-                self._assertInState(ProcessStates.STARTING)
-                self.change_state(ProcessStates.BACKOFF)
-            elif badexit:
-                self.spawnerr = 'Bad exit code %s' % es
-                self._assertInState(ProcessStates.RUNNING)
-                self.change_state(ProcessStates.EXITED)
-            msg = "exited: %s (%s)" % (processname, msg + "; not expected")
 
         self.config.options.logger.info(msg)
 
