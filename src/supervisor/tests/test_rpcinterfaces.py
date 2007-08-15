@@ -732,6 +732,25 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(data['spawnerr'], '')
         self.failUnless(data['description'].startswith('pid 111'))
 
+    def test_getProcessInfo_logfile_NONE(self):
+        from supervisor.process import ProcessStates
+
+        options = DummyOptions()
+        config = DummyPConfig(options, 'foo', '/bin/foo',
+                              stdout_logfile=None)
+        process = DummyProcess(config)
+        process.pid = 111
+        process.laststart = 10
+        process.laststop = 11
+        pgroup_config = DummyPGroupConfig(options, name='foo')
+        pgroup = DummyProcessGroup(pgroup_config)
+        pgroup.processes = {'foo':process}
+        supervisord = DummySupervisor(process_groups={'foo':pgroup})
+        interface = self._makeOne(supervisord)
+        data = interface.getProcessInfo('foo')
+
+        self.assertEqual(data['logfile'], 'NONE')
+
     def test_getAllProcessInfo(self):
         from supervisor.process import ProcessStates
         options = DummyOptions()

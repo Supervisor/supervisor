@@ -2,6 +2,8 @@ import os
 import time
 import datetime
 
+from supervisor.datatypes import Automatic
+
 from supervisor.options import readFile
 from supervisor.options import tailFile
 from supervisor.options import NotExecutable
@@ -652,6 +654,7 @@ class SupervisorNamespaceRPCInterface:
         state = process.get_state()
         spawnerr = process.spawnerr or ''
         exitstatus = process.exitstatus or 0
+        logfile = process.config.stdout_logfile or 'NONE'
 
         info = {
             'name':process.config.name,
@@ -663,7 +666,7 @@ class SupervisorNamespaceRPCInterface:
             'statename':getProcessStateDescription(state),
             'spawnerr':spawnerr,
             'exitstatus':exitstatus,
-            'logfile':process.config.stdout_logfile,
+            'logfile':logfile,
             'pid':process.pid,
             }
         
