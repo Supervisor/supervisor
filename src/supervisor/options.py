@@ -725,7 +725,9 @@ class ServerOptions(Options):
             if not section.startswith('eventlistener:'):
                  continue
             pool_name = section.split(':', 1)[1]
-            priority = integer(get(section, 'priority', 999))
+            # give listeners a "high" default priority so they are started first
+            # and stopped last at mainloop exit
+            priority = integer(get(section, 'priority', -1)) 
             buffer_size = integer(get(section, 'buffer_size', 10))
             pool_event_names = [x.upper() for x in
                                 list_of_strings(get(section, 'events', ''))]
