@@ -1,3 +1,38 @@
+- Documentation extensions:
+
+  - [group:x] documentation
+
+  - [eventlistener:x] documentation
+
+  - Supervisor events documentation
+
+  - Event listener protocol documentation
+
+  - Capture mode / process comm events documentation
+
+- Write "UPGRADING.txt" for people who are upgrading from supervisor
+  2.0 to 3.0.
+
+- Revisit test_startProcessGroup and test_startAllProcesses (see XXX
+  comment about ordering).
+
+- Revisit XXX comment in supervisord about removing logs at shutdown.
+
+- Address outstanding collector issues.
+
+- Make sure "SupervisorStateChangeEvents" are sent to listeners
+  properly.
+
+- Support groups in supervisorctl / web interface.
+
+- Expose stderr/stdout logfiles separately in RPC interface return
+  values.
+
+- "Ordered shutdown": stop process groups in a known order, with event
+  listeners typically being stopped last.  We also *might* be able to
+  delay shutdown until all buffered events have been processed (or a
+  timeout has been reached).
+
 - Web interface:
 
    - Support POST requests.
@@ -15,3 +50,4 @@
 - Log logtail requests.
 
 - Provide a way to get the supervisord pid from supervisorctl/web interface.
+
