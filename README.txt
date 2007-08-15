@@ -859,13 +859,16 @@ Supervisor Events
       restarting.
 
     EVENT_BUFFER_OVERFLOW -- an event type raised when a listener
-    pool's event buffer is overflowed.
+    pool's event buffer is overflowed (as can happen when an event
+    listener pool cannot keep up with all of the events sent to it).
+    When the pool's event buffer is overflowed, the oldest event in
+    the buffer is thrown out.
 
     The serialization of an EVENT_BUFFER_OVERFLOW body
     is::
 
       group_name: <name>
-      event_type: <type>
+      event_type: <type of discarded event>
 
 Event Listeners
 
