@@ -6,11 +6,6 @@
 
   - Capture mode / process comm events documentation
 
-- Consider changing event type names to be prefixed with their
-  "parent" type so listeners can make a determination by doing a
-  "startswith" instead of knowing how the event hierarchy is
-  structured.
-
 - Write "UPGRADING.txt" for people who are upgrading from supervisor
   2.0 to 3.0.
 
