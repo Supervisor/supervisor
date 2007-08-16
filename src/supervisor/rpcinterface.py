@@ -651,7 +651,8 @@ class SupervisorNamespaceRPCInterface:
         state = process.get_state()
         spawnerr = process.spawnerr or ''
         exitstatus = process.exitstatus or 0
-        logfile = process.config.stdout_logfile or ''
+        stdout_logfile = process.config.stdout_logfile or ''
+        stderr_logfile = process.config.stderr_logfile or ''
 
         info = {
             'name':process.config.name,
@@ -663,7 +664,9 @@ class SupervisorNamespaceRPCInterface:
             'statename':getProcessStateDescription(state),
             'spawnerr':spawnerr,
             'exitstatus':exitstatus,
-            'logfile':logfile,
+            'logfile':stdout_logfile, # b/c alias
+            'stdout_logfile':stdout_logfile,
+            'stderr_logfile':stderr_logfile,
             'pid':process.pid,
             }
         
@@ -686,19 +689,10 @@ class SupervisorNamespaceRPCInterface:
             output.append(self.getProcessInfo(name))
         return output
 
-    def readProcessLog(self, name, offset, length):
-        """ Read length bytes from name's log starting at offset
-
-        @param string name        the name of the process (or 'group:name')
-        @param int offset         offset to start reading from.
-        @param int length         number of bytes to read from the log.
-        @return string result     Bytes of log
-        """
-        self._update('readProcessLog')
-
+    def _readProcessLog(self, name, offset, length, channel):
         group, process = self._getGroupAndProcess(name)
 
-        logfile = process.config.stdout_logfile
+        logfile = getattr(process.config, '%s_logfile' % channel)
 
         if logfile is None or not os.path.exists(logfile):
             raise RPCError(Faults.NO_FILE, logfile)
@@ -709,36 +703,89 @@ class SupervisorNamespaceRPCInterface:
             why = inst.args[0]
             raise RPCError(getattr(Faults, why))
 
-    def tailProcessLog(self, name, offset, length):
-        """
-        Provides a more efficient way to tail logs than readProcessLog().
-        Use readProcessLog() to read chunks and tailProcessLog() to tail.
-        
-        Requests (length) bytes from the (name)'s log, starting at 
-        (offset).  If the total log size is greater than (offset + length), 
-        the overflow flag is set and the (offset) is automatically increased 
-        to position the buffer at the end of the log.  If less than (length) 
-        bytes are available, the maximum number of available bytes will be 
-        returned.  (offset) returned is always the last offset in the log +1.
+    def readProcessStdoutLog(self, name, offset, length):
+        """ Read length bytes from name's stdout log starting at offset
 
-        @param string name         the name of the process (or 'group:name')
-        @param int offset          offset to start reading from
-        @param int length          maximum number of bytes to return
-        @return array result       [string bytes, int offset, bool overflow]
+        @param string name        the name of the process (or 'group:name')
+        @param int offset         offset to start reading from.
+        @param int length         number of bytes to read from the log.
+        @return string result     Bytes of log
         """
-        self._update('tailProcessLog')
+        self._update('readProcessStdoutLog')
+        return self._readProcessLog(name, offset, length, 'stdout')
 
+    readProcessLog = readProcessStdoutLog # b/c alias
+
+    def readProcessStderrLog(self, name, offset, length):
+        """ Read length bytes from name's stderr log starting at offset
+
+        @param string name        the name of the process (or 'group:name')
+        @param int offset         offset to start reading from.
+        @param int length         number of bytes to read from the log.
+        @return string result     Bytes of log
+        """
+        self._update('readProcessStderrLog')
+        return self._readProcessLog(name, offset, length, 'stderr')
+
+    def _tailProcessLog(self, name, offset, length, channel):
         group, process = self._getGroupAndProcess(name)
 
-        logfile = process.config.stdout_logfile
+        logfile = getattr(process.config, '%s_logfile' % channel)
         
         if logfile is None or not os.path.exists(logfile):
             return ['', 0, False]
 
         return tailFile(logfile, int(offset), int(length))
 
-    def clearProcessLog(self, name):
-        """ Clear the log for the named process and reopen it.
+    def tailProcessStdoutLog(self, name, offset, length):
+        """
+        Provides a more efficient way to tail the (stdout) log than
+        readProcessStdoutLog().  Use readProcessStdoutLog() to read
+        chunks and tailProcessStdoutLog() to tail.
+        
+        Requests (length) bytes from the (name)'s log, starting at
+        (offset).  If the total log size is greater than (offset +
+        length), the overflow flag is set and the (offset) is
+        automatically increased to position the buffer at the end of
+        the log.  If less than (length) bytes are available, the
+        maximum number of available bytes will be returned.  (offset)
+        returned is always the last offset in the log +1.
+
+        @param string name         the name of the process (or 'group:name')
+        @param int offset          offset to start reading from
+        @param int length          maximum number of bytes to return
+        @return array result       [string bytes, int offset, bool overflow]
+        """
+        self._update('tailProcessStdoutLog')
+        return self._tailProcessLog(name, offset, length, 'stdout')
+
+    tailProcessLog = tailProcessStdoutLog # b/c alias
+
+    def tailProcessStderrLog(self, name, offset, length):
+        """
+        Provides a more efficient way to tail the (stderr) log than
+        readProcessStderrLog().  Use readProcessStderrLog() to read
+        chunks and tailProcessStderrLog() to tail.
+        
+        Requests (length) bytes from the (name)'s log, starting at
+        (offset).  If the total log size is greater than (offset +
+        length), the overflow flag is set and the (offset) is
+        automatically increased to position the buffer at the end of
+        the log.  If less than (length) bytes are available, the
+        maximum number of available bytes will be returned.  (offset)
+        returned is always the last offset in the log +1.
+
+        @param string name         the name of the process (or 'group:name')
+        @param int offset          offset to start reading from
+        @param int length          maximum number of bytes to return
+        @return array result       [string bytes, int offset, bool overflow]
+        """
+        self._update('tailProcessStderrLog')
+        return self._tailProcessLog(name, offset, length, 'stderr')
+
+    def clearProcessLogs(self, name):
+        """ Clear the stdout and stderr logs for the named process and
+        reopen them.
 
         @param string name   The name of the process (or 'group:name')
         @return boolean result      Always True unless error
@@ -754,6 +801,8 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.FAILED, name)
 
         return True
+
+    clearProcessLog = clearProcessLogs # b/c alias
 
     def clearAllProcessLogs(self):
         """ Clear all process log files

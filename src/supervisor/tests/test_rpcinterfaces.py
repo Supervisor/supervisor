@@ -722,6 +722,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
         self.assertEqual(interface.update_text, 'getProcessInfo')
         self.assertEqual(data['logfile'], '/tmp/fleeb.bar')
+        self.assertEqual(data['stdout_logfile'], '/tmp/fleeb.bar')
+        self.assertEqual(data['stderr_logfile'], '')
         self.assertEqual(data['name'], 'foo')
         self.assertEqual(data['pid'], 111)
         self.assertEqual(data['start'], 10)
@@ -750,6 +752,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         data = interface.getProcessInfo('foo')
 
         self.assertEqual(data['logfile'], '')
+        self.assertEqual(data['stdout_logfile'], '')
 
     def test_getAllProcessInfo(self):
         from supervisor.process import ProcessStates
@@ -784,6 +787,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
         p1info = info[0]
         self.assertEqual(p1info['logfile'], '/tmp/process1.log')
+        self.assertEqual(p1info['stdout_logfile'], '/tmp/process1.log')
+        self.assertEqual(p1info['stderr_logfile'], '')
         self.assertEqual(p1info['name'], 'process1')
         self.assertEqual(p1info['pid'], 111)
         self.assertEqual(p1info['start'], 10)
@@ -798,6 +803,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         p2info = info[1]
         process2 = supervisord.process_groups['gname'].processes['process2']
         self.assertEqual(p2info['logfile'], '/tmp/process2.log')
+        self.assertEqual(p2info['stdout_logfile'], '/tmp/process2.log')
+        self.assertEqual(p1info['stderr_logfile'], '')
         self.assertEqual(p2info['name'], 'process2')
         self.assertEqual(p2info['pid'], 0)
         self.assertEqual(p2info['start'], process2.laststart)
@@ -813,7 +820,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(p2info['description'], 
                             starttime.strftime(_TIMEFORMAT))
 
-    def test_readProcessLog_unreadable(self):
+    def test_readProcessStdoutLog_unreadable(self):
         from supervisor import xmlrpc
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'process1', '/bin/process1', priority=1,
@@ -821,10 +828,10 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = PopulatedDummySupervisor(options, 'process1', pconfig)
         interface = self._makeOne(supervisord)
         self._assertRPCError(xmlrpc.Faults.NO_FILE,
-                             interface.readProcessLog,
+                             interface.readProcessStdoutLog,
                              'process1', offset=0, length=1)
 
-    def test_readProcessLog_badargs(self):
+    def test_readProcessStdoutLog_badargs(self):
         from supervisor import xmlrpc
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'process1', '/bin/process1', priority=1,
@@ -840,15 +847,15 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f.write('x' * 2048)
             f.close()
             self._assertRPCError(xmlrpc.Faults.BAD_ARGUMENTS,
-                                 interface.readProcessLog,
+                                 interface.readProcessStdoutLog,
                                  'process1', offset=-1, length=1)
             self._assertRPCError(xmlrpc.Faults.BAD_ARGUMENTS,
-                                 interface.readProcessLog, 'process1',
+                                 interface.readProcessStdoutLog, 'process1',
                                  offset=-1, length=-1)
         finally:
             os.remove(logfile)
 
-    def test_readProcessLog(self):
+    def test_readProcessStdoutLog(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',
                               stdout_logfile='/tmp/fooooooo')
@@ -862,26 +869,95 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f.write('x' * 2048)
             f.write('y' * 2048)
             f.close()
-            data = interface.readProcessLog('foo', offset=0, length=0)
-            self.assertEqual(interface.update_text, 'readProcessLog')
+            data = interface.readProcessStdoutLog('foo', offset=0, length=0)
+            self.assertEqual(interface.update_text, 'readProcessStdoutLog')
             self.assertEqual(data, ('x' * 2048) + ('y' * 2048))
-            data = interface.readProcessLog('foo', offset=2048, length=0)
+            data = interface.readProcessStdoutLog('foo', offset=2048, length=0)
             self.assertEqual(data, 'y' * 2048)
-            data = interface.readProcessLog('foo', offset=0, length=2048)
+            data = interface.readProcessStdoutLog('foo', offset=0, length=2048)
             self.assertEqual(data, 'x' * 2048)
-            data = interface.readProcessLog('foo', offset=-4, length=0)
+            data = interface.readProcessStdoutLog('foo', offset=-4, length=0)
             self.assertEqual(data, 'y' * 4)
         finally:
             os.remove(logfile)
 
-    def test_tailProcessLog_bad_name(self):
+    def test_readProcessLogAliasedTo_readProcessStdoutLog(self):
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        interface = self._makeOne(supervisord)
+        self.assertEqual(interface.readProcessLog,
+                         interface.readProcessStdoutLog)
+
+    def test_readProcessStderrLog_unreadable(self):
+        from supervisor import xmlrpc
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'process1', '/bin/process1', priority=1,
+                               stderr_logfile='/tmp/process1.log')
+        supervisord = PopulatedDummySupervisor(options, 'process1', pconfig)
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.NO_FILE,
+                             interface.readProcessStderrLog,
+                             'process1', offset=0, length=1)
+
+    def test_readProcessStdoutLog_badargs(self):
+        from supervisor import xmlrpc
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'process1', '/bin/process1', priority=1,
+                              stderr_logfile='/tmp/process1.log')
+        supervisord = PopulatedDummySupervisor(options, 'process1', pconfig)
+        interface = self._makeOne(supervisord)
+        import os
+        process = supervisord.process_groups['process1'].processes['process1']
+        logfile = process.config.stderr_logfile
+
+        try:
+            f = open(logfile, 'w+')
+            f.write('x' * 2048)
+            f.close()
+            self._assertRPCError(xmlrpc.Faults.BAD_ARGUMENTS,
+                                 interface.readProcessStderrLog,
+                                 'process1', offset=-1, length=1)
+            self._assertRPCError(xmlrpc.Faults.BAD_ARGUMENTS,
+                                 interface.readProcessStderrLog, 'process1',
+                                 offset=-1, length=-1)
+        finally:
+            os.remove(logfile)
+
+    def test_readProcessStderrLog(self):
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo',
+                              stderr_logfile='/tmp/fooooooo')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        interface = self._makeOne(supervisord)
+        process = supervisord.process_groups['foo'].processes['foo']
+        logfile = process.config.stderr_logfile
+        import os
+        try:
+            f = open(logfile, 'w+')
+            f.write('x' * 2048)
+            f.write('y' * 2048)
+            f.close()
+            data = interface.readProcessStderrLog('foo', offset=0, length=0)
+            self.assertEqual(interface.update_text, 'readProcessStderrLog')
+            self.assertEqual(data, ('x' * 2048) + ('y' * 2048))
+            data = interface.readProcessStderrLog('foo', offset=2048, length=0)
+            self.assertEqual(data, 'y' * 2048)
+            data = interface.readProcessStderrLog('foo', offset=0, length=2048)
+            self.assertEqual(data, 'x' * 2048)
+            data = interface.readProcessStderrLog('foo', offset=-4, length=0)
+            self.assertEqual(data, 'y' * 4)
+        finally:
+            os.remove(logfile)
+
+    def test_tailProcessStdoutLog_bad_name(self):
         from supervisor import xmlrpc
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
         self._assertRPCError(xmlrpc.Faults.BAD_NAME, 
-                             interface.tailProcessLog, 'BAD_NAME', 0, 10)
+                             interface.tailProcessStdoutLog, 'BAD_NAME', 0, 10)
 
-    def test_tailProcessLog_all(self):
+    def test_tailProcessStdoutLog_all(self):
         # test entire log is returned when offset==0 and logsize < length
         from string import letters
         options = DummyOptions()
@@ -897,17 +973,17 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f.write(letters)
             f.close()
             
-            data, offset, overflow = interface.tailProcessLog('foo', 
+            data, offset, overflow = interface.tailProcessStdoutLog('foo', 
                                                         offset=0, 
                                                         length=len(letters))
-            self.assertEqual(interface.update_text, 'tailProcessLog')
+            self.assertEqual(interface.update_text, 'tailProcessStdoutLog')
             self.assertEqual(overflow, False)
             self.assertEqual(offset, len(letters))
             self.assertEqual(data, letters)
         finally:
             os.remove(logfile)
 
-    def test_tailProcessLog_none(self):
+    def test_tailProcessStdoutLog_none(self):
         # test nothing is returned when offset <= logsize
         from string import letters
         options = DummyOptions()
@@ -924,26 +1000,26 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f.close()
 
             # offset==logsize
-            data, offset, overflow = interface.tailProcessLog('foo', 
+            data, offset, overflow = interface.tailProcessStdoutLog('foo', 
                                                         offset=len(letters), 
                                                         length=100)
-            self.assertEqual(interface.update_text, 'tailProcessLog')
+            self.assertEqual(interface.update_text, 'tailProcessStdoutLog')
             self.assertEqual(overflow, False)
             self.assertEqual(offset, len(letters))
             self.assertEqual(data, '')
 
             # offset > logsize
-            data, offset, overflow = interface.tailProcessLog('foo', 
+            data, offset, overflow = interface.tailProcessStdoutLog('foo', 
                                                         offset=len(letters)+5, 
                                                         length=100)
-            self.assertEqual(interface.update_text, 'tailProcessLog')
+            self.assertEqual(interface.update_text, 'tailProcessStdoutLog')
             self.assertEqual(overflow, False)
             self.assertEqual(offset, len(letters))
             self.assertEqual(data, '')
         finally:
             os.remove(logfile)
 
-    def test_tailProcessLog_overflow(self):
+    def test_tailProcessStdoutLog_overflow(self):
         # test buffer overflow occurs when logsize > offset+length
         from string import letters
         options = DummyOptions()
@@ -959,16 +1035,16 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f.write(letters)
             f.close()
 
-            data, offset, overflow = interface.tailProcessLog('foo', 
+            data, offset, overflow = interface.tailProcessStdoutLog('foo', 
                                                         offset=0, length=5)
-            self.assertEqual(interface.update_text, 'tailProcessLog')
+            self.assertEqual(interface.update_text, 'tailProcessStdoutLog')
             self.assertEqual(overflow, True)
             self.assertEqual(offset, len(letters))
             self.assertEqual(data, letters[-5:])
         finally:
             os.remove(logfile)
     
-    def test_tailProcessLog_unreadable(self):
+    def test_tailProcessStdoutLog_unreadable(self):
         # test nothing is returned if the log doesn't exist yet
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',
@@ -978,22 +1054,141 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stdout_logfile
                 
-        data, offset, overflow = interface.tailProcessLog('foo', 
+        data, offset, overflow = interface.tailProcessStdoutLog('foo', 
                                                     offset=0, length=100)
-        self.assertEqual(interface.update_text, 'tailProcessLog')
+        self.assertEqual(interface.update_text, 'tailProcessStdoutLog')
         self.assertEqual(overflow, False)
         self.assertEqual(offset, 0)
         self.assertEqual(data, '')
 
-    def test_clearProcessLog_bad_name(self):
+    def test_tailProcessLogAliasedTo_tailProcessStdoutLog(self):
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        interface = self._makeOne(supervisord)
+        self.assertEqual(interface.tailProcessLog,
+                         interface.tailProcessStdoutLog)
+
+    def test_tailProcessStderrLog_bad_name(self):
+        from supervisor import xmlrpc
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME, 
+                             interface.tailProcessStderrLog, 'BAD_NAME', 0, 10)
+
+    def test_tailProcessStderrLog_all(self):
+        # test entire log is returned when offset==0 and logsize < length
+        from string import letters
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo',
+                               stderr_logfile='/tmp/fooooooo')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        interface = self._makeOne(supervisord)
+        process = supervisord.process_groups['foo'].processes['foo']
+        logfile = process.config.stderr_logfile
+        import os
+        try:
+            f = open(logfile, 'w+')
+            f.write(letters)
+            f.close()
+            
+            data, offset, overflow = interface.tailProcessStderrLog('foo', 
+                                                        offset=0, 
+                                                        length=len(letters))
+            self.assertEqual(interface.update_text, 'tailProcessStderrLog')
+            self.assertEqual(overflow, False)
+            self.assertEqual(offset, len(letters))
+            self.assertEqual(data, letters)
+        finally:
+            os.remove(logfile)
+
+    def test_tailProcessStderrLog_none(self):
+        # test nothing is returned when offset <= logsize
+        from string import letters
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo',
+                               stderr_logfile='/tmp/fooooooo')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        interface = self._makeOne(supervisord)
+        process = supervisord.process_groups['foo'].processes['foo']
+        logfile = process.config.stderr_logfile
+        import os
+        try:
+            f = open(logfile, 'w+')
+            f.write(letters)
+            f.close()
+
+            # offset==logsize
+            data, offset, overflow = interface.tailProcessStderrLog('foo', 
+                                                        offset=len(letters), 
+                                                        length=100)
+            self.assertEqual(interface.update_text, 'tailProcessStderrLog')
+            self.assertEqual(overflow, False)
+            self.assertEqual(offset, len(letters))
+            self.assertEqual(data, '')
+
+            # offset > logsize
+            data, offset, overflow = interface.tailProcessStderrLog('foo', 
+                                                        offset=len(letters)+5, 
+                                                        length=100)
+            self.assertEqual(interface.update_text, 'tailProcessStderrLog')
+            self.assertEqual(overflow, False)
+            self.assertEqual(offset, len(letters))
+            self.assertEqual(data, '')
+        finally:
+            os.remove(logfile)
+
+    def test_tailProcessStderrLog_overflow(self):
+        # test buffer overflow occurs when logsize > offset+length
+        from string import letters
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo',
+                              stderr_logfile='/tmp/fooooooo')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        interface = self._makeOne(supervisord)
+        process = supervisord.process_groups['foo'].processes['foo']
+        logfile = process.config.stderr_logfile
+        import os
+        try:
+            f = open(logfile, 'w+')
+            f.write(letters)
+            f.close()
+
+            data, offset, overflow = interface.tailProcessStderrLog('foo', 
+                                                        offset=0, length=5)
+            self.assertEqual(interface.update_text, 'tailProcessStderrLog')
+            self.assertEqual(overflow, True)
+            self.assertEqual(offset, len(letters))
+            self.assertEqual(data, letters[-5:])
+        finally:
+            os.remove(logfile)
+    
+    def test_tailProcessStderrLog_unreadable(self):
+        # test nothing is returned if the log doesn't exist yet
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo',
+                               stderr_logfile='/tmp/fooooooo')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        interface = self._makeOne(supervisord)
+        process = supervisord.process_groups['foo'].processes['foo']
+        logfile = process.config.stderr_logfile
+                
+        data, offset, overflow = interface.tailProcessStderrLog('foo', 
+                                                    offset=0, length=100)
+        self.assertEqual(interface.update_text, 'tailProcessStderrLog')
+        self.assertEqual(overflow, False)
+        self.assertEqual(offset, 0)
+        self.assertEqual(data, '')
+
+    def test_clearProcessLogs_bad_name(self):
         from supervisor import xmlrpc
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
-                             interface.clearProcessLog,
+                             interface.clearProcessLogs,
                              'spew')
 
-    def test_clearProcessLog(self):
+    def test_clearProcessLogs(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', 'foo')
         process = DummyProcess(pconfig)
@@ -1001,10 +1196,10 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         pgroup.processes = {'foo': process}
         supervisord = DummySupervisor(process_groups={'foo':pgroup})
         interface = self._makeOne(supervisord)
-        interface.clearProcessLog('foo')
+        interface.clearProcessLogs('foo')
         self.assertEqual(process.logsremoved, True)
 
-    def test_clearProcessLog_failed(self):
+    def test_clearProcessLogs_failed(self):
         from supervisor import xmlrpc
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', 'foo')
@@ -1015,8 +1210,16 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         processes = {'foo': process}
         supervisord = DummySupervisor(process_groups={'foo':pgroup})
         interface = self._makeOne(supervisord)
-        self.assertRaises(xmlrpc.RPCError, interface.clearProcessLog, 'foo')
+        self.assertRaises(xmlrpc.RPCError, interface.clearProcessLogs, 'foo')
         
+    def test_clearProcessLogAliasedTo_clearProcessLogs(self):
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        interface = self._makeOne(supervisord)
+        self.assertEqual(interface.clearProcessLog,
+                         interface.clearProcessLogs)
+
     def test_clearAllProcessLogs(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', 'foo')
