@@ -1,0 +1,20 @@
+Upgrading from supervisor 2 to supervisor 3
+
+- In '[program:x]' sections, the keys "logfile", "logfile_backups",
+  "logfile_maxbytes", "log_stderr" and "log_stdout" are no longer
+  valid.  Supervisor2 logged both stderr and stdout to a single log
+  file.  Supervisor 3 logs stderr and stdout to separate log files.
+  You'll need to rename "logfile" to "stdout_logfile",
+  "logfile_backups" to "stdout_logfile_backups", and
+  "logfile_maxbytes" to "stdout_logfile_maxbytes" at the very least to
+  preserve your configuration.  If you created program sections where
+  "log_stderr" was true, to preserve the behavior of sending stderr
+  output to the stdout log, use the "redirect_stderr" boolean in a
+  program section.
+
+- The supervisor configuration file *must* include the following
+  section verbatim for the XML-RPC interface (and thus the web
+  interface and supervisorctl) to work properly::
+
+   [rpcinterface:supervisor]
+   supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface

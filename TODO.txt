@@ -7,9 +7,6 @@
 - Revisit test_startProcessGroup and test_startAllProcesses (see XXX
   comment about ordering).
 
-- Write "UPGRADING.txt" for people who are upgrading from supervisor
-  2.0 to 3.0.
-
 - Address outstanding collector issues.
 
 - We *might* be able to delay shutdown until all buffered events have
