@@ -6,6 +6,8 @@
 
   - Capture mode / process comm events documentation
 
+- Ensure sample.conf has the right example values.
+
 - Write "UPGRADING.txt" for people who are upgrading from supervisor
   2.0 to 3.0.
 
