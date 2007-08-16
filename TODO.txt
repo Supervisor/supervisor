@@ -1,17 +1,17 @@
-- Write "UPGRADING.txt" for people who are upgrading from supervisor
-  2.0 to 3.0.
+- Support groups in supervisorctl / web interface.
+
+- Expose stderr/stdout logfiles separately in RPC interface return
+  values.
 
 - Capturefile rotation?
 
 - Revisit test_startProcessGroup and test_startAllProcesses (see XXX
   comment about ordering).
 
+- Write "UPGRADING.txt" for people who are upgrading from supervisor
+  2.0 to 3.0.
+
 - Address outstanding collector issues.
-
-- Support groups in supervisorctl / web interface.
-
-- Expose stderr/stdout logfiles separately in RPC interface return
-  values.
 
 - We *might* be able to delay shutdown until all buffered events have
   been processed (or a timeout has been reached).
