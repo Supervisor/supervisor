@@ -95,6 +95,27 @@
     to "foo:foo", representing the foo process within the foo process
     group).
 
+  - 2.X versions of supervisorctl will work against supervisor 3.0
+    servers in a degraded fashion, but 3.X versions of supervisorctl
+    will not work at all against supervisor 2.X servers.
+
+  Known issues:
+
+    - supervisorctl and the web interface do not yet allow you to stop
+      / start / restart a process group as a unit.
+
+    - supervisorctl and the web interface do not allow you to tail or
+      otherwise examine stderr log files of processes.
+
+    - buffered event notifications may be lost at supervisor shutdown
+      or restart time.
+
+  Acknowledgements:
+
+    Maintainable Software (http://www.maintainable.com) contracted
+    Agendless Consulting to add the event notification features and
+    extensible XML-RPC namespaces feature to supervisor.
+
 2.2b1
 
   - Individual program configuration sections can now specify an
