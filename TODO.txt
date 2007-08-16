@@ -1,9 +1,7 @@
-- Documentation extensions:
-
-  - Capture mode / process comm events documentation
-
 - Write "UPGRADING.txt" for people who are upgrading from supervisor
   2.0 to 3.0.
+
+- Capturefile rotation?
 
 - Revisit test_startProcessGroup and test_startAllProcesses (see XXX
   comment about ordering).

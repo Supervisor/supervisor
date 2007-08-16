@@ -521,10 +521,10 @@ Configuration File '[program:x]' Section Settings
   are defined by the combination of the 'numprocs and 'process_name'
   parameters in the configuration.  By default, if numprocs and
   process_name are left unchanged from their defaults, the group
-  represented by '[program:x]' will hae a single process named 'x' in
-  it.  This provides a modicum of backwards compatibility with older
-  supervisor releases, which did not treat program sections as
-  homogeneous process group defnitions.
+  represented by '[program:x]' will be named 'x' and will have a
+  single process named 'x' in it.  This provides a modicum of
+  backwards compatibility with older supervisor releases, which did
+  not treat program sections as homogeneous process group defnitions.
 
   But for instance, if you have a '[program:foo]' section with a
   'numprocs' of 3 and a 'process_name' expression of
@@ -567,7 +567,7 @@ Configuration File '[eventlistener:x]' Section Settings (New in 3.0)
   Supervisor allows specialized homogeneous process groups ("event
   listener pools") to be defined within the configuration file.  These
   pools contain processes that are meant to receive and respond to
-  event notifications from supervisor's event system.  Eee "Supervisor
+  event notifications from supervisor's event system.  See "Supervisor
   Events" elsewhere in this document for an explanation of how events
   work and how to implement event listener programs.
 
@@ -1190,7 +1190,32 @@ Event Listener Error Conditions
 
 Capture Mode and Process Communication Events (New in 3.0)
 
-  XXX TODO
+  If a '[program:x]' section in the configuration file defines a
+  "stdout_capturefile" or "stderr_capturefile" parameter, each process
+  represented by the program section may emit special tokens on its
+  stdout or stderr stream (respectively) which will effectively cause
+  supervisor to emit a "PROCESS_COMMUNICATION" event type.
+
+  The process communications protocol relies on two tags, one which
+  commands supervisor to enter "capture mode" for the stream and one
+  which commands it to exit.  When a process stream enters "capture
+  mode", data sent to the stream will be sent to a separate logfile
+  (the "capturefile").  When a process stream exits capture mode, the
+  data in the capturefile is read into memory (a maximum of 2MB), and
+  a PROCESS_COMMUNICATION event is emitted by supervisor, which may be
+  intercepted by event listeners.
+
+  The tag to begin "capture mode" in a process stream is
+  '<!--XSUPERVISOR:BEGIN-->'.  The tag to exit capture mode is
+  '<!--XSUPERVISOR:END-->'.  The data between these tags may be
+  arbitrary, and forms the payload of the PROCESS_COMMUNICATION event.
+  For example, if a program is set up with a stdout_capturefile, and
+  it emits the following on its stdout stream::
+
+    <!--XSUPERVISOR:BEGIN-->Hello!<!--XSUPERVISOR:END-->
+
+  .. supervisor will emit a PROCESS_COMMUNICATIONS_STDOUT event with
+  data in the payload of "Hello!".
 
 Signals
 
