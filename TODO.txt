@@ -1,8 +1,8 @@
 - Support stopping and starting groups in supervisorctl / web
   interface.
 
-- Expose stderr/stdout logfiles separately in RPC interface return
-  values.
+- Support operations against both stderr and stdout logs within
+  supervisorctl / web interface. 
 
 - Revisit test_startProcessGroup and test_startAllProcesses (see XXX
   comment about ordering).
