@@ -988,7 +988,12 @@ Event Listener Notification Protocol
   Directly following the linefeed character in the header is the event
   payload.  It consists of PAYLOAD_LENGTH bytes representing a
   serialization of the event data.  See "Supervisor Events" for the
-  specific event data serialization definitions.
+  specific event data serialization definitions.  An example payload
+  for a PROCESS_COMMUNICATION_STDOUT event notification is::
+
+    process_name: foo
+    group_name: bar
+    This is the data that was sent between the tags
 
   Once it has processed the header, the event listener implementation
   should read PAYLOAD_LENGTH bytes from its stdin, perform an
