@@ -30,6 +30,9 @@ import meld3
 from supervisor.process import ProcessStates
 from supervisor.http import NOT_DONE_YET
 
+from supervisor.options import make_namespec
+from supervisor.options import split_namespec
+
 from supervisor.xmlrpc import SystemNamespaceRPCInterface
 from supervisor.xmlrpc import RootRPCInterface
 from supervisor.xmlrpc import Faults
@@ -224,7 +227,7 @@ class TailView(MeldView):
         refresh_anchor = root.findmeld('refresh_anchor')
         if processname is not None:
             refresh_anchor.attributes(href='tail.html?processname=%s' %
-                                      processname)
+                                      urllib.quote(processname))
         else:
             refresh_anchor.deparent()
 
@@ -233,7 +236,8 @@ class TailView(MeldView):
 class StatusView(MeldView):
     def actions_for_process(self, process):
         state = process.get_state()
-        processname = process.config.name
+        processname = urllib.quote(make_namespec(process.group.config.name,
+                                                 process.config.name))
         start = {
         'name':'Start',
         'href':'index.html?processname=%s&amp;action=start' % processname,
@@ -276,14 +280,14 @@ class StatusView(MeldView):
         else:
             return 'statusnominal'
 
-    def make_callback(self, processname, action):
+    def make_callback(self, namespec, action):
         message = None
         supervisord = self.context.supervisord
 
         # the rpc interface code is already written to deal properly in a
         # deferred world, so just use it
         main =   ('supervisor', SupervisorNamespaceRPCInterface(supervisord))
-        system = ('system', SystemNamespaceRPCInterface(main))
+        system = ('system', SystemNamespaceRPCInterface([main]))
 
         rpcinterface = RootRPCInterface([main, system])
 
@@ -318,65 +322,66 @@ class StatusView(MeldView):
                 restartall.delay = 0.05
                 return restartall
 
-            elif processname:
+            elif namespec:
                 def wrong():
-                    return 'No such process named %s' % processname
+                    return 'No such process named %s' % namespec
                 wrong.delay = 0.05
-                group = supervisord.process_group.get(processname) # XXX
+                group_name, process_name = split_namespec(namespec)
+                group = supervisord.process_groups.get(group_name)
                 if group is None:
                     return wrong
-                process = group.processes.get(processname)
+                process = group.processes.get(process_name)
                 if process is None:
                     return wrong
 
                 elif action == 'stop':
-                    callback = rpcinterface.supervisor.stopProcess(processname)
+                    callback = rpcinterface.supervisor.stopProcess(namespec)
                     def stopprocess():
                         result = callback()
                         if result is NOT_DONE_YET:
                             return NOT_DONE_YET
-                        return 'Process %s stopped' % processname
+                        return 'Process %s stopped' % namespec
                     stopprocess.delay = 0.05
                     return stopprocess
 
                 elif action == 'restart':
                     callback = rpcinterface.system.multicall(
                         [ {'methodName':'supervisor.stopProcess',
-                           'params': [processname]},
+                           'params': [namespec]},
                           {'methodName':'supervisor.startProcess',
-                           'params': [processname]},
+                           'params': [namespec]},
                           ]
                         )
                     def restartprocess():
                         result = callback()
                         if result is NOT_DONE_YET:
                             return NOT_DONE_YET
-                        return 'Process %s restarted' % processname
+                        return 'Process %s restarted' % namespec
                     restartprocess.delay = 0.05
                     return restartprocess
 
                 elif action == 'start':
                     try:
                         callback = rpcinterface.supervisor.startProcess(
-                            processname)
+                            namespec)
                     except RPCError, e:
                         if e.code == Faults.SPAWN_ERROR:
                             def spawnerr():
-                                return 'Process %s spawn error' % processname
+                                return 'Process %s spawn error' % namespec
                             spawnerr.delay = 0.05
                             return spawnerr
                     def startprocess():
                         if callback() is NOT_DONE_YET:
                             return NOT_DONE_YET
-                        return 'Process %s started' % processname
+                        return 'Process %s started' % namespec
                     startprocess.delay = 0.05
                     return startprocess
                 
                 elif action == 'clearlog':
                     callback = rpcinterface.supervisor.clearProcessLog(
-                        processname)
+                        namespec)
                     def clearlog():
-                        return 'Log for %s cleared' % processname
+                        return 'Log for %s cleared' % namespec
                     clearlog.delay = 0.05
                     return clearlog
 
@@ -417,16 +422,25 @@ class StatusView(MeldView):
               SupervisorNamespaceRPCInterface(supervisord))]
             )
 
-        processnames = supervisord.processes.keys()
+        processnames = []
+        groups = supervisord.process_groups.values()
+        for group in groups:
+            gprocnames = group.processes.keys()
+            for gprocname in gprocnames:
+                processnames.append((group.config.name, gprocname))
+
         processnames.sort()
+
         data = []
-        for processname in processnames:
+        for groupname, processname in processnames:
             actions = self.actions_for_process(
-                supervisord.processes[processname])
-            info = rpcinterface.supervisor.getProcessInfo(processname)
+                supervisord.process_groups[groupname].processes[processname])
+            sent_name = make_namespec(groupname, processname)
+            info = rpcinterface.supervisor.getProcessInfo(sent_name)
             data.append({
                 'status':info['statename'],
                 'name':processname,
+                'group':groupname,
                 'actions':actions,
                 'state':info['state'],
                 'description':info['description'],
@@ -453,8 +467,9 @@ class StatusView(MeldView):
                 info_text.content(item['description'])
 
                 anchor = tr_element.findmeld('name_anchor')
-                processname = item['name']
-                anchor.attributes(href='tail.html?processname=%s' % processname)
+                processname = make_namespec(item['group'], item['name'])
+                anchor.attributes(href='tail.html?processname=%s' %
+                                  urllib.quote(processname))
                 anchor.content(processname)
 
                 actions = item['actions']
