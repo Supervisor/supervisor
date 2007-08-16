@@ -295,13 +295,8 @@ def main(test=False):
             return d
         if d.mood < 0:
             sys.exit(0)
-        for group in d.process_groups.values():
-            # XXX why do I do this?
-            group.removelogs()
         if d.options.httpserver:
             d.options.httpserver.close()
-    events.notify(events.SupervisorExitingEvent())
-            
 
 if __name__ == "__main__":
     main()
