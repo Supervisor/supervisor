@@ -1143,7 +1143,8 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [])
         buf = process1.stdin_buffer
-        self.assertTrue(buf.startswith('SUPERVISORD3.0 STARTING_FROM_STOPPED '))
+        self.assertTrue(buf.startswith(
+            'SUPERVISORD3.0 PROCESS_STATE_CHANGE_STARTING_FROM_STOPPED '))
         self.assertTrue(buf.endswith(
             '43\nprocess_name: process1\ngroup_name: whatever'), buf)
         self.assertEqual(process1.listener_state, EventListenerStates.BUSY)

@@ -156,25 +156,25 @@ class EventRejectedEvent:
 class EventTypes:
     EVENT = Event
     PROCESS_STATE_CHANGE = ProcessStateChangeEvent
-    STARTING_FROM_STOPPED = StartingFromStoppedEvent
-    STARTING_FROM_BACKOFF = StartingFromBackoffEvent
-    STARTING_FROM_EXITED = StartingFromExitedEvent
-    STARTING_FROM_FATAL = StartingFromFatalEvent
-    RUNNING = RunningFromStartingEvent
-    BACKOFF = BackoffFromStartingEvent
-    STOPPING_FROM_RUNNING = StoppingFromRunningEvent
-    STOPPING_FROM_STARTING = StoppingFromStartingEvent
-    EXITED_OR_STOPPED = ExitedOrStoppedEvent
-    EXITED = ExitedFromRunningEvent
-    STOPPED = StoppedFromStoppingEvent
-    FATAL = FatalFromBackoffEvent
-    UNKNOWN = ToUnknownEvent
+    PROCESS_STATE_CHANGE_STARTING_FROM_STOPPED = StartingFromStoppedEvent
+    PROCESS_STATE_CHANGE_STARTING_FROM_BACKOFF = StartingFromBackoffEvent
+    PROCESS_STATE_CHANGE_STARTING_FROM_EXITED = StartingFromExitedEvent
+    PROCESS_STATE_CHANGE_STARTING_FROM_FATAL = StartingFromFatalEvent
+    PROCESS_STATE_CHANGE_RUNNING_FROM_STARTING = RunningFromStartingEvent
+    PROCESS_STATE_CHANGE_BACKOFF_FROM_STARTING = BackoffFromStartingEvent
+    PROCESS_STATE_CHANGE_STOPPING_FROM_RUNNING = StoppingFromRunningEvent
+    PROCESS_STATE_CHANGE_STOPPING_FROM_STARTING = StoppingFromStartingEvent
+    PROCESS_STATE_CHANGE_EXITED_OR_STOPPED = ExitedOrStoppedEvent
+    PROCESS_STATE_CHANGE_EXITED_FROM_RUNNING = ExitedFromRunningEvent
+    PROCESS_STATE_CHANGE_STOPPED_FROM_STOPPING = StoppedFromStoppingEvent
+    PROCESS_STATE_CHANGE_FATAL_FROM_BACKOFF = FatalFromBackoffEvent
+    PROCESS_STATE_CHANGE_TO_UNKNOWN = ToUnknownEvent
     PROCESS_COMMUNICATION = ProcessCommunicationEvent
     PROCESS_COMMUNICATION_STDOUT = ProcessCommunicationStdoutEvent
     PROCESS_COMMUNICATION_STDERR = ProcessCommunicationStderrEvent
     SUPERVISOR_STATE_CHANGE = SupervisorStateChangeEvent
-    SUPERVISOR_RUNNING = SupervisorRunningEvent
-    SUPERVISOR_STOPPING = SupervisorStoppingEvent
+    SUPERVISOR_STATE_CHANGE_RUNNING = SupervisorRunningEvent
+    SUPERVISOR_STATE_CHANGE_STOPPING = SupervisorStoppingEvent
     EVENT_BUFFER_OVERFLOW = EventBufferOverflowEvent
 
 def getEventNameByType(requested):
