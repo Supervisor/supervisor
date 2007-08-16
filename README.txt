@@ -760,9 +760,10 @@ Supervisor Events
   Subtypes of EVENT:
 
     PROCESS_STATE_CHANGE -- The value of this event type will be the
-    process name.  Subscribing to this event type will cause a
-    subscriber to receive event notifications of all the types listed
-    below in "Subtypes of PROCESS_STATE_CHANGE".
+    process name.  This event type is abstract, it will never be sent
+    directly.  Subscribing to this event type will cause a subscriber
+    to receive event notifications of all the types listed below in
+    "Subtypes of PROCESS_STATE_CHANGE".
 
     The serialized body of a PROCESS_STATE_CHANGE event (and all
     subtypes) is in the form::
@@ -772,59 +773,66 @@ Supervisor Events
 
     Subtypes of PROCESS_STATE_CHANGE:
 
-      STARTING -- indicates a process has moved from a state to the
-      STARTING state.  Subscribing to this event type will cause a
-      subscriber to receive event notifications of all the types
-      listed below in "Subtypes of STARTING".
+      PROCESS_STATE_CHANGE_STARTING -- indicates a process has moved
+      from a state to the STARTING state.  Subscribing to this event
+      type will cause a subscriber to receive event notifications of
+      all the types listed below in "Subtypes of
+      PROCESS_STATE_CHANGE_STARTING".
 
-      Subtypes of STARTING:
+      Subtypes of PROCESS_STATE_CHANGE_STARTING:
 
-        STARTING_FROM_STOPPED -- subtype of STARTING, indicates a
-        process has moved from the STOPPED state from the STARTING
+        PROCESS_STATE_CHANGE_STARTING_FROM_STOPPED -- subtype of
+        PROCESS_STATE_CHANGE_STARTING, indicates a process has moved
+        from the STOPPED state from the STARTING state.
+
+        PROCESS_STATE_CHANGE_STARTING_FROM_BACKOFF -- subtype of
+        PROCESS_STATE_CHANGE_STARTING, indicates a process has moved
+        from BACKOFF state to the STARTING state.
+
+        PROCESS_STATE_CHANGE_STARTING_FROM_EXITED -- subtype of
+        PROCESS_STATE_CHANGE_STARTING, indicates a process has moved
+        from the EXITED state to the STARTING state.
+
+        PROCESS_STATE_CHANGE_STARTING_FROM_FATAL -- subtype of
+        PROCESS_STATE_CHANGE_STARTING, indicates a process has moved
+        to the FATAL state to the STARTING state.
+
+      PROCESS_STATE_CHANGE_RUNNING_FROM_STARTING -- inidicates a
+      process has moved from the STARTING state to the RUNNING state.
+
+      PROCESS_STATE_CHANGE_BACKOFF_FROM_STARTING -- indicates a
+      process has moved from the STARTING state to the BACKOFF state.
+
+      PROCESS_STATE_CHANGE_STOPPING_FROM_RUNNING -- indicates a
+      process has moved from the RUNNING state to the STOPPING state.
+
+      PROCESS_STATE_CHANGE_STOPPING_FROM_STARTING -- indicates a
+      process has moved from the RUNNING state to the STARTING state.
+
+      PROCESS_STATE_CHANGE_EXITED_OR_STOPPED -- indicates a process
+      has undergone a state change which caused it to move to the
+      EXITED or STOPPED state.
+
+      Subtypes of PROCESS_STATE_CHANGE_EXITED_OR_STOPPED:
+
+        PROCESS_STATE_CHANGE_EXITED_FROM_RUNNNING -- indicates a
+        process has moved from the RUNNING state to the EXITED state.
+
+        PROCESS_STATE_CHANGE_STOPPED_FROM_STOPPING -- indicates a
+        process has moved from the STOPPING state to the STOPPED
         state.
 
-        STARTING_FROM_BACKOFF -- subtype of STARTING, indicates a
-        process has moved from BACKOFF state to the STARTING state.
+      PROCESS_STATE_CHANGE_FATAL_FROM_BACKOFF -- indicates a process
+      has moved from the BACKOFF state to the FATAL state.
 
-        STARTING_FROM_EXITED -- subtype of STARTING, indicates a
-        process has moved from the EXITED state to the STARTING
-        state.
-
-        STARTING_FROM_FATAL -- subtype of STARTING, indicates a
-        process has moved to the FATAL state to the STARTING state.
-
-      RUNNING -- inidicates a process has moved from the STARTING state
-      to the RUNNING state.
-
-      BACKOFF -- indicates a process has moved from the STARTING state
-      to the BACKOFF state.
-
-      STOPPING_FROM_RUNNING -- indicates a process has moved from the
-      RUNNING state to the STOPPING state.
-
-      STOPPING_FROM_STARTING -- indicates a process has moved from
-      the RUNNING state to the STARTING state.
-
-      EXITED_OR_STOPPED -- indicates a process has undergone a state
-      change which caused it to move to the EXITED or STOPPED state.
-
-      Subtypes of EXITED_OR_STOPPED:
-
-        EXITED -- indicates a process has moved from the RUNNING
-        state to the EXITED state.
-
-        STOPPED -- indicates a process has moved from the STOPPING
-        state to the STOPPED state.
-
-      FATAL -- indicates a process has moved from the BACKOFF state
-      to the FATAL state.
-
-      UNKNOWN -- indicates a process has moved from a state to the
-      UNKNOWN state (indicates an error in supervisord).
+      PROCESS_STATE_CHANGE_TO_UNKNOWN -- indicates a process has moved
+      from a state to the UNKNOWN state (indicates an error in
+      supervisord).
 
     PROCESS_COMMUNICATION -- an event type raised when any process
     attempts to send information between <!--XSUPERVISOR:BEGIN--> and
-    <!--XSUPERVISOR:END--> tags in its output.  Subscribing to this
+    <!--XSUPERVISOR:END--> tags in its output.  This event type is
+    abstract, it will never be sent directly.  Subscribing to this
     event type will cause a subscriber to receive event notifications
     of all the types listed below in "Subtypes of
     PROCESS_COMMUNICATION".
@@ -854,10 +862,11 @@ Supervisor Events
 
     Subtypes of SUPERVISOR_STATE_CHANGE:
 
-      SUPERVISOR_RUNNING -- indicates that supervisor has started.
+      SUPERVISOR_STATE_CHANGE_RUNNING -- indicates that supervisor has
+      started.
 
-      SUPERVISOR_STOPPING -- indicates that supervisor is stopping or
-      restarting.
+      SUPERVISOR_STATE_CHANGE_STOPPING -- indicates that supervisor is
+      stopping or restarting.
 
     EVENT_BUFFER_OVERFLOW -- an event type raised when a listener
     pool's event buffer is overflowed (as can happen when an event
