@@ -10,6 +10,14 @@ History
 
   8/15/2007: updated for version 3.0
 
+Upgrading
+
+  If you are upgrading from supervisor version 2.X to version 3.X, and
+  you wish to preserve your supervisor configuration file, you will
+  need to read the file named 'UPGRADING.txt' within the same
+  directory as this file.  Some configuration file options have
+  changed and new ones have been added.
+
 Introduction
 
   The supervisor is a client/server system that allows its users to
