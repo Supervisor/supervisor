@@ -740,11 +740,12 @@ Process States
 Supervisor Events
 
   At certain predefined points during supervisord's operation, "event
-  notifications" are emitted.  An event denotes that something
-  potentially interesting happened.  Event listeners (see the "Event
-  Listeners" section below) can be configured to subscribe to event
-  notifications selectively, and may perform arbitrary actions based
-  on an event notification (send email, make an HTTP request, etc).
+  notifications" are emitted.  An event notification implies that
+  something potentially interesting happened.  Event listeners (see
+  the "Event Listeners" section below) can be configured to subscribe
+  to event notifications selectively, and may perform arbitrary
+  actions based on an event notification (send email, make an HTTP
+  request, etc).
 
   Event types that may be subscribed to by event listeners are
   predefined by supervisor and fall into several major categories,
@@ -872,7 +873,189 @@ Supervisor Events
 
 Event Listeners
 
-  XXX TODO
+  Supervisor event listeners are subprocesses which are treated almost
+  exactly like supervisor "programs" with the following differences:
+
+  - They are defined using an [eventlistener:x] section in the config
+    file instead of a [program:x] section in the configuration file.
+
+  - Supervisor sends specially-formatted input to an event listener's
+    stdin and expects specially-formatted output from an event
+    listener's stdout in a request-response cycle.  A protocol agreed
+    upon between supervisor and the listener's implementer allows
+    listeners to process event notifications.
+
+  - Supervisor does not respect "capture mode" output from event
+    listener processes (see "Capture Mode and Process Communication
+    Events" elsewhere in this document).
+
+  When an [eventlistener:x] section is defined, it actually defines a
+  "pool", where the number of event listeners in the pool is
+  determined by the "numprocs" value within the section.  Every
+  process in the event listener pool is treated equally by supervisor,
+  and supervisor will choose one process from the pool to receive
+  event notifications (filtered by the "events=" key in the
+  eventlistener section).
+
+  An event listener can send arbitrary output to its stderr, which
+  will be logged or ignored by supervisord depending on the
+  stderr-related configuration files in its [eventlistener:x] section.
+
+  When an event notification is sent by the supervisor, all event
+  listener pools which are subscribed to receive events for the
+  event's type will be found.  One of the listeners in each listener
+  pool will receive the event notification (any "available" listener).
+
+  If the event cannot be sent because all listener in a pool are
+  "busy", the event will be buffered and notification will be retried
+  later.  "Later" is defined as "the next time that supervisord's
+  select loop executes".
+
+  A listener pool has an event buffer queue.  The queue is sized via
+  the listener pool's "buffer_size" config file option.  If the queue
+  is full and supervisor attempts to buffer an event, supervisor will
+  throw away the oldest event in the buffer, log an error, and send an
+  EVENT_BUFFER_OVERFLOW event.  EVENT_BUFFER_OVERFLOW events are never
+  themselves buffered.
+
+  Event listeners can be implemented in any language.  Event listeners
+  can be long-running or may exit after a single request (depending on
+  the implementation and the "autorestart" parameter in the
+  eventlistener's configuration).
+
+  An event listener implementation should operate in "unbuffered" mode
+  or should flush its stdout every time it needs to communicate back
+  to the supervisord process.
+
+Event Listener States
+
+  An event listener process has three possible states that are
+  maintained by supervisord:
+
+      ACKNOWLEDGED -- The event listener has acknowledged (accepted or
+      rejected) an event send.
+
+      READY -- Event notifications may be sent to this event listener.
+
+      BUSY -- Event notifications may not be sent to this event
+      listener.
+
+  When an event listener process first starts, supervisor
+  automatically places it into the ACKNOWLEDGED state to allow for
+  startup activities or guard against startup failures (hangs).  Until
+  the listener sends a READY token to its stdout, it will stay in this
+  state.
+
+  When supervisord sends an event notification to a listener in the
+  READY state, the listener will be placed into the BUSY state until
+  it receives an OK or FAILED response from the listener, at which
+  time, the listener will be transitioned back into the ACKNOWLEDGED
+  state.
+
+Event Listener Notification Protocol
+
+  Supervisord will notify an event listener in the READY state of an
+  event by sending data to the stdin of the process.  Supervisord will
+  never send anything to the stdin of an event listener process while
+  that process is in the BUSY or ACKNOWLEDGED state.
+
+  When supervisord sends a notification to an event listener process,
+  the listener will first be sent a single "header" line on its
+  stdin. The composition of the line is a set of four tokens separated
+  by single spaces.  The line is terminated with a '\n' (linefeed)
+  character.  The tokens on the line are:
+
+  <PROTOCOL_VERSION> <EVENT_TYPE_NAME> <EVENT_SERIAL_NUM> <PAYLOAD_LENGTH>
+
+  The PROTOCOL_VERSION always consists of "SUPERVISORD" followed
+  immediately by numeric characters indicating the protocol version,
+  with no whitespace in between.  An example: "SUPERVISOR3.0"
+
+  The EVENT_TYPE_NAME is the specific event type name (see "Supervisor
+  Events" elsewhere in this document). An example:
+  "PROCESS_COMMUNICATION_STDOUT".
+
+  The EVENT_SERIAL_NUM is an integer assigned to each event.  It is
+  useful for functional testing.  An example: "30".
+
+  The PAYLOAD_LENGTH is an integer indicating the number of bytes in
+  the event payload.  An example: "22".
+
+  An example of a complete header line:
+
+  SUPERVISOR3.0 PROCESS_COMMUNICATION_STDOUT 30 22\n
+
+  Directly following the linefeed character in the header is the event
+  payload.  It consists of PAYLOAD_LENGTH bytes representing a
+  serialization of the event data.  See "Supervisor Events" for the
+  specific event data serialization definitions.
+
+  Once it has processed the header, the event listener implementation
+  should read PAYLOAD_LENGTH bytes from its stdin, perform an
+  arbitrary action based on the values in the header and the data
+  parsed out of the serialization.  It is free to block for an
+  arbitrary amount of time while doing this.  Supervisor will continue
+  processing normally as it waits for a response and it will send
+  other events of the same type to other listener processes in the
+  same pool as necessary.
+
+  After the event listener has processed the event serialization, in
+  order to notify supervisord about the result, it should send either
+  an "OK" token or a "FAILED" token immediately followed by a carriage
+  return character to its stdout.  If supervisord receives an "OK"
+  token, it will assume that the listener processed the event
+  notification successfully.  If it receives a "FAILED" token, it will
+  assume that the listener has failed to process the event, and the
+  event will be rebuffered and sent again at a later time.  The event
+  listener may reject the event for any reason by returning a "FAILED"
+  token.  This does not indicate a problem with the event data or the
+  event listener.  Once an "OK" or "FAILED" token is received by
+  supervisord, the event listener is placed into the ACKNOWLEDGED
+  state.
+
+  Once the listener is in the ACKNOWLEDGED state, it may either exit
+  (and subsequently be restarted by supervisor if its "autorestart"
+  config parameter is true), or it may continue running.  If it
+  continues to run, in order to be placed back into the READY state by
+  supervisord, it must send a "READY" token followed immediately by a
+  carriage return to its stdout.
+
+Example Event Listener Implementation
+
+  A Python implementation of a "long-running" event listener which
+  accepts an event notification, prints the header and a list of event
+  serial numbers it has received to its stderr, and responds with an
+  OK, and then subsequently a READY is as follows::
+
+    import sys
+
+    L = []
+
+    def stdout_write(s):
+        sys.stdout.write(s)
+        sys.stdout.flush()
+
+    def stderr_write(s):
+        sys.stderr.write(s)
+        sys.stderr.flush()
+        
+    while 1:
+        stdout_write('READY\n')
+        line = sys.stdin.readline()
+        stderr_write(line)
+        ver, event, serial, length = line.split(' ', 3)
+        L.append(serial)
+        data = sys.stdin.read(int(length))
+        stderr_write(str(L))
+        stdout_write('OK\n')
+
+Event Listener Error Conditions
+
+  If the event listener process dies while the event is being
+  transmitted to its stdin, or if it dies before sending an OK/FAILED
+  response back to supervisord, the event is assumed to not be
+  processed and will be rebuffered by supervisord and sent again
+  later.
 
 Capture Mode and Process Communication Events
 
