@@ -52,7 +52,7 @@ supervisor_version = open(version_txt).read().strip()
 
 dist = setup(
     name = 'supervisor',
-    version = suervisor_version,
+    version = supervisor_version,
     license = 'ZPL 2.1/others (see LICENSES.txt)',
     url = 'http://www.plope.com/software/supervisor2/',
     description = "A system for controlling process state under UNIX",
