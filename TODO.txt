@@ -12,8 +12,6 @@
 - Revisit test_startProcessGroup and test_startAllProcesses (see XXX
   comment about ordering).
 
-- Allow process config to opt out of capture mode.
-
 - Address outstanding collector issues.
 
 - Support groups in supervisorctl / web interface.
