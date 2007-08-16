@@ -26,10 +26,8 @@
 - Expose stderr/stdout logfiles separately in RPC interface return
   values.
 
-- "Ordered shutdown": stop process groups in a known order, with event
-  listeners typically being stopped last.  We also *might* be able to
-  delay shutdown until all buffered events have been processed (or a
-  timeout has been reached).
+- We *might* be able to delay shutdown until all buffered events have
+  been processed (or a timeout has been reached).
 
 - Release a meld3 version that doesn't require that ext_modules get
   built if an environment variable is present (or if distutils
