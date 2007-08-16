@@ -113,7 +113,14 @@ class Controller(cmd.Cmd):
     def _upcheck(self):
         try:
             supervisor = self._get_supervisor()
-            supervisor.getSupervisorVersion()
+            api = supervisor.getAPIVersion()
+            from supervisor import rpcinterface
+            if api != rpcinterface.API_VERSION:
+                self._output(
+                    'Sorry, this version of supervisorctl expects to '
+                    'talk to a server with API version %s, but the '
+                    'remote version is %s.' % (rpcinterface.API_VERSION, api))
+                return False
         except socket.error, why:
             if why[0] == errno.ECONNREFUSED:
                 self._output('%s refused connection' % self.options.serverurl)
@@ -281,12 +288,21 @@ class Controller(cmd.Cmd):
     def help_exit(self):
         self._output("exit\tExit the supervisor shell.")
 
+    def _procrepr(self, info):
+        template = '%(name)-32s %(state)-10s %(desc)s'
+        if info['name'] == info['group']:
+            name = info['name']
+        else:
+            name = '%s:%s' % (info['group'], info['name'])
+                    
+        return template % {'name':name, 'state':info['statename'],
+                           'desc':info['description']}
+
     def do_status(self, arg):
         if not self._upcheck():
             return
         
         supervisor = self._get_supervisor()
-        template = '%(name)-14s %(state)-10s %(desc)s'
 
         processnames = arg.strip().split()
 
@@ -300,14 +316,10 @@ class Controller(cmd.Cmd):
                     else:
                         raise
                     continue
-                newinfo = {'name':info['name'], 'state':info['statename'],
-                           'desc':info['description']}
-                self._output(template % newinfo)
+                self._output(self._procrepr(info))
         else:
             for info in supervisor.getAllProcessInfo():
-                newinfo = {'name':info['name'], 'state':info['statename'],
-                           'desc':info['description']}
-                self._output(template % newinfo)
+                self._output(self._procrepr(info))
 
     def help_status(self):
         self._output("status\t\t\tGet all process status info.")

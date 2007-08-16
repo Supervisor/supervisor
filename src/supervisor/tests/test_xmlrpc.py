@@ -68,7 +68,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
         self.assertEqual(len(request.producers), 1)
         xml_response = request.producers[0]
         response = xmlrpclib.loads(xml_response)
-        self.assertEqual(response[0][0], '1.0')
+        self.assertEqual(response[0][0], '3.0')
         self.assertEqual(request._done, True)
         self.assertEqual(request.headers['Content-Type'], 'text/xml')
         self.assertEqual(request.headers['Content-Length'], len(xml_response))

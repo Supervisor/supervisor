@@ -23,6 +23,18 @@ class ControllerTests(unittest.TestCase):
         result = controller._upcheck()
         self.assertEqual(result, True)
 
+    def test__upcheck_wrong_server_version(self):
+        options = DummyClientOptions()
+        options._server.supervisor.getAPIVersion = lambda *x: '1.0'
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller._upcheck()
+        self.assertEqual(result, False)
+        value = controller.stdout.getvalue()
+        self.assertEqual(value, 'Sorry, this version of supervisorctl expects '
+        'to talk to a server with API version 3.0, but the remote version is '
+        '1.0.\n')
+
     def test_onecmd(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
@@ -104,8 +116,10 @@ class ControllerTests(unittest.TestCase):
         controller.stdout = StringIO()
         result = controller.do_status('foo')
         self.assertEqual(result, None)
-        expected = "foo            RUNNING    foo description\n"
-        self.assertEqual(controller.stdout.getvalue(), expected)
+        value = controller.stdout.getvalue().strip()
+        self.assertEqual(value.split(None, 2),
+                         ['foo', 'RUNNING', 'foo description'])
+                         
 
     def test_status_allprocesses(self):
         options = DummyClientOptions()
@@ -113,12 +127,13 @@ class ControllerTests(unittest.TestCase):
         controller.stdout = StringIO()
         result = controller.do_status('')
         self.assertEqual(result, None)
-        expected = """\
-foo            RUNNING    foo description
-bar            FATAL      bar description
-baz            STOPPED    baz description
-"""
-        self.assertEqual(controller.stdout.getvalue(), expected)
+        value = controller.stdout.getvalue().split('\n')
+        self.assertEqual(value[0].split(None, 2),
+                         ['foo', 'RUNNING', 'foo description'])
+        self.assertEqual(value[1].split(None, 2),
+                         ['bar', 'FATAL', 'bar description'])
+        self.assertEqual(value[2].split(None, 2),
+                         ['baz:baz_01', 'STOPPED', 'baz description'])
 
     def test_start_fail(self):
         options = DummyClientOptions()
@@ -381,11 +396,14 @@ baz            STOPPED    baz description
         controller.stdout = StringIO()
         result = controller.do_open('http://localhost:9002')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(), """\
-foo            RUNNING    foo description
-bar            FATAL      bar description
-baz            STOPPED    baz description
-""")
+        value = controller.stdout.getvalue().split('\n')
+        self.assertEqual(value[0].split(None, 2),
+                         ['foo', 'RUNNING', 'foo description'])
+        self.assertEqual(value[1].split(None, 2),
+                         ['bar', 'FATAL', 'bar description'])
+        self.assertEqual(value[2].split(None, 2),
+                         ['baz:baz_01', 'STOPPED', 'baz description'])
+#""")
 
     def test_version(self):
         options = DummyClientOptions()
