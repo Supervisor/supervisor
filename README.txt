@@ -366,11 +366,11 @@ Configuration File '[program:x]' Section Settings
     stdout_logfile=AUTO
     stdout_logfile_maxbytes=50MB
     stdout_logfile_backups=10
-    stdout_capturefile=AUTO
+    stdout_capturefile=NONE
     stderr_logfile=AUTO
     stderr_logfile_maxbytes=50MB
     stderr_logfile_backups=10
-    stderr_capturefile=AUTO
+    stderr_capturefile=NONE
     environment=A=1,B=2
 
   '[program:foo]' -- the section header, required for each program.
@@ -479,14 +479,15 @@ Configuration File '[program:x]' Section Settings
   'stdout_logfile_backups' -- The number of stdout_logfile backups to
   keep around resulting from process stdout log file rotation.  Set
   this to 0 to indicate an unlimited number of backups.  Default: 10.
-  (New in 3.0, replaces "logfile_backups") 'stdout_capturefile' --
-  file written to when process is in "stdout capture mode" (see
-  "Capture Mode and Process Communication Events" later in this
-  document).  May be a file path, NONE, or AUTO.  The
+  (New in 3.0, replaces "logfile_backups")
+
+  'stdout_capturefile' -- file written to when process is in "stdout
+  capture mode" (see "Capture Mode and Process Communication Events"
+  later in this document).  May be a file path, NONE, or AUTO.  The
   stdout_capturefile value can contain Python string expressions that
   will evaluated against a dictionary that contains the keys
-  "process_num", "program_name" and "group_name".  Default: AUTO.
-  (New in 3.0, replaces 2.0's "logfile_backups")
+  "process_num", "program_name" and "group_name".  Default: NONE.
+  (New in 3.0)
 
   'stderr_logfile' -- Put process stderr output in this file unless
   redirect_stderr is true.  Accepts the same value types as
@@ -505,7 +506,7 @@ Configuration File '[program:x]' Section Settings
   capture mode" (see "Capture Mode and Process Communication Events"
   later in this document).  May contain the same Python string
   expressions as "stdout_capturefile". May be a file path, NONE, or
-  AUTO.  Default: AUTO.  (New in 3.0)
+  AUTO.  Default: NONE.  (New in 3.0)
 
   'environment' -- A list of key/value pairs in the form
   "KEY=val,KEY2=val2" that will be placed in the child process'

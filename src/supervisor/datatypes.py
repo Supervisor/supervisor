@@ -81,9 +81,9 @@ class Automatic:
     pass
 
 def logfile_name(val):
-    if val in ('NONE', 'OFF'):
+    if val in ('NONE', 'OFF', None):
         return None
-    elif val in (None, 'AUTO'):
+    elif val in (Automatic, 'AUTO'):
         return Automatic
     else:
         return existing_dirpath(val)

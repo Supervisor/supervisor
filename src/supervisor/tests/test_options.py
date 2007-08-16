@@ -338,7 +338,6 @@ class ServerOptionsTests(unittest.TestCase):
         startretries = 100
         user = root
         stdout_logfile = NONE
-        stdout_capturelogfile = NONE
         stdout_logfile_backups = 1
         stdout_logfile_maxbytes = 100MB
         stopsignal = KILL
@@ -364,7 +363,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(pconfig.startretries, 100)
         self.assertEqual(pconfig.uid, 0)
         self.assertEqual(pconfig.stdout_logfile, None)
-        self.assertEqual(pconfig.stdout_capturefile, datatypes.Automatic)
+        self.assertEqual(pconfig.stdout_capturefile, None)
         self.assertEqual(pconfig.stdout_logfile_maxbytes, 104857600)
         self.assertEqual(pconfig.stopsignal, signal.SIGKILL)
         self.assertEqual(pconfig.stopwaitsecs, 100)

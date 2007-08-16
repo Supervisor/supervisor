@@ -702,7 +702,8 @@ class ServerOptions(Options):
                         '[%s] names unknown program %s' % (section, program))
                 homogeneous_exclude.append(program_section)
                 processes = self.processes_from_section(parser, program_section,
-                                                        group_name)
+                                                        group_name,
+                                                        ProcessConfig)
                 group_processes.extend(processes)
             groups.append(
                 ProcessGroupConfig(self, group_name, priority, group_processes)
@@ -715,7 +716,8 @@ class ServerOptions(Options):
                 continue
             program_name = section.split(':', 1)[1]
             priority = integer(get(section, 'priority', 999))
-            processes=self.processes_from_section(parser, section, program_name)
+            processes=self.processes_from_section(parser, section, program_name,
+                                                  ProcessConfig)
             groups.append(
                 ProcessGroupConfig(self, program_name, priority, processes)
                 )
@@ -744,7 +746,8 @@ class ServerOptions(Options):
                                      (pool_event_name, section))
                 pool_events.append(pool_event)
             processes=self.processes_from_section(parser, section, pool_name,
-                                                  listener=True)
+                                                  EventListenerConfig)
+
             groups.append(
                 EventListenerPoolConfig(self, pool_name, priority, processes,
                                         buffer_size, pool_events)
@@ -754,7 +757,9 @@ class ServerOptions(Options):
         return groups
 
     def processes_from_section(self, parser, section, group_name,
-                               listener=False):
+                               klass=None):
+        if klass is None:
+            klass = ProcessConfig
         programs = []
         get = parser.saneget
         program_name = section.split(':', 1)[1]
@@ -787,7 +792,7 @@ class ServerOptions(Options):
                     'numprocs > 1')
 
         for n in ('stdout_logfile', 'stderr_logfile'):
-            lf_name = logfile_name(get(section, n, None))
+            lf_name = logfile_name(get(section, n, Automatic))
             mb_key = '%s_maxbytes' % n
             maxbytes = byte_size(get(section, mb_key, '50MB'))
             if not maxbytes and lf_name is Automatic:
@@ -808,12 +813,17 @@ class ServerOptions(Options):
             logfiles = {}
 
             for k in ('stdout', 'stderr'):
-                for n in ('%s_logfile' % k, '%s_capturefile' % k):
-                    val = logfile_name(get(section, n, None))
-                    if isinstance(val, basestring):
-                        val = expand(val, expansions, n)
-                        
-                    logfiles[n] = val
+                n = '%s_logfile' % k
+                val = logfile_name(get(section, n, Automatic))
+                if isinstance(val, basestring):
+                    val = expand(val, expansions, n)
+                logfiles[n] = val
+
+                n = '%s_capturefile' % k
+                val = logfile_name(get(section, n, None))
+                if isinstance(val, basestring):
+                    val = expand(val, expansions, n)
+                logfiles[n] = val
 
                 bu_key = '%s_logfile_backups' % k
                 backups = integer(get(section, bu_key, 10))
@@ -822,11 +832,6 @@ class ServerOptions(Options):
                 mb_key = '%s_logfile_maxbytes' % k
                 maxbytes = byte_size(get(section, mb_key, '50MB'))
                 logfiles[mb_key] = maxbytes
-
-            if listener:
-                klass = EventListenerConfig
-            else:
-                klass = ProcessConfig
 
             pconfig = klass(
                 self,
