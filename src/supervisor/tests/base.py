@@ -520,6 +520,8 @@ class DummySupervisorRPCNamespace:
     def getAPIVersion(self):
         return '3.0'
 
+    getVersion = getAPIVersion # deprecated
+
     def readProcessLog(self, name, offset, length):
         from supervisor import xmlrpc
         import xmlrpclib

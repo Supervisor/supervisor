@@ -25,7 +25,7 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_wrong_server_version(self):
         options = DummyClientOptions()
-        options._server.supervisor.getAPIVersion = lambda *x: '1.0'
+        options._server.supervisor.getVersion = lambda *x: '1.0'
         controller = self._makeOne(options)
         controller.stdout = StringIO()
         result = controller._upcheck()

@@ -113,7 +113,7 @@ class Controller(cmd.Cmd):
     def _upcheck(self):
         try:
             supervisor = self._get_supervisor()
-            api = supervisor.getAPIVersion()
+            api = supervisor.getVersion() # deprecated
             from supervisor import rpcinterface
             if api != rpcinterface.API_VERSION:
                 self._output(
