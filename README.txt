@@ -111,11 +111,14 @@ Installing Without Internet Access
   Since "setup.py install" performs downloads of dependent software,
   it will not work on machines without internet access.  To install to
   a machine which is not internet connected, obtain the following
-  dependencies on a machine which is internet-connected::
+  dependencies on a machine which is internet-connected:
 
   - setuptools (latest) from http://pypi.python.org/pypi/setuptools
+
   - meld3 (0.6) from http://www.plope.com/software/meld3/
+
   - medusa (0.5.4) from http://www.amk.ca/python/code/medusa.html
+
   - elementtree (1.2.6) from http://effbot.org/downloads#elementtree
 
   And then copy these files to removable media and put them on the
@@ -226,7 +229,7 @@ Components
       server.supervisor.getState()
 
     You can get a list of methods supported by supervisor's XML-RPC
-    interface by using the XML-RPC 'system.listMethods' API:
+    interface by using the XML-RPC 'system.listMethods' API::
 
       server.system.listMethods()
 
@@ -633,7 +636,7 @@ Configuration File '[rpcinterface:x]' Section Settings (ADVANCED, New in 3.0)
   behavior.
 
   In the sample config file, there is a section which is named
-  "rpcinterface:supervisor".  By default it looks like this:
+  "rpcinterface:supervisor".  By default it looks like this::
 
    [rpcinterface:supervisor]
    supervisor.rpcinterface_factory = supervisor.xmlrpc:make_main_rpcinterface
@@ -802,6 +805,7 @@ Process States
 
   Process progress through these states as per the following directed
   graph::
+
                             --> STOPPED
                           /       |
                          |        |
@@ -1304,13 +1308,18 @@ FAQ
   be due to your process' dependence on environment variable settings.
   See "Subprocess Environment" in this document.
 
-Reporting Bugs
+Maillist and Reporting Bugs
 
-  Please report bugs at http://www.plope.com/software/collector .
+  You may subscribe to the 'Supervisor-users'
+  "maillist":http://lists.palladion.com/mailman/listinfo/supervisor-users
+
+  Please report bugs at "the
+  collector":http://www.plope.com/software/collector .
 
 Author Information
 
   Chris McDonough (chrism@plope.com)
-  http://www.plope.com
-  
+  "Agendaless Consulting":http://www.agendaless.com
+
+    
 
