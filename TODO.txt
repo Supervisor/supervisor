@@ -14,12 +14,7 @@
 
 - Allow process config to opt out of capture mode.
 
-- Revisit XXX comment in supervisord about removing logs at shutdown.
-
 - Address outstanding collector issues.
-
-- Make sure "SupervisorStateChangeEvents" are sent to listeners
-  properly.
 
 - Support groups in supervisorctl / web interface.
 
