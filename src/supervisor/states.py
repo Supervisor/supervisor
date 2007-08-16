@@ -8,6 +8,17 @@ class ProcessStates:
     FATAL = 200
     UNKNOWN = 1000
 
+STOPPED_STATES = (ProcessStates.STOPPED,
+                  ProcessStates.EXITED,
+                  ProcessStates.FATAL,
+                  ProcessStates.UNKNOWN)
+
+RUNNING_STATES = (ProcessStates.RUNNING,
+                  ProcessStates.BACKOFF,
+                  ProcessStates.STARTING)
+
+
+
 def getProcessStateDescription(code):
     for statename in ProcessStates.__dict__:
         if getattr(ProcessStates, statename) == code:

@@ -24,6 +24,7 @@ import signal
 
 from supervisor.states import ProcessStates
 from supervisor.states import getProcessStateDescription
+from supervisor.states import STOPPED_STATES
 
 from supervisor.options import decode_wait_status
 from supervisor.options import signame
@@ -514,6 +515,11 @@ class ProcessGroupBase:
     def get_delay_processes(self):
         """ Processes which are starting or stopping """
         return [ x for x in self.processes.values() if x.delay ]
+
+    def get_unstopped_processes(self):
+        """ Processes which aren't in a state that is considered 'stopped' """
+        return [ x for x in self.processes.values() if x.get_state() not in
+                 STOPPED_STATES ]
 
     def get_undead(self):
         """ Processes which we've attempted to stop but which haven't responded

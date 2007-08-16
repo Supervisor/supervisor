@@ -52,12 +52,14 @@ from supervisor.options import ServerOptions
 from supervisor.options import signame
 from supervisor import events
 from supervisor.states import SupervisorStates
+from supervisor.states import getProcessStateDescription
 
 class Supervisor:
     mood = 1 # 1: up, 0: restarting, -1: suicidal
     stopping = False # set after we detect that we are handling a stop request
     lastdelayreport = 0 # throttle for delayed process error reports at stop
     process_groups = None # map of process group name to process group object
+    stop_groups = None # list used for priority ordered shutdown
 
     def __init__(self, options):
         self.options = options
@@ -90,6 +92,7 @@ class Supervisor:
 
     def run(self, test=False):
         self.process_groups = {} # clear
+        self.stop_groups = None # clear
         events.clear()
         try:
             for config in self.options.process_group_configs:
@@ -127,11 +130,32 @@ class Supervisor:
             if now > (self.lastdelayreport + 3): # every 3 secs
                 names = [ p.config.name for p in delayprocs]
                 namestr = ', '.join(names)
-                self.options.logger.info('waiting for %s to die' %
-                                         namestr)
+                self.options.logger.info('waiting for %s to die' % namestr)
                 self.lastdelayreport = now
+                for proc in delayprocs:
+                    state = getProcessStateDescription(proc.get_state())
+                    self.options.logger.log(self.options.TRACE,
+                               '%s state: %s' % (proc.config.name, state))
 
         return delayprocs
+
+    def ordered_stop_groups_phase_1(self):
+        if self.stop_groups:
+            # stop the last group (the one with the "highest" priority)
+            self.stop_groups[-1].stop_all()
+
+    def ordered_stop_groups_phase_2(self):
+        # after phase 1 we've transitioned and reaped, let's see if we
+        # can remove the group we stopped from the stop_groups queue.
+        if self.stop_groups:
+            # pop the last group (the one with the "highest" priority)
+            group = self.stop_groups.pop()
+            if group.get_unstopped_processes():
+                # if any processes in the group aren't yet in a
+                # stopped state, we're not yet done shutting this
+                # group down, so push it back on to the end of the
+                # stop group queue
+                self.stop_groups.append(group)
 
     def runforever(self, test=False):
         events.notify(events.SupervisorRunningEvent())
@@ -145,16 +169,20 @@ class Supervisor:
             combined_map.update(self.get_process_map())
 
             pgroups = self.process_groups.values()
+            pgroups.sort()
 
             if self.mood > 0:
                 [ group.start_necessary() for group in pgroups ]
 
             elif self.mood < 1:
                 if not self.stopping:
-                    # first time, do a notification
-                    events.notify(events.SupervisorStoppingEvent())
+                    # first time, set the stopping flag, do a
+                    # notification and set stop_groups
                     self.stopping = True
-                [ group.stop_all() for group in pgroups ]
+                    self.stop_groups = pgroups[:]
+                    events.notify(events.SupervisorStoppingEvent())
+
+                self.ordered_stop_groups_phase_1()
 
                 if not self.get_delay_processes():
                     # if there are no delayed processes (we're done killing
@@ -201,6 +229,9 @@ class Supervisor:
 
             self.reap()
             self.handle_signal()
+
+            if self.mood < 1:
+                self.ordered_stop_groups_phase_2()
 
             if test:
                 break

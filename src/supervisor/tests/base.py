@@ -690,12 +690,10 @@ class DummyProcessGroup:
         self.all_stopped = False
         self.delay_processes = []
         self.dispatchers = {}
+        self.unstopped_processes = []
 
     def start_necessary(self):
         self.necessary_started = True
-
-    def select(self):
-        return self.select_result
 
     def transition(self):
         self.transitioned = True
@@ -705,6 +703,9 @@ class DummyProcessGroup:
 
     def get_delay_processes(self):
         return self.delay_processes
+
+    def get_unstopped_processes(self):
+        return self.unstopped_processes
 
     def get_dispatchers(self):
         return self.dispatchers

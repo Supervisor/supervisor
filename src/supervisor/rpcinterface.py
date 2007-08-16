@@ -20,10 +20,7 @@ from supervisor.states import SupervisorStates
 from supervisor.states import getSupervisorStateDescription
 from supervisor.states import ProcessStates
 from supervisor.states import getProcessStateDescription
-
-RUNNING_STATES = (ProcessStates.RUNNING,
-                  ProcessStates.BACKOFF,
-                  ProcessStates.STARTING)
+from supervisor.states import RUNNING_STATES
 
 API_VERSION  = '3.0'
 
