@@ -1057,6 +1057,13 @@ Event Listener Error Conditions
   processed and will be rebuffered by supervisord and sent again
   later.
 
+  If an event listener sends data to its stdout which supervisor does
+  not recognize as an appropriate response based on the state that the
+  event listener is in, the event listener will be placed into the
+  UNKNOWN state, and no further event notifications will be sent to
+  it.  If an event was being processed by the listener during this
+  time, it will be rebuffered and sent again later.
+
 Capture Mode and Process Communication Events
 
   XXX TODO
