@@ -1,9 +1,5 @@
 - Documentation extensions:
 
-  - [group:x] documentation
-
-  - [eventlistener:x] documentation
-
   - Capture mode / process comm events documentation
 
 - Write "UPGRADING.txt" for people who are upgrading from supervisor

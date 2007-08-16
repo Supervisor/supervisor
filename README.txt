@@ -62,6 +62,9 @@ Introduction
      assign priorities to processes, and allows user to emit commands
      via the supervisorctl client like "start all", and "restart all",
      which starts them in the preassigned priority order.
+     Additionally, processes can be grouped into "process groups" and
+     a set of logically related processes can be stopped and started
+     as a unit.
 
 Supported Platforms
 
@@ -385,8 +388,8 @@ Configuration File '[program:x]' Section Settings
   bar"').  Note that the value of 'command' may include Python string
   expressions, e.g. "/path/to/programname --port=80%(process_num)02d"
   might expand to "/path/to/programname --port=8000" at runtime.
-  String expressions are evaluated against a dictionary containing
-  "group_name", "process_num" and "program_name".  **Controlled
+  String expressions are evaluated against a dictionary containing the
+  keys "group_name", "process_num" and "program_name".  **Controlled
   programs should themselves not be daemons, as supervisord assumes it
   is responsible for daemonizing its subprocesses (see "Nondaemonizing
   of Subprocesses" later in this document).**
@@ -396,13 +399,13 @@ Configuration File '[program:x]' Section Settings
   need to worry about setting this unless you change 'numprocs'.  The
   string expression is evaluated against a dictionary that includes
   "group_name", "process_num" and "program_name".  Default:
-  %(program_name)s.
+  %(program_name)s.  (New in 3.0)
 
   'numprocs' -- Supervisor will start as many instances of this
   program as named by numprocs.  Note that if numprocs > 1, the
   'process_name' expression must include '%(process_num)s' (or any
   other valid Python string expression that includes 'process_num')
-  within it.  Default: 1.
+  within it.  Default: 1.  (New in 3.0)
 
   'priority' -- the relative priority of the program in the start and
   shutdown ordering.  Lower priorities indicate programs that start
@@ -447,67 +450,174 @@ Configuration File '[program:x]' Section Settings
 
   'user' -- If supervisord is running as root, this UNIX user account
   will be used as the account which runs the program.  If supervisord
-  is not running as root, this option has no effect.  Defaut: do not
+  is not running as root, this option has no effect.  Default: do not
   switch users.
 
   'redirect_stderr' -- If true, cause the process' stderr output to be
   sent back to supervisor on it's stdout file descriptor (in UNIX
   shell terms, this is the equivalent of executing "/the/program
-  2>&1". Default: false.
+  2>&1". Default: false.  (New in 3.0, replaces 2.0's "log_stdout" and
+  "log_stderr")
 
   'stdout_logfile' -- Put process stdout output in this file (and if
   redirect_stderr is true, also place stderr output in this file).  If
   'stdout_logfile' is unset or set to 'AUTO', supervisor will
   automatically choose a file location.  If this is set to 'NONE',
   supervisord will create no log file.  AUTO log files and their
-  backups will be deleted when supervisord restarts.  Default: AUTO.
+  backups will be deleted when supervisord restarts.  The
+  stdout_logfile value can contain Python string expressions that will
+  evaluated against a dictionary that contains the keys "process_num",
+  "program_name" and "group_name".  Default: AUTO.  (New in 3.0,
+  replaces 2.0's "logfile")
 
   'stdout_logfile_maxbytes' -- The maximum number of bytes that may be
   consumed by stdout_logfile before it is rotated (suffix multipliers
   like "KB", "MB", and "GB" can be used in the value).  Set this value
-  to 0 to indicate an unlimited log size.  Default: 50MB.
+  to 0 to indicate an unlimited log size.  Default: 50MB.  (New in
+  3.0, replaces 2.0's "logfile_maxbytes")
 
   'stdout_logfile_backups' -- The number of stdout_logfile backups to
   keep around resulting from process stdout log file rotation.  Set
   this to 0 to indicate an unlimited number of backups.  Default: 10.
-
-  'stdout_capturefile' -- file written to when process is in "stdout
-  capture mode" (see "Capture Mode and Process Communication Events"
-  later in this document).  May be a file path, NONE, or AUTO.
-  Default: AUTO.
+  (New in 3.0, replaces "logfile_backups") 'stdout_capturefile' --
+  file written to when process is in "stdout capture mode" (see
+  "Capture Mode and Process Communication Events" later in this
+  document).  May be a file path, NONE, or AUTO.  The
+  stdout_capturefile value can contain Python string expressions that
+  will evaluated against a dictionary that contains the keys
+  "process_num", "program_name" and "group_name".  Default: AUTO.
+  (New in 3.0, replaces 2.0's "logfile_backups")
 
   'stderr_logfile' -- Put process stderr output in this file unless
   redirect_stderr is true.  Accepts the same value types as
-  "stdout_logfile".  Default: AUTO.
+  "stdout_logfile" and may contain the same Python string expressions.
+  Default: AUTO.  (New in 3.0)
 
   'stderr_logfile_maxbytes' -- The maximum number of bytes before
   logfile rotation for stderr_logfile.  Accepts the same value types
-  as "stdout_logfile_maxbytes".  Default: 50MB.
+  as "stdout_logfile_maxbytes".  Default: 50MB.  (New in 3.0)
 
   'stderr_logfile_backups' -- The number of backups to keep around
-  resulting from process stderr log file rotation.  Default: 10.
+  resulting from process stderr log file rotation.  Default: 10.  (New
+  in 3.0)
 
   'stderr_capturefile' -- file written to when process is in "stderr
   capture mode" (see "Capture Mode and Process Communication Events"
-  later in this document).  May be a file path, NONE, or AUTO.
-  Default: AUTO.
+  later in this document).  May contain the same Python string
+  expressions as "stdout_capturefile". May be a file path, NONE, or
+  AUTO.  Default: AUTO.  (New in 3.0)
 
   'environment' -- A list of key/value pairs in the form
   "KEY=val,KEY2=val2" that will be placed in the child process'
-  environment.  Default: none.  **Note** that the subprocess will
-  inherit the environment variables of the shell used to start
-  "supervisord" except for the ones overridden here.  See "Subprocess
-  Environment" below.
+  environment.  The environment string may contain Python string
+  expressions that will be evaluated against a dictionary containing
+  "process_num", "program_name" and "group_name".  Default: none.
+  **Note** that the subprocess will inherit the environment variables
+  of the shell used to start "supervisord" except for the ones
+  overridden here.  See "Subprocess Environment" below.
 
-Configuration File '[group:x]' Section Settings
+  Note that a '[program:x]' section actually represents a "homogeneous
+  process group" to supervisor (new in 3.0).  The members of the group
+  are defined by the combination of the 'numprocs and 'process_name'
+  parameters in the configuration.  By default, if numprocs and
+  process_name are left unchanged from their defaults, the group
+  represented by '[program:x]' will hae a single process named 'x' in
+  it.  This provides a modicum of backwards compatibility with older
+  supervisor releases, which did not treat program sections as
+  homogeneous process group defnitions.
 
-  XXX TODO
+  But for instance, if you have a '[program:foo]' section with a
+  'numprocs' of 3 and a 'process_name' expression of
+  '%(program_name)s_%(process_num)02d', the "foo" group will contain
+  three processes, named 'foo_00', 'foo_01', and 'foo_02'.  This makes
+  it possible to start a number of very similar processes using a
+  single '[program:x]' section.  All logfile names, all environment
+  strings, and the command of programs can also contain similar Python
+  string expressions, to pass slightly different parameters to each
+  process.
 
-Configuration File '[eventlistener:x]' Section Settings
+Configuration File '[group:x]' Section Settings (New in 3.0)
 
-  XXX TODO
+  It is often useful to group "homogeneous" processes groups (aka
+  "programs") together into a "heterogeneous" process group so they
+  can be controlled as a unit from supervisor's various controller
+  interfaces.
 
-Configuration File '[rpcinterface:x]' Section Settings (ADVANCED)
+  To place programs into a group so you can treat them as a unit,
+  define a '[group:x]' section in your configuration file, e.g.::
+
+    [group:foo]
+    programs=bar,baz
+    priority=999
+
+  For the example above to work, there must be two 'program' sections
+  elsewhere in your configuration file: '[program:bar]' and
+  '[program:baz]'.  If "homogeneous" program groups" (represented by
+  program sections) are placed into a "heterogeneous" group via
+  '[group:x]' section's "programs=" line, the homogeneous groups that
+  are implied by the program section will not exist at runtime in
+  supervisor.  Instead, all processes belonging to each of the
+  homogeneous groups will be placed into the heterogeneous group.  In
+  the above example, it means that the 'bar' and 'baz' homogeneous
+  groups will not exist, and the processes that would have been under
+  them will now be moved into the 'foo' group.
+
+Configuration File '[eventlistener:x]' Section Settings (New in 3.0)
+
+  Supervisor allows specialized homogeneous process groups ("event
+  listener pools") to be defined within the configuration file.  These
+  pools contain processes that are meant to receive and respond to
+  event notifications from supervisor's event system.  Eee "Supervisor
+  Events" elsewhere in this document for an explanation of how events
+  work and how to implement event listener programs.
+
+  An example of an eventlistener section defined within a supervisor
+  configuration file, which creates a pool::
+
+    [eventlistener:theeventlistenername]
+    command=/bin/eventlistener
+    process_name=%(program_name)s_%(process_num)02d
+    numprocs=5
+    events=PROCESS_STATE_CHANGE
+    buffer_size=10
+    priority=-1
+    autostart=true
+    autorestart=true
+    startsecs=1
+    startretries=3
+    exitcodes=0,2
+    stopsignal=QUIT
+    stopwaitsecs=10
+    user=chrism
+    redirect_stderr=true
+    stdout_logfile=/a/path
+    stdout_logfile_maxbytes=1MB
+    stdout_logfile_backups=10
+    stderr_logfile=/a/path
+    stderr_logfile_maxbytes=1MB
+    stderr_logfile_backups
+    environment=A=1,B=2
+
+  Note that all the options available to '[program:x]' sections are
+  respected by eventlistener sections except for "stdout_capturefile"
+  and "stderr_capturefile" (event listeners cannot emit process
+  communication events, see "Capture Mode and Process Communication
+  Events" elsewhere in this document).
+
+  '[eventlistener:x]' sections have two keys which '[program:x]'
+  sections do not have:
+
+  'buffer_size' -- The event listener pool's event queue buffer size.
+  When a listener pool's event buffer is overflowed (as can happen
+  when an event listener pool cannot keep up with all of the events
+  sent to it), the oldest event in the buffer is discarded.
+
+  'events' -- A comma-separated list of event type names that this
+  listener is "interested" in receiving notifications for (see
+  "Supervisor Events" elsewhere in this document for a list of valid
+  event type names).
+
+Configuration File '[rpcinterface:x]' Section Settings (ADVANCED, New in 3.0)
 
   Changing "rpcinterface:x" settings in the configuration file is only
   useful for people who wish to extend supervisor with additional
@@ -519,10 +629,10 @@ Configuration File '[rpcinterface:x]' Section Settings (ADVANCED)
    [rpcinterface:supervisor]
    supervisor.rpcinterface_factory = supervisor.xmlrpc:make_main_rpcinterface
 
-  This section must remain in the configuration for the standard setup
-  of supervisor to work properly.  If you don't want supervisor to do
-  anything it doesn't already do out of the box, this is all you need
-  to know about this type of section.
+  This section *must* remain in the configuration for the standard
+  setup of supervisor to work properly.  If you don't want supervisor
+  to do anything it doesn't already do out of the box, this is all you
+  need to know about this type of section.
 
   However, if you wish to add rpc interface namespaces to a custom
   version of supervisor, you may add additional [rpcinterface:foo]
@@ -594,7 +704,7 @@ Subprocess Environment
 
     ... supervisor-specific environment variables
      ("SUPERVISOR_ENABLED", "SUPERVISOR_PROCESS_NAME",
-     "SUPERVISOR_GROUP_NAME") ..
+     "SUPERVISOR_GROUP_NAME") ..  (New in 3.0)
 
     ... added-to/overridden-by ...
 
@@ -737,7 +847,7 @@ Process States
   All other state transitions are managed by supervisord
   automatically.
 
-Supervisor Events
+Supervisor Events (New in 3.0)
 
   At certain predefined points during supervisord's operation, "event
   notifications" are emitted.  An event notification implies that
@@ -880,7 +990,7 @@ Supervisor Events
       group_name: <name>
       event_type: <type of discarded event>
 
-Event Listeners
+Event Listeners (New in 3.0)
 
   Supervisor event listeners are subprocesses which are treated almost
   exactly like supervisor "programs" with the following differences:
@@ -1078,7 +1188,7 @@ Event Listener Error Conditions
   it.  If an event was being processed by the listener during this
   time, it will be rebuffered and sent again later.
 
-Capture Mode and Process Communication Events
+Capture Mode and Process Communication Events (New in 3.0)
 
   XXX TODO
 
