@@ -70,7 +70,9 @@ class POutputDispatcher(PDispatcher):
                 capturefile,
                 logging.INFO,
                 '%(message)s',
-                rotating=False)
+                rotating=True,
+                maxbytes=1 << 21, #2MB
+                backups=10)
 
         self.childlog = self.mainlog
 
