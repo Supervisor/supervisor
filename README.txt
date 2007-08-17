@@ -1308,13 +1308,22 @@ FAQ
   be due to your process' dependence on environment variable settings.
   See "Subprocess Environment" in this document.
 
-Maillist and Reporting Bugs
+Maillist, Reporting Bugs, and Viewing the CVS Repository
 
   You may subscribe to the 'Supervisor-users'
   "maillist":http://lists.palladion.com/mailman/listinfo/supervisor-users
 
   Please report bugs at "the
   collector":http://www.plope.com/software/collector .
+
+  You can view the CVS repository for supervisor at
+  http://cvs.plope.com/viewcvs/Packages/supervisor2/ 
+
+Contributing
+
+  If you'd like to contribute to supervisor, please contact me (Chris
+  McDonough, chrism@plope.com), and I'll arrange for you to have
+  direct CVS access to the repository.
 
 Author Information
 

@@ -1,3 +1,5 @@
+- FATAL state for supervisor.
+
 - Figure out how to make sample.conf evident when supervisor is installed
   via easy_install.
 
