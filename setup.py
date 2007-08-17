@@ -44,6 +44,7 @@ CLASSIFIERS = [
     'Natural Language :: English',
     'Operating System :: POSIX',
     'Topic :: System :: Boot',
+    'Topic :: System :: Monitoring',
     'Topic :: System :: Systems Administration',
     ]
 
