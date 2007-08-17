@@ -1,3 +1,5 @@
+- Fix CVS so not all checkins come from "chrism".
+
 - FATAL state for supervisor.
 
 - Figure out how to make sample.conf evident when supervisor is installed
