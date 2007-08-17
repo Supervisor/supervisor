@@ -636,10 +636,10 @@ Configuration File '[rpcinterface:x]' Section Settings (ADVANCED, New in 3.0)
   behavior.
 
   In the sample config file, there is a section which is named
-  "rpcinterface:supervisor".  By default it looks like this::
+  "rpcinterface:supervisor".  By default it looks like this:
 
-   [rpcinterface:supervisor]
-   supervisor.rpcinterface_factory = supervisor.xmlrpc:make_main_rpcinterface
+  [rpcinterface:supervisor]
+  supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 
   This section *must* remain in the configuration for the standard
   setup of supervisor to work properly.  If you don't want supervisor
