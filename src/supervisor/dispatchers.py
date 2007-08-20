@@ -76,7 +76,10 @@ class POutputDispatcher(PDispatcher):
 
         self.childlog = self.mainlog
 
-
+    def _trace(self, msg):
+        TRACE = self.process.config.options.TRACE
+        self.process.config.options.logger.log(TRACE, msg)
+        
     def removelogs(self):
         for log in (self.mainlog, self.capturelog):
             if log is not None:
@@ -89,6 +92,16 @@ class POutputDispatcher(PDispatcher):
             if log is not None:
                 for handler in log.handlers:
                     handler.reopen()
+
+    def _log(self, data):
+        if data:
+            config = self.process.config
+            if config.options.strip_ansi:
+                data = config.options.stripEscapes(data)
+            if self.childlog:
+                self.childlog.info(data)
+            msg = '%r %s output:\n%s' % (config.name, self.channel, data)
+            self._trace(msg)
 
     def record_output(self):
         if self.capturemode:
@@ -111,21 +124,11 @@ class POutputDispatcher(PDispatcher):
             if index:
                 self.output_buffer = self.output_buffer + data[-index:]
                 data = data[:-index]
+            self._log(data)
         else:
-            data = before
+            self._log(before)
             self.toggle_capturemode()
             self.output_buffer = after
-
-        if self.childlog and data:
-            if self.process.config.options.strip_ansi:
-                data = self.process.config.options.stripEscapes(data)
-            self.childlog.info(data)
-
-        if data:
-            procname = self.process.config.name
-            msg = '%r %s output:\n%s' % (procname, self.channel, data)
-            TRACE = self.process.config.options.TRACE
-            self.process.config.options.logger.log(TRACE, msg)
 
         if after:
             self.record_output()
@@ -160,8 +163,7 @@ class POutputDispatcher(PDispatcher):
                 notify(event)
                                         
                 msg = "%r %s emitted a comm event" % (procname, channel)
-                TRACE = self.process.config.options.TRACE
-                self.process.config.options.logger.log(TRACE, msg)
+                self._trace(msg)
                                         
                 for handler in self.capturelog.handlers:
                     handler.remove()

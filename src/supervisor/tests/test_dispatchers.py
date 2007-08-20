@@ -8,6 +8,14 @@ from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyLogger
 
 class POutputDispatcherTests(unittest.TestCase):
+    def setUp(self):
+        from supervisor.events import clear
+        clear()
+
+    def tearDown(self):
+        from supervisor.events import clear
+        clear()
+
     def _getTargetClass(self):
         from supervisor.dispatchers import POutputDispatcher
         return POutputDispatcher
@@ -109,7 +117,56 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(options.logger.data[1],
              "'process1' stdout output:\nstdout string longer than a token")
 
-    def test_stdout_capturemode_switch(self):
+    def test_stdout_capturemode_single_buffer(self):
+        # mike reported that comm events that took place within a single
+        # output buffer were broken 8/20/2007
+        from supervisor.events import ProcessCommunicationEvent
+        from supervisor.events import subscribe
+        events = []
+        def doit(event):
+            events.append(event)
+        subscribe(ProcessCommunicationEvent, doit)
+        BEGIN_TOKEN = ProcessCommunicationEvent.BEGIN_TOKEN
+        END_TOKEN = ProcessCommunicationEvent.END_TOKEN
+        data = BEGIN_TOKEN + 'hello' + END_TOKEN
+        options = DummyOptions()
+        from supervisor.options import getLogger
+        options.getLogger = getLogger # actually use real logger
+        logfile = '/tmp/log'
+        capturefile = '/tmp/capture'
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile=logfile,
+                              stdout_capturefile=capturefile)
+        config.stdout_logfile = logfile
+        config.capturefile = capturefile
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+
+        try:
+            dispatcher.output_buffer = data
+            dispatcher.record_output()
+            self.assertEqual(open(logfile, 'r').read(), '')
+            self.assertEqual(dispatcher.output_buffer, '')
+            self.assertEqual(len(events), 1)
+
+            event = events[0]
+            from supervisor.events import ProcessCommunicationStdoutEvent
+            self.assertEqual(event.__class__, ProcessCommunicationStdoutEvent)
+            self.assertEqual(event.process, process)
+            self.assertEqual(event.channel, 'stdout')
+            self.assertEqual(event.data, 'hello')
+
+        finally:
+            try:
+                os.remove(logfile)
+            except (OSError, IOError):
+                pass
+            try:
+                os.remove(capturefile)
+            except (OSError, IOError):
+                pass
+        
+    def test_stdout_capturemode_multiple_buffers(self):
         from supervisor.events import ProcessCommunicationEvent
         from supervisor.events import subscribe
         events = []
@@ -129,7 +186,6 @@ class POutputDispatcherTests(unittest.TestCase):
         second = broken[1] + ':'
         third = broken[2]
 
-        executable = '/bin/cat'
         options = DummyOptions()
         from supervisor.options import getLogger
         options.getLogger = getLogger # actually use real logger
