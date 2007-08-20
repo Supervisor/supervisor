@@ -1,7 +1,10 @@
-Next Release
+3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC
     interface in the configuration file.  Thanks to Drew Perttula.
+
+  - Fixed a bug where process communication events would not have the
+    proper payload if the payload data was very short.
 
 3.0a1
 
