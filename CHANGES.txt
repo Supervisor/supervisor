@@ -6,6 +6,11 @@
   - Fixed a bug where process communication events would not have the
     proper payload if the payload data was very short.
 
+  - when supervisord attempted to kill a process with SIGKILL after
+    the process was not killed within "stopwaitsecs" using a "normal"
+    kill signal, supervisord would crash with an improper
+    AssertionError.  Thanks to Calvin Hendryx-Parker.
+
 3.0a1
 
   - Default config file comment documented 10 secs as default for

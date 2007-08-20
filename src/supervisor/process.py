@@ -309,7 +309,10 @@ class Subprocess:
             # RUNNING -> STOPPING
             self.killing = 1
             self.delay = now + self.config.stopwaitsecs
-            self._assertInState(ProcessStates.RUNNING,ProcessStates.STARTING)
+            # we will already be in the STOPPING state if we're doing a
+            # SIGKILL as a result of overrunning stopwaitsecs
+            self._assertInState(ProcessStates.RUNNING,ProcessStates.STARTING,
+                                ProcessStates.STOPPING)
             self.change_state(ProcessStates.STOPPING)
             options.kill(self.pid, sig)
         except (AssertionError, NotImplementedError):
