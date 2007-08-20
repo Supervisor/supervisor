@@ -591,6 +591,24 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.kills[11], signal.SIGTERM)
         self.assertEqual(L[0].__class__, events.StoppingFromRunningEvent)
 
+    def test_kill_from_stopping(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        instance.pid = 11
+        L = []
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        events.subscribe(events.StoppingFromStartingEvent,lambda x: L.append(x))
+        from supervisor.process import ProcessStates
+        instance.state = ProcessStates.STOPPING
+        instance.kill(signal.SIGKILL)
+        self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
+                         'signal SIGKILL')
+        self.assertEqual(instance.killing, 1)
+        self.assertEqual(options.kills[11], signal.SIGKILL)
+        self.assertEqual(L, []) # no event because we didn't change state
+
     def test_finish(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'notthere', '/notthere',
