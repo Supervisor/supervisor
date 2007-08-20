@@ -599,7 +599,7 @@ class SubprocessTests(unittest.TestCase):
         L = []
         from supervisor.states import ProcessStates
         from supervisor import events
-        events.subscribe(events.StoppingFromStartingEvent,lambda x: L.append(x))
+        events.subscribe(events.Event,lambda x: L.append(x))
         from supervisor.process import ProcessStates
         instance.state = ProcessStates.STOPPING
         instance.kill(signal.SIGKILL)
