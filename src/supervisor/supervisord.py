@@ -90,6 +90,9 @@ class Supervisor:
 
         self.run(test)
 
+    def _trace(self, msg):
+        self.options.logger.log(self.options.TRACE, msg)
+
     def run(self, test=False):
         self.process_groups = {} # clear
         self.stop_groups = None # clear
@@ -134,9 +137,7 @@ class Supervisor:
                 self.lastdelayreport = now
                 for proc in delayprocs:
                     state = getProcessStateDescription(proc.get_state())
-                    self.options.logger.log(self.options.TRACE,
-                               '%s state: %s' % (proc.config.name, state))
-
+                    self._trace('%s state: %s' % (proc.config.name, state))
         return delayprocs
 
     def ordered_stop_groups_phase_1(self):
@@ -202,15 +203,16 @@ class Supervisor:
             except select.error, err:
                 r = w = x = []
                 if err[0] == errno.EINTR:
-                    self.options.logger.log(self.options.TRACE,
-                                            'EINTR encountered in select')
+                    self._trace('EINTR encountered in select')
                 else:
                     raise
 
             for fd in r:
                 if combined_map.has_key(fd):
                     try:
-                        combined_map[fd].handle_read_event()
+                        dispatcher = combined_map[fd]
+                        self._trace('read event caused by %s' % dispatcher)
+                        dispatcher.handle_read_event()
                     except asyncore.ExitNow:
                         raise
                     except:
@@ -219,7 +221,9 @@ class Supervisor:
             for fd in w:
                 if combined_map.has_key(fd):
                     try:
-                        combined_map[fd].handle_write_event()
+                        dispatcher = combined_map[fd]
+                        self._trace('write event caused by %s' % dispatcher)
+                        dispatcher.handle_write_event()
                     except asyncore.ExitNow:
                         raise
                     except:
