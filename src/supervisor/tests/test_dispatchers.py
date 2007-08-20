@@ -312,7 +312,18 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.mainlog, None)
         self.assertEqual(dispatcher.childlog, None)
 
-
+    def test_repr(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        drepr = repr(dispatcher)
+        self.assertTrue(drepr.startswith('<POutputDispatcher at'), drepr)
+        self.assertNotEqual(
+            drepr.find('<supervisor.tests.base.DummyProcess instance at'),
+            -1)
+        self.assertTrue(drepr.endswith('(stdout)>'), drepr)
+                        
 class PInputDispatcherTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.dispatchers import PInputDispatcher
@@ -402,6 +413,17 @@ class PInputDispatcherTests(unittest.TestCase):
         dispatcher = self._makeOne(process)
         self.assertRaises(NotImplementedError, dispatcher.handle_error)
 
+    def test_repr(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        drepr = repr(dispatcher)
+        self.assertTrue(drepr.startswith('<PInputDispatcher at'), drepr)
+        self.assertNotEqual(
+            drepr.find('<supervisor.tests.base.DummyProcess instance at'),
+            -1)
+        self.assertTrue(drepr.endswith('(stdin)>'), drepr)
 
 
 class PEventListenerDispatcherTests(unittest.TestCase):
@@ -713,6 +735,17 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.fd, 0)
         self.assertEqual(dispatcher.childlog.__class__, DummyLogger)
 
+    def test_repr(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        drepr = repr(dispatcher)
+        self.assertTrue(drepr.startswith('<PEventListenerDispatcher at'), drepr)
+        self.assertNotEqual(
+            drepr.find('<supervisor.tests.base.DummyProcess instance at'),
+            -1)
+        self.assertTrue(drepr.endswith('(stdout)>'), drepr)
     
 
 

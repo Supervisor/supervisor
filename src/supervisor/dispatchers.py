@@ -15,6 +15,12 @@ class PDispatcher:
     """ Asyncore dispatcher for mainloop, representing a process channel
     (stdin, stdout, or stderr).  This class is abstract. """
 
+    def __repr__(self):
+        return '<%s at %s for %s (%s)>' % (self.__class__.__name__,
+                                           id(self),
+                                           self.process,
+                                           self.channel)
+
     def readable(self):
         raise NotImplementedError
 
