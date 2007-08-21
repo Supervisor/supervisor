@@ -242,7 +242,6 @@ class Supervisor:
 
     def reap(self, once=False):
         pid, sts = self.options.waitpid()
-        self._trace('reap called, waitpid returned %s' % pid)
         if pid:
             process = self.options.pidhistory.get(pid, None)
             if process is None:
