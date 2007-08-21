@@ -16,6 +16,12 @@
     which supervisor was notified of its exit status.  Thanks to Drew
     Perttula.
 
+  - RPC interface behavior change: if the RPC method
+    "sendProcessStdin" is called against a process that has closed its
+    stdin file descriptor (e.g. it has done the equivalent of
+    "sys.stdin.close(); os.close(0)"), we return a NO_FILE fault
+    instead of accepting the data.
+
 3.0a1
 
   - Default config file comment documented 10 secs as default for
