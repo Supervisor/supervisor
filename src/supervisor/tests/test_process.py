@@ -3,6 +3,7 @@ import signal
 import time
 import unittest
 import sys
+import errno
 
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
@@ -439,14 +440,40 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig(options, 'output', executable)
         instance = self._makeOne(config)
         sent = 'a' * (1 << 13)
-        self.assertRaises(IOError, instance.write, sent)
+        self.assertRaises(OSError, instance.write, sent)
         options.forkpid = 1
         result = instance.spawn()
         instance.write(sent)
         stdin_fd = instance.pipes['stdin']
         self.assertEqual(sent, instance.dispatchers[stdin_fd].input_buffer)
         instance.killing = True
-        self.assertRaises(IOError, instance.write, sent)
+        self.assertRaises(OSError, instance.write, sent)
+
+    def test_write_dispatcher_closed(self):
+        executable = '/bin/cat'
+        options = DummyOptions()
+        config = DummyPConfig(options, 'output', executable)
+        instance = self._makeOne(config)
+        sent = 'a' * (1 << 13)
+        self.assertRaises(OSError, instance.write, sent)
+        options.forkpid = 1
+        result = instance.spawn()
+        stdin_fd = instance.pipes['stdin']
+        instance.dispatchers[stdin_fd].close()
+        self.assertRaises(OSError, instance.write, sent)
+
+    def test_write_dispatcher_flush_raises_epipe(self):
+        executable = '/bin/cat'
+        options = DummyOptions()
+        config = DummyPConfig(options, 'output', executable)
+        instance = self._makeOne(config)
+        sent = 'a' * (1 << 13)
+        self.assertRaises(OSError, instance.write, sent)
+        options.forkpid = 1
+        result = instance.spawn()
+        stdin_fd = instance.pipes['stdin']
+        instance.dispatchers[stdin_fd].flush_error = errno.EPIPE
+        self.assertRaises(OSError, instance.write, sent)
 
     def dont_test_spawn_and_kill(self):
         # this is a functional test
@@ -1088,7 +1115,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         process1.listener_state = EventListenerStates.READY
         from supervisor.events import StartingFromStoppedEvent
         event = StartingFromStoppedEvent(process1)
-        pool._dispatchEvent(event)
+        self.assertRaises(OSError, pool._dispatchEvent, event)
         self.assertEqual(process1.stdin_buffer, '')
         self.assertEqual(process1.listener_state, EventListenerStates.READY)
 

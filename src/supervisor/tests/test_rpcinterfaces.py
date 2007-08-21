@@ -2,6 +2,7 @@ import unittest
 import sys
 import os
 import time
+import errno
 
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummySupervisor
@@ -1317,6 +1318,19 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                              interface.sendProcessStdin,
                              'process1', 'chars for stdin')
         
+    def test_sendProcessStdin_raises_no_file_when_write_raises_epipe(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'foo')
+        supervisord = PopulatedDummySupervisor(options, 'process1', pconfig1)
+        supervisord.set_procattr('process1', 'pid', 42)
+        supervisord.set_procattr('process1', 'killing', False)
+        supervisord.set_procattr('process1', 'write_error', errno.EPIPE)
+        interface   = self._makeOne(supervisord)
+        from supervisor import xmlrpc
+        self._assertRPCError(xmlrpc.Faults.NO_FILE,
+                             interface.sendProcessStdin,
+                             'process1', 'chars for stdin')
+
     def test_sendProcessStdin_writes_chars_and_returns_true(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', 'foo')

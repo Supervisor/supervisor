@@ -386,7 +386,7 @@ class DummyProcess:
 
     def write(self, chars):
         if self.write_error:
-            raise IOError(self.write_error)
+            raise OSError(self.write_error)
         self.stdin_buffer += chars
 
     def transition(self):
@@ -756,6 +756,9 @@ class DummyDispatcher:
     error_handled = False
     logs_reopened = False
     logs_removed = False
+    closed = False
+    flush_error = None
+    flushed = False
     def __init__(self, readable=False, writable=False, error=False):
         self._readable = readable
         self._writable = writable
@@ -779,6 +782,12 @@ class DummyDispatcher:
         self.logs_reopened = True
     def removelogs(self):
         self.logs_removed = True
+    def close(self):
+        self.closed = True
+    def flush(self):
+        if self.flush_error:
+            raise OSError(self.flush_error)
+        self.flushed = True
                 
         
 def lstrip(s):

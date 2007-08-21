@@ -1,6 +1,7 @@
 import os
 import time
 import datetime
+import errno
 
 from supervisor.datatypes import Automatic
 
@@ -116,7 +117,7 @@ class SupervisorNamespaceRPCInterface:
         # there is a race condition here, but ignore it.
         try:
             self.supervisord.options.remove(logfile)
-        except (os.error, IOError):
+        except (OSError, IOError):
             raise RPCError(Faults.FAILED)
 
         for handler in self.supervisord.options.logger.handlers:
@@ -797,7 +798,7 @@ class SupervisorNamespaceRPCInterface:
         try:
             # implies a reopen
             process.removelogs()
-        except (IOError, os.error):
+        except (IOError, OSError):
             raise RPCError(Faults.FAILED, name)
 
         return True
@@ -851,9 +852,12 @@ class SupervisorNamespaceRPCInterface:
 
     def sendProcessStdin(self, name, chars):
         """ Send a string of chars to the stdin of the process name.
-        If non-7-bit data is sent (unicode), it is encoded to utf-8 before
-        being sent to the process' stdin.  If chars is not a string
-        or is not unicode, raise INCORRECT_PARAMETERS.
+        If non-7-bit data is sent (unicode), it is encoded to utf-8
+        before being sent to the process' stdin.  If chars is not a
+        string or is not unicode, raise INCORRECT_PARAMETERS.  If the
+        process has already been terminated, raise ALREADY_TERMINATED.
+        If the process' stdin cannot accept input (e.g. it was closed
+        by the child process), raise NO_FILE.
 
         @param string name        The process name to send to (or 'group:name')
         @param string chars       The character data to send to the process
@@ -875,7 +879,13 @@ class SupervisorNamespaceRPCInterface:
         if not process.pid or process.killing:
             raise RPCError(Faults.ALREADY_TERMINATED, name)
 
-        process.write(chars)
+        try:
+            process.write(chars)
+        except OSError, why:
+            if why[0] == errno.EPIPE:
+                raise RPCError(Faults.NO_FILE, name)
+            else:
+                raise
 
         return True
 

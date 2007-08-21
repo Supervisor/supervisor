@@ -90,11 +90,18 @@ class Subprocess:
                 
     def write(self, chars):
         if not self.pid or self.killing:
-            raise IOError(errno.EPIPE, "Process already closed")
+            raise OSError(errno.EPIPE, "Process already closed")
+
         stdin_fd = self.pipes['stdin']
-        if stdin_fd is not None:
-            dispatcher = self.dispatchers[stdin_fd]
-            dispatcher.input_buffer += chars
+        if stdin_fd is None:
+            raise OSError(errno.EPIPE, "Process has no stdin channel")
+
+        dispatcher = self.dispatchers[stdin_fd]
+        if dispatcher.closed:
+            raise OSError(errno.EPIPE, "Process' stdin channel is closed")
+            
+        dispatcher.input_buffer += chars
+        dispatcher.flush() # this must raise EPIPE if the pipe is closed
 
     def get_execv_args(self):
         """Internal: turn a program name into a file name, using $PATH,

@@ -55,6 +55,9 @@ class PDispatcher:
                 'fd %s closed, stopped monitoring %s' % (self.fd, self))
             self.closed = True
 
+    def flush(self):
+        pass
+
 class POutputDispatcher(PDispatcher):
     """ Output (stdout/stderr) dispatcher, capture output sent within
     <!--XSUPERVISOR:BEGIN--><!--XSUPERVISOR:END--> tags and notify
@@ -387,13 +390,17 @@ class PInputDispatcher(PDispatcher):
 
     def readable(self):
         return False
+
+    def flush(self):
+        # other code depends on this raising EPIPE if the pipe is closed
+        sent = self.process.config.options.write(self.fd,
+                                                 self.input_buffer)
+        self.input_buffer = self.input_buffer[sent:]
     
     def handle_write_event(self):
         if self.input_buffer:
             try:
-                sent = self.process.config.options.write(self.fd,
-                                                         self.input_buffer)
-                self.input_buffer = self.input_buffer[sent:]
+                self.flush()
             except OSError, why:
                 if why[0] == errno.EPIPE:
                     self.input_buffer = ''
