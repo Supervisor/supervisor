@@ -37,6 +37,8 @@ from supervisor.events import notify
 from supervisor.events import subscribe
 from supervisor import events
 
+from supervisor.datatypes import RestartUnconditionally
+from supervisor.datatypes import RestartWhenExitUnexpected
 
 class Subprocess:
 
@@ -498,8 +500,13 @@ class ProcessGroupBase:
                     p.spawn()
             elif state == ProcessStates.EXITED:
                 if p.config.autorestart:
-                    # EXITED -> STARTING
-                    p.spawn()
+                    if p.config.autorestart is RestartUnconditionally:
+                        # EXITED -> STARTING
+                        p.spawn()
+                    else: # autorestart is RestartWhenExitUnexpected
+                        if p.exitstatus not in p.config.exitcodes:
+                            # EXITED -> STARTING
+                            p.spawn()
             elif state == ProcessStates.BACKOFF:
                 if now > p.delay:
                     # BACKOFF -> STARTING

@@ -295,5 +295,23 @@ def signal_number(value):
         return result
     except (ValueError, TypeError):
         raise ValueError('value %s is not a signal name/number' % value)
-        
-        
+
+class RestartWhenExitUnexpected:
+    pass
+
+class RestartUnconditionally:
+    pass
+
+def auto_restart(value):
+    value = str(value.lower())
+    computed_value  = value
+    if value in ('true', '1', 'on', 'yes'):
+        computed_value = RestartUnconditionally
+    elif value in ('false', '0', 'off', 'no'):
+        computed_value = False
+    elif value == 'unexpected':
+        computed_value = RestartWhenExitUnexpected
+    if computed_value not in (RestartWhenExitUnexpected,
+                              RestartUnconditionally, False):
+        raise ValueError("invalid 'autorestart' value %r" % value)
+    return computed_value

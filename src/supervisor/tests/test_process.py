@@ -880,8 +880,10 @@ class ProcessGroupBaseTests(unittest.TestCase):
 
     def test_start_necessary(self):
         from supervisor.process import ProcessStates
+        from supervisor import datatypes
         options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'killed', 'killed', '/bin/killed')
+        pconfig1 = DummyPConfig(options, 'killed', 'killed', '/bin/killed',
+                                autorestart=datatypes.RestartUnconditionally)
         process1 = DummyProcess(pconfig1, ProcessStates.EXITED)
         pconfig2 = DummyPConfig(options, 'error', 'error', '/bin/error')
         process2 = DummyProcess(pconfig2, ProcessStates.FATAL)
@@ -895,8 +897,17 @@ class ProcessGroupBaseTests(unittest.TestCase):
         pconfig5 = DummyPConfig(options, 'backingoff', 'backingoff',
                                 '/bin/backingoff', autostart=True)
         process5 = DummyProcess(pconfig5, ProcessStates.BACKOFF)
+
         now = time.time()
         process5.delay = now + 1000
+
+        pconfig6 = DummyPConfig(options,
+                                'shouldntrestart', 'shouldntrestart',
+                                '/bin/shouldntrestart',
+                                autorestart=datatypes.RestartWhenExitUnexpected,
+                                exitcodes=[1])
+        process6 = DummyProcess(pconfig6, ProcessStates.EXITED)
+        process6.exitstatus = 1
 
         gconfig = DummyPGroupConfig(
             options,
@@ -904,13 +915,14 @@ class ProcessGroupBaseTests(unittest.TestCase):
         group = self._makeOne(gconfig)
         group.processes = {'killed': process1, 'error': process2,
                            'notstarted':process3, 'wontstart':process4,
-                           'backingoff':process5}
+                           'backingoff':process5, 'shouldntrestart':process6}
         group.start_necessary()
         self.assertEqual(process1.spawned, True)
         self.assertEqual(process2.spawned, False)
         self.assertEqual(process3.spawned, True)
         self.assertEqual(process4.spawned, True)
         self.assertEqual(process5.spawned, False)
+        self.assertEqual(process6.spawned, False)
 
     def test_stop_all(self):
         from supervisor.process import ProcessStates

@@ -22,6 +22,22 @@
     "sys.stdin.close(); os.close(0)"), we return a NO_FILE fault
     instead of accepting the data.
 
+  - Changed the semantics of the process configuration 'autorestart'
+    parameter with respect to processes which move between the RUNNING
+    and EXITED state.  'autorestart' was previously a boolean.  Now
+    it's a trinary, accepting one of 'false', 'unexpected', or 'true'.
+    If it's 'false', a process will never be automatically restarted
+    from the EXITED state.  If it's 'unexpected', a process that
+    enters the EXITED state will be automatically restarted if it
+    exited with an exit code that was not named in the process
+    config's 'exitcodes' list.  If it's 'true', a process that enters
+    the EXITED state will be automatically restarted unconditionally.
+    The default is now 'unexpected' (it was previously 'true').  The
+    readdition of this feature is a reversion of the behavior change
+    note in the changelog notes for 3.0a1 that asserted we never cared
+    about the process' exit status when determining whether to restart
+    it or not.
+
 3.0a1
 
   - Default config file comment documented 10 secs as default for

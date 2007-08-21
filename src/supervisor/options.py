@@ -55,6 +55,7 @@ from supervisor.datatypes import dot_separated_user_group
 from supervisor.datatypes import SocketAddress
 from supervisor.datatypes import url
 from supervisor.datatypes import Automatic
+from supervisor.datatypes import auto_restart
 
 here = os.path.abspath(os.path.dirname(__file__))
 version_txt = os.path.join(here, 'version.txt')
@@ -766,7 +767,7 @@ class ServerOptions(Options):
 
         priority = integer(get(section, 'priority', 999))
         autostart = boolean(get(section, 'autostart', 'true'))
-        autorestart = boolean(get(section, 'autorestart', 'true'))
+        autorestart = auto_restart(get(section, 'autorestart', 'unexpected'))
         startsecs = integer(get(section, 'startsecs', 1))
         startretries = integer(get(section, 'startretries', 3))
         uid = name_to_uid(get(section, 'user', None))

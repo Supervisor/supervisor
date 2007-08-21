@@ -47,7 +47,6 @@ class ServerOptionsTests(unittest.TestCase):
         command=/bin/cat
         priority=1
         autostart=true
-        autorestart=true
         user=root
         stdout_logfile=/tmp/cat.log
         stopsignal=KILL
@@ -68,6 +67,7 @@ class ServerOptionsTests(unittest.TestCase):
         priority=3
         process_name = replaced
         command=/bin/cat
+        autorestart=true
         exitcodes=0,1,127
         
         [program:cat4]
@@ -75,6 +75,7 @@ class ServerOptionsTests(unittest.TestCase):
         process_name = fleeb_%%(process_num)s
         numprocs = 2
         command = /bin/cat
+        autorestart=unexpected
         """ % {'tempdir':tempfile.gettempdir()})
 
         from supervisor import datatypes
@@ -115,7 +116,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.command, '/bin/cat')
         self.assertEqual(proc1.priority, 1)
         self.assertEqual(proc1.autostart, True)
-        self.assertEqual(proc1.autorestart, True)
+        self.assertEqual(proc1.autorestart, datatypes.RestartWhenExitUnexpected)
         self.assertEqual(proc1.startsecs, 5)
         self.assertEqual(proc1.startretries, 10)
         self.assertEqual(proc1.uid, 0)
@@ -155,7 +156,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc3.command, '/bin/cat')
         self.assertEqual(proc3.priority, 3)
         self.assertEqual(proc3.autostart, True)
-        self.assertEqual(proc3.autorestart, True)
+        self.assertEqual(proc3.autorestart, datatypes.RestartUnconditionally)
         self.assertEqual(proc3.uid, None)
         self.assertEqual(proc3.stdout_logfile, datatypes.Automatic)
         self.assertEqual(proc3.stdout_logfile_maxbytes,
@@ -174,7 +175,8 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc4_a.command, '/bin/cat')
         self.assertEqual(proc4_a.priority, 4)
         self.assertEqual(proc4_a.autostart, True)
-        self.assertEqual(proc4_a.autorestart, True)
+        self.assertEqual(proc4_a.autorestart,
+                         datatypes.RestartWhenExitUnexpected)
         self.assertEqual(proc4_a.uid, None)
         self.assertEqual(proc4_a.stdout_logfile, datatypes.Automatic)
         self.assertEqual(proc4_a.stdout_logfile_maxbytes,
@@ -188,7 +190,8 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc4_b.command, '/bin/cat')
         self.assertEqual(proc4_b.priority, 4)
         self.assertEqual(proc4_b.autostart, True)
-        self.assertEqual(proc4_b.autorestart, True)
+        self.assertEqual(proc4_b.autorestart,
+                         datatypes.RestartWhenExitUnexpected)
         self.assertEqual(proc4_b.uid, None)
         self.assertEqual(proc4_b.stdout_logfile, datatypes.Automatic)
         self.assertEqual(proc4_b.stdout_logfile_maxbytes,

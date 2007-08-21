@@ -8,7 +8,9 @@ History
 
   3/31/2007: updated for version 2.2
 
-  8/15/2007: updated for version 3.0
+  8/15/2007: updated for version 3.0a1
+
+  8/21/2007: updated for version 3.0a2
 
 Upgrading
 
@@ -366,7 +368,7 @@ Configuration File '[program:x]' Section Settings
     numprocs=1
     priority=1
     autostart=true
-    autorestart=true
+    autorestart=unexpected
     startsecs=1
     startretries=3
     exitcodes=0,2
@@ -428,9 +430,13 @@ Configuration File '[program:x]' Section Settings
   'autostart' -- If true, this program will start automatically when
   supervisord is started.  Default: true.
 
-  'autorestart' -- If true, when the program exits (either expectedly
-  or unexpectedly), supervisor will restart it automatically.
-  Default: true.
+  'autorestart' -- May be one of 'false', 'unexpected', or 'true'.  If
+  'false', the process will never be autorestarted.  If 'unexpected',
+  the process will be restart when the program exits with an exit code
+  that is not one of the exit codes associated with this process'
+  configuration (see 'exitcodes').  If 'true, the process will be
+  unconditionally restarted when it exits, without regard to its exit
+  code.  Default: unexpected.
 
   'startsecs' -- The total number of seconds which the program needs
   to stay running after a startup to consider the start successful.
@@ -445,9 +451,10 @@ Configuration File '[program:x]' Section Settings
   giving up and puting the process into an ERROR state. Default: 3.
 
   'exitcodes' -- The list of 'expected' exit codes for this program.
-  Supervisor log messages will note if the program exits with an exit
-  code which is not in this list and a stop of the program has not
-  been explicitly requested.  Default: 0,2.
+  If the 'autorestart' parameter is set to 'unexpected', and the
+  process exits in any other way than as a result of a supervisor stop
+  request, supervisor will restart the process if it exits with an
+  exit code that is not defined in this list.  Default: 0,2.
 
   'stopsignal' -- The signal used to kill the program when a stop is
   requested.  This can be any of TERM, HUP, INT, QUIT, KILL, USR1, or
@@ -594,7 +601,7 @@ Configuration File '[eventlistener:x]' Section Settings (New in 3.0)
     buffer_size=10
     priority=-1
     autostart=true
-    autorestart=true
+    autorestart=unexpected
     startsecs=1
     startretries=3
     exitcodes=0,2
@@ -829,6 +836,25 @@ Process States
   be started because the number of startretries has exceeded the
   maximum, at which point it will transition to the FATAL state.  Each
   start retry will take progressively more time.
+
+  When a process is in the EXITED state, it will automatically
+  restart:
+
+   - never if its 'autorestart' parameter is set to 'false'.
+
+   - unconditionally if its 'autorestart' parameter is set to
+     'true'.
+
+   - conditionally if its 'autorestart' parameter is set to
+     'unexpected'.  If it exited with an exit code that doesn't match
+     one of the exit codes defined in the 'exitcodes' configuration
+     parameter for the process, it will be restarted.
+
+  A process automatically transitions from EXITED to RUNNING as a
+  result of being configured to autorestart conditionally or
+  unconditionally.  The number of transitions between RUNNING and
+  EXITED is not limited in any way: it is possible to create a
+  configuration that endlessly restarts an exited process.
 
   An autorestarted process will never be automtatically restarted if
   it ends up in the FATAL state (it must be manually restarted from
@@ -1151,11 +1177,11 @@ Event Listener Notification Protocol
   state.
 
   Once the listener is in the ACKNOWLEDGED state, it may either exit
-  (and subsequently be restarted by supervisor if its "autorestart"
-  config parameter is true), or it may continue running.  If it
-  continues to run, in order to be placed back into the READY state by
-  supervisord, it must send a "READY" token followed immediately by a
-  carriage return to its stdout.
+  (and subsequently may be restarted by supervisor if its
+  "autorestart" config parameter is 'true'), or it may continue
+  running.  If it continues to run, in order to be placed back into
+  the READY state by supervisord, it must send a "READY" token
+  followed immediately by a carriage return to its stdout.
 
 Example Event Listener Implementation
 
