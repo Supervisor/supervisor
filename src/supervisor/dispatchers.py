@@ -53,7 +53,6 @@ class PDispatcher:
         if not self.closed:
             self.process.config.options.logger.debug(
                 'fd %s closed, stopped monitoring %s' % (self.fd, self))
-            self.process.remove_dispatcher(self.fd)
             self.closed = True
 
 class POutputDispatcher(PDispatcher):
@@ -200,6 +199,8 @@ class POutputDispatcher(PDispatcher):
         return False
     
     def readable(self):
+        if self.closed:
+            return False
         return True
 
     def handle_read_event(self):
@@ -262,6 +263,8 @@ class PEventListenerDispatcher(PDispatcher):
     
     def readable(self):
         self.handle_listener_state_change()
+        if self.closed:
+            return False
         return True
 
     def handle_read_event(self):
@@ -378,7 +381,7 @@ class PInputDispatcher(PDispatcher):
         self.input_buffer = ''
 
     def writable(self):
-        if self.input_buffer:
+        if self.input_buffer and not self.closed:
             return True
         return False
 

@@ -455,12 +455,6 @@ class Subprocess:
                 self._assertInState(ProcessStates.STARTING)
                 self.change_state(ProcessStates.RUNNING)
 
-    def remove_dispatcher(self, fd):
-        # called by dispatcher itself to remove itself when it detects
-        # that the child end of the pipe has been closed
-        del self.dispatchers[fd]
-
-        
 class ProcessGroupBase:
     def __init__(self, config):
         self.config = config

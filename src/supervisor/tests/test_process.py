@@ -786,15 +786,6 @@ class SubprocessTests(unittest.TestCase):
         instance.state = 10
         self.assertEqual(instance.change_state(10), False)
 
-    def test_remove_dispatcher(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'test', '/test')
-        instance = self._makeOne(config)
-        instance.dispatchers = {0:True}
-        instance.remove_dispatcher(0)
-        self.assertEqual(instance.dispatchers, {})
-        
-
 class ProcessGroupBaseTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.process import ProcessGroupBase

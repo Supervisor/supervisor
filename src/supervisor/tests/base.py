@@ -321,7 +321,6 @@ class DummyProcess:
         self.output_fd_drained = None
         self.transitioned = False
         self.write_error = None
-        self.dispatchers_removed = []
 
     def reopenlogs(self):
         self.logs_reopened = True
@@ -392,9 +391,6 @@ class DummyProcess:
 
     def transition(self):
         self.transitioned = True
-
-    def remove_dispatcher(self, fd):
-        self.dispatchers_removed.append(fd)
 
 class DummyPConfig:
     def __init__(self, options, name, command, priority=999, autostart=True,

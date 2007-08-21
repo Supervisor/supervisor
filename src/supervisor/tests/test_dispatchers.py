@@ -32,12 +32,21 @@ class POutputDispatcherTests(unittest.TestCase):
         dispatcher = self._makeOne(process)
         self.assertEqual(dispatcher.writable(), False)
         
-    def test_readable(self):
+    def test_readable_open(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'process1', '/bin/process1')
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
+        dispatcher.closed = False
         self.assertEqual(dispatcher.readable(), True)
+
+    def test_readable_closed(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        dispatcher.closed = True
+        self.assertEqual(dispatcher.readable(), False)
 
     def test_handle_write_event(self):
         options = DummyOptions()
@@ -336,10 +345,8 @@ class POutputDispatcherTests(unittest.TestCase):
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         dispatcher.close()
-        self.assertEqual(process.dispatchers_removed, [0])
         self.assertEqual(dispatcher.closed, True)
         dispatcher.close() # make sure we don't error if we try to close twice
-        self.assertEqual(process.dispatchers_removed, [0])
         self.assertEqual(dispatcher.closed, True)
         
                         
@@ -352,16 +359,32 @@ class PInputDispatcherTests(unittest.TestCase):
         channel = 'stdin'
         return self._getTargetClass()(process, channel, 0)
 
-    def test_writable_nodata(self):
+    def test_writable_open_nodata(self):
         process = DummyProcess(None)
         dispatcher = self._makeOne(process)
         dispatcher.input_buffer = 'a'
+        dispatcher.closed = False
         self.assertEqual(dispatcher.writable(), True)
 
-    def test_writable_withdata(self):
+    def test_writable_open_withdata(self):
         process = DummyProcess(None)
         dispatcher = self._makeOne(process)
         dispatcher.input_buffer = ''
+        dispatcher.closed = False
+        self.assertEqual(dispatcher.writable(), False)
+
+    def test_writable_closed_nodata(self):
+        process = DummyProcess(None)
+        dispatcher = self._makeOne(process)
+        dispatcher.input_buffer = 'a'
+        dispatcher.closed = True
+        self.assertEqual(dispatcher.writable(), False)
+
+    def test_writable_closed_withdata(self):
+        process = DummyProcess(None)
+        dispatcher = self._makeOne(process)
+        dispatcher.input_buffer = ''
+        dispatcher.closed = True
         self.assertEqual(dispatcher.writable(), False)
 
     def test_readable(self):
@@ -459,10 +482,8 @@ class PInputDispatcherTests(unittest.TestCase):
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         dispatcher.close()
-        self.assertEqual(process.dispatchers_removed, [0])
         self.assertEqual(dispatcher.closed, True)
         dispatcher.close() # make sure we don't error if we try to close twice
-        self.assertEqual(process.dispatchers_removed, [0])
         self.assertEqual(dispatcher.closed, True)
 
 class PEventListenerDispatcherTests(unittest.TestCase):
@@ -481,12 +502,21 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         dispatcher = self._makeOne(process)
         self.assertEqual(dispatcher.writable(), False)
         
-    def test_readable(self):
+    def test_readable_open(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'process1', '/bin/process1')
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
+        dispatcher.closed = False
         self.assertEqual(dispatcher.readable(), True)
+
+    def test_readable_closed(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        dispatcher.closed = True
+        self.assertEqual(dispatcher.readable(), False)
 
     def test_handle_write_event(self):
         options = DummyOptions()
@@ -798,10 +828,8 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         dispatcher.close()
-        self.assertEqual(process.dispatchers_removed, [0])
         self.assertEqual(dispatcher.closed, True)
         dispatcher.close() # make sure we don't error if we try to close twice
-        self.assertEqual(process.dispatchers_removed, [0])
         self.assertEqual(dispatcher.closed, True)
 
 
