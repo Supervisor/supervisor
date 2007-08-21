@@ -57,10 +57,16 @@ class POutputDispatcherTests(unittest.TestCase):
         
     def test_handle_error(self):
         options = DummyOptions()
-        config = DummyPConfig(options, 'process1', '/bin/process1')
+        config = DummyPConfig(options, 'test', '/test')
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
-        self.assertRaises(NotImplementedError, dispatcher.handle_error)
+        try:
+            raise ValueError('foo')
+        except:
+            dispatcher.handle_error()
+        result = options.logger.data[0]
+        self.assertTrue(result.startswith(
+            'uncaptured python exception, closing channel'),result)
 
     def test_toggle_capturemode_buffer_overrun(self):
         executable = '/bin/cat'
@@ -323,6 +329,19 @@ class POutputDispatcherTests(unittest.TestCase):
             drepr.find('<supervisor.tests.base.DummyProcess instance at'),
             -1)
         self.assertTrue(drepr.endswith('(stdout)>'), drepr)
+
+    def test_close(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        dispatcher.close()
+        self.assertEqual(process.dispatchers_removed, [0])
+        self.assertEqual(dispatcher.closed, True)
+        dispatcher.close() # make sure we don't error if we try to close twice
+        self.assertEqual(process.dispatchers_removed, [0])
+        self.assertEqual(dispatcher.closed, True)
+        
                         
 class PInputDispatcherTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -379,8 +398,9 @@ class PInputDispatcherTests(unittest.TestCase):
         options.write_error = errno.EPIPE
         dispatcher.handle_write_event()
         self.assertEqual(dispatcher.input_buffer, '')
-        self.assertEqual(options.logger.data,
-            ["failed write to process 'test' stdin"])
+        self.assertTrue(options.logger.data[0].startswith(
+            'fd 0 closed, stopped monitoring'))
+        self.assertTrue(options.logger.data[0].endswith('(stdin)>'))
 
     def test_handle_write_event_uncaught_raised(self):
         options = DummyOptions()
@@ -409,9 +429,17 @@ class PInputDispatcherTests(unittest.TestCase):
         self.assertRaises(NotImplementedError, dispatcher.handle_read_event)
         
     def test_handle_error(self):
-        process = DummyProcess(None)
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        process = DummyProcess(config)
         dispatcher = self._makeOne(process)
-        self.assertRaises(NotImplementedError, dispatcher.handle_error)
+        try:
+            raise ValueError('foo')
+        except:
+            dispatcher.handle_error()
+        result = options.logger.data[0]
+        self.assertTrue(result.startswith(
+            'uncaptured python exception, closing channel'),result)
 
     def test_repr(self):
         options = DummyOptions()
@@ -425,6 +453,17 @@ class PInputDispatcherTests(unittest.TestCase):
             -1)
         self.assertTrue(drepr.endswith('(stdin)>'), drepr)
 
+    def test_close(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        dispatcher.close()
+        self.assertEqual(process.dispatchers_removed, [0])
+        self.assertEqual(dispatcher.closed, True)
+        dispatcher.close() # make sure we don't error if we try to close twice
+        self.assertEqual(process.dispatchers_removed, [0])
+        self.assertEqual(dispatcher.closed, True)
 
 class PEventListenerDispatcherTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -668,10 +707,16 @@ class PEventListenerDispatcherTests(unittest.TestCase):
 
     def test_handle_error(self):
         options = DummyOptions()
-        config = DummyPConfig(options, 'process1', '/bin/process1')
+        config = DummyPConfig(options, 'test', '/test')
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
-        self.assertRaises(NotImplementedError, dispatcher.handle_error)
+        try:
+            raise ValueError('foo')
+        except:
+            dispatcher.handle_error()
+        result = options.logger.data[0]
+        self.assertTrue(result.startswith(
+            'uncaptured python exception, closing channel'),result)
 
     def test_removelogs(self):
         options = DummyOptions()
@@ -747,6 +792,17 @@ class PEventListenerDispatcherTests(unittest.TestCase):
             -1)
         self.assertTrue(drepr.endswith('(stdout)>'), drepr)
     
+    def test_close(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        dispatcher.close()
+        self.assertEqual(process.dispatchers_removed, [0])
+        self.assertEqual(dispatcher.closed, True)
+        dispatcher.close() # make sure we don't error if we try to close twice
+        self.assertEqual(process.dispatchers_removed, [0])
+        self.assertEqual(dispatcher.closed, True)
 
 
 def test_suite():

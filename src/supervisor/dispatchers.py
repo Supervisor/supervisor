@@ -1,5 +1,6 @@
 import logging
 import errno
+from asyncore import compact_traceback
 
 from supervisor.events import notify
 from supervisor.events import EventRejectedEvent
@@ -14,6 +15,8 @@ def find_prefix_at_end(haystack, needle):
 class PDispatcher:
     """ Asyncore dispatcher for mainloop, representing a process channel
     (stdin, stdout, or stderr).  This class is abstract. """
+
+    closed = False # True if close() has been called
 
     def __repr__(self):
         return '<%s at %s for %s (%s)>' % (self.__class__.__name__,
@@ -34,7 +37,24 @@ class PDispatcher:
         raise NotImplementedError
 
     def handle_error(self):
-        raise NotImplementedError
+        nil, t, v, tbinfo = compact_traceback()
+
+        self.process.config.options.logger.critical(
+            'uncaptured python exception, closing channel %s (%s:%s %s)' % (
+                repr(self),
+                t,
+                v,
+                tbinfo
+                )
+            )
+        self.close()
+
+    def close(self):
+        if not self.closed:
+            self.process.config.options.logger.debug(
+                'fd %s closed, stopped monitoring %s' % (self.fd, self))
+            self.process.remove_dispatcher(self.fd)
+            self.closed = True
 
 class POutputDispatcher(PDispatcher):
     """ Output (stdout/stderr) dispatcher, capture output sent within
@@ -186,6 +206,11 @@ class POutputDispatcher(PDispatcher):
         data = self.process.config.options.readfd(self.fd)
         self.output_buffer += data
         self.record_output()
+        if not data:
+            # if we get no data back from the pipe, it means that the
+            # child process has ended.  See
+            # mail.python.org/pipermail/python-dev/2004-August/046850.html
+            self.close()
 
 class PEventListenerDispatcher(PDispatcher):
     """ An output dispatcher that monitors and changes listener_states """
@@ -251,6 +276,11 @@ class PEventListenerDispatcher(PDispatcher):
                 if self.process.config.options.strip_ansi:
                     data = self.process.config.options.stripEscapes(data)
                 self.childlog.info(data)
+        else:
+            # if we get no data back from the pipe, it means that the
+            # child process has ended.  See
+            # mail.python.org/pipermail/python-dev/2004-August/046850.html
+            self.close()
         self.handle_listener_state_change()
 
     def _trace(self, msg):
@@ -363,10 +393,8 @@ class PInputDispatcher(PDispatcher):
                 self.input_buffer = self.input_buffer[sent:]
             except OSError, why:
                 if why[0] == errno.EPIPE:
-                    msg = ('failed write to process %r stdin' %
-                           self.process.config.name)
                     self.input_buffer = ''
-                    self.process.config.options.logger.info(msg)
+                    self.close()
                 else:
                     raise
 
