@@ -286,7 +286,7 @@ class ServerOptionsTests(unittest.TestCase):
         finally:
             try:
                 os.unlink(fn)
-            except os.error:
+            except OSError:
                 pass
 
     def test_write_pidfile_ok(self):
@@ -304,7 +304,7 @@ class ServerOptionsTests(unittest.TestCase):
         finally:
             try:
                 os.unlink(fn)
-            except os.error:
+            except OSError:
                 pass
 
     def test_write_pidfile_fail(self):
@@ -322,9 +322,9 @@ class ServerOptionsTests(unittest.TestCase):
         os.read(innie, 0) # we can read it while its open
         os.write(outie, 'foo') # we can write to it while its open
         instance.close_fd(innie)
-        self.assertRaises(os.error, os.read, innie, 0)
+        self.assertRaises(OSError, os.read, innie, 0)
         instance.close_fd(outie)
-        self.assertRaises(os.error, os.write, outie, 'foo')
+        self.assertRaises(OSError, os.write, outie, 'foo')
 
     def test_processes_from_section(self):
         instance = self._makeOne()

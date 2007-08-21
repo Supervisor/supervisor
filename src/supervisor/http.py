@@ -550,7 +550,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
 
         try:
             os.unlink(tempname)
-        except os.error:
+        except OSError:
             pass
 
         while 1:
@@ -561,7 +561,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
                 try:
                     # hard link
                     os.link(tempname, socketname)
-                except os.error:
+                except OSError:
                     # Lock contention, or stale socket.
                     used = self.checkused(socketname)
                     if used:
@@ -581,7 +581,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
                 else:
                     try:
                         os.chown(socketname, sockchown[0], sockchown[1])
-                    except os.error, why:
+                    except OSError, why:
                         if why[0] == errno.EPERM:
                             msg = ('Not permitted to chown %s to uid/gid %s; '
                                    'adjust "sockchown" value in config file or '
@@ -601,7 +601,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
             finally:
                 try:
                     os.unlink(tempname)
-                except os.error:
+                except OSError:
                     pass
 
         self.server_name = '<unix domain socket>'

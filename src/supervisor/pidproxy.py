@@ -38,7 +38,7 @@ class PidProxy:
             time.sleep(5)
             try:
                 pid, sts = os.waitpid(-1, os.WNOHANG)
-            except os.error:
+            except OSError:
                 pid, sts = None, None
             if pid:
                 break

@@ -922,7 +922,7 @@ class ServerOptions(Options):
         if self.directory:
             try:
                 os.chdir(self.directory)
-            except os.error, err:
+            except OSError, err:
                 self.logger.warn("can't chdir into %r: %s"
                                  % (self.directory, err))
             else:
@@ -948,7 +948,7 @@ class ServerOptions(Options):
             f = open(self.pidfile, 'w')
             f.write('%s\n' % pid)
             f.close()
-        except (IOError, os.error):
+        except (IOError, OSError):
             self.logger.critical('could not write pidfile %s' % self.pidfile)
         else:
             self.logger.info('supervisord started with pid %s' % pid)
@@ -962,13 +962,13 @@ class ServerOptions(Options):
                             socketname = self.http_port.address
                             try:
                                 os.unlink(socketname)
-                            except os.error:
+                            except OSError:
                                 pass
-        except os.error:
+        except OSError:
             pass
         try:
             os.unlink(self.pidfile)
-        except os.error:
+        except OSError:
             pass
 
     def setsignals(self):
@@ -1021,7 +1021,7 @@ class ServerOptions(Options):
                 pathname = os.path.join(childlogdir, filename)
                 try:
                     os.remove(pathname)
-                except (os.error, IOError):
+                except (OSError, IOError):
                     self.logger.info('Failed to clean up %r' % pathname)
 
     def get_socket_map(self):
@@ -1039,7 +1039,7 @@ class ServerOptions(Options):
         for x in range(start, self.minfds):
             try:
                 os.close(x)
-            except os.error:
+            except OSError:
                 pass
 
     def select(self, r, w, x, timeout):
@@ -1121,7 +1121,7 @@ class ServerOptions(Options):
         # we're sitting in the waitpid call.
         try:
             pid, sts = os.waitpid(-1, os.WNOHANG)
-        except os.error, why:
+        except OSError, why:
             err = why[0]
             if err not in (errno.ECHILD, errno.EINTR):
                 self.logger.info(
@@ -1219,7 +1219,7 @@ class ServerOptions(Options):
     def close_fd(self, fd):
         try:
             os.close(fd)
-        except os.error:
+        except OSError:
             pass
 
     def fork(self):
@@ -1673,7 +1673,7 @@ def readFile(filename, offset, length):
             else:
                 sz = f.seek(offset)
                 data = f.read(length)
-    except (os.error, IOError):
+    except (OSError, IOError):
         raise ValueError('FAILED')
 
     return data
@@ -1713,7 +1713,7 @@ def tailFile(filename, offset, length):
         offset = sz
         return [data, offset, overflow]
 
-    except (os.error, IOError):
+    except (OSError, IOError):
         return ['', offset, False]
 
 def gettags(comment):
