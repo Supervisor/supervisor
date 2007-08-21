@@ -11,6 +11,11 @@
     kill signal, supervisord would crash with an improper
     AssertionError.  Thanks to Calvin Hendryx-Parker.
 
+  - On Linux, Supervisor would consume too much CPU in an effective
+    "busywait" between the time a subprocess exited and the time at
+    which supervisor was notified of its exit status.  Thanks to Drew
+    Perttula.
+
 3.0a1
 
   - Default config file comment documented 10 secs as default for
