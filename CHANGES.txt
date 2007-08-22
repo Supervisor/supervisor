@@ -49,6 +49,10 @@
     which respects this envvar and does not try to compile its optional
     C extensions when it's set).
 
+  - The test suite would fail on Python versions <= 2.3.3 because
+    the "assertTrue" and "assertFalse" methods of unittest.TestCase
+    didn't exist in those versions.
+
 3.0a1
 
   - Default config file comment documented 10 secs as default for
