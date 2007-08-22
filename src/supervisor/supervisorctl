@@ -1,7 +1,0 @@
-#!/usr/bin/python
-from supervisor.supervisorctl import main
-
-# __doc__ required to make supervisorctl -h work
-from supervisor.supervisorctl import __doc__
-main()
-

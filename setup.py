@@ -14,7 +14,6 @@
 
 __revision__ = '$Id$'
 
-
 import urllib
 import urllib2
 if not hasattr(urllib2, 'splituser'):
@@ -73,11 +72,21 @@ dist = setup(
     maintainer_email = "chrism@plope.com",
     package_dir = {'':'src'},
     packages = find_packages(os.path.join(here, 'src')),
-    scripts=['src/supervisor/supervisord', 'src/supervisor/supervisorctl'],
+    # put data files in egg 'doc' dir
+    data_files=[ ('doc', ['sample.conf', 'README.txt', 'UPGRADING.txt',
+                          'CHANGES.txt', 'TODO.txt', 'LICENSES.txt',
+                          'COPYRIGHT.txt'])],
     install_requires = ['medusa >= 0.5.4', 'meld3 >= 0.6.1',
                         'elementtree >= 1.2.6'],
     include_package_data = True,
     zip_safe = False,
     namespace_packages = ['supervisor'],
     test_suite = "supervisor.tests",
+    entry_points = {
+     'supervisor_rpc':['main = supervisor.rpcinterface:make_main_rpcinterface'],
+     'console_scripts': [
+         'supervisord = supervisor.supervisord:main',
+         'supervisorctl = supervisor.supervisorctl:main',
+         ],
+      },
     )

@@ -70,8 +70,9 @@ class DummyOptions:
         logger.args = args, kw
         return logger
 
-    def realize(self, args):
+    def realize(self, args, **kw):
         self.realizeargs = args
+        self.realizekw = kw
 
     def cleanup_fds(self):
         self.fds_cleaned_up = True

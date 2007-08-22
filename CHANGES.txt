@@ -53,6 +53,12 @@
     the "assertTrue" and "assertFalse" methods of unittest.TestCase
     didn't exist in those versions.
 
+  - The 'supervisorctl' and 'supervisord' wrapper scripts were disused
+    in favor of using setuptools' 'console_scripts' entry point settings.
+
+  - Documentation files and the sample configuration file are put into
+    the generated supervisor egg's 'doc' directory.
+
 3.0a1
 
   - Default config file comment documented 10 secs as default for

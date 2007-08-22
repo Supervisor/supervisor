@@ -12,9 +12,6 @@
    - When we try to kill a process and the os.kill command raises an
      exception (stopProcess)
 
-- Figure out how to make sample.conf evident when supervisor is installed
-  via easy_install.
-
 - Support stopping and starting groups in supervisorctl / web
   interface.
 

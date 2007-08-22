@@ -94,12 +94,13 @@ Installing
   Run "python setup.py install".  This will download and install all
   distributions depended upon by supervisor and finally install
   supervisor itself.  Once that's done, copy the "sample.conf" file
-  you'll find in the same directory as this file to
-  /etc/supervisord.conf and modify to your liking.  If you'd rather
-  not put the supervisord.conf file in /etc, you can place it anywhere
-  and start supervisord and point it at the configuration file via the
-  -c flag, e.g. "python supervisord.py -c /path/to/sample/conf" or, if
-  you use the shell script named "supervisord", "supervisord -c
+  you'll find in the same directory as this file (or within the
+  installed supervisor egg's 'doc' directory) to /etc/supervisord.conf
+  and modify to your liking.  If you'd rather not put the
+  supervisord.conf file in /etc, you can place it anywhere and start
+  supervisord and point it at the configuration file via the -c flag,
+  e.g. "python supervisord.py -c /path/to/sample/conf" or, if you use
+  the shell script named "supervisord", "supervisord -c
   /path/to/sample.conf".
 
   If your system does not have a C compiler, or you don't have
