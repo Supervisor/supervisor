@@ -1,16 +1,3 @@
-- Reconsider what state transition needs to happen when a process
-  exits from the RUNNING state with an unexpected exit code.
-  Currently, it really doesn't matter whether the process exits with
-  an expected or unexpected error code; if it's set to autorestart, it
-  starts again unconditionally.  But to accomodate
-  restart-only-on-crash, the 'autostart' value may need to be made
-  into a trinary.  In this design, when autorestart=true, supervisor
-  will autorestart the process regardless of the exit code.  When
-  autorestart=unexpected, supervisor will only restart the process if
-  it exits with an unexpected exit code.  This may imply changing the
-  process state map slightly, which may add an event notification
-  type.
-
 - Fix CVS so not all checkins come from "chrism".
 
 - FATAL state for supervisor.
