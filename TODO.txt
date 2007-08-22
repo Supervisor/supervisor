@@ -2,6 +2,16 @@
 
 - FATAL state for supervisor.
 
+   - When we try to clear the main log file and we get an IOError or an
+     OSError (clearLog)
+
+   - When we attempt to remove a process log file via os.remove (or
+     equivalent all into handlers) and we get an IOError or an OSError
+     (clearProcessLog)
+
+   - When we try to kill a process and the os.kill command raises an
+     exception (stopProcess)
+
 - Figure out how to make sample.conf evident when supervisor is installed
   via easy_install.
 
