@@ -3,7 +3,6 @@ _TIMEFORMAT = '%b %d %I:%M %p'
 
 class DummyOptions:
 
-    TRACE = 5
     make_pipes_error = None
     fork_error = None
     execv_error = None
@@ -795,6 +794,28 @@ class DummyDispatcher:
             raise OSError(self.flush_error)
         self.flushed = True
                 
+class DummyStream:
+    def __init__(self, error=None):
+        self.error = error
+        self.closed = False
+        self.flushed = False
+        self.written = ''
+    def close(self):
+        if self.error:
+            raise self.error
+        self.closed = True
+    def flush(self):
+        self.flushed = True
+    def write(self, msg):
+        if self.error:
+            raise self.error
+        self.written +=msg
+    def seek(self, num, whence=0):
+        pass
+    def tell(self):
+        return len(self.written)
+        
+
         
 def lstrip(s):
     strings = [x.strip() for x in s.split('\n')]

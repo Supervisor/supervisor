@@ -128,8 +128,7 @@ class POutputDispatcherTests(unittest.TestCase):
         dispatcher.record_output()
         self.assertEqual(dispatcher.childlog.data,
                          ['stdout string longer than a token'])
-        self.assertEqual(options.logger.data[0], 5)
-        self.assertEqual(options.logger.data[1],
+        self.assertEqual(options.logger.data[0],
              "'process1' stdout output:\nstdout string longer than a token")
 
     def test_stdout_capturemode_single_buffer(self):
@@ -145,7 +144,7 @@ class POutputDispatcherTests(unittest.TestCase):
         END_TOKEN = ProcessCommunicationEvent.END_TOKEN
         data = BEGIN_TOKEN + 'hello' + END_TOKEN
         options = DummyOptions()
-        from supervisor.options import getLogger
+        from supervisor.loggers import getLogger
         options.getLogger = getLogger # actually use real logger
         logfile = '/tmp/log'
         capturefile = '/tmp/capture'
@@ -202,7 +201,7 @@ class POutputDispatcherTests(unittest.TestCase):
         third = broken[2]
 
         options = DummyOptions()
-        from supervisor.options import getLogger
+        from supervisor.loggers import getLogger
         options.getLogger = getLogger # actually use real logger
         logfile = '/tmp/log'
         capturefile = '/tmp/capture'
@@ -599,8 +598,8 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         dispatcher.state_buffer = 'READY\n'
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, '')
-        self.assertEqual(options.logger.data,
-                         [5, 'process1: ACKNOWLEDGED -> READY'])
+        self.assertEqual(options.logger.data[0],
+                         'process1: ACKNOWLEDGED -> READY')
         self.assertEqual(process.listener_state, EventListenerStates.READY)
 
     def test_handle_listener_state_change_acknowledged_gobbles(self):
@@ -613,10 +612,10 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         dispatcher.state_buffer = 'READY\ngarbage\n'
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, '')
-        self.assertEqual(options.logger.data[0:2],
-                         [5, 'process1: ACKNOWLEDGED -> READY'])
-        self.assertEqual(options.logger.data[2:4],
-                         [5, 'process1: READY -> UNKNOWN'])
+        self.assertEqual(options.logger.data[0],
+                         'process1: ACKNOWLEDGED -> READY')
+        self.assertEqual(options.logger.data[1],
+                         'process1: READY -> UNKNOWN')
         self.assertEqual(process.listener_state, EventListenerStates.UNKNOWN)
 
     def test_handle_listener_state_change_acknowledged_to_insufficient(self):
@@ -643,8 +642,8 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         dispatcher.state_buffer = 'bogus data yo'
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, '')
-        self.assertEqual(options.logger.data,
-                         [5, 'process1: ACKNOWLEDGED -> UNKNOWN'])
+        self.assertEqual(options.logger.data[0],
+                         'process1: ACKNOWLEDGED -> UNKNOWN')
         self.assertEqual(process.listener_state, EventListenerStates.UNKNOWN)
 
     def test_handle_listener_state_change_ready_to_unknown(self):
@@ -657,8 +656,8 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         dispatcher.state_buffer = 'bogus data yo'
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, '')
-        self.assertEqual(options.logger.data,
-                         [5, 'process1: READY -> UNKNOWN'])
+        self.assertEqual(options.logger.data[0],
+                         'process1: READY -> UNKNOWN')
         self.assertEqual(process.listener_state, EventListenerStates.UNKNOWN)
 
     def test_handle_listener_state_change_busy_to_insufficient(self):
@@ -683,8 +682,8 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         dispatcher.state_buffer = dispatcher.EVENT_PROCESSED_TOKEN + 'abc'
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, 'abc')
-        self.assertEqual(options.logger.data,
-                         [5, 'process1: BUSY -> ACKNOWLEDGED (processed)'])
+        self.assertEqual(options.logger.data[0],
+                         'process1: BUSY -> ACKNOWLEDGED (processed)')
         self.assertEqual(process.listener_state,
                          EventListenerStates.ACKNOWLEDGED)
 
@@ -698,8 +697,8 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         dispatcher.state_buffer = dispatcher.EVENT_REJECTED_TOKEN + 'abc'
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, 'abc')
-        self.assertEqual(options.logger.data,
-                         [5, 'process1: BUSY -> ACKNOWLEDGED (rejected)'])
+        self.assertEqual(options.logger.data[0],
+                         'process1: BUSY -> ACKNOWLEDGED (rejected)')
         self.assertEqual(process.listener_state,
                          EventListenerStates.ACKNOWLEDGED)
 
@@ -713,8 +712,8 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         dispatcher.state_buffer = 'bogus data\n'
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, '')
-        self.assertEqual(options.logger.data,
-                         [5, 'process1: BUSY -> UNKNOWN'])
+        self.assertEqual(options.logger.data[0],
+                         'process1: BUSY -> UNKNOWN')
         self.assertEqual(process.listener_state,
                          EventListenerStates.UNKNOWN)
 
@@ -728,10 +727,10 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         dispatcher.state_buffer = 'OK\nbogus data\n'
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, '')
-        self.assertEqual(options.logger.data[0:2],
-                         [5, 'process1: BUSY -> ACKNOWLEDGED (processed)'])
-        self.assertEqual(options.logger.data[2:4],
-                         [5, 'process1: ACKNOWLEDGED -> UNKNOWN'])
+        self.assertEqual(options.logger.data[0],
+                         'process1: BUSY -> ACKNOWLEDGED (processed)')
+        self.assertEqual(options.logger.data[1],
+                         'process1: ACKNOWLEDGED -> UNKNOWN')
         self.assertEqual(process.listener_state,
                          EventListenerStates.UNKNOWN)
 

@@ -589,9 +589,6 @@ class EventListenerPool(ProcessGroupBase):
             # rebuffer the event
             self._bufferEvent(event.event)
 
-    def _trace(self, msg):
-        self.config.options.logger.log(self.config.options.TRACE, msg)
-
     def transition(self):
         self.kill_undead()
         for proc in self.processes.values():
@@ -602,11 +599,11 @@ class EventListenerPool(ProcessGroupBase):
             event = self.event_buffer.pop(0)
             ok = self._dispatchEvent(event, buffer=False)
             if ok:
-                self._trace(
+                self.config.options.logger.trace(
                     '%s: Succeeded sending buffered event %s (bufsize %s)' % (
                     self.config.name, event.serial, len(self.event_buffer)))
             else:
-                self._trace(
+                self.config.options.logger.trace(
                     '%s: Failed sending buffered event %s (bufsize %s)' % (
                     self.config.name, event.serial, len(self.event_buffer)))
                 self.event_buffer.insert(0, event)
@@ -631,8 +628,9 @@ class EventListenerPool(ProcessGroupBase):
                 self.config.options.logger.info(
                     'pool %s event buffer overflowed, discarding event %s' % (
                     (self.config.name, discarded_event.serial)))
-        self._trace('pool %s busy, buffering event %s' % ((self.config.name,
-                                                           event.serial)))
+        self.config.options.logger.trace(
+            'pool %s busy, buffering event %s' % ((self.config.name,
+                                                   event.serial)))
         self.event_buffer.append(event)
 
     def _dispatchEvent(self, event, buffer=True):
@@ -656,7 +654,8 @@ class EventListenerPool(ProcessGroupBase):
                 
                 process.listener_state = EventListenerStates.BUSY
                 process.event = event
-                self._trace('event %s sent to listener %s' % (
+                self.config.options.logger.trace(
+                    'event %s sent to listener %s' % (
                     event.serial, process.config.name))
                 return True
         if buffer:

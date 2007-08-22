@@ -160,8 +160,7 @@ class SupervisordTests(unittest.TestCase):
         options.select_error = errno.EINTR
         supervisord = self._makeOne(options)
         supervisord.runforever(test=True)
-        self.assertEqual(options.logger.data[0], 5)
-        self.assertEqual(options.logger.data[1], 'EINTR encountered in select')
+        self.assertEqual(options.logger.data[0], 'EINTR encountered in select')
 
     def test_runforever_select_uncaught_exception(self):
         options = DummyOptions()

@@ -104,10 +104,6 @@ class POutputDispatcher(PDispatcher):
 
         self.childlog = self.mainlog
 
-    def _trace(self, msg):
-        TRACE = self.process.config.options.TRACE
-        self.process.config.options.logger.log(TRACE, msg)
-        
     def removelogs(self):
         for log in (self.mainlog, self.capturelog):
             if log is not None:
@@ -129,7 +125,7 @@ class POutputDispatcher(PDispatcher):
             if self.childlog:
                 self.childlog.info(data)
             msg = '%r %s output:\n%s' % (config.name, self.channel, data)
-            self._trace(msg)
+            self.process.config.options.logger.trace(msg)
 
     def record_output(self):
         if self.capturemode:
@@ -191,7 +187,7 @@ class POutputDispatcher(PDispatcher):
                 notify(event)
                                         
                 msg = "%r %s emitted a comm event" % (procname, channel)
-                self._trace(msg)
+                self.process.config.options.logger.trace(msg)
                                         
                 for handler in self.capturelog.handlers:
                     handler.remove()
@@ -276,7 +272,7 @@ class PEventListenerDispatcher(PDispatcher):
             self.state_buffer += data
             procname = self.process.config.name
             msg = '%r %s output:\n%s' % (procname, self.channel, data)
-            self._trace(msg)
+            self.process.config.options.logger.trace(msg)
 
             if self.childlog:
                 if self.process.config.options.strip_ansi:
@@ -289,10 +285,6 @@ class PEventListenerDispatcher(PDispatcher):
             self.close()
         self.handle_listener_state_change()
 
-    def _trace(self, msg):
-        TRACE = self.process.config.options.TRACE
-        self.process.config.options.logger.log(TRACE, msg)
-        
     def handle_listener_state_change(self):
         process = self.process
         procname = process.config.name
@@ -314,13 +306,13 @@ class PEventListenerDispatcher(PDispatcher):
                 return
             elif data.startswith(self.READY_FOR_EVENTS_TOKEN):
                 msg = '%s: ACKNOWLEDGED -> READY' % procname
-                self._trace(msg)
+                self.process.config.options.logger.trace(msg)
                 process.listener_state = EventListenerStates.READY
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.event = None
             else:
                 msg = '%s: ACKNOWLEDGED -> UNKNOWN' % procname
-                self._trace(msg)
+                self.process.config.options.logger.trace(msg)
                 process.listener_state = EventListenerStates.UNKNOWN
                 self.state_buffer = ''
                 process.event = None
@@ -333,7 +325,7 @@ class PEventListenerDispatcher(PDispatcher):
         elif state == EventListenerStates.READY:
             # the process sent some spurious data, be a hardass about it
             msg = '%s: READY -> UNKNOWN' % procname
-            self._trace(msg)
+            self.process.config.options.logger.trace(msg)
             process.listener_state = EventListenerStates.UNKNOWN
             self.state_buffer = ''
             process.event = None
@@ -345,14 +337,14 @@ class PEventListenerDispatcher(PDispatcher):
                 return
             elif data.startswith(self.EVENT_PROCESSED_TOKEN):
                 msg = '%s: BUSY -> ACKNOWLEDGED (processed)' % procname
-                self._trace(msg)
+                self.process.config.options.logger.trace(msg)
                 tokenlen = len(self.EVENT_PROCESSED_TOKEN)
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.listener_state = EventListenerStates.ACKNOWLEDGED
                 process.event = None
             elif data.startswith(self.EVENT_REJECTED_TOKEN):
                 msg = '%s: BUSY -> ACKNOWLEDGED (rejected)' % procname
-                self._trace(msg)
+                self.process.config.options.logger.trace(msg)
                 tokenlen = len(self.EVENT_REJECTED_TOKEN)
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.listener_state = EventListenerStates.ACKNOWLEDGED
@@ -360,7 +352,7 @@ class PEventListenerDispatcher(PDispatcher):
                 process.event = None
             else:
                 msg = '%s: BUSY -> UNKNOWN' % procname
-                self._trace(msg)
+                self.process.config.options.logger.trace(msg)
                 process.listener_state = EventListenerStates.UNKNOWN
                 self.state_buffer = ''
                 notify(EventRejectedEvent(process, process.event))
