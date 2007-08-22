@@ -142,15 +142,9 @@ Installing Without Internet Access
   target machine.  Install each onto the target machine as per its
   instructions.
 
-  *Note* -- if the machine you're installing on does not have a C
-  compiler, meld3's "setup.py install" probably won't work because
-  meld3 uses C extensions, but you can either copy the meld3/meld3
-  directory into your Python's site-packages directory, or you can
-  build a binary distribution for your platform on a similar machine
-  that does have a C compiler before shipping it over by doing "python
-  setup.py bdist".
-
-  Finally, run supervisor's "python setup.py install".
+  Finally, run supervisor's "python setup.py install" or
+  "NO_MELD3_EXTENSION_MODULES=1 python.setup.py install" (see
+  explanation in the 'Installing' section).
   
 Running Supervisord
 
