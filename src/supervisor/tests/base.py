@@ -764,6 +764,15 @@ class DummyDispatcher:
         self._writable = writable
         self._error = error
         self.input_buffer = ''
+        if readable:
+            # only readable dispatchers should have these methods
+            def reopenlogs():
+                self.logs_reopened = True
+            self.reopenlogs = reopenlogs
+            def removelogs():
+                self.logs_removed = True
+            self.removelogs = removelogs
+
     def readable(self):
         return self._readable
     def writable(self):
@@ -778,10 +787,6 @@ class DummyDispatcher:
         self.read_event_handled = True
     def handle_error(self):
         self.error_handled = True
-    def reopenlogs(self):
-        self.logs_reopened = True
-    def removelogs(self):
-        self.logs_removed = True
     def close(self):
         self.closed = True
     def flush(self):

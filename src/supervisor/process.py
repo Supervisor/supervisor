@@ -75,12 +75,12 @@ class Subprocess:
 
     def removelogs(self):
         for dispatcher in self.dispatchers.values():
-            if dispatcher.readable():
+            if hasattr(dispatcher, 'removelogs'):
                 dispatcher.removelogs()
 
     def reopenlogs(self):
         for dispatcher in self.dispatchers.values():
-            if dispatcher.readable():
+            if hasattr(dispatcher, 'removelogs'):
                 dispatcher.reopenlogs()
 
     def drain(self):
