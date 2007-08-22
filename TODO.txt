@@ -19,12 +19,6 @@
 - We *might* be able to delay shutdown until all buffered events have
   been processed (or a timeout has been reached).
 
-- Release a meld3 version that doesn't require that ext_modules get
-  built if an environment variable is present (or if distutils
-  supports conditionally compiling extensions, use whatever it does).
-  Make supervisor's setup.py depend on this version and document how
-  to cause supervisor's "setup.py install" to install a C-free meld3.
-
 - Web interface:
 
    - Support POST requests.
