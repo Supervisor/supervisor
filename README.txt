@@ -99,6 +99,20 @@ Installing
   you use the shell script named "supervisord", "supervisord -c
   /path/to/sample.conf".
 
+  If your system does not have a C compiler, 'setup.py install' will
+  fail, as by default, at least one of supervisor's dependent
+  distributions, meld3, attempts to compile C extensions.  These
+  extensions are optional, and meld3 (as of its release 0.6.1) will
+  work fine without them.  To avoid attempting to compile meld3
+  extensions, set the environment variable
+  "NO_MELD3_EXTENSION_MODULES=1" in the shell in which you invoke
+  supervisor's 'setup.py install' command, e.g.::
+
+     NO_MELD3_EXTENSION_MODULES=1 python setup.py install
+
+  This will cause meld3 to skip attempting to build its extensions,
+  and thus supervisor's installation will succeed.
+
   I make reference below to a "$BINDIR" when explaining how to run
   supervisord and supervisorctl.  This is the "bindir" directory that
   your Python installation has been configured with.  For example, for
