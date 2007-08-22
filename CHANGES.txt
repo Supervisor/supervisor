@@ -38,6 +38,17 @@
     about the process' exit status when determining whether to restart
     it or not.
 
+  - setup.py develop (and presumably setup.py install) would fail
+    under Python 2.3.3, because setuptools attempted to import
+    'splituser' from urllib2, and it didn't exist.
+
+  - It's now possible to use 'setup.py install' and 'setup.py develop'
+    on systems which do not have a C compiler if you set the environment
+    variable "NO_MELD3_EXTENSION_MODULES=1" in the shell in which
+    you invoke these commands (a new version of meld3, 0.6.1 was released
+    which respects this envvar and does not try to compile its optional
+    C extensions when it's set).
+
 3.0a1
 
   - Default config file comment documented 10 secs as default for
