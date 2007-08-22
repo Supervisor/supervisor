@@ -39,18 +39,29 @@ class FileHandler(logging.StreamHandler):
 
     Re-opening should be used instead of the 'rollover' feature of
     the FileHandler from the standard library's logging package.
+
+    
     """
 
     def __init__(self, filename, mode="a"):
-        logging.StreamHandler.__init__(self, open(filename, mode))
+        # we purposely *do not* call logging.StreamHandler's __init__
+        # here because it attempts to register the handler in its
+        # global handler list, which is bad because a) they tend to
+        # leak at the end of tests b) if we don't play by this scheme,
+        # making sure to call all the right super methods, it will
+        # lead to a memory leak and c) the initializer sets an rlock
+        # and the rest of the logging framework does thread locking
+        # using it, and we don't need that at all because we're
+        # completely single threaded.
+        self.stream = open(filename, mode)
         self.baseFilename = filename
+        self.formatter = None
+        self.level = logging.NOTSET
         self.mode = mode
+        self.filters = []
+        self.lock = None
 
     def close(self):
-        # logging module can be none at shutdown sys.exithook time (sigh),
-        # see my rant in test_loggers.py
-        if logging is not None: 
-            logging.StreamHandler(self).close()
         self.stream.close()
 
     def reopen(self):
@@ -80,6 +91,22 @@ class RawFileHandler(RawHandler, FileHandler):
     pass
 
 class RawStreamHandler(RawHandler, logging.StreamHandler):
+    def __init__(self, strm=None):
+        # we purposely *do not* call logging.StreamHandler's __init__
+        # here because it attempts to register the handler in its
+        # global handler list, which is bad because a) they tend to
+        # leak at the end of tests b) if we don't play by this scheme,
+        # making sure to call all the right super methods, it will
+        # lead to a memory leak and c) the initializer sets an rlock
+        # and the rest of the logging framework does thread locking
+        # using it, and we don't need that at all because we're
+        # completely single threaded.
+        self.stream = strm
+        self.formatter = None
+        self.level = logging.NOTSET
+        self.filters = []
+        self.lock = None
+        
     def remove(self):
         pass
 

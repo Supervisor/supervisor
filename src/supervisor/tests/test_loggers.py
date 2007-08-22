@@ -8,7 +8,6 @@ import logging
 from supervisor.tests.base import DummyStream
 
 class HandlerTests:
-    handler = None
     def setUp(self):
         self.basedir = tempfile.mkdtemp()
         self.filename = os.path.join(self.basedir, 'thelog')
@@ -18,40 +17,10 @@ class HandlerTests:
             shutil.rmtree(self.basedir)
         except OSError:
             pass
-        if self.handler:
-            # Behold, the logging module.  Since it registers an
-            # exitfunc at import time that tries to call close methods
-            # on handlers that are registered in a (not just one, but
-            # *two*, and private!) module globals at handler
-            # construction time, we have to clean up here so it doesnt
-            # spew tracebacks to stderr at shutdown (at least for 2.4
-            # and 2.5).  We can't prevent it the exit handler it
-            # registers from shitting itself at shutdown by using the
-            # logging API because when its exitfunc is run, at least
-            # in my test rig, it's run after sys.modules have been
-            # cleared, so there's no way to do anything meaningful in
-            # the handlers' close methods.  I am consoled only by the
-            # fact that this a complete waste of time for everyone who
-            # uses the logging module and not just me.  There is *no
-            # fucking way* that importing a stdlib module should have
-            # the side effect of registering an exitfunc.  Can you
-            # tell that this annoys me?
-            if hasattr(logging, '_handlerList'): # 2.3.5 doesnt have it
-                hl = []
-                for handler in logging._handlerList:
-                    if handler is not self.handler:
-                        hl.append(handler)
-                logging._handlerList = hl
-            try:
-                del logging._handlers[self.handler]
-            except KeyError:
-                pass
-            self.handler = None
 
     def _makeOne(self, *arg, **kw):
         klass = self._getTargetClass()
-        self.handler = klass(*arg, **kw)
-        return self.handler
+        return klass(*arg, **kw)
 
     def _makeLogRecord(self, msg):
         record = logging.LogRecord('name',
