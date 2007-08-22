@@ -18,3 +18,14 @@ Upgrading from supervisor 2 to supervisor 3
 
    [rpcinterface:supervisor]
    supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+- The semantics of the 'autorestart' parameter within '[program:x]'
+  sections has changed.  This parameter used to accept only 'true' or
+  'false'.  It now accepts an additional value 'unexpected', which
+  indicates that the process should restart from the EXITED state only
+  if its exit code does not match any of those represented by the
+  'exitcode' parameter in the process' configuration (IOW, a process
+  crash)a.  In addition, the *default* for autorestart is now
+  'unexpected' (it used to be 'true', which meant restart
+  unconditionally).
+
