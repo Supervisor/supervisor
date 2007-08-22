@@ -14,10 +14,10 @@
 ##############################################################################
 """supervisorctl -- control applications run by supervisord from the cmd line.
 
-Usage: python supervisorctl.py [-C URL] [-h] [action [arguments]]
+Usage: python supervisorctl.py [-c file] [-h] [action [arguments]]
 
 Options:
--c/--configuration URL -- configuration file or URL
+-c/--configuration -- configuration file path (default /etc/supervisor.conf)
 -h/--help -- print usage message and exit
 -i/--interactive -- start an interactive shell after executing commands
 -s/--serverurl URL -- URL on which supervisord server is listening
@@ -605,7 +605,7 @@ class Controller(cmd.Cmd):
 def main(args=None, options=None):
     if options is None:
         options = ClientOptions()
-    options.realize(args)
+    options.realize(args, doc=__doc__)
     c = Controller(options)
     if options.args:
         c.onecmd(" ".join(options.args))

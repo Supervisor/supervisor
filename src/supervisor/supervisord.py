@@ -17,7 +17,7 @@
 Usage: %s [options]
 
 Options:
--c/--configuration URL -- configuration file or URL
+-c/--configuration FILENAME -- configuration file
 -n/--nodaemon -- run in the foreground (same as 'nodaemon true' in config file)
 -h/--help -- print this usage message and exit
 -u/--user USER -- run supervisord as this user (or numeric uid)
@@ -66,7 +66,7 @@ class Supervisor:
         self.process_groups = {}
 
     def main(self, args=None, test=False, first=False):
-        self.options.realize(args)
+        self.options.realize(args, doc=__doc__)
         self.options.cleanup_fds()
         info_messages = []
         critical_messages = []
