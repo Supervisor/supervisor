@@ -445,7 +445,7 @@ class deferring_http_channel(http_server.http_channel):
                         self.server.exceptions.increment()
                         (file, fun, line), t, v, tbinfo = \
                                asyncore.compact_traceback()
-                        self.log_info(
+                        self.server.log_info(
                             'Server Error: %s, %s: file: %s line: %s' %
                             (t,v,file,line),
                             'error')
