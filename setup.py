@@ -76,7 +76,7 @@ dist = setup(
     data_files=[ ('doc', ['sample.conf', 'README.txt', 'UPGRADING.txt',
                           'CHANGES.txt', 'TODO.txt', 'LICENSES.txt',
                           'COPYRIGHT.txt'])],
-    install_requires = ['medusa >= 0.5.4', 'meld3 >= 0.6.1',
+    install_requires = ['medusa >= 0.5.4', 'meld3 >= 0.6.2',
                         'elementtree >= 1.2.6'],
     include_package_data = True,
     zip_safe = False,

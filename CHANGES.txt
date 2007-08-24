@@ -43,11 +43,11 @@
     'splituser' from urllib2, and it didn't exist.
 
   - It's now possible to use 'setup.py install' and 'setup.py develop'
-    on systems which do not have a C compiler if you set the environment
-    variable "NO_MELD3_EXTENSION_MODULES=1" in the shell in which
-    you invoke these commands (a new version of meld3, 0.6.1 was released
-    which respects this envvar and does not try to compile its optional
-    C extensions when it's set).
+    on systems which do not have a C compiler if you set the
+    environment variable "NO_MELD3_EXTENSION_MODULES=1" in the shell
+    in which you invoke these commands (versions of meld3 > 0.6.1
+    respect this envvar and do not try to compile optional C
+    extensions when it's set).
 
   - The test suite would fail on Python versions <= 2.3.3 because
     the "assertTrue" and "assertFalse" methods of unittest.TestCase
@@ -58,6 +58,10 @@
 
   - Documentation files and the sample configuration file are put into
     the generated supervisor egg's 'doc' directory.
+
+  _ Using the web interface would cause fairly dramatic memory
+    leakage.  We now require a version of meld3 that does not leak
+    memory from its C extensions.
 
 3.0a1
 
