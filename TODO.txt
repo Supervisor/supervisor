@@ -1,3 +1,7 @@
+- Add a new cwd option that will chdir after the fork-exec.
+
+- Move set of 'SUPERVISOR_ENABLED' envvar to process spawn method.
+
 - Fix CVS so not all checkins come from "chrism".
 
 - FATAL state for supervisor.
@@ -44,5 +48,4 @@
 
 - Provide a way to get the supervisord pid from supervisorctl/web interface.
 
-- Add a new cwd option that will chdir after the fork-exec.
 

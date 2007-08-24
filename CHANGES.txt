@@ -60,8 +60,8 @@
     the generated supervisor egg's 'doc' directory.
 
   _ Using the web interface would cause fairly dramatic memory
-    leakage.  We now require a version of meld3 that does not leak
-    memory from its C extensions.
+    leakage.  We now require a version of meld3 that does not appear
+    to leak memory from its C extensions (0.6.3).
 
 3.0a1
 
