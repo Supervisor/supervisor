@@ -19,6 +19,7 @@ import time
 import traceback
 import urllib
 import datetime
+import StringIO
 
 from medusa import default_handler
 from medusa import producers
@@ -60,33 +61,34 @@ class DeferredWebProducer:
                 return NOT_DONE_YET
                 
             self.finished = True
-
             return self.sendresponse(response)
 
         except:
-            # report unexpected exception back to server
-            traceback.print_exc()
+            io = StringIO.StringIO()
+            traceback.print_exc(file=io)
+            # this should go to the main supervisor log file
+            self.request.channel.server.logger.log('Web interface error',
+                                                  io.getvalue())
             self.finished = True
             self.request.error(500)
 
     def sendresponse(self, response):
 
-        headers = response.get('headers', [])
+        headers = response.get('headers', {})
         for header in headers:
             self.request[header] = headers[header]
 
+        if not self.request.has_key('Content-Type'):
+            self.request['Content-Type'] = 'text/plain'
+
         if headers.get('Location'):
-            self.request['Content-Type'] = 'text/html'
             self.request['Content-Length'] = 0
             self.request.error(301)
             return
 
         body = response.get('body', '')
-        content_type = response.get('content_type', 'text/html')
-        self.request['Content-Type'] = content_type
         self.request['Content-Length'] = len(body)
             
-
         self.request.push(body)
 
         connection = get_header(self.CONNECTION, self.request.header)
