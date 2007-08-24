@@ -479,15 +479,39 @@ def makeSpew(unkillable=False):
         return makeExecutable(os.path.join(here, 'fixtures/spew.py'))
     return makeExecutable(os.path.join(here, 'fixtures/unkillable_spew.py'))
 
+class DummyMedusaServerLogger:
+    def __init__(self):
+        self.logged = []
+    def log(self, category, msg):
+        self.logged.append((category, msg))
+
+class DummyMedusaServer:
+    def __init__(self):
+        self.logger = DummyMedusaServerLogger()
+
+class DummyMedusaChannel:
+    def __init__(self):
+        self.server = DummyMedusaServer()
+        self.producer = None
+
+    def push_with_producer(self, producer):
+        self.producer = producer
+
+    def close_when_done(self):
+        pass
 
 class DummyRequest:
     command = 'GET'
     _error = None
     _done = False
+    version = '1.0'
     def __init__(self, path, params, query, fragment):
         self.args = path, params, query, fragment
         self.producers = []
         self.headers = {}
+        self.header = []
+        self.outgoing = []
+        self.channel = DummyMedusaChannel()
 
     def split_uri(self):
         return self.args
@@ -501,8 +525,17 @@ class DummyRequest:
     def __setitem__(self, header, value):
         self.headers[header] = value
 
+    def has_key(self, header):
+        return self.headers.has_key(header)
+
     def done(self):
         self._done = True
+
+    def build_reply_header(self):
+        return ''
+
+    def log(self, *arg, **kw):
+        pass
 
 class DummyRPCServer:
     def __init__(self):
