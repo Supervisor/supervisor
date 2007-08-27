@@ -189,6 +189,7 @@ class RotatingRawFileHandler(RawFileHandler):
     
 def getLogger(filename, level, fmt, rotating=False, maxbytes=0, backups=0,
               stdout=False):
+    initialize() # sets up proper logging levels
     logger = logging.getLogger(filename)
     handlers = []
 

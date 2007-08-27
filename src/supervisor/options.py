@@ -1047,7 +1047,6 @@ class ServerOptions(Options):
 
     def make_logger(self, critical_messages, info_messages):
         # must be called after realize() and after supervisor does setuid()
-        loggers.initialize() # sets up proper logging levels
         format =  '%(asctime)s %(levelname)s %(message)s\n'
         self.logger = loggers.getLogger(
             self.logfile,
