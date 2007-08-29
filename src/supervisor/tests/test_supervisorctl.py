@@ -35,6 +35,24 @@ class ControllerTests(unittest.TestCase):
         'to talk to a server with API version 3.0, but the remote version is '
         '1.0.\n')
 
+    def test__upcheck_unknown_method(self):
+        options = DummyClientOptions()
+        from xmlrpclib import Fault
+        from supervisor.xmlrpc import Faults
+        def getVersion():
+            raise Fault(Faults.UNKNOWN_METHOD, 'duh')
+        options._server.supervisor.getVersion = getVersion
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller._upcheck()
+        self.assertEqual(result, False)
+        value = controller.stdout.getvalue()
+        self.assertEqual(value, 'Sorry, supervisord responded but did not '
+        'recognize the supervisor namespace commands that supervisorctl '
+        'uses to control it.  Please check that the '
+        '[rpcinterface:supervisor] section is enabled in the '
+        'configuration file (see sample.conf).\n')
+
     def test_onecmd(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)

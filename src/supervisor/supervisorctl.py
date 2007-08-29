@@ -121,6 +121,16 @@ class Controller(cmd.Cmd):
                     'talk to a server with API version %s, but the '
                     'remote version is %s.' % (rpcinterface.API_VERSION, api))
                 return False
+        except xmlrpclib.Fault, e:
+            if e.faultCode == xmlrpc.Faults.UNKNOWN_METHOD:
+                self._output(
+                    'Sorry, supervisord responded but did not recognize '
+                    'the supervisor namespace commands that supervisorctl '
+                    'uses to control it.  Please check that the '
+                    '[rpcinterface:supervisor] section is enabled in the '
+                    'configuration file (see sample.conf).')
+                return False
+            raise 
         except socket.error, why:
             if why[0] == errno.ECONNREFUSED:
                 self._output('%s refused connection' % self.options.serverurl)
