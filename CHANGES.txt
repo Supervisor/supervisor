@@ -5,8 +5,8 @@ Next Release
     Mike Orr for reporting this. (Mike Naberezny)
 
   - Create 'scripts' directory within supervisor package, move
-    'pidproxy.py' there, and place sample event listener programs
-    within the directory.
+    'pidproxy.py' there, and place sample event listener and comm
+    event programs within the directory.
 
 3.0a2
 
