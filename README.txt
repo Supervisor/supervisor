@@ -136,7 +136,7 @@ Installing Without Internet Access
 
   - setuptools (latest) from http://pypi.python.org/pypi/setuptools
 
-  - meld3 (0.6) from http://www.plope.com/software/meld3/
+  - meld3 (0.6.3) from http://www.plope.com/software/meld3/
 
   - medusa (0.5.4) from http://www.amk.ca/python/code/medusa.html
 
@@ -1098,6 +1098,9 @@ Event Listeners (New in 3.0)
   or should flush its stdout every time it needs to communicate back
   to the supervisord process.
 
+  Sample event listeners are present within the supervisor package's
+  'scripts' directory.
+
 Event Listener States
 
   An event listener process has three possible states that are
@@ -1326,8 +1329,9 @@ Other Notes
    [program:mysql]
    command=/path/to/pidproxy /path/to/pidfile /path/to/mysqld_safe
 
-  The pidproxy program is named 'pidproxy.py' and is in the
-  supervisor distribution.
+  The pidproxy program is named 'pidproxy.py' and is in the supervisor
+  distribution within the 'scripts' directory of the supervisor
+  package.
 
 FAQ
 
