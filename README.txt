@@ -1272,6 +1272,10 @@ Capture Mode and Process Communication Events (New in 3.0)
   .. supervisor will emit a PROCESS_COMMUNICATIONS_STDOUT event with
   data in the payload of "Hello!".
 
+  An example of a script which emits a process communication event is
+  in the 'scripts' directory of the supervisor package, named
+  "sample_commevent.py".
+
 Signals
 
   Killing supervisord with SIGHUP will stop all processes, reload the
