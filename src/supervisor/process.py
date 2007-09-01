@@ -640,7 +640,7 @@ class EventListenerPool(ProcessGroupBase):
                 discarded_event = self.event_buffer.pop(0)
                 events.notify(events.EventBufferOverflowEvent(self,
                                                               discarded_event))
-                self.config.options.logger.info(
+                self.config.options.logger.warn(
                     'pool %s event buffer overflowed, discarding event %s' % (
                     (self.config.name, discarded_event.serial)))
         # insert event into 2nd position in list so we don't block pending
