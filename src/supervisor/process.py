@@ -643,12 +643,12 @@ class EventListenerPool(ProcessGroupBase):
                 self.config.options.logger.info(
                     'pool %s event buffer overflowed, discarding event %s' % (
                     (self.config.name, discarded_event.serial)))
+        # insert event into 2nd position in list so we don't block pending
+        # events for a chronically failed event notification
         self.event_buffer.insert(1, event)
         self.config.options.logger.info(
             'buffered event %s for pool %s (bufsize %s)' % (
             (event.serial, self.config.name, len(self.event_buffer))))
-        # insert event into 2nd position in list so we don't block pending
-        # events for a chronically failed event notification
 
     def _eventEnvelope(self, event_type, serial, payload):
         event_name = events.getEventNameByType(event_type)
