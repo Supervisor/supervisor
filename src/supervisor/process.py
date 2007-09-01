@@ -31,10 +31,7 @@ from supervisor.options import signame
 from supervisor.options import ProcessException
 
 from supervisor.dispatchers import EventListenerStates
-from supervisor.events import getEventNameByType
-from supervisor.events import EventBufferOverflowEvent
-from supervisor.events import notify
-from supervisor.events import subscribe
+
 from supervisor import events
 
 from supervisor.datatypes import RestartUnconditionally
@@ -50,6 +47,7 @@ class Subprocess:
     config = None # ProcessConfig instance
     state = None # process state code
     listener_state = None # listener state code (if we're an event listener)
+    event = None # event currently being processed (if we're an event listener)
     laststart = 0 # Last time the subprocess was started; 0 if never
     laststop = 0  # Last time the subprocess was stopped; 0 if never
     delay = 0 # If nonzero, delay starting or killing until this time
@@ -145,7 +143,7 @@ class Subprocess:
         if new_state is old_state:
             return False
         event_type = events.getProcessStateChangeEventType(old_state, new_state)
-        notify(event_type(self))
+        events.notify(event_type(self))
         self.state = new_state
 
     def _assertInState(self, *states):
@@ -413,6 +411,13 @@ class Subprocess:
         self.pipes = {}
         self.dispatchers = {}
 
+        # if we died before we processed the current event (only happens
+        # if we're an event listener), notify the event system that this
+        # event was rejected so it can be processed again.
+        if self.event is not None:
+            events.notify(events.EventRejectedEvent(self, self.event))
+            self.event = None
+
     def set_uid(self):
         if self.config.uid is None:
             return
@@ -579,8 +584,8 @@ class EventListenerPool(ProcessGroupBase):
         ProcessGroupBase.__init__(self, config)
         self.event_buffer = []
         for event_type in self.config.pool_events:
-            subscribe(event_type, self._dispatchEvent)
-        subscribe(events.EventRejectedEvent, self.handle_rejected)
+            events.subscribe(event_type, self._dispatchEvent)
+        events.subscribe(events.EventRejectedEvent, self.handle_rejected)
 
     def handle_rejected(self, event):
         process = event.process
@@ -628,12 +633,13 @@ class EventListenerPool(ProcessGroupBase):
         return False
 
     def _bufferEvent(self, event):
-        if isinstance(event, EventBufferOverflowEvent):
+        if isinstance(event, events.EventBufferOverflowEvent):
             return # don't ever buffer EventBufferOverflowEvents
         if len(self.event_buffer) >= self.config.buffer_size:
             if self.event_buffer:
                 discarded_event = self.event_buffer.pop(0)
-                notify(EventBufferOverflowEvent(self, discarded_event))
+                events.notify(events.EventBufferOverflowEvent(self,
+                                                              discarded_event))
                 self.config.options.logger.info(
                     'pool %s event buffer overflowed, discarding event %s' % (
                     (self.config.name, discarded_event.serial)))
@@ -645,7 +651,7 @@ class EventListenerPool(ProcessGroupBase):
         # events for a chronically failed event notification
 
     def _eventEnvelope(self, event_type, serial, payload):
-        event_name = getEventNameByType(event_type)
+        event_name = events.getEventNameByType(event_type)
         payload_len = len(payload)
         D = {'ver':'SUPERVISORD3.0',
              'len':payload_len,

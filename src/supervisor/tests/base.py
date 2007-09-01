@@ -849,7 +849,7 @@ class DummyStream:
         return len(self.written)
         
 class DummyEvent:
-    pass
+    serial = 'abc'
         
 def lstrip(s):
     strings = [x.strip() for x in s.split('\n')]

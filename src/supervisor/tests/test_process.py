@@ -10,6 +10,7 @@ from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummyPGroupConfig
 from supervisor.tests.base import DummyDispatcher
+from supervisor.tests.base import DummyEvent
 
 class SubprocessTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -713,6 +714,26 @@ class SubprocessTests(unittest.TestCase):
                       'exited: notthere (terminated by SIGHUP; not expected)')
         self.assertEqual(instance.exitstatus, None)
         self.assertEqual(L[0].__class__, events.BackoffFromStartingEvent)
+
+    def test_finish_with_current_event_sends_rejected(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ExitedFromRunningEvent, lambda x: L.append(x))
+        events.subscribe(events.EventRejectedEvent, lambda x: L.append(x))
+        options = DummyOptions()
+        config = DummyPConfig(options, 'notthere', '/notthere',
+                              stdout_logfile='/tmp/foo', startsecs=10)
+        instance = self._makeOne(config)
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.RUNNING
+        event = DummyEvent()
+        instance.event = event
+        instance.finish(123, 1)
+        self.assertEqual(L[0].__class__, events.ExitedFromRunningEvent)
+        self.assertEqual(L[1].__class__, events.EventRejectedEvent)
+        self.assertEqual(L[1].process, instance)
+        self.assertEqual(L[1].event, event)
+        self.assertEqual(instance.event, None)
 
     def test_set_uid_no_uid(self):
         options = DummyOptions()

@@ -261,7 +261,6 @@ class PEventListenerDispatcher(PDispatcher):
         return False
     
     def readable(self):
-        self.handle_listener_state_change()
         if self.closed:
             return False
         return True
@@ -286,13 +285,14 @@ class PEventListenerDispatcher(PDispatcher):
         self.handle_listener_state_change()
 
     def handle_listener_state_change(self):
-        process = self.process
-        procname = process.config.name
-        state = process.listener_state
         data = self.state_buffer
 
         if not data:
             return
+
+        process = self.process
+        procname = process.config.name
+        state = process.listener_state
 
         if state == EventListenerStates.UNKNOWN:
             # this is a fatal state
@@ -306,13 +306,13 @@ class PEventListenerDispatcher(PDispatcher):
                 return
             elif data.startswith(self.READY_FOR_EVENTS_TOKEN):
                 msg = '%s: ACKNOWLEDGED -> READY' % procname
-                self.process.config.options.logger.trace(msg)
+                process.config.options.logger.trace(msg)
                 process.listener_state = EventListenerStates.READY
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.event = None
             else:
                 msg = '%s: ACKNOWLEDGED -> UNKNOWN' % procname
-                self.process.config.options.logger.trace(msg)
+                process.config.options.logger.trace(msg)
                 process.listener_state = EventListenerStates.UNKNOWN
                 self.state_buffer = ''
                 process.event = None
@@ -325,7 +325,7 @@ class PEventListenerDispatcher(PDispatcher):
         elif state == EventListenerStates.READY:
             # the process sent some spurious data, be a hardass about it
             msg = '%s: READY -> UNKNOWN' % procname
-            self.process.config.options.logger.trace(msg)
+            process.config.options.logger.trace(msg)
             process.listener_state = EventListenerStates.UNKNOWN
             self.state_buffer = ''
             process.event = None
@@ -337,14 +337,14 @@ class PEventListenerDispatcher(PDispatcher):
                 return
             elif data.startswith(self.EVENT_PROCESSED_TOKEN):
                 msg = '%s: BUSY -> ACKNOWLEDGED (processed)' % procname
-                self.process.config.options.logger.trace(msg)
+                process.config.options.logger.trace(msg)
                 tokenlen = len(self.EVENT_PROCESSED_TOKEN)
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.listener_state = EventListenerStates.ACKNOWLEDGED
                 process.event = None
             elif data.startswith(self.EVENT_REJECTED_TOKEN):
                 msg = '%s: BUSY -> ACKNOWLEDGED (rejected)' % procname
-                self.process.config.options.logger.trace(msg)
+                process.config.options.logger.trace(msg)
                 tokenlen = len(self.EVENT_REJECTED_TOKEN)
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.listener_state = EventListenerStates.ACKNOWLEDGED
@@ -352,7 +352,7 @@ class PEventListenerDispatcher(PDispatcher):
                 process.event = None
             else:
                 msg = '%s: BUSY -> UNKNOWN' % procname
-                self.process.config.options.logger.trace(msg)
+                process.config.options.logger.trace(msg)
                 process.listener_state = EventListenerStates.UNKNOWN
                 self.state_buffer = ''
                 notify(EventRejectedEvent(process, process.event))
