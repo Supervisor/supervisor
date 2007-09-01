@@ -597,43 +597,9 @@ class EventListenerPool(ProcessGroupBase):
             # resend the oldest buffered event (dont rebuffer though, maintain
             # order oldest (leftmost) to newest (rightmost) in list)
             event = self.event_buffer.pop(0)
-            ok = self._dispatchEvent(event, buffer=False)
-            if ok:
-                self.config.options.logger.trace(
-                    '%s: Succeeded sending buffered event %s (bufsize %s)' % (
-                    self.config.name, event.serial, len(self.event_buffer)))
-            else:
-                self.config.options.logger.trace(
-                    '%s: Failed sending buffered event %s (bufsize %s)' % (
-                    self.config.name, event.serial, len(self.event_buffer)))
-                self.event_buffer.insert(0, event)
+            self._dispatchEvent(event)
 
-    def _eventEnvelope(self, event_type, serial, payload):
-        event_name = getEventNameByType(event_type)
-        payload_len = len(payload)
-        D = {'ver':'SUPERVISORD3.0',
-             'len':payload_len,
-             'event_name':event_name,
-             'payload':payload,
-             'serial':serial}
-        return '%(ver)s %(event_name)s %(serial)s %(len)s\n%(payload)s' % D
-
-    def _bufferEvent(self, event):
-        if isinstance(event, EventBufferOverflowEvent):
-            return # don't ever buffer EventBufferOverflowEvents
-        if len(self.event_buffer) >= self.config.buffer_size:
-            if self.event_buffer:
-                discarded_event = self.event_buffer.pop(0)
-                notify(EventBufferOverflowEvent(self, discarded_event))
-                self.config.options.logger.info(
-                    'pool %s event buffer overflowed, discarding event %s' % (
-                    (self.config.name, discarded_event.serial)))
-        self.config.options.logger.trace(
-            'pool %s busy, buffering event %s' % ((self.config.name,
-                                                   event.serial)))
-        self.event_buffer.append(event)
-
-    def _dispatchEvent(self, event, buffer=True):
+    def _dispatchEvent(self, event):
         # events are required to be instances
         event_type = event.__class__
         if not hasattr(event, 'serial'):
@@ -658,9 +624,35 @@ class EventListenerPool(ProcessGroupBase):
                     'event %s sent to listener %s' % (
                     event.serial, process.config.name))
                 return True
-        if buffer:
-            self._bufferEvent(event)
+        self._bufferEvent(event)
         return False
+
+    def _bufferEvent(self, event):
+        if isinstance(event, EventBufferOverflowEvent):
+            return # don't ever buffer EventBufferOverflowEvents
+        if len(self.event_buffer) >= self.config.buffer_size:
+            if self.event_buffer:
+                discarded_event = self.event_buffer.pop(0)
+                notify(EventBufferOverflowEvent(self, discarded_event))
+                self.config.options.logger.info(
+                    'pool %s event buffer overflowed, discarding event %s' % (
+                    (self.config.name, discarded_event.serial)))
+        self.event_buffer.insert(1, event)
+        self.config.options.logger.info(
+            'buffered event %s for pool %s (bufsize %s)' % (
+            (event.serial, self.config.name, len(self.event_buffer))))
+        # insert event into 2nd position in list so we don't block pending
+        # events for a chronically failed event notification
+
+    def _eventEnvelope(self, event_type, serial, payload):
+        event_name = getEventNameByType(event_type)
+        payload_len = len(payload)
+        D = {'ver':'SUPERVISORD3.0',
+             'len':payload_len,
+             'event_name':event_name,
+             'payload':payload,
+             'serial':serial}
+        return '%(ver)s %(event_name)s %(serial)s %(len)s\n%(payload)s' % D
 
 _num = 0
 

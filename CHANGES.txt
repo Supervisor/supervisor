@@ -8,6 +8,11 @@ Next Release
     'pidproxy.py' there, and place sample event listener and comm
     event programs within the directory.
 
+  - When an event notification is buffered (either because a listener
+    rejected it or because all listeners were busy when we attempted
+    to send it originally), we now rebuffer it in a way that will
+    result in it being retried earlier than it used to be.
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC
