@@ -33,7 +33,7 @@ def main(sleep):
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
-        main(int(sys.argv[1]))
+        main(float(sys.argv[1]))
     else:
         main(1)
 
