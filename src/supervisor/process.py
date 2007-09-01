@@ -601,8 +601,6 @@ class EventListenerPool(ProcessGroupBase):
         for proc in self.processes.values():
             proc.transition()
         if self.event_buffer:
-            # resend the oldest buffered event (dont rebuffer though, maintain
-            # order oldest (leftmost) to newest (rightmost) in list)
             event = self.event_buffer.pop(0)
             self._dispatchEvent(event)
 
