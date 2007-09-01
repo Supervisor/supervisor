@@ -6,6 +6,7 @@ from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyLogger
+from supervisor.tests.base import DummyEvent
 
 class POutputDispatcherTests(unittest.TestCase):
     def setUp(self):
@@ -486,6 +487,14 @@ class PInputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.closed, True)
 
 class PEventListenerDispatcherTests(unittest.TestCase):
+    def setUp(self):
+        from supervisor.events import clear
+        clear()
+
+    def tearDown(self):
+        from supervisor.events import clear
+        clear()
+
     def _getTargetClass(self):
         from supervisor.dispatchers import PEventListenerDispatcher
         return PEventListenerDispatcher
@@ -703,12 +712,20 @@ class PEventListenerDispatcherTests(unittest.TestCase):
                          EventListenerStates.ACKNOWLEDGED)
 
     def test_handle_listener_state_change_busy_to_unknown(self):
+        from supervisor.events import EventRejectedEvent
+        from supervisor.events import subscribe
+        events = []
+        def doit(event):
+            events.append(event)
+        subscribe(EventRejectedEvent, doit)
         options = DummyOptions()
         config = DummyPConfig(options, 'process1', '/bin/process1')
         process = DummyProcess(config)
         from supervisor.dispatchers import EventListenerStates
         dispatcher = self._makeOne(process)
         process.listener_state = EventListenerStates.BUSY
+        current_event = DummyEvent()
+        process.event = current_event
         dispatcher.state_buffer = 'bogus data\n'
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, '')
@@ -716,6 +733,8 @@ class PEventListenerDispatcherTests(unittest.TestCase):
                          'process1: BUSY -> UNKNOWN')
         self.assertEqual(process.listener_state,
                          EventListenerStates.UNKNOWN)
+        self.assertEqual(events[0].process, process)
+        self.assertEqual(events[0].event, current_event)
 
     def test_handle_listener_state_busy_gobbles(self):
         options = DummyOptions()

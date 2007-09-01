@@ -848,7 +848,8 @@ class DummyStream:
     def tell(self):
         return len(self.written)
         
-
+class DummyEvent:
+    pass
         
 def lstrip(s):
     strings = [x.strip() for x in s.split('\n')]
