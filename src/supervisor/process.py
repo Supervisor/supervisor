@@ -415,6 +415,8 @@ class Subprocess:
         # if we're an event listener), notify the event system that this
         # event was rejected so it can be processed again.
         if self.event is not None:
+            # Note: this should only be true if we were in the BUSY
+            # state when finish() was called.
             events.notify(events.EventRejectedEvent(self, self.event))
             self.event = None
 
