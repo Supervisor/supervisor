@@ -675,7 +675,14 @@ class logtail_handler:
         while path and path[0] == '/':
             path = path[1:]
 
-        path, process_name = path.split('/', 1)
+        path, process_name_and_channel = path.split('/', 1)
+
+        try:
+            process_name, channel = process_name_and_channel.split('/', 1)
+        except ValueError:
+            # no channel specified, default channel to stdout
+            process_name = process_name_and_channel
+            channel = 'stdout'
 
         from supervisor.options import split_namespec
         group_name, process_name = split_namespec(process_name)
@@ -690,7 +697,7 @@ class logtail_handler:
             request.error(404) # not found
             return
 
-        logfile = process.config.stdout_logfile
+        logfile = getattr(process.config, '%s_logfile' % channel, None)
 
         if logfile is None or not os.path.exists(logfile):
             # XXX problematic: processes that don't start won't have a log

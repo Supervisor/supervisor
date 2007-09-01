@@ -63,7 +63,7 @@ class ControllerTests(unittest.TestCase):
             controller.stdout.getvalue().find('Documented commands') != -1
             )
 
-    def test_tail_noname(self):
+    def test_tail_toofewargs(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
         controller.stdout = StringIO()
@@ -76,12 +76,12 @@ class ControllerTests(unittest.TestCase):
         options = DummyClientOptions()
         controller = self._makeOne(options)
         controller.stdout = StringIO()
-        result = controller.do_tail('one two three')
+        result = controller.do_tail('one two three four')
         self.assertEqual(result, None)
         lines = controller.stdout.getvalue().split('\n')
         self.assertEqual(lines[0], 'Error: too many arguments')
 
-    def test_tail_onearg(self):
+    def test_tail_defaults(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
         controller.stdout = StringIO()
@@ -118,7 +118,7 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0], 'BAD_NAME: ERROR (no such process name)')
 
-    def test_tail_twoargs(self):
+    def test_tail_bytesmodifier(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
         controller.stdout = StringIO()
@@ -127,6 +127,34 @@ class ControllerTests(unittest.TestCase):
         lines = controller.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0], 'tput line')
+
+    def test_tail_explicit_channel_stdout_nomodifier(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_tail('foo stdout')
+        self.assertEqual(result, None)
+        lines = controller.stdout.getvalue().split('\n')
+        self.assertEqual(len(lines), 12)
+        self.assertEqual(lines[0], 'output line')
+
+    def test_tail_explicit_channel_stderr_nomodifier(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_tail('foo stderr')
+        lines = controller.stdout.getvalue().split('\n')
+        self.assertEqual(len(lines), 12)
+        self.assertEqual(lines[0], 'output line')
+
+    def test_tail_explicit_channel_unrecognized(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_tail('foo fudge')
+        self.assertEqual(result, None)
+        value = controller.stdout.getvalue().strip()
+        self.assertEqual(value, "Error: bad channel 'fudge'")
 
     def test_status_oneprocess(self):
         options = DummyClientOptions()

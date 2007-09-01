@@ -16,6 +16,14 @@ Next Release
   - When a listener process exits (unexpectedly) before transitioning
     from the BUSY state, rebuffer the event that was being processed.
 
+  - supervisorctl 'tail' command now accepts a trailing specifier:
+    'stderr' or 'stdout', which respectively, allow a user to tail the
+    stderr or stdout of the named process.  When this specifier is not
+    provided, tail defaults to stdout.
+
+  - supervisor 'clear' command now clears both stderr and stdout logs
+    for the given process.
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

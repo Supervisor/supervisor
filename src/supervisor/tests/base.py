@@ -555,7 +555,7 @@ class DummySupervisorRPCNamespace:
 
     getVersion = getAPIVersion # deprecated
 
-    def readProcessLog(self, name, offset, length):
+    def readProcessStdoutLog(self, name, offset, length):
         from supervisor import xmlrpc
         import xmlrpclib
         if name == 'BAD_NAME':
@@ -566,6 +566,9 @@ class DummySupervisorRPCNamespace:
             raise xmlrpclib.Fault(xmlrpc.Faults.NO_FILE, 'NO_FILE')
         a = 'output line\n' * 10
         return a[offset:]
+
+    readProcessLog = readProcessStdoutLog
+    readProcessStderrLog = readProcessStdoutLog
 
     def getAllProcessInfo(self):
         from supervisor.process import ProcessStates
@@ -690,12 +693,16 @@ class DummySupervisorRPCNamespace:
         from supervisor import xmlrpc
         raise Fault(xmlrpc.Faults.SHUTDOWN_STATE, '')
 
-    def clearProcessLog(self, name):
+    def clearProcessStdoutLog(self, name):
         from xmlrpclib import Fault
         from supervisor import xmlrpc
         if name == 'BAD_NAME':
             raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
         return True
+
+    clearProcessLog = clearProcessStdoutLog
+    clearProcessStderrLog = clearProcessStdoutLog
+    clearProcessLogs = clearProcessStdoutLog
 
     def clearAllProcessLogs(self):
         from supervisor import xmlrpc

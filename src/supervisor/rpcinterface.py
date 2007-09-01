@@ -791,7 +791,7 @@ class SupervisorNamespaceRPCInterface:
         @param string name   The name of the process (or 'group:name')
         @return boolean result      Always True unless error
         """
-        self._update('clearProcessLog')
+        self._update('clearProcessLogs')
 
         group, process = self._getGroupAndProcess(name)
 

@@ -185,54 +185,73 @@ class Controller(cmd.Cmd):
             self.help_tail()
             return
 
-        elif len(args) > 2:
+        elif len(args) > 3:
             self._output('Error: too many arguments')
             self.help_tail()
             return
 
-        elif len(args) == 2:
-            if args[0].startswith('-'):
-                what = args[0][1:]
-                if what == 'f':
-                    path = '/logtail/' + args[1]
-                    return self._tailf(path)
-                try:
-                    what = int(what)
-                except:
-                    self._output('Error: bad argument %s' % args[0])
-                    return
-                else:
-                    bytes = what
-            else:
-                self._output('Error: bad argument %s' % args[0])
-                
-        else:
-            bytes = 1600
+        modifier = None
 
-        processname = args[-1]
-        
+        if args[0].startswith('-'):
+            modifier = args.pop(0)
+
+        if len(args) == 1:
+            processname = args[-1]
+            channel = 'stdout'
+        else:
+            processname = args[0]
+            channel = args[-1].lower()
+            if channel not in ('stderr', 'stdout'):
+                self._output('Error: bad channel %r' % channel)
+                return
+
+        bytes = 1600
+
+        if modifier is not None:
+            what = modifier[1:]
+            if what == 'f':
+                bytes = None
+            else:
+                try:
+                    bytes = int(what)
+                except:
+                    self._output('Error: bad argument %s' % modifier)
+                    return
+
         supervisor = self._get_supervisor()
 
-        try:
-            output = supervisor.readProcessLog(processname, -bytes, 0)
-        except xmlrpclib.Fault, e:
-            template = '%s: ERROR (%s)'
-            if e.faultCode == xmlrpc.Faults.NO_FILE:
-                self._output(template % (processname, 'no log file'))
-            elif e.faultCode == xmlrpc.Faults.FAILED:
-                self._output(template % (processname,
-                                         'unknown error reading log'))
-            elif e.faultCode == xmlrpc.Faults.BAD_NAME:
-                self._output(template % (processname, 'no such process name'))
+        if bytes is None:
+            return self._tailf('/logtail/%s/%s' % (processname, channel))
+
         else:
-            self._output(output)
+            try:
+                if channel is 'stdout':
+                    output = supervisor.readProcessStdoutLog(processname,
+                                                             -bytes, 0)
+                else: # if channel is 'stderr'
+                    output = supervisor.readProcessStderrLog(processname,
+                                                             -bytes, 0)
+            except xmlrpclib.Fault, e:
+                template = '%s: ERROR (%s)'
+                if e.faultCode == xmlrpc.Faults.NO_FILE:
+                    self._output(template % (processname, 'no log file'))
+                elif e.faultCode == xmlrpc.Faults.FAILED:
+                    self._output(template % (processname,
+                                             'unknown error reading log'))
+                elif e.faultCode == xmlrpc.Faults.BAD_NAME:
+                    self._output(template % (processname,
+                                             'no such process name'))
+            else:
+                self._output(output)
 
     def help_tail(self):
         self._output(
-            "tail -f <processname>\tContinuous tail of named process stdout,\n"
+            "tail [-f] <processname> [stdin|stdout] (default stdout)"
+            "Ex:\n"
+            "tail -f <processname>\tContinuous tail of named process stdout\n"
             "\t\t\tCtrl-C to exit.\n"
-            "tail -100 <processname>\tlast 100 *bytes* of process log file\n"
-            "tail <processname>\tlast 1600 *bytes* of process log file\n"
+            "tail -100 <processname>\tlast 100 *bytes* of process stdout\n"
+            "tail <processname> stderr\tlast 1600 *bytes* of process stderr\n"
             )
 
     def do_maintail(self, arg):
@@ -570,7 +589,7 @@ class Controller(cmd.Cmd):
 
             for processname in processnames:
                 try:
-                    result = supervisor.clearProcessLog(processname)
+                    result = supervisor.clearProcessLogs(processname)
                 except xmlrpclib.Fault, e:
                     error = self._clearresult(e.faultCode, processname)
                     if error is not None:
@@ -584,10 +603,10 @@ class Controller(cmd.Cmd):
                         raise # assertion
 
     def help_clear(self):
-        self._output("clear <processname>\t\t\tClear a process' log file.")
+        self._output("clear <processname>\t\t\tClear a process' log files.")
         self._output("clear <processname> <processname>\tclear multiple "
-                     "process log files")
-        self._output("clear all\t\t\t\tClear all process log files")
+                     "process' log files")
+        self._output("clear all\t\t\t\tClear all process' log files")
 
     def do_open(self, arg):
         url = arg.strip()
