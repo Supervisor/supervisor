@@ -68,9 +68,6 @@ class Handler:
     def setLevel(self, level):
         self.level = level
 
-    def format(self, record):
-        return self.fmt % record.__dict__
-
     def flush(self):
         self.stream.flush()
 
@@ -79,7 +76,7 @@ class Handler:
 
     def emit(self, record):
         try:
-            msg = self.format(record)
+            msg = self.fmt % record.__dict__
             try:
                 self.stream.write(msg)
             except UnicodeError:
@@ -188,8 +185,7 @@ class RotatingFileHandler(FileHandler):
         the size limit we have.
         """
         if self.maxBytes > 0:                   # are we rolling over?
-            msg = "%s\n" % self.format(record)
-            self.stream.seek(0, 2)  #due to non-posix-compliant Windows feature
+            msg = self.fmt % record.__dict__
             if self.stream.tell() + len(msg) >= self.maxBytes:
                 return 1
         return 0
