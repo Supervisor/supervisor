@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python -u
 
 ##############################################################################
 #
@@ -31,10 +31,10 @@ def write_stderr(s):
 def main():
     while 1:
         write_stdout('READY\n') # transition from ACKNOWLEDGED to READY
-        line = sys.stdin.readline()  # read a line from stdin from supervisord
+        line = sys.stdin.readline()  # read header line from stdin 
         write_stderr(line) # print it out to stderr (testing only)
-        ver, event, serial, length = line.split(' ', 3) # split into tokens
-        data = sys.stdin.read(int(length)) # read the event payload
+        headers = dict([ x.split(':') for x in line.split() ])
+        data = sys.stdin.read(int(headers['len'])) # read the event payload
         write_stderr(data) # print the event payload to stderr (testing only)
         write_stdout('OK\n') # transition from READY to ACKNOWLEDGED
 

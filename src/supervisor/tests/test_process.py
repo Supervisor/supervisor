@@ -308,7 +308,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         self.assertEqual(options.written,
-             {1: 'supervisor: error trying to setuid to 1 (screwed)\n'})
+             {2: 'supervisor: error trying to setuid to 1 (screwed)\n'})
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options.execv_args,
                          ('/good/filename', ['/good/filename']) )
@@ -328,7 +328,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         self.assertEqual(options.written,
-                         {1: "couldn't exec /good/filename: EPERM\n"})
+                         {2: "couldn't exec /good/filename: EPERM\n"})
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options._exitcode, 127)
 
@@ -345,8 +345,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.pgrp_set, True)
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
-        self.assertEqual(len(options.written), 1)
-        msg = options.written[1]
+        msg = options.written[2] # dict, 2 is fd #
         self.failUnless(msg.startswith("couldn't exec /good/filename:"))
         self.failUnless("exceptions.RuntimeError" in msg)
         self.assertEqual(options.privsdropped, None)
@@ -1079,6 +1078,27 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
             (EventType, pool._dispatchEvent))
         self.assertEqual(events.callbacks[1], 
             (events.EventRejectedEvent, pool.handle_rejected))
+        self.assertEqual(pool.serial, -1)
+
+    def test__eventEnvelope(self):
+        options = DummyOptions()
+        options.identifier = 'thesupervisorname'
+        gconfig = DummyPGroupConfig(options)
+        gconfig.name = 'thepoolname'
+        pool = self._makeOne(gconfig)
+        from supervisor import events
+        result = pool._eventEnvelope(
+            events.EventTypes.PROCESS_COMMUNICATION_STDOUT, 80, 20, 'payload\n')
+        header, payload = result.split('\n', 1)
+        headers = header.split()
+        self.assertEqual(headers[0], 'ver:3.0')
+        self.assertEqual(headers[1], 'server:thesupervisorname')
+        self.assertEqual(headers[2], 'serial:80')
+        self.assertEqual(headers[3], 'pool:thepoolname')
+        self.assertEqual(headers[4], 'poolserial:20')
+        self.assertEqual(headers[5], 'eventname:PROCESS_COMMUNICATION_STDOUT')
+        self.assertEqual(headers[6], 'len:8')
+        self.assertEqual(payload, 'payload\n')
 
     def test_handle_rejected_no_overflow(self):
         from supervisor import events
@@ -1166,9 +1186,26 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         process1.listener_state = EventListenerStates.READY
         from supervisor.events import StartingFromStoppedEvent
         event = StartingFromStoppedEvent(process1)
-        self.assertRaises(OSError, pool._dispatchEvent, event)
-        self.assertEqual(process1.stdin_buffer, '')
+        result = pool._dispatchEvent(event)
+        self.assertEqual(result, False)
         self.assertEqual(process1.listener_state, EventListenerStates.READY)
+        self.assertEqual(pool.event_buffer, [event])
+
+    def test__dispatchEvent_attaches_pool_serial_and_serial(self):
+        from supervisor.process import GlobalSerial
+        options = DummyOptions()
+        gconfig = DummyPGroupConfig(options)
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        pool = self._makeOne(gconfig)
+        process1 = pool.processes['process1']
+        from supervisor.states import EventListenerStates
+        process1.listener_state = EventListenerStates.READY
+        from supervisor.events import StartingFromStoppedEvent
+        event = StartingFromStoppedEvent(process1)
+        self.assertTrue(pool._dispatchEvent(event))
+        self.assertEqual(event.serial, GlobalSerial.serial)
+        self.assertEqual(event.pool_serials['whatever'], pool.serial)
 
     def test_repr(self):
         options = DummyOptions()
@@ -1242,11 +1279,13 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [])
-        buf = process1.stdin_buffer
-        self.assertTrue(buf.startswith(
-            'SUPERVISORD3.0 PROCESS_STATE_CHANGE_STARTING_FROM_STOPPED '))
-        self.assertTrue(buf.endswith(
-            '43\nprocess_name: process1\ngroup_name: whatever'), buf)
+        header, payload = process1.stdin_buffer.split('\n', 1)
+        self.assertEquals(payload,
+            'process_name: process1\ngroup_name: whatever', payload)
+        headers = header.split()
+        self.assertEqual(
+            headers[5],
+            'eventname:PROCESS_STATE_CHANGE_STARTING_FROM_STOPPED')
         self.assertEqual(process1.listener_state, EventListenerStates.BUSY)
         self.assertEqual(process1.event, event)
 

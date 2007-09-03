@@ -533,6 +533,22 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         dispatcher = self._makeOne(process)
         self.assertRaises(NotImplementedError, dispatcher.handle_write_event)
 
+    def test_handle_read_event_calls_handle_listener_state_change(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile='/tmp/foo')
+        process = DummyProcess(config)
+        from supervisor.dispatchers import EventListenerStates
+        process.listener_state = EventListenerStates.ACKNOWLEDGED
+        dispatcher = self._makeOne(process)
+        options.readfd_result = dispatcher.READY_FOR_EVENTS_TOKEN
+        self.assertEqual(dispatcher.handle_read_event(), None)
+        self.assertEqual(process.listener_state, EventListenerStates.READY)
+        self.assertEqual(dispatcher.state_buffer, '')
+        self.assertEqual(len(dispatcher.childlog.data), 1)
+        self.assertEqual(dispatcher.childlog.data[0],
+                         dispatcher.READY_FOR_EVENTS_TOKEN)
+
     def test_handle_read_event_nodata(self):
         options = DummyOptions()
         options.readfd_result = ''
@@ -567,22 +583,6 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         self.assertEqual(len(dispatcher.childlog.data), 1)
         self.assertEqual(dispatcher.childlog.data[0],
                          'supercalifragilisticexpialidocious')
-
-    def test_handle_read_event_calls_handle_listener_state_change(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'process1', '/bin/process1',
-                              stdout_logfile='/tmp/foo')
-        process = DummyProcess(config)
-        from supervisor.dispatchers import EventListenerStates
-        process.listener_state = EventListenerStates.ACKNOWLEDGED
-        dispatcher = self._makeOne(process)
-        options.readfd_result = dispatcher.READY_FOR_EVENTS_TOKEN
-        self.assertEqual(dispatcher.handle_read_event(), None)
-        self.assertEqual(process.listener_state, EventListenerStates.READY)
-        self.assertEqual(dispatcher.state_buffer, '')
-        self.assertEqual(len(dispatcher.childlog.data), 1)
-        self.assertEqual(dispatcher.childlog.data[0],
-                         dispatcher.READY_FOR_EVENTS_TOKEN)
 
     def test_handle_listener_state_change_from_unknown(self):
         options = DummyOptions()

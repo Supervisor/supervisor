@@ -24,6 +24,30 @@ Next Release
   - supervisor 'clear' command now clears both stderr and stdout logs
     for the given process.
 
+  - When a process encounters a spawn error as a result of a failed
+    execve or when it cannot setuid to a given uid, it now puts this
+    info into the process' stderr log rather than its stdout log.
+
+  - The event listener protocol header now contains the 'server'
+    identifier, the 'pool' that the event emanated from, and the
+    'poolserial' as well as the values it previously contained
+    (version, event name, serial, and length).  The server identifier
+    is taken from the config file options value 'identifier', the
+    'pool' value is the name of the listener pool that this event
+    emanates from, and the 'poolserial' is a serial number assigned to
+    the event local to the pool that is processing it.
+
+  - The event listener protocol header is now a sequence of key-value
+    pairs rather than a list of positional values.  Previously, a
+    representative header looked like:
+
+      SUPERVISOR3.0 PROCESS_COMMUNICATION_STDOUT 30 22\n
+
+    Now it looks like:
+
+      ver:3.0 server:supervisor serial:21 ... 
+
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

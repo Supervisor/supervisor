@@ -83,6 +83,10 @@ class Subprocess:
 
     def drain(self):
         for dispatcher in self.dispatchers.values():
+            # note that we *must* call readable() for every
+            # dispatcher, as it may have side effects for a given
+            # dispatcher (eg. call handle_listener_state_change for
+            # event listener processes)
             if dispatcher.readable():
                 dispatcher.handle_read_event()
             if dispatcher.writable():
@@ -255,13 +259,13 @@ class Subprocess:
                     options.dup2(self.pipes['child_stderr'], 2)
                 for i in range(3, options.minfds):
                     options.close_fd(i)
-                # sending to fd 1 will put this output in the log(s)
+                # sending to fd 2 will put this output in the stderr log
                 msg = self.set_uid()
                 if msg:
                     uid = self.config.uid
                     s = 'supervisor: error trying to setuid to %s ' % uid
-                    options.write(1, s)
-                    options.write(1, "(%s)\n" % msg)
+                    options.write(2, s)
+                    options.write(2, "(%s)\n" % msg)
                 try:
                     env = os.environ.copy()
                     env['SUPERVISOR_PROCESS_NAME'] = self.config.name
@@ -272,13 +276,13 @@ class Subprocess:
                     options.execve(filename, argv, env)
                 except OSError, why:
                     code = why[0]
-                    options.write(1, "couldn't exec %s: %s\n" % (
+                    options.write(2, "couldn't exec %s: %s\n" % (
                         argv[0], errno.errorcode.get(code, code)))
                 except:
                     (file, fun, line), t,v,tbinfo = asyncore.compact_traceback()
                     error = '%s, %s: file: %s line: %s' % (t, v, file, line)
-                    options.write(1, "couldn't exec %s: %s\n" % (filename,
-                                                                      error))
+                    options.write(2, "couldn't exec %s: %s\n" % (filename,
+                                                                 error))
             finally:
                 options._exit(127)
 
@@ -588,6 +592,7 @@ class EventListenerPool(ProcessGroupBase):
         for event_type in self.config.pool_events:
             events.subscribe(event_type, self._dispatchEvent)
         events.subscribe(events.EventRejectedEvent, self.handle_rejected)
+        self.serial = -1
 
     def handle_rejected(self, event):
         process = event.process
@@ -608,7 +613,14 @@ class EventListenerPool(ProcessGroupBase):
         # events are required to be instances
         event_type = event.__class__
         if not hasattr(event, 'serial'):
-            event.serial = new_serial()
+            event.serial = new_serial(GlobalSerial)
+        if not hasattr(event, 'pool_serials'):
+            event.pool_serials = {}
+        if not event.pool_serials.has_key(self.config.name):
+            event.pool_serials[self.config.name] = new_serial(self)
+
+        pool_serial = event.pool_serials[self.config.name]
+            
         for process in self.processes.values():
             if process.state != ProcessStates.RUNNING:
                 continue
@@ -616,9 +628,10 @@ class EventListenerPool(ProcessGroupBase):
                 payload = str(event)
                 try:
                     serial = event.serial
-                    envelope = self._eventEnvelope(event_type, serial, payload)
+                    envelope = self._eventEnvelope(event_type, serial,
+                                                   pool_serial, payload)
                     process.write(envelope)
-                except IOError, why:
+                except OSError, why:
                     if why[0] != errno.EPIPE:
                         raise
                     continue
@@ -650,25 +663,34 @@ class EventListenerPool(ProcessGroupBase):
             'buffered event %s for pool %s (bufsize %s)' % (
             (event.serial, self.config.name, len(self.event_buffer))))
 
-    def _eventEnvelope(self, event_type, serial, payload):
+    def _eventEnvelope(self, event_type, serial, pool_serial, payload):
         event_name = events.getEventNameByType(event_type)
         payload_len = len(payload)
-        D = {'ver':'SUPERVISORD3.0',
-             'len':payload_len,
-             'event_name':event_name,
-             'payload':payload,
-             'serial':serial}
-        return '%(ver)s %(event_name)s %(serial)s %(len)s\n%(payload)s' % D
+        D = {
+            'ver':'3.0',
+            'sid':self.config.options.identifier,
+            'serial':serial,
+            'pool_name':self.config.name,
+            'pool_serial':pool_serial,
+            'event_name':event_name,
+            'len':payload_len,
+            'payload':payload,
+             }
+        return ('ver:%(ver)s server:%(sid)s serial:%(serial)s '
+                'pool:%(pool_name)s poolserial:%(pool_serial)s '
+                'eventname:%(event_name)s len:%(len)s\n%(payload)s' % D)
 
-_num = 0
+class GlobalSerial:
+    def __init__(self):
+        self.serial = -1
 
-def new_serial():
-    global _num
-    val = _num
-    if _num == sys.maxint:
-        _num = -1
-    _num = _num + 1
-    return val
+GlobalSerial = GlobalSerial() # singleton
+
+def new_serial(inst):
+    if inst.serial == sys.maxint:
+        inst.serial = -1
+    inst.serial += 1
+    return inst.serial
 
             
     

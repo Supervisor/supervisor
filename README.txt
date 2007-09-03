@@ -12,6 +12,8 @@ History
 
   8/21/2007: updated for version 3.0a2
 
+  9/2/2007:  updated for version 3.0a3
+
 Upgrading
 
   If you are upgrading from supervisor version 2.X to version 3.X, and
@@ -1098,9 +1100,6 @@ Event Listeners (New in 3.0)
   or should flush its stdout every time it needs to communicate back
   to the supervisord process.
 
-  Sample event listeners are present within the supervisor package's
-  'scripts' directory.
-
 Event Listener States
 
   An event listener process has three possible states that are
@@ -1135,29 +1134,40 @@ Event Listener Notification Protocol
 
   When supervisord sends a notification to an event listener process,
   the listener will first be sent a single "header" line on its
-  stdin. The composition of the line is a set of four tokens separated
-  by single spaces.  The line is terminated with a '\n' (linefeed)
-  character.  The tokens on the line are:
+  stdin. The composition of the line is a set of colon-separated
+  tokens (each of which represents a key-value pair) separated from
+  each other by a single space.  The line is terminated with a '\n'
+  (linefeed) character.  The tokens on the line are not guaranteed to
+  be in any particular order.  The types of tokens currently defined
+  are:
 
-  <PROTOCOL_VERSION> <EVENT_TYPE_NAME> <EVENT_SERIAL_NUM> <PAYLOAD_LENGTH>
+   'ver' -- the event listener API protocol version.  An example:
+   "3.0".
 
-  The PROTOCOL_VERSION always consists of "SUPERVISORD" followed
-  immediately by numeric characters indicating the protocol version,
-  with no whitespace in between.  An example: "SUPERVISOR3.0"
+   'server' -- the 'identifier' of the supervisor sending the event
+   (see config file [supervisord] 'identifier' value).  An example:
+   "supervisor".
 
-  The EVENT_TYPE_NAME is the specific event type name (see "Supervisor
-  Events" elsewhere in this document). An example:
-  "PROCESS_COMMUNICATION_STDOUT".
+   'serial' -- an integer assigned to each event.  It is useful for
+   functional testing.  An example: "30".
 
-  The EVENT_SERIAL_NUM is an integer assigned to each event.  It is
-  useful for functional testing.  An example: "30".
+   'pool' -- the name of the event listener pool which generated this
+   event.  An example: "eventpool".
 
-  The PAYLOAD_LENGTH is an integer indicating the number of bytes in
-  the event payload.  An example: "22".
+   'poolserial' -- an integer assigned to each event by the pool which
+   it is being sent from.  This is useful for detecting event ordering
+   anomalies.  An example: "30".
 
-  An example of a complete header line:
+   'eventname' -- the specific event type name (see "Supervisor
+   Events" elsewhere in this document). An example:
+   "PROCESS_COMMUNICATION_STDOUT".
 
-  SUPERVISOR3.0 PROCESS_COMMUNICATION_STDOUT 30 22\n
+   'len' -- an integer indicating the number of bytes in the event
+   payload, aka the PAYLOAD_LENGTH.  An example: "22".
+
+  An example of a complete header line::
+
+    ver:3.0 server:supervisor serial:21 pool:listener poolserial:21 eventname:PROCESS_COMMUNICATION_STDOUT len:54\n
 
   Directly following the linefeed character in the header is the event
   payload.  It consists of PAYLOAD_LENGTH bytes representing a
@@ -1202,31 +1212,36 @@ Event Listener Notification Protocol
 Example Event Listener Implementation
 
   A Python implementation of a "long-running" event listener which
-  accepts an event notification, prints the header and a list of event
-  serial numbers it has received to its stderr, and responds with an
-  OK, and then subsequently a READY is as follows::
+  accepts an event notification, prints the header and payload to its
+  stderr, and responds with an OK, and then subsequently a READY is as
+  follows::
 
     import sys
 
-    L = []
-
-    def stdout_write(s):
+    def write_stdout(s):
         sys.stdout.write(s)
         sys.stdout.flush()
 
-    def stderr_write(s):
+    def write_stderr(s):
         sys.stderr.write(s)
         sys.stderr.flush()
-        
-    while 1:
-        stdout_write('READY\n')
-        line = sys.stdin.readline()
-        stderr_write(line)
-        ver, event, serial, length = line.split(' ', 3)
-        L.append(serial)
-        data = sys.stdin.read(int(length))
-        stderr_write(str(L))
-        stdout_write('OK\n')
+
+    def main():
+        while 1:
+            write_stdout('READY\n') # transition from ACKNOWLEDGED to READY
+            line = sys.stdin.readline()  # read header line from stdin 
+            write_stderr(line) # print it out to stderr
+            headers = dict([ x.split(':') for x in line.split() ])
+            data = sys.stdin.read(int(headers['len'])) # read the event payload
+            write_stderr(data) # print the event payload to stderr
+            write_stdout('OK\n') # transition from READY to ACKNOWLEDGED
+
+    if __name__ == '__main__':
+        main()
+        import sys
+
+  Other sample event listeners are present within the supervisor
+  package's 'scripts' directory.
 
 Event Listener Error Conditions
 

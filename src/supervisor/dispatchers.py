@@ -282,6 +282,7 @@ class PEventListenerDispatcher(PDispatcher):
             # child process has ended.  See
             # mail.python.org/pipermail/python-dev/2004-August/046850.html
             self.close()
+
         self.handle_listener_state_change()
 
     def handle_listener_state_change(self):
