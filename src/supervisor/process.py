@@ -659,7 +659,7 @@ class EventListenerPool(ProcessGroupBase):
         # insert event into 2nd position in list so we don't block pending
         # events for a chronically failed event notification
         self.event_buffer.insert(1, event)
-        self.config.options.logger.info(
+        self.config.options.logger.warn(
             'buffered event %s for pool %s (bufsize %s)' % (
             (event.serial, self.config.name, len(self.event_buffer))))
 
