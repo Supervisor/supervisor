@@ -366,7 +366,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(pconfig.startretries, 100)
         self.assertEqual(pconfig.uid, 0)
         self.assertEqual(pconfig.stdout_logfile, None)
-        self.assertEqual(pconfig.stdout_capturefile, None)
+        self.assertEqual(pconfig.stdout_capture_maxbytes, 0)
         self.assertEqual(pconfig.stdout_logfile_maxbytes, 104857600)
         self.assertEqual(pconfig.stopsignal, signal.SIGKILL)
         self.assertEqual(pconfig.stopwaitsecs, 100)
@@ -685,9 +685,9 @@ class TestProcessConfig(unittest.TestCase):
         defaults = {}
         for name in ('name', 'command', 'priority', 'autostart', 'autorestart',
                      'startsecs', 'startretries', 'uid',
-                     'stdout_logfile', 'stdout_capturefile',
+                     'stdout_logfile', 'stdout_capture_maxbytes',
                      'stdout_logfile_backups', 'stdout_logfile_maxbytes',
-                     'stderr_logfile', 'stderr_capturefile',
+                     'stderr_logfile', 'stderr_capture_maxbytes',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
                      'stopsignal', 'stopwaitsecs', 'exitcodes',
                      'redirect_stderr', 'environment'):

@@ -65,6 +65,21 @@ Next Release
 
   - Improve process communication event performance.
 
+  - The process config parameters 'stdout_capturefile' and
+    'stderr_capturefile' are no longer valid.  They have been replaced
+    with the 'stdout_capture_maxbytes' and 'stderr_capture_maxbytes'
+    parameters, which are meant to be suffix-multipled integers.  They
+    both default to zero.  When they are zero, process communication
+    event capturing is not performed.  When either is nonzero, the
+    value represents the maximum number of bytes that will be captured
+    between process event start and end tags.  This change was to
+    support the fact that we no longer keep capture data in a separate
+    file, we just use a FIFO in RAM to maintain capture info.  For
+    users whom don't care about process communication events, or whom
+    haven't changed the defaults for 'stdout_capturefile' or
+    'stderr_capturefile', they needn't do anything to their
+    configurations to deal with this change.
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

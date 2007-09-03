@@ -633,6 +633,8 @@ class ServerOptions(Options):
         numprocs = integer(get(section, 'numprocs', 1))
         process_name = get(section, 'process_name', '%(program_name)s')
         environment_str = get(section, 'environment', '')
+        stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
+        stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
 
         command = get(section, 'command', None)
         if command is None:
@@ -648,6 +650,7 @@ class ServerOptions(Options):
                     'numprocs > 1')
 
         for n in ('stdout_logfile', 'stderr_logfile'):
+            # do warning
             lf_name = logfile_name(get(section, n, Automatic))
             mb_key = '%s_maxbytes' % n
             maxbytes = byte_size(get(section, mb_key, '50MB'))
@@ -675,12 +678,6 @@ class ServerOptions(Options):
                     val = expand(val, expansions, n)
                 logfiles[n] = val
 
-                n = '%s_capturefile' % k
-                val = logfile_name(get(section, n, None))
-                if isinstance(val, basestring):
-                    val = expand(val, expansions, n)
-                logfiles[n] = val
-
                 bu_key = '%s_logfile_backups' % k
                 backups = integer(get(section, bu_key, 10))
                 logfiles[bu_key] = backups
@@ -700,11 +697,11 @@ class ServerOptions(Options):
                 startretries=startretries,
                 uid=uid,
                 stdout_logfile=logfiles['stdout_logfile'],
-                stdout_capturefile=logfiles['stdout_capturefile'],
+                stdout_capture_maxbytes = stdout_cmaxbytes,
                 stdout_logfile_backups=logfiles['stdout_logfile_backups'],
                 stdout_logfile_maxbytes=logfiles['stdout_logfile_maxbytes'],
                 stderr_logfile=logfiles['stderr_logfile'],
-                stderr_capturefile=logfiles['stderr_capturefile'],
+                stderr_capture_maxbytes = stderr_cmaxbytes,
                 stderr_logfile_backups=logfiles['stderr_logfile_backups'],
                 stderr_logfile_maxbytes=logfiles['stderr_logfile_maxbytes'],
                 stopsignal=stopsignal,
@@ -1300,9 +1297,9 @@ class Config:
 class ProcessConfig(Config):
     def __init__(self, options, name, command, priority, autostart,
                  autorestart, startsecs, startretries, uid,
-                 stdout_logfile, stdout_capturefile,
+                 stdout_logfile, stdout_capture_maxbytes,
                  stdout_logfile_backups, stdout_logfile_maxbytes,
-                 stderr_logfile, stderr_capturefile,
+                 stderr_logfile, stderr_capture_maxbytes,
                  stderr_logfile_backups, stderr_logfile_maxbytes,
                  stopsignal, stopwaitsecs, exitcodes, redirect_stderr,
                  environment=None):
@@ -1316,11 +1313,11 @@ class ProcessConfig(Config):
         self.startretries = startretries
         self.uid = uid
         self.stdout_logfile = stdout_logfile
-        self.stdout_capturefile = stdout_capturefile
+        self.stdout_capture_maxbytes = stdout_capture_maxbytes
         self.stdout_logfile_backups = stdout_logfile_backups
         self.stdout_logfile_maxbytes = stdout_logfile_maxbytes
         self.stderr_logfile = stderr_logfile
-        self.stderr_capturefile = stderr_capturefile
+        self.stderr_capture_maxbytes = stderr_capture_maxbytes
         self.stderr_logfile_backups = stderr_logfile_backups
         self.stderr_logfile_maxbytes = stderr_logfile_maxbytes
         self.stopsignal = stopsignal
@@ -1338,10 +1335,6 @@ class ProcessConfig(Config):
             self.stdout_logfile = get_autoname(name, sid, 'stdout')
         if self.stderr_logfile is Automatic:
             self.stderr_logfile = get_autoname(name, sid, 'stderr')
-        if self.stdout_capturefile is Automatic:
-            self.stdout_capturefile = get_autoname(name, sid, 'stdout_capture')
-        if self.stderr_capturefile is Automatic:
-            self.stderr_capturefile = get_autoname(name, sid, 'stderr_capture')
             
     def make_process(self, group=None):
         from supervisor.process import Subprocess

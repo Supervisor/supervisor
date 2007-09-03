@@ -60,7 +60,7 @@ class POutputDispatcherTests(unittest.TestCase):
         options = DummyOptions()
         options.readfd_result = 'abc'
         config = DummyPConfig(options, 'process1', '/bin/process1',
-                              stdout_capturefile='abc')
+                              stdout_capture_maxbytes=100)
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         self.assertEqual(dispatcher.handle_read_event(), None)
@@ -85,7 +85,7 @@ class POutputDispatcherTests(unittest.TestCase):
         from StringIO import StringIO
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile='/tmp/foo',
-                              stdout_capturefile='/tmp/capture')
+                              stdout_capture_maxbytes=500)
         process = DummyProcess(config)
         process.pid = 4000
         dispatcher = self._makeOne(process)
@@ -147,7 +147,7 @@ class POutputDispatcherTests(unittest.TestCase):
         options = DummyOptions()
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile='/tmp/foo',
-                              stdout_capturefile='/tmp/capture')
+                              stdout_capture_maxbytes=100)
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         dispatcher.output_buffer = 'stdout string longer than a token'
@@ -164,7 +164,7 @@ class POutputDispatcherTests(unittest.TestCase):
         options = DummyOptions()
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile='/tmp/foo',
-                              stdout_capturefile='/tmp/capture')
+                              stdout_capture_maxbytes=100)
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         dispatcher.output_buffer = 'a'
@@ -188,12 +188,9 @@ class POutputDispatcherTests(unittest.TestCase):
         from supervisor.loggers import getLogger
         options.getLogger = getLogger # actually use real logger
         logfile = '/tmp/log'
-        capturefile = '/tmp/capture'
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile=logfile,
-                              stdout_capturefile=capturefile)
-        config.stdout_logfile = logfile
-        config.capturefile = capturefile
+                              stdout_capture_maxbytes=1000)
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
 
@@ -214,10 +211,6 @@ class POutputDispatcherTests(unittest.TestCase):
         finally:
             try:
                 os.remove(logfile)
-            except (OSError, IOError):
-                pass
-            try:
-                os.remove(capturefile)
             except (OSError, IOError):
                 pass
         
@@ -245,12 +238,9 @@ class POutputDispatcherTests(unittest.TestCase):
         from supervisor.loggers import getLogger
         options.getLogger = getLogger # actually use real logger
         logfile = '/tmp/log'
-        capturefile = '/tmp/capture'
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile=logfile,
-                              stdout_capturefile=capturefile)
-        config.stdout_logfile = logfile
-        config.capturefile = capturefile
+                              stdout_capture_maxbytes=10000)
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         try:
@@ -286,10 +276,6 @@ class POutputDispatcherTests(unittest.TestCase):
                 os.remove(logfile)
             except (OSError, IOError):
                 pass
-            try:
-                os.remove(capturefile)
-            except (OSError, IOError):
-                pass
 
     def test_strip_ansi(self):
         options = DummyOptions()
@@ -321,7 +307,6 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.process, process)
         self.assertEqual(dispatcher.channel, 'stdout')
         self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(dispatcher.capturefile, None)
         self.assertEqual(dispatcher.capturelog, None)
         self.assertEqual(dispatcher.mainlog, None)
         self.assertEqual(dispatcher.childlog, None)
@@ -335,7 +320,6 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.process, process)
         self.assertEqual(dispatcher.channel, 'stdout')
         self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(dispatcher.capturefile, None)
         self.assertEqual(dispatcher.capturelog, None)
         self.assertEqual(dispatcher.mainlog.__class__, DummyLogger)
         self.assertEqual(dispatcher.childlog, dispatcher.mainlog)
@@ -343,13 +327,12 @@ class POutputDispatcherTests(unittest.TestCase):
     def test_ctor_capturelog_only(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'process1', '/bin/process1',
-                              stdout_capturefile='/tmp/foo')
+                              stdout_capture_maxbytes=300)
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         self.assertEqual(dispatcher.process, process)
         self.assertEqual(dispatcher.channel, 'stdout')
         self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(dispatcher.capturefile, '/tmp/foo')
         self.assertEqual(dispatcher.capturelog.__class__,DummyLogger)
         self.assertEqual(dispatcher.mainlog, None)
         self.assertEqual(dispatcher.childlog, None)
@@ -362,7 +345,6 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.process, process)
         self.assertEqual(dispatcher.channel, 'stdout')
         self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(dispatcher.capturefile, None)
         self.assertEqual(dispatcher.capturelog, None)
         self.assertEqual(dispatcher.mainlog, None)
         self.assertEqual(dispatcher.childlog, None)

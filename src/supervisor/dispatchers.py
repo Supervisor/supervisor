@@ -68,7 +68,6 @@ class POutputDispatcher(PDispatcher):
     capturemode = False # are we capturing process event data
     mainlog = None #  the process' "normal" logger
     capturelog = None # the logger while we're in capturemode
-    capturefile = None # the capture file name
     childlog = None # the current logger (event or main)
     output_buffer = '' # data waiting to be logged
 
@@ -79,7 +78,8 @@ class POutputDispatcher(PDispatcher):
         self.channel = channel = self.event_type.channel
 
         logfile = getattr(process.config, '%s_logfile' % channel)
-        capturefile = getattr(process.config, '%s_capturefile' % channel)
+        capture_maxbytes = getattr(process.config,
+                                   '%s_capture_maxbytes' % channel)
 
         if logfile:
             maxbytes = getattr(process.config, '%s_logfile_maxbytes' % channel)
@@ -92,14 +92,13 @@ class POutputDispatcher(PDispatcher):
                 maxbytes=maxbytes,
                 backups=backups)
 
-        if capturefile:
-            self.capturefile = capturefile
+        if capture_maxbytes:
             self.capturelog = self.process.config.options.getLogger(
                 None, # BoundIO
                 loggers.LevelsByName.INFO,
                 '%(message)s',
                 rotating=False,
-                maxbytes=1 << 21, #2MB
+                maxbytes=capture_maxbytes,
                 )
 
         self.childlog = self.mainlog
@@ -177,7 +176,6 @@ class POutputDispatcher(PDispatcher):
             if self.capturemode:
                 self.childlog = self.capturelog
             else:
-                capturefile = self.capturefile
                 for handler in self.capturelog.handlers:
                     handler.flush()
                 data = self.capturelog.getvalue()

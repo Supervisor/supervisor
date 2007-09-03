@@ -394,11 +394,11 @@ Configuration File '[program:x]' Section Settings
     stdout_logfile=AUTO
     stdout_logfile_maxbytes=50MB
     stdout_logfile_backups=10
-    stdout_capturefile=NONE
+    stdout_capture_maxbytes=1MB
     stderr_logfile=AUTO
     stderr_logfile_maxbytes=50MB
     stderr_logfile_backups=10
-    stderr_capturefile=NONE
+    stderr_capture_maxbytes=1MB
     environment=A=1,B=2
 
   '[program:foo]' -- the section header, required for each program.
@@ -514,13 +514,12 @@ Configuration File '[program:x]' Section Settings
   this to 0 to indicate an unlimited number of backups.  Default: 10.
   (New in 3.0, replaces "logfile_backups")
 
-  'stdout_capturefile' -- file written to when process is in "stdout
-  capture mode" (see "Capture Mode and Process Communication Events"
-  later in this document).  May be a file path, NONE, or AUTO.  The
-  stdout_capturefile value can contain Python string expressions that
-  will evaluated against a dictionary that contains the keys
-  "process_num", "program_name" and "group_name".  Default: NONE.
-  (New in 3.0)
+  'stdout_capture_maxbytes' -- max number of bytes written to FIFO
+  when process is in "stdout capture mode" (see "Capture Mode and
+  Process Communication Events" later in this document).  Should be an
+  integer (suffix multipliers like "KB", "MB" and "GB" can used in the
+  value).  If this value is 0, process capture mode will be off.
+  Default: 0.  (New in 3.0)
 
   'stderr_logfile' -- Put process stderr output in this file unless
   redirect_stderr is true.  Accepts the same value types as
@@ -535,11 +534,12 @@ Configuration File '[program:x]' Section Settings
   resulting from process stderr log file rotation.  Default: 10.  (New
   in 3.0)
 
-  'stderr_capturefile' -- file written to when process is in "stderr
-  capture mode" (see "Capture Mode and Process Communication Events"
-  later in this document).  May contain the same Python string
-  expressions as "stdout_capturefile". May be a file path, NONE, or
-  AUTO.  Default: NONE.  (New in 3.0)
+  'stderr_capture_maxbytes' -- max number of bytes written to FIFO
+  when process is in "stderr capture mode" (see "Capture Mode and
+  Process Communication Events" later in this document).  Should be an
+  integer (suffix multipliers like "KB", "MB" and "GB" can used in the
+  value).  If this value is 0, process capture mode will be off.
+  Default: 0.  (New in 3.0)
 
   'environment' -- A list of key/value pairs in the form
   "KEY=val,KEY2=val2" that will be placed in the child process'
@@ -633,10 +633,10 @@ Configuration File '[eventlistener:x]' Section Settings (New in 3.0)
     environment=A=1,B=2
 
   Note that all the options available to '[program:x]' sections are
-  respected by eventlistener sections except for "stdout_capturefile"
-  and "stderr_capturefile" (event listeners cannot emit process
-  communication events, see "Capture Mode and Process Communication
-  Events" elsewhere in this document).
+  respected by eventlistener sections except for
+  "stdout_capture_maxbytes" and "stderr_capture_maxbytes" (event
+  listeners cannot emit process communication events, see "Capture
+  Mode and Process Communication Events" elsewhere in this document).
 
   '[eventlistener:x]' sections have two keys which '[program:x]'
   sections do not have:
@@ -1257,26 +1257,31 @@ Event Listener Error Conditions
 Capture Mode and Process Communication Events (New in 3.0)
 
   If a '[program:x]' section in the configuration file defines a
-  "stdout_capturefile" or "stderr_capturefile" parameter, each process
-  represented by the program section may emit special tokens on its
-  stdout or stderr stream (respectively) which will effectively cause
-  supervisor to emit a "PROCESS_COMMUNICATION" event type.
+  non-zero "stdout_capture_maxbytes" or "stderr_capture_maxbytes"
+  parameter, each process represented by the program section may emit
+  special tokens on its stdout or stderr stream (respectively) which
+  will effectively cause supervisor to emit a "PROCESS_COMMUNICATION"
+  event type.
 
   The process communications protocol relies on two tags, one which
   commands supervisor to enter "capture mode" for the stream and one
   which commands it to exit.  When a process stream enters "capture
-  mode", data sent to the stream will be sent to a separate logfile
-  (the "capturefile").  When a process stream exits capture mode, the
-  data in the capturefile is read into memory (a maximum of 2MB), and
-  a PROCESS_COMMUNICATION event is emitted by supervisor, which may be
-  intercepted by event listeners.
+  mode", data sent to the stream will be sent to a separate buffer in
+  memory, the "capture buffer", which is allowed to contain a maximum
+  of 'capture_maxbytes'.  During capture mode, when the buffer's
+  length exceeds 'capture_maxbytes' bytes, the earliest data in the
+  buffer is discarded to make room for new data.  When a process
+  stream exits capture mode, the data in the capture buffer is read
+  into memory, and a PROCESS_COMMUNICATION event is emitted by
+  supervisor, which may be intercepted by event listeners.
 
   The tag to begin "capture mode" in a process stream is
   '<!--XSUPERVISOR:BEGIN-->'.  The tag to exit capture mode is
   '<!--XSUPERVISOR:END-->'.  The data between these tags may be
   arbitrary, and forms the payload of the PROCESS_COMMUNICATION event.
-  For example, if a program is set up with a stdout_capturefile, and
-  it emits the following on its stdout stream::
+  For example, if a program is set up with (e.g.) a
+  stdout_capture_maxbytes=1MB, and it emits the following on its
+  stdout stream::
 
     <!--XSUPERVISOR:BEGIN-->Hello!<!--XSUPERVISOR:END-->
 

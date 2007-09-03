@@ -399,9 +399,9 @@ class DummyProcess:
 class DummyPConfig:
     def __init__(self, options, name, command, priority=999, autostart=True,
                  autorestart=True, startsecs=10, startretries=999,
-                 uid=None, stdout_logfile=None, stdout_capturefile=None,
+                 uid=None, stdout_logfile=None, stdout_capture_maxbytes=0,
                  stdout_logfile_backups=0, stdout_logfile_maxbytes=0,
-                 stderr_logfile=None, stderr_capturefile=None,
+                 stderr_logfile=None, stderr_capture_maxbytes=0,
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10,
@@ -416,11 +416,11 @@ class DummyPConfig:
         self.startretries = startretries
         self.uid = uid
         self.stdout_logfile = stdout_logfile
-        self.stdout_capturefile = stdout_capturefile
+        self.stdout_capture_maxbytes = stdout_capture_maxbytes
         self.stdout_logfile_backups = stdout_logfile_backups
         self.stdout_logfile_maxbytes = stdout_logfile_maxbytes
         self.stderr_logfile = stderr_logfile
-        self.stderr_capturefile = stderr_capturefile
+        self.stderr_capture_maxbytes = stderr_capture_maxbytes
         self.stderr_logfile_backups = stderr_logfile_backups
         self.stderr_logfile_maxbytes = stderr_logfile_maxbytes
         self.redirect_stderr = redirect_stderr
