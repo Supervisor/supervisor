@@ -62,6 +62,7 @@ class DummyOptions:
         self.existing = []
         self.openreturn = None
         self.readfd_result = ''
+        self.parse_warnings = []
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -96,8 +97,8 @@ class DummyOptions:
     def get_socket_map(self):
         return self.socket_map
 
-    def make_logger(self, critical_msgs, info_msgs):
-        self.make_logger_messages = critical_msgs, info_msgs
+    def make_logger(self, critical_msgs, warn_msgs, info_msgs):
+        self.make_logger_messages = critical_msgs, warn_msgs, info_msgs
 
     def clear_autochildlogdir(self):
         self.autochildlogdir_cleared = True

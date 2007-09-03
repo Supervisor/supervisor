@@ -70,16 +70,19 @@ class Supervisor:
         self.options.cleanup_fds()
         info_messages = []
         critical_messages = []
+        warn_messages = []
         setuid_msg = self.options.set_uid()
         if setuid_msg:
             critical_messages.append(setuid_msg)
         if first:
             rlimit_messages = self.options.set_rlimits()
             info_messages.extend(rlimit_messages)
+            warn_messages.extend(self.options.parse_warnings)
 
         # this sets the options.logger object
         # delay logger instantiation until after setuid
-        self.options.make_logger(critical_messages, info_messages)
+        self.options.make_logger(critical_messages, warn_messages,
+                                 info_messages)
 
         if not self.options.nocleanup:
             # clean up old automatic logs

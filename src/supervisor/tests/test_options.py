@@ -441,11 +441,11 @@ class ServerOptionsTests(unittest.TestCase):
         instance.logger = DummyLogger()
         config.read_string(text)
         processes = instance.processes_from_section(config, 'program:foo', None)
-        self.assertEqual(instance.logger.data[0],
+        self.assertEqual(instance.parse_warnings[0],
              'For [program:foo], AUTO logging used for stdout_logfile '
              'without rollover, set maxbytes > 0 to avoid filling up '
               'filesystem unintentionally')
-        self.assertEqual(instance.logger.data[1],
+        self.assertEqual(instance.parse_warnings[1],
              'For [program:foo], AUTO logging used for stderr_logfile '
              'without rollover, set maxbytes > 0 to avoid filling up '
               'filesystem unintentionally')

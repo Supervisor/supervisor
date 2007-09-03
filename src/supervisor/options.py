@@ -385,6 +385,7 @@ class ServerOptions(Options):
         self.add("environment", "supervisord.environment", "b:", "environment=",
                  dict_of_key_value_pairs)
         self.pidhistory = {}
+        self.parse_warnings = []
 
     def getLogger(self, filename, level, fmt, rotating=False, maxbytes=0,
                   backups=0, stdout=False):
@@ -651,7 +652,7 @@ class ServerOptions(Options):
             mb_key = '%s_maxbytes' % n
             maxbytes = byte_size(get(section, mb_key, '50MB'))
             if not maxbytes and lf_name is Automatic:
-                self.logger.warn(
+                self.parse_warnings.append(
                     'For [%s], AUTO logging used for %s without '
                     'rollover, set maxbytes > 0 to avoid filling up '
                     'filesystem unintentionally' % (section, n))
@@ -1044,7 +1045,7 @@ class ServerOptions(Options):
                     self.usage(msg % locals())
         return msgs
 
-    def make_logger(self, critical_messages, info_messages):
+    def make_logger(self, critical_messages, warn_messages, info_messages):
         # must be called after realize() and after supervisor does setuid()
         format =  '%(asctime)s %(levelname)s %(message)s\n'
         self.logger = loggers.getLogger(
@@ -1058,6 +1059,8 @@ class ServerOptions(Options):
             )
         for msg in critical_messages:
             self.logger.critical(msg)
+        for msg in warn_messages:
+            self.logger.warn(msg)
         for msg in info_messages:
             self.logger.info(msg)
 

@@ -34,7 +34,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(options.fds_cleaned_up, True)
         self.assertEqual(options.rlimits_set, True)
         self.assertEqual(options.make_logger_messages,
-                         (['setuid_called'], ['rlimits_set']))
+                         (['setuid_called'], [], ['rlimits_set']))
         self.assertEqual(options.autochildlogdir_cleared, True)
         self.assertEqual(len(supervisord.process_groups), 1)
         self.assertEqual(supervisord.process_groups['foo'].config.options,
