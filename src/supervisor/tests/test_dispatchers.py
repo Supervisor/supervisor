@@ -79,26 +79,10 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertTrue(result.startswith(
             'uncaptured python exception, closing channel'),result)
 
-    def test_toggle_capturemode_buffer_overrun(self):
-        executable = '/bin/cat'
-        options = DummyOptions()
-        from StringIO import StringIO
-        options.openreturn = StringIO('a' * (3 << 20)) # > 2MB
-        config = DummyPConfig(options, 'process1', '/bin/process1',
-                              stdout_logfile='/tmp/foo',
-                              stdout_capturefile='/tmp/capture')
-        process = DummyProcess(config)
-        dispatcher = self._makeOne(process)
-        dispatcher.capturemode = True
-        dispatcher.toggle_capturemode()
-        result = options.logger.data[0]
-        self.failUnless(result.startswith('Truncated oversized'), result)
-
     def test_toggle_capturemode_sends_event(self):
         executable = '/bin/cat'
         options = DummyOptions()
         from StringIO import StringIO
-        options.openreturn = StringIO('hallooo')
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile='/tmp/foo',
                               stdout_capturefile='/tmp/capture')
@@ -106,6 +90,7 @@ class POutputDispatcherTests(unittest.TestCase):
         process.pid = 4000
         dispatcher = self._makeOne(process)
         dispatcher.capturemode = True
+        dispatcher.capturelog.data = ['hallooo']
         L = []
         def doit(event):
             L.append(event)

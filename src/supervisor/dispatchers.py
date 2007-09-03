@@ -1,10 +1,10 @@
-import logging
 import errno
 from asyncore import compact_traceback
 
 from supervisor.events import notify
 from supervisor.events import EventRejectedEvent
 from supervisor.states import EventListenerStates
+from supervisor import loggers
 
 def find_prefix_at_end(haystack, needle):
     l = len(needle) - 1
@@ -86,7 +86,7 @@ class POutputDispatcher(PDispatcher):
             backups = getattr(process.config, '%s_logfile_backups' % channel)
             self.mainlog = process.config.options.getLogger(
                 logfile,
-                logging.INFO,
+                loggers.LevelsByName.INFO,
                 '%(message)s',
                 rotating=not not maxbytes, # optimization
                 maxbytes=maxbytes,
@@ -95,12 +95,12 @@ class POutputDispatcher(PDispatcher):
         if capturefile:
             self.capturefile = capturefile
             self.capturelog = self.process.config.options.getLogger(
-                capturefile,
-                logging.INFO,
+                None, # BoundIO
+                loggers.LevelsByName.INFO,
                 '%(message)s',
-                rotating=True,
+                rotating=False,
                 maxbytes=1 << 21, #2MB
-                backups=10)
+                )
 
         self.childlog = self.mainlog
 
@@ -130,8 +130,9 @@ class POutputDispatcher(PDispatcher):
                 data = config.options.stripEscapes(data)
             if self.childlog:
                 self.childlog.info(data)
-            msg = '%r %s output:\n%s' % (config.name, self.channel, data)
-            self.process.config.options.logger.trace(msg)
+            msg = '%(name)r %(channel)s output:\n%(data)s'
+            self.process.config.options.logger.trace(
+                msg, name=config.name, channel=self.channel, data=data)
 
     def record_output(self):
         if self.capturelog is None:
@@ -171,7 +172,7 @@ class POutputDispatcher(PDispatcher):
 
     def toggle_capturemode(self):
         self.capturemode = not self.capturemode
-
+    
         if self.capturelog is not None:
             if self.capturemode:
                 self.childlog = self.capturelog
@@ -179,28 +180,16 @@ class POutputDispatcher(PDispatcher):
                 capturefile = self.capturefile
                 for handler in self.capturelog.handlers:
                     handler.flush()
-                data = ''
-                f = self.process.config.options.open(capturefile, 'r')
-                while 1:
-                    new = f.read(1<<20) # 1MB
-                    data += new
-                    if not new:
-                        break
-                    if len(data) > (1 << 21): #2MB
-                        data = data[:1<<21]
-                        # DWIM: don't overrun memory
-                        self.process.config.options.logger.info(
-                            'Truncated oversized EVENT mode log to 2MB')
-                        break 
-
+                data = self.capturelog.getvalue()
                 channel = self.channel
                 procname = self.process.config.name
                 event = self.event_type(self.process, self.process.pid, data)
                 notify(event)
                                         
-                msg = "%r %s emitted a comm event" % (procname, channel)
-                self.process.config.options.logger.trace(msg)
-                                        
+                msg = "%(procname)r %(channel)s emitted a comm event"
+                self.process.config.options.logger.trace(msg,
+                                                         procname=procname,
+                                                         channel=channel)
                 for handler in self.capturelog.handlers:
                     handler.remove()
                     handler.reopen()
@@ -251,7 +240,7 @@ class PEventListenerDispatcher(PDispatcher):
             backups = getattr(process.config, '%s_logfile_backups' % channel)
             self.childlog = process.config.options.getLogger(
                 logfile,
-                logging.INFO,
+                loggers.LevelsByName.INFO,
                 '%(message)s',
                 rotating=not not maxbytes, # optimization
                 maxbytes=maxbytes,

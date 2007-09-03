@@ -76,7 +76,7 @@ class Handler:
 
     def emit(self, record):
         try:
-            msg = self.fmt % record.__dict__
+            msg = self.fmt % record.asdict()
             try:
                 self.stream.write(msg)
             except UnicodeError:
@@ -104,19 +104,46 @@ class FileHandler(Handler):
         self.stream = open(self.baseFilename, self.mode)
 
     def remove(self):
-        if os.path.exists(self.baseFilename):
+        try:
             os.remove(self.baseFilename)
+        except OSError, why:
+            if why[0] != errno.ENOENT:
+                raise
 
 class StreamHandler(Handler):
     def __init__(self, strm=None):
         self.stream = strm
         
     def remove(self):
-        pass
+        if hasattr(self.stream, 'clear'):
+            self.stream.clear()
 
     def reopen(self):
         pass
 
+class BoundIO:
+    def __init__(self, maxbytes, buf=''):
+        self.maxbytes = maxbytes
+        self.buf = buf
+
+    def flush(self):
+        pass
+
+    def close(self):
+        self.clear()
+
+    def write(self, s):
+        slen = len(s)
+        if len(self.buf) + slen > self.maxbytes:
+            self.buf = self.buf[slen:]
+        self.buf += s
+
+    def getvalue(self):
+        return self.buf
+
+    def clear(self):
+        self.buf = ''
+            
 class RotatingFileHandler(FileHandler):
     def __init__(self, filename, mode='a', maxBytes=512*1024*1024,
                  backupCount=10):
@@ -145,6 +172,8 @@ class RotatingFileHandler(FileHandler):
         FileHandler.__init__(self, filename, mode)
         self.maxBytes = maxBytes
         self.backupCount = backupCount
+        self.counter = 0
+        self.every = 10
 
     def emit(self, record):
         """
@@ -185,37 +214,32 @@ class RotatingFileHandler(FileHandler):
         the size limit we have.
         """
         if self.maxBytes > 0:                   # are we rolling over?
-            msg = self.fmt % record.__dict__
+            msg = self.fmt % record.asdict()
             if self.stream.tell() + len(msg) >= self.maxBytes:
                 return 1
         return 0
 
 class LogRecord:
-    def __init__(self, level, msg, exc_info):
+    def __init__(self, level, msg, **kw):
         self.level = level
-        self.levelname = getLevelNameByNumber(level)
-        if exc_info:
-            self.exc_text = self.formatException(exc_info)
-        now = time.time()
-        msecs = (now - long(now)) * 1000
-        part1 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
-        self.asctime = '%s,%03d' % (part1, msecs)
-        self.message = msg
+        self.msg = msg
+        self.kw = kw
+        self.dictrepr = None
 
-    def formatException(self, ei):
-        """
-        Format and return the specified exception information as a string.
-
-        This default implementation just uses
-        traceback.print_exception()
-        """
-        sio = cStringIO.StringIO()
-        traceback.print_exception(ei[0], ei[1], ei[2], None, sio)
-        s = sio.getvalue()
-        sio.close()
-        if s[-1] == "\n":
-            s = s[:-1]
-        return s
+    def asdict(self):
+        if self.dictrepr is None:
+            now = time.time()
+            msecs = (now - long(now)) * 1000
+            part1 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
+            asctime = '%s,%03d' % (part1, msecs)
+            levelname = getLevelNameByNumber(self.level)
+            if self.kw:
+                msg = self.msg % self.kw
+            else:
+                msg = self.msg
+            self.dictrepr = {'message':msg, 'levelname':levelname,
+                             'asctime':asctime}
+        return self.dictrepr
 
 class Logger:
     def __init__(self, level=None, handlers=None):
@@ -225,35 +249,35 @@ class Logger:
         else:
             self.handlers = handlers
 
-    def trace(self, msg, **kwargs):
+    def trace(self, msg, **kw):
         if LevelsByName.TRAC >= self.level:
-            self._log(LevelsByName.TRAC, msg, **kwargs)
+            self._log(LevelsByName.TRAC, msg, **kw)
     
-    def debug(self, msg, **kwargs):
+    def debug(self, msg, **kw):
         if LevelsByName.DEBG >= self.level:
-            self._log(LevelsByName.DEBG, msg, **kwargs)
+            self._log(LevelsByName.DEBG, msg, **kw)
     
-    def info(self, msg, **kwargs):
+    def info(self, msg, **kw):
         if LevelsByName.INFO >= self.level:
-            self._log(LevelsByName.INFO, msg, **kwargs)
+            self._log(LevelsByName.INFO, msg, **kw)
 
-    def warn(self, msg, **kwargs):
+    def warn(self, msg, **kw):
         if LevelsByName.WARN >= self.level:
-            self._log(LevelsByName.WARN, msg, **kwargs)
+            self._log(LevelsByName.WARN, msg, **kw)
 
-    def error(self, msg, **kwargs):
+    def error(self, msg, **kw):
         if LevelsByName.ERRO >= self.level:
-            self._log(LevelsByName.ERRO, msg, **kwargs)
+            self._log(LevelsByName.ERRO, msg, **kw)
 
-    def critical(self, msg, **kwargs):
+    def critical(self, msg, **kw):
         if LevelsByName.CRIT >= self.level:
-            self._log(LevelsByName.CRIT, msg, **kwargs)
+            self._log(LevelsByName.CRIT, msg, **kw)
 
-    def log(self, level, msg, **kwargs):
-        self._log(level, msg, **kwargs)
+    def log(self, level, msg, **kw):
+        self._log(level, msg, **kw)
 
-    def _log(self, level, msg, exc_info=None):
-        record = LogRecord(level, msg, exc_info)
+    def _log(self, level, msg, **kw):
+        record = LogRecord(level, msg, **kw)
         for handler in self.handlers:
             if record.level >= handler.level:
                 handler.emit(record)
@@ -261,15 +285,28 @@ class Logger:
     def addHandler(self, hdlr):
         self.handlers.append(hdlr)
 
+    def getvalue(self):
+        raise NotImplementedError
+
 def getLogger(filename, level, fmt, rotating=False, maxbytes=0, backups=0,
               stdout=False):
 
     handlers = []
 
-    if rotating is False:
-        handlers.append(FileHandler(filename))
+    logger = Logger(level)
+    
+    if filename is None:
+        if not maxbytes:
+            maxbytes = 1<<21 #2MB
+        io = BoundIO(maxbytes)
+        handlers.append(StreamHandler(io))
+        logger.getvalue = io.getvalue
+
     else:
-        handlers.append(RotatingFileHandler(filename,'a',maxbytes,backups))
+        if rotating is False:
+            handlers.append(FileHandler(filename))
+        else:
+            handlers.append(RotatingFileHandler(filename,'a',maxbytes,backups))
 
     if stdout:
         handlers.append(StreamHandler(sys.stdout))
@@ -277,8 +314,7 @@ def getLogger(filename, level, fmt, rotating=False, maxbytes=0, backups=0,
     for handler in handlers:
         handler.setFormat(fmt)
         handler.setLevel(level)
+        logger.addHandler(handler)
 
-    logger = Logger(level, handlers)
-    
     return logger
 

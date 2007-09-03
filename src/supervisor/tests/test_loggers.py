@@ -168,6 +168,34 @@ class RotatingFileHandlerTests(FileHandlerTests):
         two = open(self.filename+ '.2','r').read()
         self.assertEqual(two, 'a'*8)
 
+class BoundIOTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.loggers import BoundIO
+        return BoundIO
+
+    def _makeOne(self, maxbytes, buf=''):
+        klass = self._getTargetClass()
+        return klass(maxbytes, buf)
+
+    def test_write_overflow(self):
+        io = self._makeOne(1, 'a')
+        io.write('b')
+        self.assertEqual(io.buf, 'b')
+
+    def test_getvalue(self):
+        io = self._makeOne(1, 'a')
+        self.assertEqual(io.getvalue(), 'a')
+
+    def test_clear(self):
+        io = self._makeOne(1, 'a')
+        io.clear()
+        self.assertEqual(io.buf, '')
+
+    def test_close(self):
+        io = self._makeOne(1, 'a')
+        io.close()
+        self.assertEqual(io.buf, '')
+
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
 

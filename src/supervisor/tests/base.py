@@ -237,9 +237,10 @@ class DummyLogger:
         self.closed = False
         self.data = []
 
-    def info(self, *args):
-        for arg in args:
-            self.data.append(arg)
+    def info(self, msg, **kw):
+        if kw:
+            msg = msg % kw
+        self.data.append(msg)
     warn = log = debug = critical = trace = info
     def reopen(self):
         self.reopened = True
@@ -249,6 +250,8 @@ class DummyLogger:
         self.removed = True
     def flush(self):
         self.flushed = True
+    def getvalue(self):
+        return ''.join(self.data)
 
 
 class DummySupervisor:

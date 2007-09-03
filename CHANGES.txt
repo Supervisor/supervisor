@@ -63,6 +63,8 @@ Next Release
   - Fix crash on start if AUTO logging is used with a max_bytes of
     zero for a process.
 
+  - Improve process communication event performance.
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

@@ -213,7 +213,8 @@ class Supervisor:
                     try:
                         dispatcher = combined_map[fd]
                         self.options.logger.trace(
-                            'read event caused by %s' % dispatcher)
+                            'read event caused by %(dispatcher)s',
+                            dispatcher=dispatcher)
                         dispatcher.handle_read_event()
                     except asyncore.ExitNow:
                         raise
@@ -225,7 +226,8 @@ class Supervisor:
                     try:
                         dispatcher = combined_map[fd]
                         self.options.logger.trace(
-                            'write event caused by %s' % dispatcher)
+                            'write event caused by %(dispatcher)s',
+                            dispatcher=dispatcher)
                         dispatcher.handle_write_event()
                     except asyncore.ExitNow:
                         raise
