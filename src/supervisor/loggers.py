@@ -25,7 +25,6 @@ import os
 import errno
 import sys
 import time
-import StringIO
 import traceback
 
 class LevelsByName:
