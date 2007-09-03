@@ -14,7 +14,7 @@
 
 """
 Logger implementation loosely modeled on PEP 282.  We don't use the
-PEP 282 logger implementation in the stdlin ('logging') because it's
+PEP 282 logger implementation in the stdlib ('logging') because it's
 idiosyncratic and a bit slow for our purposes (we don't use threads).
 """
 
