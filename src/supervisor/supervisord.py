@@ -298,7 +298,7 @@ def main(test=False):
         if test:
             return d
         if d.mood < 0:
-            sys.exit(0)
+            break
         if d.options.httpserver:
             d.options.httpserver.close()
 
