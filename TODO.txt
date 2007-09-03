@@ -1,5 +1,3 @@
-- Stop using the Python stdlib logging module to improve speed.
-
 - Add a new cwd option that will chdir after the fork-exec.
 
 - Move set of 'SUPERVISOR_ENABLED' envvar to process spawn method.

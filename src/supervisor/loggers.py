@@ -12,71 +12,72 @@
 #
 ##############################################################################
 
-# this module must not depend on any non-stdlib modules to avoid circular
-# import problems
+"""
+Logger implementation loosely modeled on PEP 282.  We don't use the
+PEP 282 logger implementation in the stdlin ('logging') because it's
+idiosyncratic and a bit slow for our purposes (we don't use threads).
+"""
 
-import logging
+# This module must not depend on any non-stdlib modules to
+# avoid circular import problems
+
 import os
 import errno
 import sys
+import time
+import StringIO
+import traceback
 
-TRACE = 5
-_initialized = False
+class LevelsByName:
+    CRIT = 50
+    ERRO = 40
+    WARN = 30
+    INFO = 20
+    DEBG = 10
+    TRAC = 5
 
-def initialize():
-    global _initialized
-    if not _initialized:
-        logging.addLevelName(logging.CRITICAL, 'CRIT')
-        logging.addLevelName(logging.DEBUG, 'DEBG')
-        logging.addLevelName(logging.INFO, 'INFO')
-        logging.addLevelName(logging.WARN, 'WARN')
-        logging.addLevelName(logging.ERROR, 'ERRO')
-        logging.addLevelName(TRACE, 'TRAC')
-        _initialized = True
-    
-class FileHandler(logging.StreamHandler):
-    """File handler which supports reopening of logs.
+class LevelsByDescription:
+    critical = LevelsByName.CRIT
+    error = LevelsByName.ERRO
+    warn = LevelsByName.WARN
+    info = LevelsByName.INFO
+    debug = LevelsByName.DEBG
+    trace = LevelsByName.TRAC
 
-    Re-opening should be used instead of the 'rollover' feature of
-    the FileHandler from the standard library's logging package.
+def _levelNumbers():
+    bynumber = {}
+    for name, number in LevelsByName.__dict__.items():
+        bynumber[number] = name
+    return bynumber
 
-    
-    """
+LOG_LEVELS_BY_NUM = _levelNumbers()
 
-    def __init__(self, filename, mode="a"):
-        # we purposely *do not* call logging.StreamHandler's __init__
-        # here because it attempts to register the handler in its
-        # global handler list, which is bad because a) they tend to
-        # leak at the end of tests b) if we don't play by this scheme,
-        # making sure to call all the right super methods, it will
-        # lead to a memory leak and c) the initializer sets an rlock
-        # and the rest of the logging framework does thread locking
-        # using it, and we don't need that at all because we're
-        # completely single threaded.
-        self.stream = open(filename, mode)
-        self.baseFilename = filename
-        self.formatter = None
-        self.level = logging.NOTSET
-        self.mode = mode
-        self.filters = []
-        self.lock = None
+def getLevelNameByNumber(number):
+    return LOG_LEVELS_BY_NUM[number]
+
+def getLevelNumByDescription(description):
+    num = getattr(LevelsByDescription, description, None)
+    return num
+
+class Handler:
+    fmt = '%(message)s'
+    level = LevelsByName.INFO
+    def setFormat(self, fmt):
+        self.fmt = fmt
+
+    def setLevel(self, level):
+        self.level = level
+
+    def format(self, record):
+        return self.fmt % record.__dict__
+
+    def flush(self):
+        self.stream.flush()
 
     def close(self):
         self.stream.close()
 
-    def reopen(self):
-        self.close()
-        self.stream = open(self.baseFilename, self.mode)
-
-    def remove(self):
-        if os.path.exists(self.baseFilename):
-            os.remove(self.baseFilename)
-
-class RawHandler:
     def emit(self, record):
-        """
-        Override the handler to not insert a linefeed during emit.
-        """
         try:
             msg = self.format(record)
             try:
@@ -87,30 +88,39 @@ class RawHandler:
         except:
             self.handleError(record)
 
-class RawFileHandler(RawHandler, FileHandler):
-    pass
+    def handleError(self, record):
+        ei = sys.exc_info()
+        traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
+        del ei
 
-class RawStreamHandler(RawHandler, logging.StreamHandler):
+class FileHandler(Handler):
+    """File handler which supports reopening of logs.
+    """
+
+    def __init__(self, filename, mode="a"):
+        self.stream = open(filename, mode)
+        self.baseFilename = filename
+        self.mode = mode
+
+    def reopen(self):
+        self.close()
+        self.stream = open(self.baseFilename, self.mode)
+
+    def remove(self):
+        if os.path.exists(self.baseFilename):
+            os.remove(self.baseFilename)
+
+class StreamHandler(Handler):
     def __init__(self, strm=None):
-        # we purposely *do not* call logging.StreamHandler's __init__
-        # here because it attempts to register the handler in its
-        # global handler list, which is bad because a) they tend to
-        # leak at the end of tests b) if we don't play by this scheme,
-        # making sure to call all the right super methods, it will
-        # lead to a memory leak and c) the initializer sets an rlock
-        # and the rest of the logging framework does thread locking
-        # using it, and we don't need that at all because we're
-        # completely single threaded.
         self.stream = strm
-        self.formatter = None
-        self.level = logging.NOTSET
-        self.filters = []
-        self.lock = None
         
     def remove(self):
         pass
 
-class RotatingRawFileHandler(RawFileHandler):
+    def reopen(self):
+        pass
+
+class RotatingFileHandler(FileHandler):
     def __init__(self, filename, mode='a', maxBytes=512*1024*1024,
                  backupCount=10):
         """
@@ -135,7 +145,7 @@ class RotatingRawFileHandler(RawFileHandler):
         """
         if maxBytes > 0:
             mode = 'a' # doesn't make sense otherwise!
-        RawFileHandler.__init__(self, filename, mode)
+        FileHandler.__init__(self, filename, mode)
         self.maxBytes = maxBytes
         self.backupCount = backupCount
 
@@ -146,12 +156,9 @@ class RotatingRawFileHandler(RawFileHandler):
         Output the record to the file, catering for rollover as described
         in doRollover().
         """
-        try:
-            if self.shouldRollover(record):
-                self.doRollover()
-            RawFileHandler.emit(self, record)
-        except:
-            self.handleError(record)
+        if self.shouldRollover(record):
+            self.doRollover()
+        FileHandler.emit(self, record)
 
     def doRollover(self):
         """
@@ -186,29 +193,96 @@ class RotatingRawFileHandler(RawFileHandler):
             if self.stream.tell() + len(msg) >= self.maxBytes:
                 return 1
         return 0
+
+class LogRecord:
+    def __init__(self, level, msg, exc_info):
+        self.level = level
+        self.levelname = getLevelNameByNumber(level)
+        if exc_info:
+            self.exc_text = self.formatException(exc_info)
+        now = time.time()
+        msecs = (now - long(now)) * 1000
+        part1 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
+        self.asctime = '%s,%03d' % (part1, msecs)
+        self.message = msg
+
+    def formatException(self, ei):
+        """
+        Format and return the specified exception information as a string.
+
+        This default implementation just uses
+        traceback.print_exception()
+        """
+        sio = cStringIO.StringIO()
+        traceback.print_exception(ei[0], ei[1], ei[2], None, sio)
+        s = sio.getvalue()
+        sio.close()
+        if s[-1] == "\n":
+            s = s[:-1]
+        return s
+
+class Logger:
+    def __init__(self, level=None, handlers=None):
+        self.level = level
+        if handlers is None:
+            self.handlers = []
+        else:
+            self.handlers = handlers
+
+    def trace(self, msg, **kwargs):
+        if LevelsByName.TRAC >= self.level:
+            self._log(LevelsByName.TRAC, msg, **kwargs)
     
+    def debug(self, msg, **kwargs):
+        if LevelsByName.DEBG >= self.level:
+            self._log(LevelsByName.DEBG, msg, **kwargs)
+    
+    def info(self, msg, **kwargs):
+        if LevelsByName.INFO >= self.level:
+            self._log(LevelsByName.INFO, msg, **kwargs)
+
+    def warn(self, msg, **kwargs):
+        if LevelsByName.WARN >= self.level:
+            self._log(LevelsByName.WARN, msg, **kwargs)
+
+    def error(self, msg, **kwargs):
+        if LevelsByName.ERRO >= self.level:
+            self._log(LevelsByName.ERRO, msg, **kwargs)
+
+    def critical(self, msg, **kwargs):
+        if LevelsByName.CRIT >= self.level:
+            self._log(LevelsByName.CRIT, msg, **kwargs)
+
+    def log(self, level, msg, **kwargs):
+        self._log(level, msg, **kwargs)
+
+    def _log(self, level, msg, exc_info=None):
+        record = LogRecord(level, msg, exc_info)
+        for handler in self.handlers:
+            if record.level >= handler.level:
+                handler.emit(record)
+
+    def addHandler(self, hdlr):
+        self.handlers.append(hdlr)
+
 def getLogger(filename, level, fmt, rotating=False, maxbytes=0, backups=0,
               stdout=False):
-    initialize() # sets up proper logging levels
-    logger = logging.getLogger(filename)
+
     handlers = []
 
     if rotating is False:
-        handlers.append(RawFileHandler(filename))
+        handlers.append(FileHandler(filename))
     else:
-        handlers.append(RotatingRawFileHandler(filename,'a',maxbytes,backups))
+        handlers.append(RotatingFileHandler(filename,'a',maxbytes,backups))
 
     if stdout:
-        handlers.append(RawStreamHandler(sys.stdout))
+        handlers.append(StreamHandler(sys.stdout))
 
-    logger.handlers = []
-    logger.setLevel(level)
-    formatter = logging.Formatter(fmt)
-    
     for handler in handlers:
-        handler.setFormatter(formatter)
+        handler.setFormat(fmt)
         handler.setLevel(level)
-        logger.addHandler(handler)
 
+    logger = Logger(level, handlers)
+    
     return logger
 

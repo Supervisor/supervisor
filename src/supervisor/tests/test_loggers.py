@@ -3,7 +3,6 @@ import unittest
 import tempfile
 import shutil
 import os
-import logging
 
 from supervisor.tests.base import DummyStream
 
@@ -23,12 +22,9 @@ class HandlerTests:
         return klass(*arg, **kw)
 
     def _makeLogRecord(self, msg):
-        record = logging.LogRecord('name',
-                                   level=logging.INFO,
-                                   pathname='pathname',
-                                   lineno=5,
+        from supervisor import loggers
+        record = loggers.LogRecord(level=loggers.LevelsByName.INFO,
                                    msg=msg,
-                                   args=(),
                                    exc_info=None)
         return record
 
@@ -92,11 +88,6 @@ class FileHandlerTests(HandlerTests, unittest.TestCase):
         self.assertTrue(os.path.exists(self.filename), self.filename)
         self.assertRaises(OSError, handler.remove)
 
-class RawFileHandlerTests(FileHandlerTests):
-    def _getTargetClass(self):
-        from supervisor.loggers import RawFileHandler
-        return RawFileHandler
-
     def test_emit_ascii_noerror(self):
         handler = self._makeOne(self.filename)
         record = self._makeLogRecord('hello!')
@@ -126,10 +117,10 @@ class RawFileHandlerTests(FileHandlerTests):
         self.assertTrue(dummy_stderr.written.endswith('OSError\n'),
                         dummy_stderr.written)
 
-class RotatingRawFileHandlerTests(RawFileHandlerTests):
+class RotatingFileHandlerTests(FileHandlerTests):
     def _getTargetClass(self):
-        from supervisor.loggers import RotatingRawFileHandler
-        return RotatingRawFileHandler
+        from supervisor.loggers import RotatingFileHandler
+        return RotatingFileHandler
 
     def test_ctor(self):
         handler = self._makeOne(self.filename)

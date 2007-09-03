@@ -57,6 +57,9 @@ Next Release
     separated by a space instead of a line feed.  The names of keys in
     all event types have had underscores removed.
 
+  - Abandon the use of the Python stdlib 'logging' module for speed
+    and cleanliness purposes.  We've rolled our own.
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

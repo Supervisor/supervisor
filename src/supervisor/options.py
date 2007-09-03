@@ -18,7 +18,6 @@ import socket
 import getopt
 import os
 import sys
-import logging
 import tempfile
 import errno
 import signal
@@ -1061,13 +1060,6 @@ class ServerOptions(Options):
             self.logger.critical(msg)
         for msg in info_messages:
             self.logger.info(msg)
-        self.logger.trace = self.trace
-
-    def trace(self, msg, *args, **kwargs):
-        if self.logger.manager.disable >= loggers.TRACE:
-            return
-        if loggers.TRACE >= self.logger.getEffectiveLevel():
-            self.logger._log(loggers.TRACE, msg, args, **kwargs)
 
     def close_fd(self, fd):
         try:

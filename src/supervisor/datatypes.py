@@ -14,6 +14,7 @@
 
 import os
 import sys
+from supervisor.loggers import getLevelNumByDescription
 
 # I dont know why we bother, this doesn't run on Windows, but just
 # in case it ever does, avoid this bug magnet by leaving it.
@@ -226,29 +227,12 @@ def existing_dirpath(v):
     raise ValueError, ('The directory named as part of the path %s '
                        'does not exist.' % v)
 
-_logging_levels = {
-    "critical": 50,
-    "fatal": 50,
-    "error": 40,
-    "warn": 30,
-    "warning": 30,
-    "info": 20,
-    "blather": 15,
-    "debug": 10,
-    "trace": 5,
-    "all": 1,
-    "notset": 0,
-    }
-
 def logging_level(value):
     s = str(value).lower()
-    if _logging_levels.has_key(s):
-        return _logging_levels[s]
-    else:
-        v = int(s)
-        if v < 0 or v > 50:
-            raise ValueError("log level not in range: " + `v`)
-        return v
+    level = getLevelNumByDescription(value)
+    if level is None:
+        raise ValueError('bad logging level name %r' % value)
+    return level
 
 class SuffixMultiplier:
     # d is a dictionary of suffixes to integer multipliers.  If no suffixes
