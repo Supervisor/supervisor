@@ -53,7 +53,8 @@ Next Release
     serializations now separate the data sent by the process from the
     "headers" using two linefeed characters (to make parsing easier).
     In event serialization "header" values, we've removed the space
-    between the header name and the value.
+    between the header name and the value.  The names of keys in all
+    event types have had underscores removed.
 
 3.0a2
 

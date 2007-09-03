@@ -1282,7 +1282,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         header, payload = process1.stdin_buffer.split('\n', 1)
         
         self.assertEquals(payload,
-            'process_name:process1\ngroup_name:whatever\npid:1', payload)
+            'processname:process1\ngroupname:whatever\npid:1', payload)
         headers = header.split()
         self.assertEqual(
             headers[5],

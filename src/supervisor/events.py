@@ -42,7 +42,7 @@ class EventBufferOverflowEvent(Event):
     def __str__(self):
         name = self.group.config.name
         typ = getEventNameByType(self.event)
-        return 'group_name:%s\nevent_type:%s' % (name, typ)
+        return 'groupname:%s\neventtype:%s' % (name, typ)
 
 class ProcessCommunicationEvent(Event):
     # event mode tokens
@@ -57,7 +57,7 @@ class ProcessCommunicationEvent(Event):
         groupname = ''
         if self.process.group is not None:
             groupname = self.process.group.config.name
-        return 'process_name:%s\ngroup_name:%s\npid:%s\n\n%s' % (
+        return 'processname:%s\ngroupname:%s\npid:%s\n\n%s' % (
             self.process.config.name,
             groupname,
             self.pid,
@@ -81,7 +81,7 @@ class ProcessStateChangeEvent(Event):
         groupname = ''
         if self.process.group is not None:
             groupname = self.process.group.config.name
-        return 'process_name:%s\ngroup_name:%s\npid:%s' % (
+        return 'processname:%s\ngroupname:%s\npid:%s' % (
             self.process.config.name,
             groupname,
             self.pid)

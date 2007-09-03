@@ -126,8 +126,8 @@ class TestSerializations(unittest.TestCase):
         process1.group = DummyGroup
         event = ProcessCommunicationStdoutEvent(process1, 1, 'yo')
         headers, payload = self._deserialize(str(event))
-        self.assertEqual(headers['process_name'], 'process1', headers)
-        self.assertEqual(headers['group_name'], 'process1', headers)
+        self.assertEqual(headers['processname'], 'process1', headers)
+        self.assertEqual(headers['groupname'], 'process1', headers)
         self.assertEqual(headers['pid'], '1', headers)
         self.assertEqual(payload, 'yo')
             
@@ -141,8 +141,8 @@ class TestSerializations(unittest.TestCase):
         from supervisor.events import ProcessCommunicationStderrEvent
         event = ProcessCommunicationStderrEvent(process1, 1, 'yo')
         headers, payload = self._deserialize(str(event))
-        self.assertEqual(headers['process_name'], 'process1', headers)
-        self.assertEqual(headers['group_name'], 'process1', headers)
+        self.assertEqual(headers['processname'], 'process1', headers)
+        self.assertEqual(headers['groupname'], 'process1', headers)
         self.assertEqual(headers['pid'], '1', headers)
 
     def test_overflow_event(self):
@@ -156,8 +156,8 @@ class TestSerializations(unittest.TestCase):
         wrapped = events.ProcessCommunicationStderrEvent(process1, 1, 'yo')
         event = events.EventBufferOverflowEvent(process1, wrapped)
         headers, payload = self._deserialize(str(event))
-        self.assertEqual(headers['group_name'], 'foo')
-        self.assertEqual(headers['event_type'], 'None')
+        self.assertEqual(headers['groupname'], 'foo')
+        self.assertEqual(headers['eventtype'], 'None')
 
     def test_process_sc_event(self):
         from supervisor import events
@@ -169,8 +169,8 @@ class TestSerializations(unittest.TestCase):
         process1.group = DummyGroup
         event = events.StartingFromStoppedEvent(process1, 1)
         headers, payload = self._deserialize(str(event))
-        self.assertEqual(headers['process_name'], 'process1')
-        self.assertEqual(headers['group_name'], 'process1')
+        self.assertEqual(headers['processname'], 'process1')
+        self.assertEqual(headers['groupname'], 'process1')
         self.assertEqual(headers['pid'], '1')
 
     def test_supervisor_sc_event(self):
