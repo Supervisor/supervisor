@@ -101,7 +101,7 @@ class TestEventTypes(unittest.TestCase):
         
 class TestSerializations(unittest.TestCase):
     def _deserialize(self, serialization):
-        data = serialization.split('\n\n')
+        data = serialization.split('\n')
         headerdata = data[0]
         payload = ''
         headers = {}
@@ -110,7 +110,7 @@ class TestSerializations(unittest.TestCase):
         if headerdata:
             try:
                 headers = dict( [ x.split(':',1) for x in
-                                  headerdata.split('\n')] )
+                                  headerdata.split()] )
             except ValueError:
                 raise AssertionError('headerdata %r could not be deserialized' %
                                      headerdata)
