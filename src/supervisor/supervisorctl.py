@@ -246,7 +246,7 @@ class Controller(cmd.Cmd):
 
     def help_tail(self):
         self._output(
-            "tail [-f] <processname> [stdin|stdout] (default stdout)"
+            "tail [-f] <processname> [stdout|stderr] (default stdout)"
             "Ex:\n"
             "tail -f <processname>\tContinuous tail of named process stdout\n"
             "\t\t\tCtrl-C to exit.\n"
