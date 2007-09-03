@@ -59,7 +59,8 @@ class POutputDispatcherTests(unittest.TestCase):
     def test_handle_read_event(self):
         options = DummyOptions()
         options.readfd_result = 'abc'
-        config = DummyPConfig(options, 'process1', '/bin/process1')
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_capturefile='abc')
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         self.assertEqual(dispatcher.handle_read_event(), None)
@@ -139,11 +140,29 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.childlog.handlers[0].reopened, True)
         self.assertEqual(dispatcher.mainlog.handlers[0].reopened, True)
 
-    def test_record_output(self):
-        # stdout/stderr goes to the process log and the main log
+    def test_record_output_non_capturemode(self):
+        # stdout/stderr goes to the process log and the main log,
+        # in non-capturemode, the data length doesn't matter
         options = DummyOptions()
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile='/tmp/foo')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        dispatcher.output_buffer = 'a'
+        dispatcher.record_output()
+        self.assertEqual(dispatcher.childlog.data, ['a'])
+        self.assertEqual(options.logger.data[0],
+             "'process1' stdout output:\na")
+        self.assertEqual(dispatcher.output_buffer, '')
+
+    def test_record_output_capturemode_string_longer_than_token(self):
+        # stdout/stderr goes to the process log and the main log,
+        # in capturemode, the length of the data needs to be longer
+        # than the capture token to make it out.
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile='/tmp/foo',
+                              stdout_capturefile='/tmp/capture')
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         dispatcher.output_buffer = 'stdout string longer than a token'
@@ -152,6 +171,21 @@ class POutputDispatcherTests(unittest.TestCase):
                          ['stdout string longer than a token'])
         self.assertEqual(options.logger.data[0],
              "'process1' stdout output:\nstdout string longer than a token")
+
+    def test_record_output_capturemode_string_not_longer_than_token(self):
+        # stdout/stderr goes to the process log and the main log,
+        # in capturemode, the length of the data needs to be longer
+        # than the capture token to make it out.
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile='/tmp/foo',
+                              stdout_capturefile='/tmp/capture')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        dispatcher.output_buffer = 'a'
+        dispatcher.record_output()
+        self.assertEqual(dispatcher.childlog.data, [])
+        self.assertEqual(dispatcher.output_buffer, 'a')
 
     def test_stdout_capturemode_single_buffer(self):
         # mike reported that comm events that took place within a single

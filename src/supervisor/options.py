@@ -1067,7 +1067,7 @@ class ServerOptions(Options):
         if self.logger.manager.disable >= loggers.TRACE:
             return
         if loggers.TRACE >= self.logger.getEffectiveLevel():
-            apply(self.logger._log, (loggers.TRACE, msg, args), kwargs)
+            self.logger._log(loggers.TRACE, msg, args, **kwargs)
 
     def close_fd(self, fd):
         try:

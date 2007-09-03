@@ -128,6 +128,13 @@ class POutputDispatcher(PDispatcher):
             self.process.config.options.logger.trace(msg)
 
     def record_output(self):
+        if self.capturelog is None:
+            # shortcut trying to find capture data
+            data = self.output_buffer
+            self.output_buffer = ''
+            self._log(data)
+            return
+            
         if self.capturemode:
             token = self.event_type.END_TOKEN
         else:
