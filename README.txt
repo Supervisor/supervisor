@@ -932,7 +932,7 @@ Supervisor Events (New in 3.0)
     The serialized body of a PROCESS_STATE_CHANGE event (and all
     subtypes) is in the form::
 
-      process_name:<name> group_name:<name> pid:<process_pid>
+      processname:<name> groupname:<name> pid:<process_pid>
 
     Subtypes of PROCESS_STATE_CHANGE:
 
@@ -1003,7 +1003,7 @@ Supervisor Events (New in 3.0)
     The serialized body of a PROCESS_COMMUNICATION event (and all
     subtypes) is::
 
-      process_name:<name> group_name:<name>
+      processname:<name> groupname:<name> pid:<pid>
       <data>
 
     Subtypes of PROCESS_COMMUNICATION:
@@ -1039,7 +1039,7 @@ Supervisor Events (New in 3.0)
     The serialization of an EVENT_BUFFER_OVERFLOW body
     is::
 
-      group_name:<name> event_type:<type of discarded event>
+      groupname:<name> eventtype:<type of discarded event>
 
 Event Listeners (New in 3.0)
 
