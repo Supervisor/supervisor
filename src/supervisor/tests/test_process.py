@@ -1185,7 +1185,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         process1.write_error = errno.EPIPE
         process1.listener_state = EventListenerStates.READY
         from supervisor.events import StartingFromStoppedEvent
-        event = StartingFromStoppedEvent(process1)
+        event = StartingFromStoppedEvent(process1, 1)
         result = pool._dispatchEvent(event)
         self.assertEqual(result, False)
         self.assertEqual(process1.listener_state, EventListenerStates.READY)
@@ -1202,7 +1202,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         from supervisor.states import EventListenerStates
         process1.listener_state = EventListenerStates.READY
         from supervisor.events import StartingFromStoppedEvent
-        event = StartingFromStoppedEvent(process1)
+        event = StartingFromStoppedEvent(process1, 1)
         self.assertTrue(pool._dispatchEvent(event))
         self.assertEqual(event.serial, GlobalSerial.serial)
         self.assertEqual(event.pool_serials['whatever'], pool.serial)
@@ -1226,7 +1226,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.processes = {'process1': process1}
         from supervisor.events import StartingFromStoppedEvent
         from supervisor.states import EventListenerStates
-        event = StartingFromStoppedEvent(process1)
+        event = StartingFromStoppedEvent(process1, 1)
         event.serial = 'a'
         process1.listener_state = EventListenerStates.BUSY
         pool.event_buffer = [event, None, None, None]
@@ -1247,7 +1247,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.processes = {'process1': process1}
         from supervisor.events import StartingFromStoppedEvent
         from supervisor.states import EventListenerStates
-        event = StartingFromStoppedEvent(process1)
+        event = StartingFromStoppedEvent(process1, 1)
         event.serial = 1
         process1.listener_state = EventListenerStates.READY
         pool.event_buffer = [event]
@@ -1270,7 +1270,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.processes = {'process1': process1}
         from supervisor.events import StartingFromStoppedEvent
         from supervisor.states import EventListenerStates
-        event = StartingFromStoppedEvent(process1)
+        event = StartingFromStoppedEvent(process1, 1)
         process1.listener_state = EventListenerStates.READY
         class DummyGroup:
             config = gconfig
@@ -1280,8 +1280,9 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [])
         header, payload = process1.stdin_buffer.split('\n', 1)
+        
         self.assertEquals(payload,
-            'process_name: process1\ngroup_name: whatever', payload)
+            'process_name:process1\ngroup_name:whatever\npid:1', payload)
         headers = header.split()
         self.assertEqual(
             headers[5],

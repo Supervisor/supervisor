@@ -183,7 +183,7 @@ class POutputDispatcher(PDispatcher):
 
                 channel = self.channel
                 procname = self.process.config.name
-                event = self.event_type(self.process, data)
+                event = self.event_type(self.process, self.process.pid, data)
                 notify(event)
                                         
                 msg = "%r %s emitted a comm event" % (procname, channel)

@@ -42,23 +42,25 @@ class EventBufferOverflowEvent(Event):
     def __str__(self):
         name = self.group.config.name
         typ = getEventNameByType(self.event)
-        return 'group_name: %s\nevent_type: %s' % (name, typ)
+        return 'group_name:%s\nevent_type:%s' % (name, typ)
 
 class ProcessCommunicationEvent(Event):
     # event mode tokens
     BEGIN_TOKEN = '<!--XSUPERVISOR:BEGIN-->'
     END_TOKEN   = '<!--XSUPERVISOR:END-->'
-    def __init__(self, process, data):
+    def __init__(self, process, pid, data):
         self.process = process
+        self.pid = pid
         self.data = data
 
     def __str__(self):
         groupname = ''
         if self.process.group is not None:
             groupname = self.process.group.config.name
-        return 'process_name: %s\ngroup_name: %s\n%s' % (
+        return 'process_name:%s\ngroup_name:%s\npid:%s\n\n%s' % (
             self.process.config.name,
             groupname,
+            self.pid,
             self.data)
 
 class ProcessCommunicationStdoutEvent(ProcessCommunicationEvent):
@@ -71,16 +73,18 @@ class ProcessStateChangeEvent(Event):
     """ Abstract class, never raised directly """
     frm = None
     to = None
-    def __init__(self, process):
+    def __init__(self, process, pid):
         self.process = process
+        self.pid = pid
 
     def __str__(self):
         groupname = ''
         if self.process.group is not None:
             groupname = self.process.group.config.name
-        return 'process_name: %s\ngroup_name: %s' % (self.process.config.name,
-                                                     groupname)
-
+        return 'process_name:%s\ngroup_name:%s\npid:%s' % (
+            self.process.config.name,
+            groupname,
+            self.pid)
 
 class StartingFromStoppedEvent(ProcessStateChangeEvent):
     frm = ProcessStates.STOPPED

@@ -147,7 +147,7 @@ class Subprocess:
         if new_state is old_state:
             return False
         event_type = events.getProcessStateChangeEventType(old_state, new_state)
-        events.notify(event_type(self))
+        events.notify(event_type(self, self.pid))
         self.state = new_state
 
     def _assertInState(self, *states):

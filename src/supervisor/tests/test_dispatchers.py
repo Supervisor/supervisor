@@ -89,12 +89,33 @@ class POutputDispatcherTests(unittest.TestCase):
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         dispatcher.capturemode = True
-        events = []
-        def doit(event):
-            events.append(event)
         dispatcher.toggle_capturemode()
         result = options.logger.data[0]
         self.failUnless(result.startswith('Truncated oversized'), result)
+
+    def test_toggle_capturemode_sends_event(self):
+        executable = '/bin/cat'
+        options = DummyOptions()
+        from StringIO import StringIO
+        options.openreturn = StringIO('hallooo')
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile='/tmp/foo',
+                              stdout_capturefile='/tmp/capture')
+        process = DummyProcess(config)
+        process.pid = 4000
+        dispatcher = self._makeOne(process)
+        dispatcher.capturemode = True
+        L = []
+        def doit(event):
+            L.append(event)
+        from supervisor import events
+        events.subscribe(events.EventTypes.PROCESS_COMMUNICATION, doit)
+        dispatcher.toggle_capturemode()
+        self.assertEqual(len(L), 1)
+        event = L[0]
+        self.assertEqual(event.process, process)
+        self.assertEqual(event.pid, 4000)
+        self.assertEqual(event.data, 'hallooo')
 
     def test_removelogs(self):
         options = DummyOptions()

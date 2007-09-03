@@ -72,30 +72,50 @@ class TestEventTypes(unittest.TestCase):
 
     def test_ProcessCommunicationEvent(self):
         from supervisor.events import ProcessCommunicationEvent
-        inst = ProcessCommunicationEvent(1, 2)
+        inst = ProcessCommunicationEvent(1, 2, 3)
         self.assertEqual(inst.process, 1)
-        self.assertEqual(inst.data, 2)
+        self.assertEqual(inst.pid, 2)
+        self.assertEqual(inst.data, 3)
 
     def test_ProcessCommunicationStdoutEvent(self):
         from supervisor.events import ProcessCommunicationStdoutEvent
-        inst = ProcessCommunicationStdoutEvent(1, 2)
+        inst = ProcessCommunicationStdoutEvent(1, 2, 3)
         self.assertEqual(inst.process, 1)
-        self.assertEqual(inst.data, 2)
+        self.assertEqual(inst.pid, 2)
+        self.assertEqual(inst.data, 3)
         self.assertEqual(inst.channel, 'stdout')
         
     def test_ProcessCommunicationStderrEvent(self):
         from supervisor.events import ProcessCommunicationStderrEvent
-        inst = ProcessCommunicationStderrEvent(1, 2)
+        inst = ProcessCommunicationStderrEvent(1, 2, 3)
         self.assertEqual(inst.process, 1)
-        self.assertEqual(inst.data, 2)
+        self.assertEqual(inst.pid, 2)
+        self.assertEqual(inst.data, 3)
         self.assertEqual(inst.channel, 'stderr')
 
     def test_ProcessStateChangeEvent(self):
         from supervisor.events import ProcessStateChangeEvent
-        inst = ProcessStateChangeEvent(1)
+        inst = ProcessStateChangeEvent(1, 2)
         self.assertEqual(inst.process, 1)
+        self.assertEqual(inst.pid, 2)
         
 class TestSerializations(unittest.TestCase):
+    def _deserialize(self, serialization):
+        data = serialization.split('\n\n')
+        headerdata = data[0]
+        payload = ''
+        headers = {}
+        if len(data) > 1:
+            payload = data[1]
+        if headerdata:
+            try:
+                headers = dict( [ x.split(':',1) for x in
+                                  headerdata.split('\n')] )
+            except ValueError:
+                raise AssertionError('headerdata %r could not be deserialized' %
+                                     headerdata)
+        return headers, payload
+    
     def test_pcomm_stdout_event(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
@@ -104,10 +124,12 @@ class TestSerializations(unittest.TestCase):
         class DummyGroup:
             config = pconfig1
         process1.group = DummyGroup
-        event = ProcessCommunicationStdoutEvent(process1, 'yo')
-        self.assertEqual(str(event),
-                         'process_name: process1\ngroup_name: process1\nyo'
-                         )
+        event = ProcessCommunicationStdoutEvent(process1, 1, 'yo')
+        headers, payload = self._deserialize(str(event))
+        self.assertEqual(headers['process_name'], 'process1', headers)
+        self.assertEqual(headers['group_name'], 'process1', headers)
+        self.assertEqual(headers['pid'], '1', headers)
+        self.assertEqual(payload, 'yo')
             
     def test_pcomm_stderr_event(self):
         options = DummyOptions()
@@ -117,10 +139,11 @@ class TestSerializations(unittest.TestCase):
             config = pconfig1
         process1.group = DummyGroup
         from supervisor.events import ProcessCommunicationStderrEvent
-        event = ProcessCommunicationStderrEvent(process1, 'yo')
-        self.assertEqual(str(event),
-                         'process_name: process1\ngroup_name: process1\nyo'
-                         )
+        event = ProcessCommunicationStderrEvent(process1, 1, 'yo')
+        headers, payload = self._deserialize(str(event))
+        self.assertEqual(headers['process_name'], 'process1', headers)
+        self.assertEqual(headers['group_name'], 'process1', headers)
+        self.assertEqual(headers['pid'], '1', headers)
 
     def test_overflow_event(self):
         from supervisor import events
@@ -130,9 +153,11 @@ class TestSerializations(unittest.TestCase):
         class DummyGroup:
             config = pconfig1
         process1.group = DummyGroup
-        wrapped = events.ProcessCommunicationStderrEvent(process1, 'yo')
+        wrapped = events.ProcessCommunicationStderrEvent(process1, 1, 'yo')
         event = events.EventBufferOverflowEvent(process1, wrapped)
-        self.assertEqual(str(event), 'group_name: foo\nevent_type: None')
+        headers, payload = self._deserialize(str(event))
+        self.assertEqual(headers['group_name'], 'foo')
+        self.assertEqual(headers['event_type'], 'None')
 
     def test_process_sc_event(self):
         from supervisor import events
@@ -142,14 +167,17 @@ class TestSerializations(unittest.TestCase):
         class DummyGroup:
             config = pconfig1
         process1.group = DummyGroup
-        event = events.StartingFromStoppedEvent(process1)
-        self.assertEqual(str(event),
-                         'process_name: process1\ngroup_name: process1')
+        event = events.StartingFromStoppedEvent(process1, 1)
+        headers, payload = self._deserialize(str(event))
+        self.assertEqual(headers['process_name'], 'process1')
+        self.assertEqual(headers['group_name'], 'process1')
+        self.assertEqual(headers['pid'], '1')
 
     def test_supervisor_sc_event(self):
         from supervisor import events
         event = events.SupervisorRunningEvent()
-        self.assertEqual(str(event), '')
+        headers, payload = self._deserialize(str(event))
+        self.assertEqual(headers, {})
 
 class TestUtilityFunctions(unittest.TestCase):
     def test_getEventNameByType(self):
