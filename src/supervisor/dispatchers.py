@@ -146,12 +146,11 @@ class POutputDispatcher(PDispatcher):
         else:
             token, tokenlen = self.begintoken_data
 
+        if len(self.output_buffer) <= tokenlen:
+            return # not enough data
+
         data = self.output_buffer
         self.output_buffer = ''
-
-        if len(data) <= tokenlen:
-            self.output_buffer = data
-            return # not enough data
 
         try:
             before, after = data.split(token, 1)
