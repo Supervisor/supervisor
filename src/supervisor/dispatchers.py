@@ -104,6 +104,12 @@ class POutputDispatcher(PDispatcher):
 
         self.childlog = self.mainlog
 
+        # this is purely for a minor speedup
+        begintoken = self.event_type.BEGIN_TOKEN
+        endtoken = self.event_type.END_TOKEN
+        self.begintoken_data = (begintoken, len(begintoken))
+        self.endtoken_data = (endtoken, len(endtoken))
+
     def removelogs(self):
         for log in (self.mainlog, self.capturelog):
             if log is not None:
@@ -136,14 +142,14 @@ class POutputDispatcher(PDispatcher):
             return
             
         if self.capturemode:
-            token = self.event_type.END_TOKEN
+            token, tokenlen = self.endtoken_data
         else:
-            token = self.event_type.BEGIN_TOKEN
+            token, tokenlen = self.begintoken_data
 
         data = self.output_buffer
         self.output_buffer = ''
 
-        if len(data) <= len(token):
+        if len(data) <= tokenlen:
             self.output_buffer = data
             return # not enough data
 
