@@ -51,9 +51,6 @@ def _levelNumbers():
 
 LOG_LEVELS_BY_NUM = _levelNumbers()
 
-def getLevelNameByNumber(number):
-    return LOG_LEVELS_BY_NUM[number]
-
 def getLevelNumByDescription(description):
     num = getattr(LevelsByDescription, description, None)
     return num
@@ -181,14 +178,18 @@ class RotatingFileHandler(FileHandler):
         Output the record to the file, catering for rollover as described
         in doRollover().
         """
-        if self.shouldRollover(record):
-            self.doRollover()
         FileHandler.emit(self, record)
+        self.doRollover()
 
     def doRollover(self):
         """
         Do a rollover, as described in __init__().
         """
+        if self.maxBytes <= 0:
+            return
+        
+        if not (self.stream.tell() >= self.maxBytes):
+            return
 
         self.stream.close()
         if self.backupCount > 0:
@@ -205,19 +206,6 @@ class RotatingFileHandler(FileHandler):
             os.rename(self.baseFilename, dfn)
         self.stream = open(self.baseFilename, 'w')
 
-    def shouldRollover(self, record):
-        """
-        Determine if rollover should occur.
-
-        Basically, see if the supplied record would cause the file to exceed
-        the size limit we have.
-        """
-        if self.maxBytes > 0:                   # are we rolling over?
-            msg = self.fmt % record.asdict()
-            if self.stream.tell() + len(msg) >= self.maxBytes:
-                return 1
-        return 0
-
 class LogRecord:
     def __init__(self, level, msg, **kw):
         self.level = level
@@ -231,7 +219,7 @@ class LogRecord:
             msecs = (now - long(now)) * 1000
             part1 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
             asctime = '%s,%03d' % (part1, msecs)
-            levelname = getLevelNameByNumber(self.level)
+            levelname = LOG_LEVELS_BY_NUM[self.level]
             if self.kw:
                 msg = self.msg % self.kw
             else:
@@ -278,7 +266,7 @@ class Logger:
     def _log(self, level, msg, **kw):
         record = LogRecord(level, msg, **kw)
         for handler in self.handlers:
-            if record.level >= handler.level:
+            if level >= handler.level:
                 handler.emit(record)
 
     def addHandler(self, hdlr):

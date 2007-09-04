@@ -128,15 +128,6 @@ class RotatingFileHandlerTests(FileHandlerTests):
         self.assertEqual(handler.maxBytes, 512*1024*1024)
         self.assertEqual(handler.backupCount, 10)
 
-    def test_shouldRollover(self):
-        handler = self._makeOne(self.filename, maxBytes=10, backupCount=1)
-        dummy_stream = DummyStream()
-        handler.stream = dummy_stream
-        record = self._makeLogRecord('hello!')
-        self.assertFalse(handler.shouldRollover(record))
-        record = self._makeLogRecord('a' *11)
-        self.assertTrue(handler.shouldRollover(record), True)
-
     def test_emit_does_rollover(self):
         handler = self._makeOne(self.filename, maxBytes=10, backupCount=2)
         record = self._makeLogRecord('a' * 4)
@@ -157,16 +148,24 @@ class RotatingFileHandlerTests(FileHandlerTests):
         self.assertTrue(os.path.exists(self.filename + '.1'))
         self.assertFalse(os.path.exists(self.filename + '.2'))
 
-        handler.emit(record) # 20 bytes, do rollover
+        handler.emit(record) # 20 bytes
+        self.assertTrue(os.path.exists(self.filename + '.1'))
+        self.assertFalse(os.path.exists(self.filename + '.2'))
+
+        handler.emit(record) # 24 bytes, do rollover
+        self.assertTrue(os.path.exists(self.filename + '.1'))
+        self.assertTrue(os.path.exists(self.filename + '.2'))
+
+        handler.emit(record) # 28 bytes
         self.assertTrue(os.path.exists(self.filename + '.1'))
         self.assertTrue(os.path.exists(self.filename + '.2'))
 
         current = open(self.filename,'r').read()
-        self.assertEqual(current, 'a'*4)
+        self.assertEqual(current, 'a' * 4)
         one = open(self.filename+ '.1','r').read()
-        self.assertEqual(one, 'a'*8)
+        self.assertEqual(one, 'a'*12)
         two = open(self.filename+ '.2','r').read()
-        self.assertEqual(two, 'a'*8)
+        self.assertEqual(two, 'a'*12)
 
 class BoundIOTests(unittest.TestCase):
     def _getTargetClass(self):
