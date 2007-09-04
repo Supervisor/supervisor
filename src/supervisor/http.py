@@ -759,7 +759,7 @@ def make_http_server(options, supervisord):
         def log(self, msg):
             if msg.endswith('\n'):
                 msg = msg[:-1]
-            options.logger.info(msg)
+            options.logger.debug(msg)
     wrapper = LogWrapper()
 
     family = options.http_port.family
