@@ -137,7 +137,7 @@ class Supervisor:
                 self.lastdelayreport = now
                 for proc in delayprocs:
                     state = getProcessStateDescription(proc.get_state())
-                    self.options.logger.trace(
+                    self.options.logger.debug(
                         '%s state: %s' % (proc.config.name, state))
         return delayprocs
 
