@@ -130,7 +130,7 @@ class POutputDispatcher(PDispatcher):
             if self.childlog:
                 self.childlog.info(data)
             msg = '%(name)r %(channel)s output:\n%(data)s'
-            self.process.config.options.logger.trace(
+            self.process.config.options.logger.debug(
                 msg, name=config.name, channel=self.channel, data=data)
 
     def record_output(self):
@@ -185,7 +185,7 @@ class POutputDispatcher(PDispatcher):
                 notify(event)
                                         
                 msg = "%(procname)r %(channel)s emitted a comm event"
-                self.process.config.options.logger.trace(msg,
+                self.process.config.options.logger.debug(msg,
                                                          procname=procname,
                                                          channel=channel)
                 for handler in self.capturelog.handlers:
@@ -270,7 +270,7 @@ class PEventListenerDispatcher(PDispatcher):
             self.state_buffer += data
             procname = self.process.config.name
             msg = '%r %s output:\n%s' % (procname, self.channel, data)
-            self.process.config.options.logger.trace(msg)
+            self.process.config.options.logger.debug(msg)
 
             if self.childlog:
                 if self.process.config.options.strip_ansi:
@@ -306,13 +306,13 @@ class PEventListenerDispatcher(PDispatcher):
                 return
             elif data.startswith(self.READY_FOR_EVENTS_TOKEN):
                 msg = '%s: ACKNOWLEDGED -> READY' % procname
-                process.config.options.logger.trace(msg)
+                process.config.options.logger.debug(msg)
                 process.listener_state = EventListenerStates.READY
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.event = None
             else:
                 msg = '%s: ACKNOWLEDGED -> UNKNOWN' % procname
-                process.config.options.logger.trace(msg)
+                process.config.options.logger.debug(msg)
                 process.listener_state = EventListenerStates.UNKNOWN
                 self.state_buffer = ''
                 process.event = None
@@ -325,7 +325,7 @@ class PEventListenerDispatcher(PDispatcher):
         elif state == EventListenerStates.READY:
             # the process sent some spurious data, be a hardass about it
             msg = '%s: READY -> UNKNOWN' % procname
-            process.config.options.logger.trace(msg)
+            process.config.options.logger.debug(msg)
             process.listener_state = EventListenerStates.UNKNOWN
             self.state_buffer = ''
             process.event = None
@@ -337,14 +337,14 @@ class PEventListenerDispatcher(PDispatcher):
                 return
             elif data.startswith(self.EVENT_PROCESSED_TOKEN):
                 msg = '%s: BUSY -> ACKNOWLEDGED (processed)' % procname
-                process.config.options.logger.trace(msg)
+                process.config.options.logger.debug(msg)
                 tokenlen = len(self.EVENT_PROCESSED_TOKEN)
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.listener_state = EventListenerStates.ACKNOWLEDGED
                 process.event = None
             elif data.startswith(self.EVENT_REJECTED_TOKEN):
                 msg = '%s: BUSY -> ACKNOWLEDGED (rejected)' % procname
-                process.config.options.logger.trace(msg)
+                process.config.options.logger.debug(msg)
                 tokenlen = len(self.EVENT_REJECTED_TOKEN)
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.listener_state = EventListenerStates.ACKNOWLEDGED
@@ -352,7 +352,7 @@ class PEventListenerDispatcher(PDispatcher):
                 process.event = None
             else:
                 msg = '%s: BUSY -> UNKNOWN' % procname
-                process.config.options.logger.trace(msg)
+                process.config.options.logger.debug(msg)
                 process.listener_state = EventListenerStates.UNKNOWN
                 self.state_buffer = ''
                 notify(EventRejectedEvent(process, process.event))

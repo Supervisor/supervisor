@@ -160,7 +160,7 @@ class Subprocess:
     def record_spawnerr(self, msg):
         now = time.time()
         self.spawnerr = msg
-        self.config.options.logger.critical("spawnerr: %s" % msg)
+        self.config.options.logger.info("spawnerr: %s" % msg)
         self.backoff = self.backoff + 1
         self.delay = now + self.backoff
 
@@ -174,7 +174,7 @@ class Subprocess:
 
         if self.pid:
             msg = 'process %r already running' % pname
-            options.logger.critical(msg)
+            options.logger.warn(msg)
             return
 
         self.killing = 0
@@ -568,7 +568,7 @@ class ProcessGroupBase:
             # kill processes which are taking too long to stop with a final
             # sigkill.  if this doesn't kill it, the process will be stuck
             # in the STOPPING state forever.
-            self.config.options.logger.critical(
+            self.config.options.logger.warn(
                 'killing %r (%s) with SIGKILL' % (undead.config.name,
                                                   undead.pid))
             undead.kill(signal.SIGKILL)
@@ -638,7 +638,7 @@ class EventListenerPool(ProcessGroupBase):
                 
                 process.listener_state = EventListenerStates.BUSY
                 process.event = event
-                self.config.options.logger.trace(
+                self.config.options.logger.debug(
                     'event %s sent to listener %s' % (
                     event.serial, process.config.name))
                 return True
@@ -653,7 +653,7 @@ class EventListenerPool(ProcessGroupBase):
                 discarded_event = self.event_buffer.pop(0)
                 events.notify(events.EventBufferOverflowEvent(self,
                                                               discarded_event))
-                self.config.options.logger.warn(
+                self.config.options.logger.error(
                     'pool %s event buffer overflowed, discarding event %s' % (
                     (self.config.name, discarded_event.serial)))
         # insert event into 2nd position in list so we don't block pending

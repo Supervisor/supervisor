@@ -768,16 +768,16 @@ class ServerOptions(Options):
         pid = os.fork()
         if pid != 0:
             # Parent
-            self.logger.debug("supervisord forked; parent exiting")
+            self.logger.trace("supervisord forked; parent exiting")
             os._exit(0)
         # Child
-        self.logger.info("daemonizing the process")
+        self.logger.info("daemonizing the supervisord process")
         if self.directory:
             try:
                 os.chdir(self.directory)
             except OSError, err:
-                self.logger.warn("can't chdir into %r: %s"
-                                 % (self.directory, err))
+                self.logger.critical("can't chdir into %r: %s"
+                                     % (self.directory, err))
             else:
                 self.logger.info("set current directory: %r"
                                  % self.directory)
@@ -866,7 +866,7 @@ class ServerOptions(Options):
         try:
             filenames = os.listdir(childlogdir)
         except (IOError, OSError):
-            self.logger.info('Could not clear childlog dir')
+            self.logger.warn('Could not clear childlog dir')
             return
         
         for filename in filenames:
@@ -875,7 +875,7 @@ class ServerOptions(Options):
                 try:
                     os.remove(pathname)
                 except (OSError, IOError):
-                    self.logger.info('Failed to clean up %r' % pathname)
+                    self.logger.warn('Failed to clean up %r' % pathname)
 
     def get_socket_map(self):
         return asyncore.socket_map
@@ -977,10 +977,10 @@ class ServerOptions(Options):
         except OSError, why:
             err = why[0]
             if err not in (errno.ECHILD, errno.EINTR):
-                self.logger.info(
+                self.logger.critical(
                     'waitpid error; a process may not be cleaned up properly')
             if err == errno.EINTR:
-                self.logger.debug('EINTR during reap')
+                self.logger.trace('EINTR during reap')
             pid, sts = None, None
         return pid, sts
 

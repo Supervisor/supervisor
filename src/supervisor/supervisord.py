@@ -261,11 +261,11 @@ class Supervisor:
         if self.options.signal:
             sig, self.options.signal = self.options.signal, None
             if sig in (signal.SIGTERM, signal.SIGINT, signal.SIGQUIT):
-                self.options.logger.critical(
+                self.options.logger.warn(
                     'received %s indicating exit request' % signame(sig))
                 self.mood = -1
             elif sig == signal.SIGHUP:
-                self.options.logger.critical(
+                self.options.logger.warn(
                     'received %s indicating restart request' % signame(sig))
                 self.mood = 0
             elif sig == signal.SIGCHLD:
@@ -278,7 +278,7 @@ class Supervisor:
                 for group in self.process_groups.values():
                     group.reopenlogs()
             else:
-                self.options.logger.debug(
+                self.options.logger.trace(
                     'received %s indicating nothing' % signame(sig))
         
     def get_state(self):

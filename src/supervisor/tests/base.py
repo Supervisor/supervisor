@@ -241,7 +241,7 @@ class DummyLogger:
         if kw:
             msg = msg % kw
         self.data.append(msg)
-    warn = log = debug = critical = trace = info
+    warn = log = debug = critical = trace = error = info
     def reopen(self):
         self.reopened = True
     def close(self):

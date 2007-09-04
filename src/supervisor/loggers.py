@@ -28,12 +28,12 @@ import time
 import traceback
 
 class LevelsByName:
-    CRIT = 50
-    ERRO = 40
-    WARN = 30
-    INFO = 20
-    DEBG = 10
-    TRAC = 5
+    CRIT = 50   # messages that probably require immediate user attention
+    ERRO = 40   # messages that indicate a potentially ignorable error condition
+    WARN = 30   # messages that indicate issues which aren't errors
+    INFO = 20   # normal informational output
+    DEBG = 10   # messages useful for users trying to debug configurations
+    TRAC = 5    # messages useful for developers trying to debug supervisor
 
 class LevelsByDescription:
     critical = LevelsByName.CRIT

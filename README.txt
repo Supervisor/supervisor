@@ -300,9 +300,10 @@ Configuration File '[supervisord]' Section Settings
 
   'loglevel' -- The logging level, dictating what is written to the
   activity log.  One of 'critical', 'error', 'warn', 'info', 'debug'
-  or 'trace'.  Note that at log level 'trace', the supervisord log
+  or 'trace'.  Note that at log level 'debug', the supervisord log
   file will record the stderr/stdout output of its child processes,
-  which is useful for debugging.  Default: info.
+  which is useful for debugging a process which isn't starting
+  properly.  See also: 'Supervisor Log Levels'.  Default: info.
 
   'pidfile' -- The location in which supervisord keeps its pid file.
 
@@ -1291,6 +1292,31 @@ Capture Mode and Process Communication Events (New in 3.0)
   An example of a script which emits a process communication event is
   in the 'scripts' directory of the supervisor package, named
   "sample_commevent.py".
+
+Supervisor Log Levels
+
+  Supervisor logs messages into its main log file at a variety of
+  levels (see the 'loglevel' [supervisord] section configuration
+  parameter.  The intended meanings of these levels is as below.
+
+  critical (CRIT) -- messages that indicate a condition that requires
+  immediate user attention, a supervisor state change, or an error in
+  supervisor itself.
+
+  error (ERRO) -- messages that indicate a potentially ignorable error
+  condition (e.g. unable to clear a log directory)
+
+  warn (WARN) -- messages that indicate an anomalous condition which
+  isn't an error.
+
+  info (INFO) -- normal informational output.
+
+  debug (DEBG) -- messages useful for users trying to debug process
+  configuration and communications behavior (process output, listener
+  state changes, event notifications, RPC communications information).
+
+  trace (TRAC) -- messages useful for developers trying to debug
+  supervisor itself.
 
 Signals
 

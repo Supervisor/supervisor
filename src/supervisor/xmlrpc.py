@@ -343,7 +343,7 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
             except RPCError, err:
                 # turn RPCError reported by method into a Fault instance
                 value = xmlrpclib.Fault(err.code, err.text)
-                logger.warn('XML-RPC method %s() returned fault: [%d] %s' % (
+                logger.debug('XML-RPC method %s() returned fault: [%d] %s' % (
                     method,
                     err.code, err.text))
 
