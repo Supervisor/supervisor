@@ -65,7 +65,12 @@ class Handler:
         self.level = level
 
     def flush(self):
-        self.stream.flush()
+        try:
+            self.stream.flush()
+        except IOError, why:
+            # if supervisor output is piped, this can be raised at exit
+            if why[0] != errno.EPIPE:
+                raise
 
     def close(self):
         self.stream.close()
