@@ -86,6 +86,15 @@ Next Release
     for debugging supervisor itself).  See 'Supervisor Log Levels' in
     README.txt for more info.
 
+  - setup.py {install|develop} now installs a supervisor profiling
+    script for developer use.  It accepts the same command line
+    arguments as the 'supervisord' script.
+
+      profile_supervisord -n -c foo.conf
+
+    When you exit supervisor, it will print Python profiling output to
+    stdout.
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC
