@@ -49,13 +49,11 @@ Next Release
 
   - Specific event payload serializations have changed.  All event
     types that deal with processes now include the pid of the process
-    that the event is describing.  The PROCESS_COMMUNICATION_EVENT
-    serializations now separate the data sent by the process from the
-    "headers" using two linefeed characters (to make parsing easier).
-    In event serialization "header" values, we've removed the space
-    between the header name and the value and headers are now
-    separated by a space instead of a line feed.  The names of keys in
-    all event types have had underscores removed.
+    that the event is describing.  In event serialization "header"
+    values, we've removed the space between the header name and the
+    value and headers are now separated by a space instead of a line
+    feed.  The names of keys in all event types have had underscores
+    removed.
 
   - Abandon the use of the Python stdlib 'logging' module for speed
     and cleanliness purposes.  We've rolled our own.
