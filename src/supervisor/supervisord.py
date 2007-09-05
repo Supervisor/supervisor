@@ -307,5 +307,21 @@ def main(test=False):
         if d.options.httpserver:
             d.options.httpserver.close()
 
+def profile(test=False):
+    import profile
+    import pstats
+    import tempfile
+    fd, fn = tempfile.mkstemp()
+    try:
+        profile.runctx('main(test)', globals(), locals(), fn)
+        stats = pstats.Stats(fn)
+        stats.strip_dirs()
+        #stats.sort_stats('calls', 'time', 'cumulative')
+        stats.sort_stats('cumulative', 'calls', 'time')
+        #stats.print_callers(.3)
+        stats.print_stats(.3)
+    finally:
+        os.remove(fn)
+
 if __name__ == "__main__":
     main()
