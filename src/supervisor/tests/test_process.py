@@ -1306,7 +1306,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
             '<supervisor.process.EventListenerPool instance at'))
         self.assertTrue(s.endswith('named whatever>'))
 
-    def test_transition_nobody_listenening(self):
+    def test_transition_nobody_ready(self):
         options = DummyOptions()
         from supervisor.states import ProcessStates
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
@@ -1324,8 +1324,6 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [event])
         data = pool.config.options.logger.data
-        self.assertEqual(data[0],
-                         'rebuffering event a for pool whatever (bufsize 0)')
     
     def test_transition_event_proc_not_running(self):
         options = DummyOptions()
@@ -1346,9 +1344,6 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         self.assertEqual(pool.event_buffer, [event])
         self.assertEqual(process1.stdin_buffer, '')
         self.assertEqual(process1.listener_state, EventListenerStates.READY)
-        data = pool.config.options.logger.data
-        self.assertEqual(data[0],
-                         'rebuffering event 1 for pool whatever (bufsize 0)')
 
     def test_transition_event_proc_running(self):
         options = DummyOptions()

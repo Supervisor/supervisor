@@ -573,6 +573,8 @@ class EventListenerPool(ProcessGroupBase):
             events.subscribe(event_type, self._acceptEvent)
         events.subscribe(events.EventRejectedEvent, self.handle_rejected)
         self.serial = -1
+        self.last_dispatch = 0
+        self.dispatch_throttle = 0 # in seconds: .00195 is an interesting one
 
     def handle_rejected(self, event):
         process = event.process
@@ -583,9 +585,20 @@ class EventListenerPool(ProcessGroupBase):
 
     def transition(self):
         processes = self.processes.values()
-        for proc in processes:
-            proc.transition()
-        self.dispatch()
+        dispatch_capable = False
+        for process in processes:
+            process.transition()
+            # this is redundant, we do it in _dispatchEvent too, but we
+            # want to reduce function call overhead
+            if process.state == ProcessStates.RUNNING:
+                if process.listener_state == EventListenerStates.READY:
+                    dispatch_capable = True
+        if dispatch_capable:
+            if self.dispatch_throttle:
+                now = time.time()
+                if now - self.last_dispatch < self.dispatch_throttle:
+                    return
+            self.dispatch()
 
     def dispatch(self):
         while self.event_buffer:
@@ -597,6 +610,7 @@ class EventListenerPool(ProcessGroupBase):
                 # to process any further events in the buffer
                 self._acceptEvent(event, head=True)
                 break
+        self.last_dispatch = time.time()
 
     def _acceptEvent(self, event, head=False):
         # events are required to be instances
