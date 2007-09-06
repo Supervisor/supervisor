@@ -570,7 +570,7 @@ class EventListenerPool(ProcessGroupBase):
         ProcessGroupBase.__init__(self, config)
         self.event_buffer = []
         for event_type in self.config.pool_events:
-            events.subscribe(event_type, self._dispatchEvent)
+            events.subscribe(event_type, self._acceptEvent)
         events.subscribe(events.EventRejectedEvent, self.handle_rejected)
         self.serial = -1
 
@@ -579,16 +579,26 @@ class EventListenerPool(ProcessGroupBase):
         procs = self.processes.values()
         if process in procs: # this is one of our processes
             # rebuffer the event
-            self._bufferEvent(event.event)
+            self._acceptEvent(event.event, head=True)
 
     def transition(self):
-        for proc in self.processes.values():
+        processes = self.processes.values()
+        for proc in processes:
             proc.transition()
-        if self.event_buffer:
-            event = self.event_buffer.pop(0)
-            self._dispatchEvent(event)
+        self.dispatch()
 
-    def _dispatchEvent(self, event):
+    def dispatch(self):
+        while self.event_buffer:
+            # dispatch the oldest event
+            event = self.event_buffer.pop(0)
+            ok = self._dispatchEvent(event)
+            if not ok:
+                # if we can't dispatch an event, rebuffer it and stop trying
+                # to process any further events in the buffer
+                self._acceptEvent(event, head=True)
+                break
+
+    def _acceptEvent(self, event, head=False):
         # events are required to be instances
         event_type = event.__class__
         if not hasattr(event, 'serial'):
@@ -597,7 +607,24 @@ class EventListenerPool(ProcessGroupBase):
             event.pool_serials = {}
         if not event.pool_serials.has_key(self.config.name):
             event.pool_serials[self.config.name] = new_serial(self)
+        else:
+            self.config.options.logger.debug(
+                'rebuffering event %s for pool %s (bufsize %s)' % (
+                (event.serial, self.config.name, len(self.event_buffer))))
 
+        if len(self.event_buffer) >= self.config.buffer_size:
+            if self.event_buffer:
+                # discard the oldest event
+                discarded_event = self.event_buffer.pop(0)
+                self.config.options.logger.error(
+                    'pool %s event buffer overflowed, discarding event %s' % (
+                    (self.config.name, discarded_event.serial)))
+        if head:
+            self.event_buffer.insert(0, event)
+        else:
+            self.event_buffer.append(event)
+
+    def _dispatchEvent(self, event):
         pool_serial = event.pool_serials[self.config.name]
             
         for process in self.processes.values():
@@ -606,6 +633,7 @@ class EventListenerPool(ProcessGroupBase):
             if process.listener_state == EventListenerStates.READY:
                 payload = str(event)
                 try:
+                    event_type = event.__class__
                     serial = event.serial
                     envelope = self._eventEnvelope(event_type, serial,
                                                    pool_serial, payload)
@@ -621,26 +649,8 @@ class EventListenerPool(ProcessGroupBase):
                     'event %s sent to listener %s' % (
                     event.serial, process.config.name))
                 return True
-        self._bufferEvent(event)
-        return False
 
-    def _bufferEvent(self, event):
-        if isinstance(event, events.EventBufferOverflowEvent):
-            return # don't ever buffer EventBufferOverflowEvents
-        if len(self.event_buffer) >= self.config.buffer_size:
-            if self.event_buffer:
-                discarded_event = self.event_buffer.pop(0)
-                events.notify(events.EventBufferOverflowEvent(self,
-                                                              discarded_event))
-                self.config.options.logger.error(
-                    'pool %s event buffer overflowed, discarding event %s' % (
-                    (self.config.name, discarded_event.serial)))
-        # insert event into 2nd position in list so we don't block pending
-        # events for a chronically failed event notification
-        self.event_buffer.insert(1, event)
-        self.config.options.logger.debug(
-            'buffered event %s for pool %s (bufsize %s)' % (
-            (event.serial, self.config.name, len(self.event_buffer))))
+        return False
 
     def _eventEnvelope(self, event_type, serial, pool_serial, payload):
         event_name = events.getEventNameByType(event_type)

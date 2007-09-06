@@ -93,6 +93,18 @@ Next Release
     When you exit supervisor, it will print Python profiling output to
     stdout.
 
+  - When an event is rebuffered (because all listeners are busy or a
+    listener rejected the event), the rebuffered event is now inserted
+    in the head of the listener event queue.  This doesn't guarantee
+    event emission in natural ordering, because if a listener rejects
+    an event or dies while its processing an event, it can take an
+    arbitrary amount of time for the event to be rebuffered, and other
+    events may be processed in the meantime.  But if listeners never
+    rejects an event or doesn't die while processing an event, this
+    guarantees that events will be emitted in the order that they were
+    received because if all listeners are busy, the rebuffered event
+    will be treid again "first" on the next go-around.
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

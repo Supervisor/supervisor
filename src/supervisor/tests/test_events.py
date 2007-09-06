@@ -64,12 +64,6 @@ class EventSubscriptionNotificationTests(unittest.TestCase):
         
 
 class TestEventTypes(unittest.TestCase):
-    def test_EventBufferOverflowEvent(self):
-        from supervisor.events import EventBufferOverflowEvent
-        inst = EventBufferOverflowEvent(1, 2)
-        self.assertEqual(inst.group, 1)
-        self.assertEqual(inst.event, 2)
-
     def test_ProcessCommunicationEvent(self):
         from supervisor.events import ProcessCommunicationEvent
         inst = ProcessCommunicationEvent(1, 2, 3)
@@ -144,20 +138,6 @@ class TestSerializations(unittest.TestCase):
         self.assertEqual(headers['processname'], 'process1', headers)
         self.assertEqual(headers['groupname'], 'process1', headers)
         self.assertEqual(headers['pid'], '1', headers)
-
-    def test_overflow_event(self):
-        from supervisor import events
-        options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'foo', 'process1','/bin/process1')
-        process1 = DummyProcess(pconfig1)
-        class DummyGroup:
-            config = pconfig1
-        process1.group = DummyGroup
-        wrapped = events.ProcessCommunicationStderrEvent(process1, 1, 'yo')
-        event = events.EventBufferOverflowEvent(process1, wrapped)
-        headers, payload = self._deserialize(str(event))
-        self.assertEqual(headers['groupname'], 'foo')
-        self.assertEqual(headers['eventtype'], 'None')
 
     def test_process_sc_event(self):
         from supervisor import events

@@ -1189,7 +1189,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         from supervisor import events
         self.assertEqual(len(events.callbacks), 2)
         self.assertEqual(events.callbacks[0], 
-            (EventType, pool._dispatchEvent))
+            (EventType, pool._acceptEvent))
         self.assertEqual(events.callbacks[1], 
             (events.EventRejectedEvent, pool.handle_rejected))
         self.assertEqual(pool.serial, -1)
@@ -1215,9 +1215,6 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         self.assertEqual(payload, 'payload\n')
 
     def test_handle_rejected_no_overflow(self):
-        from supervisor import events
-        L = []
-        events.subscribe(events.EventBufferOverflowEvent, lambda x: L.append(x))
         options = DummyOptions()
         gconfig = DummyPGroupConfig(options)
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
@@ -1234,15 +1231,9 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         dummyevent = DummyEvent2()
         dummyevent.serial = 1
         pool.handle_rejected(dummyevent)
-        self.assertEqual(pool.event_buffer, [None, dummyevent.event, None])
-        self.assertEqual(pool.config.options.logger.data[0],
-            'buffered event abc for pool whatever (bufsize 3)')
-        self.assertEqual(len(L), 0)
+        self.assertEqual(pool.event_buffer, [dummyevent.event, None, None])
         
     def test_handle_rejected_event_buffer_overflowed(self):
-        from supervisor import events
-        L = []
-        events.subscribe(events.EventBufferOverflowEvent, lambda x: L.append(x))
         options = DummyOptions()
         gconfig = DummyPGroupConfig(options)
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
@@ -1265,29 +1256,12 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.event_buffer = [event_a, event_b, event_c]
         pool.handle_rejected(rej_event)
         serials = [ x.serial for x in pool.event_buffer ]
-        # we popped a, and we inserted the rejected event into the 2nd pos
-        self.assertEqual(serials, ['b', 'rejected', 'c'])
+        # we popped a, and we inserted the rejected event into the 1st pos
+        self.assertEqual(serials, ['rejected', 'b', 'c'])
         self.assertEqual(pool.config.options.logger.data[0],
             'pool whatever event buffer overflowed, discarding event a')
-        self.assertEqual(len(L), 1)
-        self.assertEqual(L[0].event, event_a)
-        self.assertEqual(pool.config.options.logger.data[1],
-            'buffered event rejected for pool whatever (bufsize 3)')
 
-    def test__bufferEvent_doesnt_rebufer_overflow_events(self):
-        options = DummyOptions()
-        gconfig = DummyPGroupConfig(options)
-        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
-        process1 = DummyProcess(pconfig1)
-        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
-        pool = self._makeOne(gconfig)
-        pool.event_buffer = [1]
-        from supervisor.events import EventBufferOverflowEvent
-        overflow = EventBufferOverflowEvent(pool, None)
-        pool._bufferEvent(overflow)
-        self.assertEqual(pool.event_buffer, [1])
-
-    def test__dispatchEvent_pipe_error(self):
+    def test_dispatch_pipe_error(self):
         options = DummyOptions()
         gconfig = DummyPGroupConfig(options)
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
@@ -1300,12 +1274,14 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         process1.listener_state = EventListenerStates.READY
         from supervisor.events import StartingFromStoppedEvent
         event = StartingFromStoppedEvent(process1, 1)
-        result = pool._dispatchEvent(event)
-        self.assertEqual(result, False)
+        pool._acceptEvent(event)
+        pool.dispatch()
         self.assertEqual(process1.listener_state, EventListenerStates.READY)
         self.assertEqual(pool.event_buffer, [event])
+        self.assertEqual(options.logger.data[0],
+                         'rebuffering event 1 for pool whatever (bufsize 0)')
 
-    def test__dispatchEvent_attaches_pool_serial_and_serial(self):
+    def test__acceptEvent_attaches_pool_serial_and_serial(self):
         from supervisor.process import GlobalSerial
         options = DummyOptions()
         gconfig = DummyPGroupConfig(options)
@@ -1317,7 +1293,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         process1.listener_state = EventListenerStates.READY
         from supervisor.events import StartingFromStoppedEvent
         event = StartingFromStoppedEvent(process1, 1)
-        self.assertTrue(pool._dispatchEvent(event))
+        pool._acceptEvent(event)
         self.assertEqual(event.serial, GlobalSerial.serial)
         self.assertEqual(event.pool_serials['whatever'], pool.serial)
 
@@ -1343,13 +1319,13 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         event = StartingFromStoppedEvent(process1, 1)
         event.serial = 'a'
         process1.listener_state = EventListenerStates.BUSY
-        pool.event_buffer = [event, None, None, None]
+        pool._acceptEvent(event)
         pool.transition()
         self.assertEqual(process1.transitioned, True)
-        self.assertEqual(pool.event_buffer, [None, event, None, None])
+        self.assertEqual(pool.event_buffer, [event])
         data = pool.config.options.logger.data
         self.assertEqual(data[0],
-                         'buffered event a for pool whatever (bufsize 4)')
+                         'rebuffering event a for pool whatever (bufsize 0)')
     
     def test_transition_event_proc_not_running(self):
         options = DummyOptions()
@@ -1364,7 +1340,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         event = StartingFromStoppedEvent(process1, 1)
         event.serial = 1
         process1.listener_state = EventListenerStates.READY
-        pool.event_buffer = [event]
+        pool._acceptEvent(event)
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [event])
@@ -1372,7 +1348,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         self.assertEqual(process1.listener_state, EventListenerStates.READY)
         data = pool.config.options.logger.data
         self.assertEqual(data[0],
-                         'buffered event 1 for pool whatever (bufsize 1)')
+                         'rebuffering event 1 for pool whatever (bufsize 0)')
 
     def test_transition_event_proc_running(self):
         options = DummyOptions()
@@ -1389,7 +1365,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         class DummyGroup:
             config = gconfig
         process1.group = DummyGroup
-        pool.event_buffer = [event]
+        pool._acceptEvent(event)
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [])

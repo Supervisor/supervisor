@@ -34,16 +34,6 @@ class Event:
     """ Abstract event type """
     pass
 
-class EventBufferOverflowEvent(Event):
-    def __init__(self, group, event):
-        self.group = group
-        self.event = event
-
-    def __str__(self):
-        name = self.group.config.name
-        typ = getEventNameByType(self.event)
-        return 'groupname:%s eventtype:%s' % (name, typ)
-
 class ProcessCommunicationEvent(Event):
     # event mode tokens
     BEGIN_TOKEN = '<!--XSUPERVISOR:BEGIN-->'
@@ -179,7 +169,6 @@ class EventTypes:
     SUPERVISOR_STATE_CHANGE = SupervisorStateChangeEvent
     SUPERVISOR_STATE_CHANGE_RUNNING = SupervisorRunningEvent
     SUPERVISOR_STATE_CHANGE_STOPPING = SupervisorStoppingEvent
-    EVENT_BUFFER_OVERFLOW = EventBufferOverflowEvent
 
 def getEventNameByType(requested):
     for name, typ in EventTypes.__dict__.items():
