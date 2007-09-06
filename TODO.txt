@@ -1,3 +1,11 @@
+- General speed improvement wrangling:
+
+  - Play around with creating a select trigger file descriptor for
+    each event pool.  When an event is accepted by the pool, write to
+    the file descriptor.  This will cause select to time out and fall
+    through.  In an asyncore dispatcher represented by the file
+    descriptor, attempt to dispatch the event.
+
 - Add a new cwd option that will chdir after the fork-exec.
 
 - Move set of 'SUPERVISOR_ENABLED' envvar to process spawn method.
