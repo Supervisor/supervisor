@@ -367,7 +367,7 @@ class DummyProcess:
     def finish(self, pid, sts):
         self.finished = pid, sts
 
-    def fatal(self):
+    def give_up(self):
         from supervisor.process import ProcessStates
         self.state = ProcessStates.FATAL
 
@@ -746,15 +746,11 @@ class DummyPGroupConfig:
 class DummyProcessGroup:
     def __init__(self, config):
         self.config = config
-        self.necessary_started = False
         self.transitioned = False
         self.all_stopped = False
         self.delay_processes = []
         self.dispatchers = {}
         self.unstopped_processes = []
-
-    def start_necessary(self):
-        self.necessary_started = True
 
     def transition(self):
         self.transitioned = True

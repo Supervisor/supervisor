@@ -23,6 +23,7 @@ import traceback
 import signal
 
 from supervisor.states import ProcessStates
+from supervisor.states import SupervisorStates
 from supervisor.states import getProcessStateDescription
 from supervisor.states import STOPPED_STATES
 
@@ -292,7 +293,7 @@ class Subprocess:
         self.administrative_stop = 1
         return self.kill(self.config.stopsignal)
 
-    def fatal(self):
+    def give_up(self):
         self.delay = 0
         self.backoff = 0
         self.system_stop = 1
@@ -445,35 +446,64 @@ class Subprocess:
 
     def transition(self):
         now = time.time()
+        state = self.state
 
-        state = self.get_state()
-
-        # we need to transition processes between BACKOFF ->
-        # FATAL and STARTING -> RUNNING within here
         logger = self.config.options.logger
 
-        if state == ProcessStates.BACKOFF:
-            if self.backoff > self.config.startretries:
-                # BACKOFF -> FATAL if the proc has exceeded its number
-                # of retries
-                self.fatal()
-                msg = ('entered FATAL state, too many start retries too '
-                       'quickly')
-                logger.info('gave up: %s %s' % (self.config.name, msg))
+        if self.config.options.mood > SupervisorStates.RESTARTING:
+            # dont start any processes if supervisor is shutting down
+            if state == ProcessStates.EXITED:
+                if self.config.autorestart:
+                    if self.config.autorestart is RestartUnconditionally:
+                        # EXITED -> STARTING
+                        self.spawn()
+                    else: # autorestart is RestartWhenExitUnexpected
+                        if self.exitstatus not in self.config.exitcodes:
+                            # EXITED -> STARTING
+                            self.spawn()
+            elif state == ProcessStates.STOPPED and not self.laststart:
+                if self.config.autostart:
+                    # STOPPED -> STARTING
+                    self.spawn()
+            elif state == ProcessStates.BACKOFF:
+                if self.backoff <= self.config.startretries:
+                    if now > self.delay:
+                        # BACKOFF -> STARTING
+                        self.spawn()
 
-        elif state == ProcessStates.STARTING:
+        if state == ProcessStates.STARTING:
             if now - self.laststart > self.config.startsecs:
                 # STARTING -> RUNNING if the proc has started
                 # successfully and it has stayed up for at least
                 # proc.config.startsecs,
                 self.delay = 0
                 self.backoff = 0
+                self._assertInState(ProcessStates.STARTING)
+                self.change_state(ProcessStates.RUNNING)
                 msg = (
                     'entered RUNNING state, process has stayed up for '
                     '> than %s seconds (startsecs)' % self.config.startsecs)
                 logger.info('success: %s %s' % (self.config.name, msg))
-                self._assertInState(ProcessStates.STARTING)
-                self.change_state(ProcessStates.RUNNING)
+
+        if state == ProcessStates.BACKOFF:
+            if self.backoff > self.config.startretries:
+                # BACKOFF -> FATAL if the proc has exceeded its number
+                # of retries
+                self.give_up()
+                msg = ('entered FATAL state, too many start retries too '
+                       'quickly')
+                logger.info('gave up: %s %s' % (self.config.name, msg))
+
+        elif state == ProcessStates.STOPPING:
+            time_left = self.delay - now
+            if time_left <= 0:
+                # kill processes which are taking too long to stop with a final
+                # sigkill.  if this doesn't kill it, the process will be stuck
+                # in the STOPPING state forever.
+                self.config.options.logger.warn(
+                    'killing %r (%s) with SIGKILL' % (self.config.name,
+                                                      self.pid))
+                self.kill(signal.SIGKILL)
 
 class ProcessGroupBase:
     def __init__(self, config):
@@ -498,31 +528,6 @@ class ProcessGroupBase:
         for process in self.processes.values():
             process.reopenlogs()
 
-    def start_necessary(self):
-        processes = self.processes.values()
-        processes.sort() # asc by priority
-        now = time.time()
-
-        for p in processes:
-            state = p.get_state()
-            if state == ProcessStates.STOPPED and not p.laststart:
-                if p.config.autostart:
-                    # STOPPED -> STARTING
-                    p.spawn()
-            elif state == ProcessStates.EXITED:
-                if p.config.autorestart:
-                    if p.config.autorestart is RestartUnconditionally:
-                        # EXITED -> STARTING
-                        p.spawn()
-                    else: # autorestart is RestartWhenExitUnexpected
-                        if p.exitstatus not in p.config.exitcodes:
-                            # EXITED -> STARTING
-                            p.spawn()
-            elif state == ProcessStates.BACKOFF:
-                if now > p.delay:
-                    # BACKOFF -> STARTING
-                    p.spawn()
-
     def stop_all(self):
         processes = self.processes.values()
         processes.sort()
@@ -538,7 +543,7 @@ class ProcessGroupBase:
                 proc.stop()
             elif state == ProcessStates.BACKOFF:
                 # BACKOFF -> FATAL
-                proc.fatal()
+                proc.give_up()
 
     def get_delay_processes(self):
         """ Processes which are starting or stopping """
@@ -549,30 +554,6 @@ class ProcessGroupBase:
         return [ x for x in self.processes.values() if x.get_state() not in
                  STOPPED_STATES ]
 
-    def get_undead(self):
-        """ Processes which we've attempted to stop but which haven't responded
-        to a kill request within a given amount of time (stopwaitsecs) """
-        now = time.time()
-        processes = self.processes.values()
-        undead = []
-
-        for proc in processes:
-            if proc.get_state() == ProcessStates.STOPPING:
-                time_left = proc.delay - now
-                if time_left <= 0:
-                    undead.append(proc)
-        return undead
-
-    def kill_undead(self):
-        for undead in self.get_undead():
-            # kill processes which are taking too long to stop with a final
-            # sigkill.  if this doesn't kill it, the process will be stuck
-            # in the STOPPING state forever.
-            self.config.options.logger.warn(
-                'killing %r (%s) with SIGKILL' % (undead.config.name,
-                                                  undead.pid))
-            undead.kill(signal.SIGKILL)
-
     def get_dispatchers(self):
         dispatchers = {}
         for process in self.processes.values():
@@ -581,7 +562,6 @@ class ProcessGroupBase:
 
 class ProcessGroup(ProcessGroupBase):
     def transition(self):
-        self.kill_undead()
         for proc in self.processes.values():
             proc.transition()
 
@@ -602,7 +582,6 @@ class EventListenerPool(ProcessGroupBase):
             self._bufferEvent(event.event)
 
     def transition(self):
-        self.kill_undead()
         for proc in self.processes.values():
             proc.transition()
         if self.event_buffer:

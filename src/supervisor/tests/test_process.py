@@ -25,7 +25,7 @@ class SubprocessTests(unittest.TestCase):
         clear()
 
     def test_getProcessStateDescription(self):
-        from supervisor.process import ProcessStates
+        from supervisor.states import ProcessStates
         from supervisor.process import getProcessStateDescription
         for statename, code in ProcessStates.__dict__.items():
             self.assertEqual(getProcessStateDescription(code), statename)
@@ -536,7 +536,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.kills[11], signal.SIGTERM)
         self.assertEqual(dispatcher.write_event_handled, True)
 
-    def test_fatal(self):
+    def test_give_up(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test')
         instance = self._makeOne(config)
@@ -545,7 +545,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor import events
         events.subscribe(events.FatalFromBackoffEvent, lambda x: L.append(x))
         instance.state = ProcessStates.BACKOFF
-        instance.fatal()
+        instance.give_up()
         self.assertEqual(instance.system_stop, 1)
         self.assertFalse(instance.delay)
         self.assertFalse(instance.backoff)
@@ -591,7 +591,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor.states import ProcessStates
         from supervisor import events
         events.subscribe(events.StoppingFromStartingEvent,lambda x: L.append(x))
-        from supervisor.process import ProcessStates
+        from supervisor.states import ProcessStates
         instance.state = ProcessStates.STARTING
         instance.kill(signal.SIGTERM)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
@@ -609,7 +609,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor.states import ProcessStates
         from supervisor import events
         events.subscribe(events.StoppingFromRunningEvent, lambda x: L.append(x))
-        from supervisor.process import ProcessStates
+        from supervisor.states import ProcessStates
         instance.state = ProcessStates.RUNNING
         instance.kill(signal.SIGTERM)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
@@ -627,7 +627,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor.states import ProcessStates
         from supervisor import events
         events.subscribe(events.Event,lambda x: L.append(x))
-        from supervisor.process import ProcessStates
+        from supervisor.states import ProcessStates
         instance.state = ProcessStates.STOPPING
         instance.kill(signal.SIGKILL)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
@@ -771,60 +771,265 @@ class SubprocessTests(unittest.TestCase):
 
         self.assertEqual(L, [instance, instance1, instance2])
 
-    def test_transition(self):
-        options = DummyOptions()
-
-        from supervisor.process import ProcessStates
-
-        # this should go from BACKOFF to FATAL via transition()
-        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
-        process1 = self._makeOne(pconfig1)
-        process1.laststart = 1
-        process1.backoff = 10000
-        process1.delay = 1
-        process1.system_stop = 0
-        process1.stdout_buffer = 'abc'
-        process1.stderr_buffer = 'def'
-        process1.state = ProcessStates.BACKOFF
-
+    def test_transition_stopped_to_starting_supervisor_stopping(self):
         from supervisor import events
         L = []
         events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates, SupervisorStates
+        options = DummyOptions()
+        options.mood = SupervisorStates.SHUTDOWN
 
-        process1.transition()
+        # this should not be spawned, as supervisor is shutting down
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
+        process = self._makeOne(pconfig)
+        process.laststart = 0
+        process.state = ProcessStates.STOPPED
+        process.transition()
+        self.assertEqual(process.state, ProcessStates.STOPPED)
+        self.assertEqual(L, [])
+
+    def test_transition_stopped_to_starting_supervisor_running(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates, SupervisorStates
+        options = DummyOptions()
+        options.mood = SupervisorStates.RUNNING
+
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
+        process = self._makeOne(pconfig)
+        process.laststart = 0
+        process.state = ProcessStates.STOPPED
+        process.transition()
+        self.assertEqual(process.state, ProcessStates.STARTING)
+        self.assertEqual(L[0].__class__, events.StartingFromStoppedEvent)
+
+    def test_transition_exited_to_starting_supervisor_stopping(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates, SupervisorStates
+        options = DummyOptions()
+        options.mood = SupervisorStates.SHUTDOWN
+
+        # this should not be spawned, as supervisor is shutting down
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
+        from supervisor.datatypes import RestartUnconditionally
+        pconfig.autorestart = RestartUnconditionally
+        process = self._makeOne(pconfig)
+        process.laststart = 1
+        process.system_stop = 1
+        process.state = ProcessStates.EXITED
+        process.transition()
+        self.assertEqual(process.state, ProcessStates.EXITED)
+        self.assertEqual(process.system_stop, 1)
+        self.assertEqual(L, [])
+
+    def test_transition_exited_to_starting_uncond_supervisor_running(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates, SupervisorStates
+        options = DummyOptions()
+
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
+        from supervisor.datatypes import RestartUnconditionally
+        pconfig.autorestart = RestartUnconditionally
+        process = self._makeOne(pconfig)
+        process.laststart = 1
+        process.state = ProcessStates.EXITED
+        process.transition()
+        self.assertEqual(process.state, ProcessStates.STARTING)
+        self.assertEqual(L[0].__class__, events.StartingFromExitedEvent)
+
+    def test_transition_exited_to_starting_condit_supervisor_running(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates, SupervisorStates
+        options = DummyOptions()
+
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
+        from supervisor.datatypes import RestartWhenExitUnexpected
+        pconfig.autorestart = RestartWhenExitUnexpected
+        process = self._makeOne(pconfig)
+        process.laststart = 1
+        process.state = ProcessStates.EXITED
+        process.exitstatus = 'bogus'
+        process.transition()
+        self.assertEqual(process.state, ProcessStates.STARTING)
+        self.assertEqual(L[0].__class__, events.StartingFromExitedEvent)
+
+    def test_transition_exited_to_starting_condit_fls_supervisor_running(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates, SupervisorStates
+        options = DummyOptions()
+
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
+        from supervisor.datatypes import RestartWhenExitUnexpected
+        pconfig.autorestart = RestartWhenExitUnexpected
+        process = self._makeOne(pconfig)
+        process.laststart = 1
+        process.state = ProcessStates.EXITED
+        process.exitstatus = 0
+        process.transition()
+        self.assertEqual(process.state, ProcessStates.EXITED)
+        self.assertEqual(L, [])
+
+    def test_transition_backoff_to_starting_supervisor_stopping(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates, SupervisorStates
+        options = DummyOptions()
+        options.mood = SupervisorStates.SHUTDOWN
+
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
+        process = self._makeOne(pconfig)
+        process.laststart = 1
+        process.delay = 0
+        process.backoff = 0
+        process.state = ProcessStates.BACKOFF
+        process.transition()
+        self.assertEqual(process.state, ProcessStates.BACKOFF)
+        self.assertEqual(L, [])
+
+    def test_transition_backoff_to_starting_supervisor_running(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates, SupervisorStates
+        options = DummyOptions()
+        options.mood = SupervisorStates.RUNNING
+
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
+        process = self._makeOne(pconfig)
+        process.laststart = 1
+        process.delay = 0
+        process.backoff = 0
+        process.state = ProcessStates.BACKOFF
+        process.transition()
+        self.assertEqual(process.state, ProcessStates.STARTING)
+        self.assertEqual(L[0].__class__, events.StartingFromBackoffEvent)
+
+    def test_transition_backoff_to_starting_supervisor_running_notyet(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates, SupervisorStates
+        options = DummyOptions()
+        options.mood = SupervisorStates.RUNNING
+
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
+        process = self._makeOne(pconfig)
+        process.laststart = 1
+        process.delay = sys.maxint
+        process.backoff = 0
+        process.state = ProcessStates.BACKOFF
+        process.transition()
+        self.assertEqual(process.state, ProcessStates.BACKOFF)
+        self.assertEqual(L, [])
+
+    def test_transition_starting_to_running(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates
+
+        options = DummyOptions()
+
+        # this should go from STARTING to RUNNING via transition()
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
+        process = self._makeOne(pconfig)
+        process.backoff = 1
+        process.delay = 1
+        process.system_stop = 0
+        process.laststart = 1
+        process.pid = 1
+        process.stdout_buffer = 'abc'
+        process.stderr_buffer = 'def'
+        process.state = ProcessStates.STARTING
+        process.transition()
+
+        # this implies RUNNING
+        self.assertEqual(process.backoff, 0)
+        self.assertEqual(process.delay, 0)
+        self.assertEqual(process.system_stop, 0)
+        self.assertEqual(options.logger.data[0],
+                         'success: process entered RUNNING state, process has '
+                         'stayed up for > than 10 seconds (startsecs)')
+        self.assertEqual(L[0].__class__, events.RunningFromStartingEvent)
+
+    def test_transition_backoff_to_fatal(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates
+        options = DummyOptions()
+
+        # this should go from BACKOFF to FATAL via transition()
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
+        process = self._makeOne(pconfig)
+        process.laststart = 1
+        process.backoff = 10000
+        process.delay = 1
+        process.system_stop = 0
+        process.stdout_buffer = 'abc'
+        process.stderr_buffer = 'def'
+        process.state = ProcessStates.BACKOFF
+
+        process.transition()
 
         # this implies FATAL
-        self.assertEqual(process1.backoff, 0)
-        self.assertEqual(process1.delay, 0)
-        self.assertEqual(process1.system_stop, 1)
+        self.assertEqual(process.backoff, 0)
+        self.assertEqual(process.delay, 0)
+        self.assertEqual(process.system_stop, 1)
         self.assertEqual(options.logger.data[0],
-                         'gave up: process1 entered FATAL state, too many start'
+                         'gave up: process entered FATAL state, too many start'
                          ' retries too quickly')
         self.assertEqual(L[0].__class__, events.FatalFromBackoffEvent)
 
+    def test_transition_stops_unkillable_notyet(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates
+        options = DummyOptions()
 
-        # this should go from STARTING to RUNNING via transition()
-        pconfig2 = DummyPConfig(options, 'process2', 'process2','/bin/process2')
-        process2 = self._makeOne(pconfig2)
-        process2.backoff = 1
-        process2.delay = 1
-        process2.system_stop = 0
-        process2.laststart = 1
-        process2.pid = 1
-        process2.stdout_buffer = 'abc'
-        process2.stderr_buffer = 'def'
-        process2.state = ProcessStates.STARTING
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
+        process = self._makeOne(pconfig)
+        process.delay = sys.maxint
+        process.state = ProcessStates.STOPPING
 
-        process2.transition()
+        process.transition()
+        self.assertEqual(process.state, ProcessStates.STOPPING)
+        self.assertEqual(L, [])
 
-        # this implies RUNNING
-        self.assertEqual(process2.backoff, 0)
-        self.assertEqual(process2.delay, 0)
-        self.assertEqual(process2.system_stop, 0)
-        self.assertEqual(options.logger.data[1],
-                         'success: process2 entered RUNNING state, process has '
-                         'stayed up for > than 10 seconds (startsecs)')
-        self.assertEqual(L[1].__class__, events.RunningFromStartingEvent)
+    def test_transition_stops_unkillable(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateChangeEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates
+        options = DummyOptions()
+
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
+        process = self._makeOne(pconfig)
+        process.delay = 0
+        process.pid = 1
+        process.killing = 0
+        process.state = ProcessStates.STOPPING
+
+        process.transition()
+        self.assertEqual(process.killing, 1)
+        self.assertNotEqual(process.delay, 0)
+        self.assertEqual(process.state, ProcessStates.STOPPING)
+        self.assertEqual(options.logger.data[0],
+                         "killing 'process' (1) with SIGKILL")
+        import signal
+        self.assertEqual(options.kills[1], signal.SIGKILL)
+        self.assertEqual(L, [])
 
     def test_change_state_doesnt_notify_if_no_state_change(self):
         options = DummyOptions()
@@ -843,7 +1048,7 @@ class ProcessGroupBaseTests(unittest.TestCase):
 
     def test_get_delay_processes(self):
         options = DummyOptions()
-        from supervisor.process import ProcessStates
+        from supervisor.states import ProcessStates
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
         process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
         process1.delay = 1
@@ -853,99 +1058,8 @@ class ProcessGroupBaseTests(unittest.TestCase):
         delayed = group.get_delay_processes()
         self.assertEqual(delayed, [process1])
         
-    def test_get_undead(self):
-        options = DummyOptions()
-        from supervisor.process import ProcessStates
-
-        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
-        process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
-        process1.delay = time.time() - 1
-
-        pconfig2 = DummyPConfig(options, 'process2', 'process2','/bin/process2')
-        process2 = DummyProcess(pconfig2, state=ProcessStates.STOPPING)
-        process2.delay = time.time() + 1000
-
-        pconfig3 = DummyPConfig(options, 'process3', 'process3','/bin/process3')
-        process3 = DummyProcess(pconfig3, state=ProcessStates.RUNNING)
-
-        gconfig = DummyPGroupConfig(options,
-                                    pconfigs=[pconfig1, pconfig2, pconfig3])
-        group = self._makeOne(gconfig)
-        group.processes = { 'process1': process1, 'process2': process2,
-                            'process3':process3 }
-
-        undead = group.get_undead()
-        self.assertEqual(undead, [process1])
-
-    def test_kill_undead(self):
-        options = DummyOptions()
-        from supervisor.process import ProcessStates
-
-        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
-        process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
-        process1.delay = time.time() - 1
-
-        pconfig2 = DummyPConfig(options, 'process2', 'process2','/bin/process2')
-        process2 = DummyProcess(pconfig2, state=ProcessStates.STOPPING)
-        process2.delay = time.time() + 1000
-
-        gconfig = DummyPGroupConfig(
-            options,
-            pconfigs=[pconfig1, pconfig2])
-        group = self._makeOne(gconfig)
-        group.processes = { 'process1': process1, 'process2': process2}
-
-        group.kill_undead()
-        self.assertEqual(process1.killed_with, signal.SIGKILL)
-
-    def test_start_necessary(self):
-        from supervisor.process import ProcessStates
-        from supervisor import datatypes
-        options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'killed', 'killed', '/bin/killed',
-                                autorestart=datatypes.RestartUnconditionally)
-        process1 = DummyProcess(pconfig1, ProcessStates.EXITED)
-        pconfig2 = DummyPConfig(options, 'error', 'error', '/bin/error')
-        process2 = DummyProcess(pconfig2, ProcessStates.FATAL)
-
-        pconfig3 = DummyPConfig(options, 'notstarted', 'notstarted',
-                                '/bin/notstarted', autostart=True)
-        process3 = DummyProcess(pconfig3, ProcessStates.STOPPED)
-        pconfig4 = DummyPConfig(options, 'wontstart', 'wonstart',
-                                '/bin/wontstart', autostart=True)
-        process4 = DummyProcess(pconfig4, ProcessStates.BACKOFF)
-        pconfig5 = DummyPConfig(options, 'backingoff', 'backingoff',
-                                '/bin/backingoff', autostart=True)
-        process5 = DummyProcess(pconfig5, ProcessStates.BACKOFF)
-
-        now = time.time()
-        process5.delay = now + 1000
-
-        pconfig6 = DummyPConfig(options,
-                                'shouldntrestart', 'shouldntrestart',
-                                '/bin/shouldntrestart',
-                                autorestart=datatypes.RestartWhenExitUnexpected,
-                                exitcodes=[1])
-        process6 = DummyProcess(pconfig6, ProcessStates.EXITED)
-        process6.exitstatus = 1
-
-        gconfig = DummyPGroupConfig(
-            options,
-            pconfigs=[pconfig1, pconfig2, pconfig3, pconfig4, pconfig5])
-        group = self._makeOne(gconfig)
-        group.processes = {'killed': process1, 'error': process2,
-                           'notstarted':process3, 'wontstart':process4,
-                           'backingoff':process5, 'shouldntrestart':process6}
-        group.start_necessary()
-        self.assertEqual(process1.spawned, True)
-        self.assertEqual(process2.spawned, False)
-        self.assertEqual(process3.spawned, True)
-        self.assertEqual(process4.spawned, True)
-        self.assertEqual(process5.spawned, False)
-        self.assertEqual(process6.spawned, False)
-
     def test_stop_all(self):
-        from supervisor.process import ProcessStates
+        from supervisor.states import ProcessStates
         options = DummyOptions()
 
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
@@ -976,7 +1090,7 @@ class ProcessGroupBaseTests(unittest.TestCase):
 
     def test_get_dispatchers(self):
         options = DummyOptions()
-        from supervisor.process import ProcessStates
+        from supervisor.states import ProcessStates
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
         process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
         process1.dispatchers = {4:None}
@@ -991,7 +1105,7 @@ class ProcessGroupBaseTests(unittest.TestCase):
         
     def test_reopenlogs(self):
         options = DummyOptions()
-        from supervisor.process import ProcessStates
+        from supervisor.states import ProcessStates
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
         process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
@@ -1002,7 +1116,7 @@ class ProcessGroupBaseTests(unittest.TestCase):
 
     def test_removelogs(self):
         options = DummyOptions()
-        from supervisor.process import ProcessStates
+        from supervisor.states import ProcessStates
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
         process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
@@ -1043,7 +1157,7 @@ class ProcessGroupTests(ProcessGroupBaseTests):
 
     def test_transition(self):
         options = DummyOptions()
-        from supervisor.process import ProcessStates
+        from supervisor.states import ProcessStates
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
         process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
@@ -1218,7 +1332,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
 
     def test_transition_nobody_listenening(self):
         options = DummyOptions()
-        from supervisor.process import ProcessStates
+        from supervisor.states import ProcessStates
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
         process1 = DummyProcess(pconfig1, state=ProcessStates.STARTING)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
@@ -1239,7 +1353,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
     
     def test_transition_event_proc_not_running(self):
         options = DummyOptions()
-        from supervisor.process import ProcessStates
+        from supervisor.states import ProcessStates
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
         process1 = DummyProcess(pconfig1, state=ProcessStates.STARTING)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
@@ -1262,7 +1376,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
 
     def test_transition_event_proc_running(self):
         options = DummyOptions()
-        from supervisor.process import ProcessStates
+        from supervisor.states import ProcessStates
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
         process1 = DummyProcess(pconfig1, state=ProcessStates.RUNNING)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])

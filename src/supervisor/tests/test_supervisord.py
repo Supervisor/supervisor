@@ -176,7 +176,6 @@ class SupervisordTests(unittest.TestCase):
         supervisord.process_groups = {'foo': pgroup}
         options.select_result = [6], [7, 8], []
         supervisord.runforever(test=True)
-        self.assertEqual(pgroup.necessary_started, True)
         self.assertEqual(pgroup.transitioned, True)
         self.assertEqual(readable.read_event_handled, True)
         self.assertEqual(writable.write_event_handled, True)

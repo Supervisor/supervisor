@@ -172,10 +172,7 @@ class Supervisor:
             pgroups = self.process_groups.values()
             pgroups.sort()
 
-            if self.options.mood > SupervisorStates.RESTARTING:
-                [ group.start_necessary() for group in pgroups ]
-
-            elif self.options.mood < SupervisorStates.RUNNING:
+            if self.options.mood < SupervisorStates.RUNNING:
                 if not self.stopping:
                     # first time, set the stopping flag, do a
                     # notification and set stop_groups
