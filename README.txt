@@ -1031,17 +1031,6 @@ Supervisor Events (New in 3.0)
       SUPERVISOR_STATE_CHANGE_STOPPING -- indicates that supervisor is
       stopping or restarting.
 
-    EVENT_BUFFER_OVERFLOW -- an event type raised when a listener
-    pool's event buffer is overflowed (as can happen when an event
-    listener pool cannot keep up with all of the events sent to it).
-    When the pool's event buffer is overflowed, the oldest event in
-    the buffer is thrown out.
-
-    The serialization of an EVENT_BUFFER_OVERFLOW body
-    is::
-
-      groupname:<name> eventtype:<type of discarded event>
-
 Event Listeners (New in 3.0)
 
   Supervisor event listeners are subprocesses which are treated almost

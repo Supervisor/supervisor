@@ -97,13 +97,15 @@ Next Release
     listener rejected the event), the rebuffered event is now inserted
     in the head of the listener event queue.  This doesn't guarantee
     event emission in natural ordering, because if a listener rejects
-    an event or dies while its processing an event, it can take an
+    an event or dies while it's processing an event, it can take an
     arbitrary amount of time for the event to be rebuffered, and other
-    events may be processed in the meantime.  But if listeners never
-    rejects an event or doesn't die while processing an event, this
+    events may be processed in the meantime.  But if pool listeners
+    never reject an event or don't die while processing an event, this
     guarantees that events will be emitted in the order that they were
     received because if all listeners are busy, the rebuffered event
-    will be treid again "first" on the next go-around.
+    will be tried again "first" on the next go-around.
+
+  - Removed EVENT_BUFFER_OVERFLOW event type.
 
 3.0a2
 
