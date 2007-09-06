@@ -262,16 +262,13 @@ class DummySupervisor:
             self.options = options
         if state is None:
             from supervisor.supervisord import SupervisorStates
-            self.state = SupervisorStates.ACTIVE
+            self.options.mood = SupervisorStates.RUNNING
         else:
-            self.state = state
+            self.options.mood = state
         if process_groups is None:
             self.process_groups = {}
         else:
             self.process_groups = process_groups
-
-    def get_state(self):
-        return self.state
 
 class DummyProcess:
     # Initial state; overridden by instance variables

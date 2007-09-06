@@ -46,14 +46,6 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(options.pidfile_written, True)
         self.assertEqual(options.cleaned_up, True)
 
-    def test_get_state(self):
-        from supervisor.supervisord import SupervisorStates
-        options = DummyOptions()
-        supervisord = self._makeOne(options)
-        self.assertEqual(supervisord.get_state(), SupervisorStates.ACTIVE)
-        supervisord.mood = -1
-        self.assertEqual(supervisord.get_state(), SupervisorStates.SHUTDOWN)
-
     def test_reap(self):
         options = DummyOptions()
         options.waitpid_return = 1, 1
@@ -74,7 +66,7 @@ class SupervisordTests(unittest.TestCase):
         options.signal = signal.SIGTERM
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.mood, -1)
+        self.assertEqual(supervisord.options.mood, -1)
         self.assertEqual(options.logger.data[0],
                          'received SIGTERM indicating exit request')
 
@@ -83,7 +75,7 @@ class SupervisordTests(unittest.TestCase):
         options.signal = signal.SIGINT
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.mood, -1)
+        self.assertEqual(supervisord.options.mood, -1)
         self.assertEqual(options.logger.data[0],
                          'received SIGINT indicating exit request')
 
@@ -92,7 +84,7 @@ class SupervisordTests(unittest.TestCase):
         options.signal = signal.SIGQUIT
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.mood, -1)
+        self.assertEqual(supervisord.options.mood, -1)
         self.assertEqual(options.logger.data[0],
                          'received SIGQUIT indicating exit request')
 
@@ -101,7 +93,7 @@ class SupervisordTests(unittest.TestCase):
         options.signal = signal.SIGHUP
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.mood, 0)
+        self.assertEqual(supervisord.options.mood, 0)
         self.assertEqual(options.logger.data[0],
                          'received SIGHUP indicating restart request')
 
@@ -118,7 +110,7 @@ class SupervisordTests(unittest.TestCase):
             options, 'foo',
             pconfigs=pconfigs)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.mood, 1)
+        self.assertEqual(supervisord.options.mood, 1)
         self.assertEqual(options.logs_reopened, True)
         self.assertEqual(options.logger.data[0],
                          'received SIGUSR2 indicating log reopen request')
@@ -128,7 +120,7 @@ class SupervisordTests(unittest.TestCase):
         options.signal = signal.SIGUSR1
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.mood, 1)
+        self.assertEqual(supervisord.options.mood, 1)
         self.assertEqual(options.logger.data[0],
                          'received SIGUSR1 indicating nothing')
 
@@ -210,7 +202,7 @@ class SupervisordTests(unittest.TestCase):
         gconfig = DummyPGroupConfig(options)
         pgroup = DummyProcessGroup(gconfig)
         supervisord.process_groups = {'foo': pgroup}
-        supervisord.mood = -1
+        supervisord.options.mood = -1
         L = []
         def callback(event):
             L.append(event)
@@ -235,7 +227,7 @@ class SupervisordTests(unittest.TestCase):
         def callback():
             L.append(1)
         supervisord.process_groups = {'foo': pgroup}
-        supervisord.mood = 0
+        supervisord.options.mood = 0
         import asyncore
         self.assertRaises(asyncore.ExitNow, supervisord.runforever, test=True)
         self.assertEqual(pgroup.all_stopped, True)
@@ -252,7 +244,7 @@ class SupervisordTests(unittest.TestCase):
         def callback():
             L.append(1)
         supervisord.process_groups = {'foo': pgroup}
-        supervisord.mood = 0
+        supervisord.options.mood = 0
         import asyncore
         supervisord.runforever(test=True)
         self.assertNotEqual(supervisord.lastdelayreport, 0)
@@ -260,8 +252,8 @@ class SupervisordTests(unittest.TestCase):
     def test_getSupervisorStateDescription(self):
         from supervisor.states import getSupervisorStateDescription
         from supervisor.states import SupervisorStates
-        result = getSupervisorStateDescription(SupervisorStates.ACTIVE)
-        self.assertEqual(result, 'ACTIVE')
+        result = getSupervisorStateDescription(SupervisorStates.RUNNING)
+        self.assertEqual(result, 'RUNNING')
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

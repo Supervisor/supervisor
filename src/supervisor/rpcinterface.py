@@ -31,10 +31,7 @@ class SupervisorNamespaceRPCInterface:
 
     def _update(self, text):
         self.update_text = text # for unit tests, mainly
-
-        state = self.supervisord.get_state()
-
-        if state == SupervisorStates.SHUTDOWN:
+        if self.supervisord.options.mood < SupervisorStates.RUNNING:
             raise RPCError(Faults.SHUTDOWN_STATE)
 
     # RPC API methods
@@ -73,7 +70,7 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('getState')
 
-        state = self.supervisord.get_state()
+        state = self.supervisord.options.mood
         statename = getSupervisorStateDescription(state)
         data =  {
             'statecode':state,
@@ -132,8 +129,7 @@ class SupervisorNamespaceRPCInterface:
         @return boolean result always returns True unless error
         """
         self._update('shutdown')
-        
-        self.supervisord.mood = -1
+        self.supervisord.options.mood = SupervisorStates.SHUTDOWN
         return True
 
     def restart(self):
@@ -143,7 +139,7 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('restart')
         
-        self.supervisord.mood = 0
+        self.supervisord.options.mood = SupervisorStates.RESTARTING
         return True
 
     def _getAllProcesses(self, lexical=False):

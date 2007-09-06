@@ -55,7 +55,6 @@ from supervisor.states import SupervisorStates
 from supervisor.states import getProcessStateDescription
 
 class Supervisor:
-    mood = 1 # 1: up, 0: restarting, -1: suicidal
     stopping = False # set after we detect that we are handling a stop request
     lastdelayreport = 0 # throttle for delayed process error reports at stop
     process_groups = None # map of process group name to process group object
@@ -173,10 +172,10 @@ class Supervisor:
             pgroups = self.process_groups.values()
             pgroups.sort()
 
-            if self.mood > 0:
+            if self.options.mood > SupervisorStates.RESTARTING:
                 [ group.start_necessary() for group in pgroups ]
 
-            elif self.mood < 1:
+            elif self.options.mood < SupervisorStates.RUNNING:
                 if not self.stopping:
                     # first time, set the stopping flag, do a
                     # notification and set stop_groups
@@ -239,7 +238,7 @@ class Supervisor:
             self.reap()
             self.handle_signal()
 
-            if self.mood < 1:
+            if self.options.mood < SupervisorStates.RUNNING:
                 self.ordered_stop_groups_phase_2()
 
             if test:
@@ -263,13 +262,13 @@ class Supervisor:
             if sig in (signal.SIGTERM, signal.SIGINT, signal.SIGQUIT):
                 self.options.logger.warn(
                     'received %s indicating exit request' % signame(sig))
-                self.mood = -1
+                self.options.mood = SupervisorStates.SHUTDOWN
             elif sig == signal.SIGHUP:
                 self.options.logger.warn(
                     'received %s indicating restart request' % signame(sig))
-                self.mood = 0
+                self.options.mood = SupervisorStates.RESTARTING
             elif sig == signal.SIGCHLD:
-                self.options.logger.info(
+                self.options.logger.debug(
                     'received %s indicating a child quit' % signame(sig))
             elif sig == signal.SIGUSR2:
                 self.options.logger.info(
@@ -282,9 +281,7 @@ class Supervisor:
                     'received %s indicating nothing' % signame(sig))
         
     def get_state(self):
-        if self.mood <= 0:
-            return SupervisorStates.SHUTDOWN
-        return SupervisorStates.ACTIVE
+        return self.options.mood
 
 # Main program
 def main(test=False):
@@ -302,7 +299,7 @@ def main(test=False):
         first = False
         if test:
             return d
-        if d.mood < 0:
+        if options.mood < SupervisorStates.RUNNING:
             break
         if d.options.httpserver:
             d.options.httpserver.close()

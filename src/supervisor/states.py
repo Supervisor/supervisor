@@ -1,3 +1,20 @@
+##############################################################################
+#
+# Copyright (c) 2007 Agendaless Consulting and Contributors.
+# All Rights Reserved.
+#
+# This software is subject to the provisions of the Zope Public License,
+# Version 2.1 (ZPL).  A copy of the ZPL should accompany this distribution.
+# THIS SOFTWARE IS PROVIDED "AS IS" AND ANY AND ALL EXPRESS OR IMPLIED
+# WARRANTIES ARE DISCLAIMED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF TITLE, MERCHANTABILITY, AGAINST INFRINGEMENT, AND FITNESS
+# FOR A PARTICULAR PURPOSE.
+#
+##############################################################################
+
+# This modules must not depend on any other non-stdlib module to prevent
+# circular import problems.
+
 class ProcessStates:
     STOPPED = 0
     STARTING = 10
@@ -25,8 +42,10 @@ def getProcessStateDescription(code):
             return statename
 
 class SupervisorStates:
-    ACTIVE = 0
-    SHUTDOWN = 1
+    FATAL = 2
+    RUNNING = 1
+    RESTARTING = 0
+    SHUTDOWN = -1
 
 def getSupervisorStateDescription(code):
     for statename in SupervisorStates.__dict__:

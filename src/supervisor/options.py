@@ -57,6 +57,7 @@ from supervisor.datatypes import Automatic
 from supervisor.datatypes import auto_restart
 
 from supervisor import loggers
+from supervisor import states
 
 here = os.path.abspath(os.path.dirname(__file__))
 version_txt = os.path.join(here, 'version.txt')
@@ -332,6 +333,7 @@ class ServerOptions(Options):
     environment = None
     httpserver = None
     unlink_socketfile = True
+    mood = states.SupervisorStates.RUNNING
     
     ANSI_ESCAPE_BEGIN = '\x1b['
     ANSI_TERMINATORS = ('H', 'f', 'A', 'B', 'C', 'D', 'R', 's', 'u', 'J', 

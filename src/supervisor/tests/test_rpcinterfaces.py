@@ -73,7 +73,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         interface._update('foo')
         self.assertEqual(interface.update_text, 'foo')
-        supervisord.state = SupervisorStates.SHUTDOWN
+        supervisord.options.mood = SupervisorStates.SHUTDOWN
         self._assertRPCError(xmlrpc.Faults.SHUTDOWN_STATE, interface._update,
                              'foo')
 
@@ -111,7 +111,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
         stateinfo = interface.getState()
-        statecode = supervisord.get_state()
+        statecode = supervisord.options.mood
         statename = getSupervisorStateDescription(statecode)
         self.assertEqual(stateinfo['statecode'], statecode)
         self.assertEqual(stateinfo['statename'], statename)
@@ -202,14 +202,14 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         value = interface.shutdown()
         self.assertEqual(value, True)
-        self.assertEqual(supervisord.mood, -1)
+        self.assertEqual(supervisord.options.mood, -1)
 
     def test_restart(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
         value = interface.restart()
         self.assertEqual(value, True)
-        self.assertEqual(supervisord.mood, 0)
+        self.assertEqual(supervisord.options.mood, 0)
 
     def test_startProcess_already_started(self):
         from supervisor import xmlrpc
@@ -642,7 +642,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(process2.stop_called, True)
 
     def test__interpretProcessInfo(self):
-        supervisord = DummySupervisor({})
+        supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
         start = _NOW -100
         stop  = _NOW -1
