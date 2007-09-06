@@ -267,62 +267,11 @@ class SupervisorNamespaceRPCInterface:
 
         processes = group.processes.values()
         processes.sort()
+        processes = [ (group, process) for process in processes ]
+
+        startall = make_allfunc(processes, isNotRunning, self.startProcess,
+                                wait=wait)
             
-        results = []
-        callbacks = []
-
-        def startall(group=group):
-            if not callbacks:
-
-                for process in processes:
-                    name = make_namespec(group.config.name, process.config.name)
-                    if process.get_state() not in RUNNING_STATES:
-                        # only start nonrunning processes
-                        try:
-                            callback = self.startProcess(name, wait)
-                            callbacks.append((group, process, callback))
-                        except RPCError, e:
-                            results.append({'name':process.config.name,
-                                            'group':group.config.name,
-                                            'status':e.code,
-                                            'description':e.text})
-                            continue
-
-            if not callbacks:
-                return results
-
-            group, process, callback = callbacks.pop(0)
-
-            try:
-                value = callback()
-            except RPCError, e:
-                results.append({'name':process.config.name,
-                                'group':group.config.name,
-                                'status':e.code,
-                                'description':e.text})
-                return NOT_DONE_YET
-
-            if value is NOT_DONE_YET:
-                # push it back into the queue; it will finish eventually
-                callbacks.append((group, process, callback))
-            else:
-                results.append({'name':process.config.name,
-                                'group':group.config.name,
-                                'status':Faults.SUCCESS,
-                                'description':'OK'})
-
-            if callbacks:
-                return NOT_DONE_YET
-
-            return results
-
-        # XXX the above implementation has a weakness inasmuch as the
-        # first call into each individual process callback will always
-        # return NOT_DONE_YET, so they need to be called twice.  The
-        # symptom of this is that calling this method causes the
-        # client to block for much longer than it actually requires to
-        # start all of the nonrunning processes.  See stopAllProcesses
-
         startall.delay = 0.05
         startall.rpcinterface = self
         return startall # deferred
@@ -335,62 +284,9 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('startAllProcesses')
 
-        all_processes = self._getAllProcesses()
-
-        results = []
-        callbacks = []
-
-        def startall():
-            if not callbacks:
-
-                for group, process in all_processes:
-                    name = make_namespec(group.config.name, process.config.name)
-                    if process.get_state() not in RUNNING_STATES:
-                        # only start nonrunning processes
-                        try:
-                            callback = self.startProcess(name, wait)
-                            callbacks.append((group, process, callback))
-                        except RPCError, e:
-                            results.append({'name':process.config.name,
-                                            'group':group.config.name,
-                                            'status':e.code,
-                                            'description':e.text})
-                            continue
-
-            if not callbacks:
-                return results
-
-            group, process, callback = callbacks.pop(0)
-
-            try:
-                value = callback()
-            except RPCError, e:
-                results.append({'name':process.config.name,
-                                'group':group.config.name,
-                                'status':e.code,
-                                'description':e.text})
-                return NOT_DONE_YET
-
-            if value is NOT_DONE_YET:
-                # push it back into the queue; it will finish eventually
-                callbacks.append((group, process, callback))
-            else:
-                results.append({'name':process.config.name,
-                                'group':group.config.name,
-                                'status':Faults.SUCCESS,
-                                'description':'OK'})
-
-            if callbacks:
-                return NOT_DONE_YET
-
-            return results
-
-        # XXX the above implementation has a weakness inasmuch as the
-        # first call into each individual process callback will always
-        # return NOT_DONE_YET, so they need to be called twice.  The
-        # symptom of this is that calling this method causes the
-        # client to block for much longer than it actually requires to
-        # start all of the nonrunning processes.  See stopAllProcesses
+        processes = self._getAllProcesses()
+        startall = make_allfunc(processes, isNotRunning, self.startProcess,
+                                wait=wait)
 
         startall.delay = 0.05
         startall.rpcinterface = self
@@ -448,77 +344,10 @@ class SupervisorNamespaceRPCInterface:
 
         processes = group.processes.values()
         processes.sort()
+        processes = [ (group, process) for process in processes ]
+
+        killall = make_allfunc(processes, isRunning, self.stopProcess)
             
-        callbacks = []
-        results = []
-
-        def killall(group=group):
-            if not callbacks:
-
-                for process in processes:
-                    name = make_namespec(group.config.name, process.config.name)
-                    if process.get_state() in RUNNING_STATES:
-                        # only stop running processes
-                        try:
-                            callback = self.stopProcess(name)
-                            callbacks.append((group, process, callback))
-                        except RPCError, e:
-                            results.append({'name':process.config.name,
-                                            'group':group.config.name,
-                                            'status':e.code,
-                                            'description':e.text})
-                            continue
-
-            if not callbacks:
-                return results
-
-            group, process, callback = callbacks.pop(0)
-
-            try:
-                value = callback()
-            except RPCError, e:
-                results.append(
-                    {'name':process.config.name,
-                     'group':group.config.name,
-                     'status':e.code,
-                     'description':e.text})
-                return NOT_DONE_YET
-            
-            if value is NOT_DONE_YET:
-                # push it back into the queue; it will finish eventually
-                callbacks.append((group, process, callback))
-            else:
-                results.append(
-                    {'name':process.config.name,
-                     'group':group.config.name,
-                     'status':Faults.SUCCESS,
-                     'description':'OK'}
-                    )
-
-            if callbacks:
-                return NOT_DONE_YET
-
-            return results
-
-        # XXX the above implementation has a weakness inasmuch as the
-        # first call into each individual process callback will always
-        # return NOT_DONE_YET, so they need to be called twice.  The
-        # symptom of this is that calling this method causes the
-        # client to block for much longer than it actually requires to
-        # kill all of the running processes.  After the first call to
-        # the killit callback, the process is actually dead, but the
-        # above killall method processes the callbacks one at a time
-        # during the select loop, which, because there is no output
-        # from child processes after stopAllProcesses is called, is
-        # not busy, so hits the timeout for each callback.  I
-        # attempted to make this better, but the only way to make it
-        # better assumes totally synchronous reaping of child
-        # processes, which requires infrastructure changes to
-        # supervisord that are scary at the moment as it could take a
-        # while to pin down all of the platform differences and might
-        # require a C extension to the Python signal module to allow
-        # the setting of ignore flags to signals.
-
         killall.delay = 0.05
         killall.rpcinterface = self
         return killall # deferred
@@ -530,77 +359,9 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('stopAllProcesses')
         
-        all_processes = self._getAllProcesses()
+        processes = self._getAllProcesses()
 
-        callbacks = []
-        results = []
-
-        def killall():
-            if not callbacks:
-
-                for group, process in all_processes:
-                    name = make_namespec(group.config.name, process.config.name)
-                    if process.get_state() in RUNNING_STATES:
-                        # only stop running processes
-                        try:
-                            callback = self.stopProcess(name)
-                            callbacks.append((group, process, callback))
-                        except RPCError, e:
-                            results.append({'name':process.config.name,
-                                            'group':group.config.name,
-                                            'status':e.code,
-                                            'description':e.text})
-                            continue
-
-            if not callbacks:
-                return results
-
-            group, process, callback = callbacks.pop(0)
-
-            try:
-                value = callback()
-            except RPCError, e:
-                results.append(
-                    {'name':process.config.name,
-                     'group':group.config.name,
-                     'status':e.code,
-                     'description':e.text})
-                return NOT_DONE_YET
-            
-            if value is NOT_DONE_YET:
-                # push it back into the queue; it will finish eventually
-                callbacks.append((group, process, callback))
-            else:
-                results.append(
-                    {'name':process.config.name,
-                     'group':group.config.name,
-                     'status':Faults.SUCCESS,
-                     'description':'OK'}
-                    )
-
-            if callbacks:
-                return NOT_DONE_YET
-
-            return results
-
-        # XXX the above implementation has a weakness inasmuch as the
-        # first call into each individual process callback will always
-        # return NOT_DONE_YET, so they need to be called twice.  The
-        # symptom of this is that calling this method causes the
-        # client to block for much longer than it actually requires to
-        # kill all of the running processes.  After the first call to
-        # the killit callback, the process is actually dead, but the
-        # above killall method processes the callbacks one at a time
-        # during the select loop, which, because there is no output
-        # from child processes after stopAllProcesses is called, is
-        # not busy, so hits the timeout for each callback.  I
-        # attempted to make this better, but the only way to make it
-        # better assumes totally synchronous reaping of child
-        # processes, which requires infrastructure changes to
-        # supervisord that are scary at the moment as it could take a
-        # while to pin down all of the platform differences and might
-        # require a C extension to the Python signal module to allow
-        # the setting of ignore flags to signals.
+        killall = make_allfunc(processes, isRunning, self.stopProcess)
 
         killall.delay = 0.05
         killall.rpcinterface = self
@@ -888,6 +649,89 @@ class SupervisorNamespaceRPCInterface:
                 raise
 
         return True
+
+def make_allfunc(processes, predicate, func, **extra_kwargs):
+    """ Return a closure representing a function that calls a
+    function for every process, and returns a result """
+
+    callbacks = []
+    results = []
+
+    def allfunc(processes=processes, predicate=predicate, func=func,
+                extra_kwargs=extra_kwargs, callbacks=callbacks,
+                results=results):
+        if not callbacks:
+
+            for group, process in processes:
+                name = make_namespec(group.config.name, process.config.name)
+                if predicate(process):
+                    try:
+                        callback = func(name, **extra_kwargs)
+                        callbacks.append((group, process, callback))
+                    except RPCError, e:
+                        results.append({'name':process.config.name,
+                                        'group':group.config.name,
+                                        'status':e.code,
+                                        'description':e.text})
+                        continue
+
+        if not callbacks:
+            return results
+
+        group, process, callback = callbacks.pop(0)
+
+        try:
+            value = callback()
+        except RPCError, e:
+            results.append(
+                {'name':process.config.name,
+                 'group':group.config.name,
+                 'status':e.code,
+                 'description':e.text})
+            return NOT_DONE_YET
+
+        if value is NOT_DONE_YET:
+            # push it back into the queue; it will finish eventually
+            callbacks.append((group, process, callback))
+        else:
+            results.append(
+                {'name':process.config.name,
+                 'group':group.config.name,
+                 'status':Faults.SUCCESS,
+                 'description':'OK'}
+                )
+
+        if callbacks:
+            return NOT_DONE_YET
+
+        return results
+
+    # XXX the above implementation has a weakness inasmuch as the
+    # first call into each individual process callback will always
+    # return NOT_DONE_YET, so they need to be called twice.  The
+    # symptom of this is that calling this method causes the
+    # client to block for much longer than it actually requires to
+    # kill all of the running processes.  After the first call to
+    # the killit callback, the process is actually dead, but the
+    # above killall method processes the callbacks one at a time
+    # during the select loop, which, because there is no output
+    # from child processes after e.g. stopAllProcesses is called,
+    # is not busy, so hits the timeout for each callback.  I
+    # attempted to make this better, but the only way to make it
+    # better assumes totally synchronous reaping of child
+    # processes, which requires infrastructure changes to
+    # supervisord that are scary at the moment as it could take a
+    # while to pin down all of the platform differences and might
+    # require a C extension to the Python signal module to allow
+    # the setting of ignore flags to signals.
+    return allfunc
+
+def isRunning(process):
+    if process.get_state() in RUNNING_STATES:
+        return True
+
+def isNotRunning(process):
+    return not isRunning(process)
 
 # this is not used in code but referenced via an entry point in the conf file
 def make_main_rpcinterface(supervisord):

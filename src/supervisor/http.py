@@ -27,7 +27,8 @@ from medusa import http_server
 from medusa import producers
 from medusa import filesys
 
-NOT_DONE_YET = []
+class NOT_DONE_YET:
+    pass
 
 class deferring_chunked_producer:
     """A producer that implements the 'chunked' transfer coding for HTTP/1.1.
