@@ -16,7 +16,6 @@ import os
 import stat
 import time
 import sys
-import string
 import socket
 import errno
 import pwd
@@ -55,10 +54,7 @@ class deferring_chunked_producer:
             else:
                 self.producer = None
                 if self.footers:
-                    return string.join (
-                            ['0'] + self.footers,
-                            '\r\n'
-                            ) + '\r\n\r\n'
+                    return '\r\n'.join(['0'] + self.footers) + '\r\n\r\n'
                 else:
                     return '0\r\n\r\n'
         else:
@@ -158,9 +154,8 @@ class deferring_http_request(http_server.http_request):
 
         #  --- BUCKLE UP! ----
 
-        connection = string.lower(http_server.get_header(
-            http_server.CONNECTION,
-            self.header))
+        connection = http_server.get_header(http_server.CONNECTION,self.header)
+        connection = connection.lower()
 
         close_it = 0
         wrap_in_chunking = 0
@@ -391,7 +386,7 @@ class deferring_http_channel(http_server.http_channel):
         else:
             header = self.in_buffer
             self.in_buffer = ''
-            lines = string.split (header, '\r\n')
+            lines = header.split('\r\n')
 
             # --------------------------------------------------
             # crack the request header
