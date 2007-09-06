@@ -221,6 +221,9 @@ class PEventListenerDispatcher(PDispatcher):
     READY_FOR_EVENTS_TOKEN = 'READY\n'
     EVENT_PROCESSED_TOKEN = 'OK\n'
     EVENT_REJECTED_TOKEN = 'FAIL\n'
+    READY_FOR_EVENTS_LEN = len(READY_FOR_EVENTS_TOKEN)
+    EVENT_PROCESSED_LEN = len(EVENT_PROCESSED_TOKEN)
+    EVENT_REJECTED_LEN = len(EVENT_REJECTED_TOKEN)
 
     def __init__(self, process, channel, fd):
         self.process = process
@@ -243,7 +246,7 @@ class PEventListenerDispatcher(PDispatcher):
                 rotating=not not maxbytes, # optimization
                 maxbytes=maxbytes,
                 backups=backups)
-    
+
     def removelogs(self):
         if self.childlog is not None:
             for handler in self.childlog.handlers:
@@ -300,14 +303,14 @@ class PEventListenerDispatcher(PDispatcher):
             return
 
         if state == EventListenerStates.ACKNOWLEDGED:
-            tokenlen = len(self.READY_FOR_EVENTS_TOKEN)
-            if len(data) < tokenlen:
+            if len(data) < self.READY_FOR_EVENTS_LEN:
                 # not enough info to make a decision
                 return
             elif data.startswith(self.READY_FOR_EVENTS_TOKEN):
                 msg = '%s: ACKNOWLEDGED -> READY' % procname
                 process.config.options.logger.debug(msg)
                 process.listener_state = EventListenerStates.READY
+                tokenlen = self.READY_FOR_EVENTS_LEN
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.event = None
             else:
@@ -338,14 +341,14 @@ class PEventListenerDispatcher(PDispatcher):
             elif data.startswith(self.EVENT_PROCESSED_TOKEN):
                 msg = '%s: BUSY -> ACKNOWLEDGED (processed)' % procname
                 process.config.options.logger.debug(msg)
-                tokenlen = len(self.EVENT_PROCESSED_TOKEN)
+                tokenlen = self.EVENT_PROCESSED_LEN
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.listener_state = EventListenerStates.ACKNOWLEDGED
                 process.event = None
             elif data.startswith(self.EVENT_REJECTED_TOKEN):
                 msg = '%s: BUSY -> ACKNOWLEDGED (rejected)' % procname
                 process.config.options.logger.debug(msg)
-                tokenlen = len(self.EVENT_REJECTED_TOKEN)
+                tokenlen = self.EVENT_REJECTED_LEN
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.listener_state = EventListenerStates.ACKNOWLEDGED
                 notify(EventRejectedEvent(process, process.event))
