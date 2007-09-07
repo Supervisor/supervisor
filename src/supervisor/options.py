@@ -55,6 +55,7 @@ from supervisor.datatypes import SocketAddress
 from supervisor.datatypes import url
 from supervisor.datatypes import Automatic
 from supervisor.datatypes import auto_restart
+from supervisor.datatypes import profile_options
 
 from supervisor import loggers
 from supervisor import states
@@ -381,6 +382,8 @@ class ServerOptions(Options):
                  "k", "nocleanup", flag=1, default=0)
         self.add("strip_ansi", "supervisord.strip_ansi",
                  "t", "strip_ansi", flag=1, default=0)
+        self.add("profile_options", "supervisord.profile_options",
+                 "", "profile_options=", profile_options, default=None)
         self.add("sockchmod", "supervisord.sockchmod", "p:", "socket-mode=",
                  octal_type, default=0700)
         self.add("sockchown", "supervisord.sockchown", "o:", "socket-owner=",
@@ -549,6 +552,7 @@ class ServerOptions(Options):
         section.environment = dict_of_key_value_pairs(get('environment', ''))
         section.process_group_configs = self.process_groups_from_parser(parser)
         section.rpcinterface_factories = self.rpcinterfaces_from_parser(parser)
+        section.profile_options = None
         return section
 
     def process_groups_from_parser(self, parser):

@@ -38,6 +38,10 @@ Options:
 -a/--minfds NUM -- the minimum number of file descriptors for start success
 -t/--strip_ansi -- strip ansi escape codes from process output
 --minprocs NUM  -- the minimum number of processes available for start success
+--profile_options OPTIONS -- run supervisord under profiler and output
+                             results based on OPTIONS, which  is a comma-sep'd
+                             list of 'cumulative', 'calls', and/or 'callers',
+                             e.g. 'cumulative,callers')
 """
 
 import os
@@ -64,8 +68,7 @@ class Supervisor:
         self.options = options
         self.process_groups = {}
 
-    def main(self, args=None, test=False, first=False):
-        self.options.realize(args, doc=__doc__)
+    def main(self):
         self.options.cleanup_fds()
         info_messages = []
         critical_messages = []
@@ -73,7 +76,7 @@ class Supervisor:
         setuid_msg = self.options.set_uid()
         if setuid_msg:
             critical_messages.append(setuid_msg)
-        if first:
+        if self.options.first:
             rlimit_messages = self.options.set_rlimits()
             info_messages.extend(rlimit_messages)
         warn_messages.extend(self.options.parse_warnings)
@@ -90,9 +93,9 @@ class Supervisor:
         for config in self.options.process_group_configs:
             config.after_setuid()
 
-        self.run(test)
+        self.run()
 
-    def run(self, test=False):
+    def run(self):
         self.process_groups = {} # clear
         self.stop_groups = None # clear
         events.clear()
@@ -108,7 +111,7 @@ class Supervisor:
             # writing pid file needs to come *after* daemonizing or pid
             # will be wrong
             self.options.write_pidfile()
-            self.runforever(test)
+            self.runforever()
         finally:
             self.options.cleanup()
 
@@ -158,7 +161,7 @@ class Supervisor:
                 # stop group queue
                 self.stop_groups.append(group)
 
-    def runforever(self, test=False):
+    def runforever(self):
         events.notify(events.SupervisorRunningEvent())
         timeout = 1
 
@@ -238,7 +241,7 @@ class Supervisor:
             if self.options.mood < SupervisorStates.RUNNING:
                 self.ordered_stop_groups_phase_2()
 
-            if test:
+            if self.options.test:
                 break
 
     def reap(self, once=False):
@@ -280,42 +283,53 @@ class Supervisor:
     def get_state(self):
         return self.options.mood
 
-# Main program
-def main(test=False):
-    assert os.name == "posix", "This code makes Unix-specific assumptions"
-    first = True
-    while 1:
-        # if we hup, restart by making a new Supervisor()
-        # the test argument just makes it possible to unit test this code
-        options = ServerOptions()
-        d = Supervisor(options)
-        try:
-            d.main(None, test, first)
-        except asyncore.ExitNow:
-            pass
-        first = False
-        if test:
-            return d
-        if options.mood < SupervisorStates.RUNNING:
-            break
-        if d.options.httpserver:
-            d.options.httpserver.close()
-
-def profile(test=False):
+# profile entry point
+def profile(cmd, globals, locals, sort_order, callers):
     import profile
     import pstats
     import tempfile
     fd, fn = tempfile.mkstemp()
     try:
-        profile.runctx('main(test)', globals(), locals(), fn)
+        profile.runctx(cmd, globals, locals, fn)
         stats = pstats.Stats(fn)
         stats.strip_dirs()
-        #stats.sort_stats('calls', 'time', 'cumulative')
-        stats.sort_stats('cumulative', 'calls', 'time')
-        #stats.print_callers(.3)
-        stats.print_stats(.3)
+        # calls,time,cumulative and cumulative,calls,time are useful
+        stats.sort_stats(*sort_order or ('cumulative', 'calls', 'time'))
+        if callers:
+            stats.print_callers(.3)
+        else:
+            stats.print_stats(.3)
     finally:
         os.remove(fn)
+
+
+# Main program
+def main(args=None, test=False):
+    assert os.name == "posix", "This code makes Unix-specific assumptions"
+    # if we hup, restart by making a new Supervisor()
+    first = True
+    while 1:
+        options = ServerOptions()
+        options.realize(args, doc=__doc__)
+        options.first = first
+        options.test = test
+        if options.profile_options:
+            sort_order, callers = options.profile_options
+            profile('go(options)', globals(), locals(), sort_order, callers)
+        else:
+            go(options)
+        if test or (options.mood < SupervisorStates.RESTARTING):
+            break
+        if options.httpserver:
+            options.httpserver.close()
+        first = False
+
+def go(options):
+    d = Supervisor(options)
+    try:
+        d.main()
+    except asyncore.ExitNow:
+        pass
 
 if __name__ == "__main__":
     main()

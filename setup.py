@@ -86,7 +86,6 @@ dist = setup(
      'supervisor_rpc':['main = supervisor.rpcinterface:make_main_rpcinterface'],
      'console_scripts': [
          'supervisord = supervisor.supervisord:main',
-         'profile_supervisord = supervisor.supervisord:profile',
          'supervisorctl = supervisor.supervisorctl:main',
          ],
       },

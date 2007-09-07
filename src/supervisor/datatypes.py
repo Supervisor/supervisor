@@ -300,3 +300,13 @@ def auto_restart(value):
         raise ValueError("invalid 'autorestart' value %r" % value)
     return computed_value
 
+def profile_options(value):
+    options = [x.lower() for x in list_of_strings(value) ]
+    sort_options = []
+    callers = False
+    for thing in options:
+        if thing != 'callers':
+            sort_options.append(thing)
+        else:
+            callers = True
+    return sort_options, callers

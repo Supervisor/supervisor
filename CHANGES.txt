@@ -84,15 +84,6 @@ Next Release
     for debugging supervisor itself).  See 'Supervisor Log Levels' in
     README.txt for more info.
 
-  - setup.py {install|develop} now installs a supervisor profiling
-    script for developer use.  It accepts the same command line
-    arguments as the 'supervisord' script.
-
-      profile_supervisord -n -c foo.conf
-
-    When you exit supervisor, it will print Python profiling output to
-    stdout.
-
   - When an event is rebuffered (because all listeners are busy or a
     listener rejected the event), the rebuffered event is now inserted
     in the head of the listener event queue.  This doesn't guarantee
@@ -121,6 +112,18 @@ Next Release
   - An 'OK' URL was added at /ok.html which just returns the string
     'OK' (can be used for up checks or speed checks via
     plain-old-HTTP).
+
+  - An additional command-line option '--profile_options' is accepted
+    by the supervisord script for developer use.  It accepts the same
+    command line arguments as the 'supervisord' script.
+
+      supervisord -n -c sample.conf --profile_options=cumulative,calls
+
+    The values are sort_stats options that can be passed to the
+    standard Python profiler's PStats sort_stats method.
+
+    When you exit supervisor, it will print Python profiling output to
+    stdout.
 
 3.0a2
 

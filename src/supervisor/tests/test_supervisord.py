@@ -2,6 +2,9 @@ import unittest
 import time
 import signal
 import sys
+import os
+import tempfile
+import shutil
 
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
@@ -9,6 +12,52 @@ from supervisor.tests.base import DummyPGroupConfig
 from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummyProcessGroup
 from supervisor.tests.base import DummyDispatcher
+
+class EntryPointTests(unittest.TestCase):
+    def test_main_noprofile(self):
+        from supervisor.supervisord import main
+        conf = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), 'fixtures',
+            'donothing.conf')
+        import StringIO
+        new_stdout = StringIO.StringIO()
+        old_stdout = sys.stdout
+        try:
+            tempdir = tempfile.mkdtemp()
+            sock = os.path.join(tempdir, 'sock')
+            log = os.path.join(tempdir, 'log')
+            pid = os.path.join(tempdir, 'pid')
+            sys.stdout = new_stdout
+            main(args=['-c', conf, '-w', sock, '-l', log, '-j', pid, '-n'],
+                 test=True)
+        finally:
+            sys.stdout = old_stdout
+            shutil.rmtree(tempdir)
+        output = new_stdout.getvalue()
+        self.failUnless(output.find('supervisord started') != 1, output)
+
+    def test_main_profile(self):
+        from supervisor.supervisord import main
+        conf = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), 'fixtures',
+            'donothing.conf')
+        import StringIO
+        new_stdout = StringIO.StringIO()
+        old_stdout = sys.stdout
+        try:
+            tempdir = tempfile.mkdtemp()
+            sock = os.path.join(tempdir, 'sock')
+            log = os.path.join(tempdir, 'log')
+            pid = os.path.join(tempdir, 'pid')
+            sys.stdout = new_stdout
+            main(args=['-c', conf, '-w', sock, '-l', log, '-j', pid, '-n',
+                       '--profile_options=cumulative,calls'], test=True)
+        finally:
+            sys.stdout = old_stdout
+            shutil.rmtree(tempdir)
+        output = new_stdout.getvalue()
+        self.failUnless(output.find('cumulative time, call count') != -1,
+                        output)
 
 class SupervisordTests(unittest.TestCase):
     def tearDown(self):
@@ -27,9 +76,10 @@ class SupervisordTests(unittest.TestCase):
         pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
         gconfigs = [DummyPGroupConfig(options,'foo', pconfigs=[pconfig])]
         options.process_group_configs = gconfigs
+        options.test = True
+        options.first = True
         supervisord = self._makeOne(options)
-        supervisord.main(args='abc', test=True, first=True)
-        self.assertEqual(options.realizeargs, 'abc')
+        supervisord.main()
         self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.fds_cleaned_up, True)
         self.assertEqual(options.rlimits_set, True)
@@ -132,7 +182,8 @@ class SupervisordTests(unittest.TestCase):
         events.subscribe(events.SupervisorStateChangeEvent, callback)
         options = DummyOptions()
         supervisord = self._makeOne(options)
-        supervisord.runforever(test=True)
+        options.test = True
+        supervisord.runforever()
         self.assertEqual(L, [1])
 
     def test_runforever_emits_generic_specific_event(self):
@@ -142,8 +193,9 @@ class SupervisordTests(unittest.TestCase):
             L.append(2)
         events.subscribe(events.SupervisorRunningEvent, callback)
         options = DummyOptions()
+        options.test = True
         supervisord = self._makeOne(options)
-        supervisord.runforever(test=True)
+        supervisord.runforever()
         self.assertEqual(L, [2])
 
     def test_runforever_select_eintr(self):
@@ -151,7 +203,8 @@ class SupervisordTests(unittest.TestCase):
         import errno
         options.select_error = errno.EINTR
         supervisord = self._makeOne(options)
-        supervisord.runforever(test=True)
+        options.test = True
+        supervisord.runforever()
         self.assertEqual(options.logger.data[0], 'EINTR encountered in select')
 
     def test_runforever_select_uncaught_exception(self):
@@ -160,7 +213,8 @@ class SupervisordTests(unittest.TestCase):
         options.select_error = errno.EBADF
         supervisord = self._makeOne(options)
         import select
-        self.assertRaises(select.error, supervisord.runforever, test=True)
+        options.test = True
+        self.assertRaises(select.error, supervisord.runforever)
 
     def test_runforever_select_dispatchers(self):
         options = DummyOptions()
@@ -175,7 +229,8 @@ class SupervisordTests(unittest.TestCase):
         pgroup.dispatchers = {6:readable, 7:writable, 8:error}
         supervisord.process_groups = {'foo': pgroup}
         options.select_result = [6], [7, 8], []
-        supervisord.runforever(test=True)
+        options.test = True
+        supervisord.runforever()
         self.assertEqual(pgroup.transitioned, True)
         self.assertEqual(readable.read_event_handled, True)
         self.assertEqual(writable.write_event_handled, True)
@@ -193,7 +248,8 @@ class SupervisordTests(unittest.TestCase):
         pgroup.dispatchers = {6:exitnow}
         supervisord.process_groups = {'foo': pgroup}
         options.select_result = [6], [], []
-        self.assertRaises(asyncore.ExitNow, supervisord.runforever, test=True)
+        options.test = True
+        self.assertRaises(asyncore.ExitNow, supervisord.runforever)
 
     def test_runforever_stopping_emits_events(self):
         options = DummyOptions()
@@ -208,7 +264,8 @@ class SupervisordTests(unittest.TestCase):
         from supervisor import events
         events.subscribe(events.SupervisorStateChangeEvent, callback)
         import asyncore
-        self.assertRaises(asyncore.ExitNow, supervisord.runforever, test=True)
+        options.test = True
+        self.assertRaises(asyncore.ExitNow, supervisord.runforever)
         self.assertTrue(pgroup.all_stopped)
         self.assertTrue(isinstance(L[0], events.SupervisorRunningEvent))
         self.assertTrue(isinstance(L[0], events.SupervisorStateChangeEvent))
@@ -227,8 +284,9 @@ class SupervisordTests(unittest.TestCase):
             L.append(1)
         supervisord.process_groups = {'foo': pgroup}
         supervisord.options.mood = 0
+        supervisord.options.test = True
         import asyncore
-        self.assertRaises(asyncore.ExitNow, supervisord.runforever, test=True)
+        self.assertRaises(asyncore.ExitNow, supervisord.runforever)
         self.assertEqual(pgroup.all_stopped, True)
 
     def test_exit_delayed(self):
@@ -245,7 +303,8 @@ class SupervisordTests(unittest.TestCase):
         supervisord.process_groups = {'foo': pgroup}
         supervisord.options.mood = 0
         import asyncore
-        supervisord.runforever(test=True)
+        supervisord.options.test = True
+        supervisord.runforever()
         self.assertNotEqual(supervisord.lastdelayreport, 0)
 
     def test_getSupervisorStateDescription(self):
