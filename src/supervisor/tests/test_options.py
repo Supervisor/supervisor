@@ -778,28 +778,6 @@ class ProcessGroupConfigTests(unittest.TestCase):
         from supervisor.process import ProcessGroup
         self.assertEqual(group.__class__, ProcessGroup)
             
-class BasicAuthTransportTests(unittest.TestCase):
-    def _getTargetClass(self):
-        from supervisor.options import BasicAuthTransport
-        return BasicAuthTransport
-
-    def _makeOne(self, username=None, password=None, serverurl=None):
-        klass = self._getTargetClass()
-        return klass(username, password, serverurl)
-
-    def test_ctor(self):
-        instance = self._makeOne('username', 'password', 'serverurl')
-        self.assertEqual(instance.username, 'username')
-        self.assertEqual(instance.password, 'password')
-        self.assertEqual(instance.serverurl, 'serverurl')
-        self.assertEqual(instance.verbose, False)
-
-    def test_works_with_py25(self):
-        instance = self._makeOne('username', 'password', 'serverurl')
-        # the test is just to insure that this method can be called; failure
-        # would be an AttributeError for _use_datetime under Python 2.5
-        parser, unmarshaller = instance.getparser() # this uses _use_datetime
-
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
 

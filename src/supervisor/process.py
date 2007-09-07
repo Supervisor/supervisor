@@ -269,6 +269,10 @@ class Subprocess:
                     options.write(2, "(%s)\n" % msg)
                 try:
                     env = os.environ.copy()
+                    env['SUPERVISOR_ENABLED'] = '1'
+                    serverurl = self.config.options.serverurl
+                    if serverurl:
+                        env['SUPERVISOR_SERVER_URL'] = serverurl
                     env['SUPERVISOR_PROCESS_NAME'] = self.config.name
                     if self.group:
                         env['SUPERVISOR_GROUP_NAME'] = self.group.config.name

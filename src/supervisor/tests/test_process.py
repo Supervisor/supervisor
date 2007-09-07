@@ -362,7 +362,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.execv_args, ('/bin/cat', ['/bin/cat']) )
         self.assertEqual(options.execv_environment['_TEST_'], '1')
 
-    def test_spawn_as_child_environment_supervisor_process_name(self):
+    def test_spawn_as_child_environment_supervisor_envvars(self):
         options = DummyOptions()
         options.forkpid = 0
         config = DummyPConfig(options, 'cat', '/bin/cat')
@@ -375,9 +375,14 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(options.execv_args, ('/bin/cat', ['/bin/cat']) )
         self.assertEqual(
+            options.execv_environment['SUPERVISOR_ENABLED'], '1')
+        self.assertEqual(
             options.execv_environment['SUPERVISOR_PROCESS_NAME'], 'cat')
         self.assertEqual(
             options.execv_environment['SUPERVISOR_GROUP_NAME'], 'dummy')
+        self.assertEqual(
+            options.execv_environment['SUPERVISOR_SERVER_URL'],
+            'http://localhost:9001')
 
     def test_spawn_as_child_stderr_redirected(self):
         options = DummyOptions()

@@ -1393,7 +1393,6 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
         from supervisor import xmlrpc
         # belt-and-suspenders test for docstring-as-typing parsing correctness
         # and documentation validity vs. implementation
-        from supervisor import options
         _RPCTYPES = ['int', 'double', 'string', 'boolean', 'dateTime.iso8601',
                      'base64', 'binary', 'array', 'struct']
         interface = self._makeOne()
@@ -1415,7 +1414,7 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
             meth = getattr(namespace, method_name)
             code = meth.func_code
             argnames = code.co_varnames[1:code.co_argcount]
-            parsed = options.gettags(str(meth.__doc__))
+            parsed = xmlrpc.gettags(str(meth.__doc__))
 
             plines = []
             ptypes = []

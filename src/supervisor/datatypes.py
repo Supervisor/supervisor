@@ -299,3 +299,4 @@ def auto_restart(value):
                               RestartUnconditionally, False):
         raise ValueError("invalid 'autorestart' value %r" % value)
     return computed_value
+

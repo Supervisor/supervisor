@@ -114,6 +114,129 @@ class TraverseTests(unittest.TestCase):
         xmlrpc.traverse(dummy, 'foo', [1])
         self.assertEqual(L, [1])
 
+class TesstSupervisorTransport(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.xmlrpc import SupervisorTransport
+        return SupervisorTransport
+
+    def _makeOne(self, *arg, **kw):
+        return self._getTargetClass()(*arg, **kw)
+
+    def test_ctor_unix(self):
+        from supervisor import xmlrpc
+        transport = self._makeOne('user', 'pass', 'unix:///foo/bar')
+        conn = transport._get_connection()
+        self.failUnless(isinstance(conn, xmlrpc.UnixStreamHTTPConnection))
+        self.assertEqual(conn.host, '/foo/bar')
+
+    def test__get_connection_http_9001(self):
+        from supervisor import xmlrpc
+        import httplib
+        transport = self._makeOne('user', 'pass', 'http://127.0.0.1:9001/')
+        conn = transport._get_connection()
+        self.failUnless(isinstance(conn, httplib.HTTPConnection))
+        self.assertEqual(conn.host, '127.0.0.1')
+        self.assertEqual(conn.port, 9001)
+
+    def test__get_connection_http_80(self):
+        from supervisor import xmlrpc
+        import httplib
+        transport = self._makeOne('user', 'pass', 'http://127.0.0.1/')
+        conn = transport._get_connection()
+        self.failUnless(isinstance(conn, httplib.HTTPConnection))
+        self.assertEqual(conn.host, '127.0.0.1')
+        self.assertEqual(conn.port, 80)
+
+    def test_request_non_200_response(self):
+        import xmlrpclib
+        transport = self._makeOne('user', 'pass', 'http://127.0.0.1/')
+        dummy_conn = DummyConnection(400, '')
+        def getconn():
+            return dummy_conn
+        transport._get_connection = getconn
+        self.assertRaises(xmlrpclib.ProtocolError,
+                          transport.request, 'localhost', '/', '')
+        self.assertEqual(transport.connection, None)
+        self.assertEqual(dummy_conn.closed, True)
+
+    def test_request_400_response(self):
+        import xmlrpclib
+        transport = self._makeOne('user', 'pass', 'http://127.0.0.1/')
+        dummy_conn = DummyConnection(400, '')
+        def getconn():
+            return dummy_conn
+        transport._get_connection = getconn
+        self.assertRaises(xmlrpclib.ProtocolError,
+                          transport.request, 'localhost', '/', '')
+        self.assertEqual(transport.connection, None)
+        self.assertEqual(dummy_conn.closed, True)
+        self.assertEqual(dummy_conn.requestargs[0], 'POST')
+        self.assertEqual(dummy_conn.requestargs[1], '/')
+        self.assertEqual(dummy_conn.requestargs[2], '')
+        self.assertEqual(dummy_conn.requestargs[3]['Content-Length'], '0')
+        self.assertEqual(dummy_conn.requestargs[3]['Content-Type'], 'text/xml')
+        self.assertEqual(dummy_conn.requestargs[3]['Authorization'],
+                         'Basic dXNlcjpwYXNz')
+        self.assertEqual(dummy_conn.requestargs[3]['Accept'], 'text/xml')
+
+    def test_request_200_response(self):
+        import xmlrpclib
+        transport = self._makeOne('user', 'pass', 'http://127.0.0.1/')
+        response = """<?xml version="1.0"?>
+        <methodResponse>
+        <params>
+        <param>
+        <value><string>South Dakota</string></value>
+        </param>
+        </params>
+        </methodResponse>"""
+        dummy_conn = DummyConnection(200, response)
+        def getconn():
+            return dummy_conn
+        transport._get_connection = getconn
+        result = transport.request('localhost', '/', '')
+        self.assertEqual(transport.connection, dummy_conn)
+        self.assertEqual(dummy_conn.closed, False)
+        self.assertEqual(dummy_conn.requestargs[0], 'POST')
+        self.assertEqual(dummy_conn.requestargs[1], '/')
+        self.assertEqual(dummy_conn.requestargs[2], '')
+        self.assertEqual(dummy_conn.requestargs[3]['Content-Length'], '0')
+        self.assertEqual(dummy_conn.requestargs[3]['Content-Type'], 'text/xml')
+        self.assertEqual(dummy_conn.requestargs[3]['Authorization'],
+                         'Basic dXNlcjpwYXNz')
+        self.assertEqual(dummy_conn.requestargs[3]['Accept'], 'text/xml')
+        self.assertEqual(result, ('South Dakota',))
+
+    def test_works_with_py25(self):
+        instance = self._makeOne('username', 'password', 'http://127.0.0.1')
+        # the test is just to insure that this method can be called; failure
+        # would be an AttributeError for _use_datetime under Python 2.5
+        parser, unmarshaller = instance.getparser() # this uses _use_datetime
+
+class DummyResponse:
+    def __init__(self, status=200, body='', reason='reason'):
+        self.status = status
+        self.body = body
+        self.reason = reason
+
+    def read(self):
+        return self.body
+
+class DummyConnection:
+    closed = False
+    def __init__(self, status=200, body='', reason='reason'):
+        self.response = DummyResponse(status, body, reason)
+
+    def getresponse(self):
+        return self.response
+        
+    def request(self, *arg, **kw):
+        self.requestargs = arg
+        self.requestkw = kw
+
+    def close(self):
+        self.closed = True
+
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
 

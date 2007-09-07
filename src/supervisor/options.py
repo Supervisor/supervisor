@@ -58,6 +58,7 @@ from supervisor.datatypes import auto_restart
 
 from supervisor import loggers
 from supervisor import states
+from supervisor import xmlrpc
 
 here = os.path.abspath(os.path.dirname(__file__))
 version_txt = os.path.join(here, 'version.txt')
@@ -442,6 +443,17 @@ class ServerOptions(Options):
             self.sockchown = section.sockchown
 
         self.identifier = section.identifier
+
+        if section.http_port is None:
+            self.serverurl = None
+
+        else:
+            if section.http_port.family == socket.AF_INET:
+                host, port = section.http_port.address
+                self.serverurl = 'http://%s:%s' % (host, port)
+            else:
+                # domain socket
+                self.serverurl = 'unix://%s' % section.http_port.address
 
     def convert_sockchown(self, sockchown):
         # Convert chown stuff to uid/gid
@@ -1214,7 +1226,6 @@ class ClientOptions(Options):
         self.add("password", "supervisorctl.password", "p:", "password=")
 
     def realize(self, *arg, **kw):
-        os.environ['SUPERVISOR_ENABLED'] = '1'
         Options.realize(self, *arg, **kw)
         if not self.args:
             self.interactive = 1
@@ -1256,9 +1267,9 @@ class ClientOptions(Options):
             # so we fake the url we pass into it and always use the transport's
             # 'serverurl' to figure out what to attach to
             'http://127.0.0.1',
-            transport = BasicAuthTransport(self.username,
-                                           self.password,
-                                           self.serverurl)
+            transport = xmlrpc.SupervisorTransport(self.username,
+                                                   self.password,
+                                                   self.serverurl)
             )
 
 _marker = []
@@ -1415,78 +1426,6 @@ class EventListenerPoolConfig(Config):
         from supervisor.process import EventListenerPool
         return EventListenerPool(self)
 
-class BasicAuthTransport(xmlrpclib.Transport):
-    """ A transport that understands basic auth and UNIX domain socket
-    URLs """
-    _use_datetime = 0 # python 2.5 fwd compatibility
-    def __init__(self, username=None, password=None, serverurl=None):
-        self.username = username
-        self.password = password
-        self.verbose = False
-        self.serverurl = serverurl
-
-    def request(self, host, handler, request_body, verbose=False):
-        # issue XML-RPC request
-
-        h = self.make_connection(host)
-        if verbose:
-            h.set_debuglevel(1)
-
-        h.putrequest("POST", handler)
-
-        # required by HTTP/1.1
-        h.putheader("Host", host)
-
-        # required by XML-RPC
-        h.putheader("User-Agent", self.user_agent)
-        h.putheader("Content-Type", "text/xml")
-        h.putheader("Content-Length", str(len(request_body)))
-
-        # basic auth
-        if self.username is not None and self.password is not None:
-            unencoded = "%s:%s" % (self.username, self.password)
-            encoded = unencoded.encode('base64')
-            encoded = encoded.replace('\012', '')
-            h.putheader("Authorization", "Basic %s" % encoded)
-
-        h.endheaders()
-
-        if request_body:
-            h.send(request_body)
-
-        errcode, errmsg, headers = h.getreply()
-
-        if errcode != 200:
-            raise xmlrpclib.ProtocolError(
-                host + handler,
-                errcode, errmsg,
-                headers
-                )
-
-        return self.parse_response(h.getfile())
-
-    def make_connection(self, host):
-        serverurl = self.serverurl
-        if not serverurl.startswith('http'):
-            if serverurl.startswith('unix://'):
-                serverurl = serverurl[7:]
-            http = UnixStreamHTTP(serverurl)
-            return http
-        else:            
-            type, uri = urllib.splittype(serverurl)
-            host, path = urllib.splithost(uri)
-            hostpath = host+path
-            return xmlrpclib.Transport.make_connection(self, hostpath)
-            
-class UnixStreamHTTPConnection(httplib.HTTPConnection):
-    def connect(self):
-        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        # we abuse the host parameter as the socketname
-        self.sock.connect(self.host)
-
-class UnixStreamHTTP(httplib.HTTP):
-    _connection_class = UnixStreamHTTPConnection
-
 def readFile(filename, offset, length):
     """ Read length bytes from the file named by filename starting at
     offset """
@@ -1558,50 +1497,6 @@ def tailFile(filename, offset, length):
 
     except (OSError, IOError):
         return ['', offset, False]
-
-def gettags(comment):
-    """ Parse documentation strings into JavaDoc-like tokens """
-
-    tags = []
-
-    tag = None
-    datatype = None
-    name = None
-    tag_lineno = lineno = 0
-    tag_text = []
-
-    for line in comment.split('\n'):
-        line = line.strip()
-        if line.startswith("@"):
-            tags.append((tag_lineno, tag, datatype, name, '\n'.join(tag_text)))
-            parts = line.split(None, 3)
-            if len(parts) == 1:
-                datatype = ''
-                name = ''
-                tag_text = []
-            elif len(parts) == 2:
-                datatype = parts[1]
-                name = ''
-                tag_text = []
-            elif len(parts) == 3:
-                datatype = parts[1]
-                name = parts[2]
-                tag_text = []
-            elif len(parts) == 4:
-                datatype = parts[1]
-                name = parts[2]
-                tag_text = [parts[3].lstrip()]
-            tag = parts[0][1:]
-            tag_lineno = lineno
-        else:
-            if line:
-                tag_text.append(line)
-        lineno = lineno + 1
-
-    tags.append((tag_lineno, tag, datatype, name, '\n'.join(tag_text)))
-
-    return tags
-
 
 # Helpers for dealing with signals and exit status
 

@@ -13,12 +13,14 @@
 ##############################################################################
 
 import types
+import socket
 import xmlrpclib
+import httplib
+import urllib
 import re
 import StringIO
 import traceback
 import sys
-from supervisor.options import gettags
 
 from medusa.http_server import get_header
 from medusa.xmlrpc_handler import xmlrpc_handler
@@ -389,4 +391,123 @@ def traverse(ob, method, params):
         return ob(*params)
     except TypeError:
         raise RPCError(Faults.INCORRECT_PARAMETERS)
+
+class SupervisorTransport(xmlrpclib.Transport):
+    """
+    Provides a Transport for xmlrpclib that uses
+    httplib.HTTPConnection in order to support persistent
+    connections.  Also support basic auth and UNIX domain socket
+    servers.
+    """
+    connection = None
+
+    _use_datetime = 0 # python 2.5 fwd compatibility
+    def __init__(self, username=None, password=None, serverurl=None):
+        self.username = username
+        self.password = password
+        self.verbose = False
+        self.serverurl = serverurl
+        if serverurl.startswith('http://'):
+            type, uri = urllib.splittype(serverurl)
+            host, path = urllib.splithost(uri)
+            host, port = urllib.splitport(host)
+            if port is None:
+                port = 80
+            else:
+                port = int(port)
+            def get_connection(host=host, port=port):
+                return httplib.HTTPConnection(host, port)
+            self._get_connection = get_connection
+        elif serverurl.startswith('unix://'):
+            serverurl = serverurl[7:]
+            def get_connection(serverurl=serverurl):
+                return UnixStreamHTTPConnection(serverurl)
+            self._get_connection = get_connection
+        else:
+            raise ValueError('Unknown protocol for serverurl %s' % serverurl)
+
+    def request(self, host, handler, request_body, verbose=0):
+        if not self.connection:
+            self.connection = self._get_connection()
+            self.headers = {
+                "User-Agent" : self.user_agent,
+                "Content-Type" : "text/xml",
+                "Accept": "text/xml"
+                }
+            
+            # basic auth
+            if self.username is not None and self.password is not None:
+                unencoded = "%s:%s" % (self.username, self.password)
+                encoded = unencoded.encode('base64')
+                encoded = encoded.replace('\012', '')
+                self.headers["Authorization"] = "Basic %s" % encoded
+                
+        self.headers["Content-Length"] = str(len(request_body))
+
+        self.connection.request('POST', handler, request_body, self.headers)
+
+        r = self.connection.getresponse()
+
+        if r.status != 200:
+            self.connection.close()
+            self.connection = None
+            raise xmlrpclib.ProtocolError(host + handler,
+                                          r.status,
+                                          r.reason,
+                                          '' )
+        data = r.read()
+        p, u = self.getparser()
+        p.feed(data)
+        p.close()
+        return u.close()    
+
+class UnixStreamHTTPConnection(httplib.HTTPConnection):
+    def connect(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        # we abuse the host parameter as the socketname
+        self.sock.connect(self.host)
+
+def gettags(comment):
+    """ Parse documentation strings into JavaDoc-like tokens """
+
+    tags = []
+
+    tag = None
+    datatype = None
+    name = None
+    tag_lineno = lineno = 0
+    tag_text = []
+
+    for line in comment.split('\n'):
+        line = line.strip()
+        if line.startswith("@"):
+            tags.append((tag_lineno, tag, datatype, name, '\n'.join(tag_text)))
+            parts = line.split(None, 3)
+            if len(parts) == 1:
+                datatype = ''
+                name = ''
+                tag_text = []
+            elif len(parts) == 2:
+                datatype = parts[1]
+                name = ''
+                tag_text = []
+            elif len(parts) == 3:
+                datatype = parts[1]
+                name = parts[2]
+                tag_text = []
+            elif len(parts) == 4:
+                datatype = parts[1]
+                name = parts[2]
+                tag_text = [parts[3].lstrip()]
+            tag = parts[0][1:]
+            tag_lineno = lineno
+        else:
+            if line:
+                tag_text.append(line)
+        lineno = lineno + 1
+
+    tags.append((tag_lineno, tag, datatype, name, '\n'.join(tag_text)))
+
+    return tags
+
 

@@ -63,6 +63,7 @@ class DummyOptions:
         self.openreturn = None
         self.readfd_result = ''
         self.parse_warnings = []
+        self.serverurl = 'http://localhost:9001'
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
