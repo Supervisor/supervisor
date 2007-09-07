@@ -118,6 +118,10 @@ Next Release
     SUPERVISOR_SERVER_URL.  This contains the server URL for the
     supervisord running the child.
 
+  - An 'OK' URL was added at /ok.html which just returns the string
+    'OK' (can be used for up checks or speed checks via
+    plain-old-HTTP).
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

@@ -10,13 +10,22 @@ from supervisor.tests.base import DummyProcess
 
 from supervisor.http import NOT_DONE_YET
 
-class LogtailHandlerTests(unittest.TestCase):
+class HandlerTests:
+    def _makeOne(self, supervisord):
+        return self._getTargetClass()(supervisord)
+
+    def test_match(self):
+        class DummyRequest:
+            def __init__(self, uri):
+                self.uri = uri
+        supervisor = DummySupervisor()
+        handler = self._makeOne(supervisor)
+        self.assertEqual(handler.match(DummyRequest(handler.path)), True)
+
+class LogtailHandlerTests(HandlerTests, unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.http import logtail_handler
         return logtail_handler
-
-    def _makeOne(self, supervisord):
-        return self._getTargetClass()(supervisord)
 
     def test_handle_request_stdout_logfile_none(self):
         options = DummyOptions()
@@ -59,6 +68,45 @@ class LogtailHandlerTests(unittest.TestCase):
         self.assertEqual(len(request.producers), 1)
         self.assertEqual(request._done, True)
 
+class MainLogTailHandlerTests(HandlerTests, unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.http import mainlogtail_handler
+        return mainlogtail_handler
+
+    def test_handle_request_stdout_logfile_none(self):
+        supervisor = DummySupervisor()
+        handler = self._makeOne(supervisor)
+        request = DummyRequest('/mainlogtail', None, None, None)
+        handler.handle_request(request)
+        self.assertEqual(request._error, 410)
+
+    def test_handle_request_stdout_logfile_missing(self):
+        supervisor = DummySupervisor()
+        supervisor.options.logfile = '/not/there'
+        request = DummyRequest('/mainlogtail', None, None, None)
+        handler = self._makeOne(supervisor)
+        handler.handle_request(request)
+        self.assertEqual(request._error, 410)
+
+    def test_handle_request(self):
+        supervisor = DummySupervisor()
+        import tempfile
+        import os
+        import stat
+        f = tempfile.NamedTemporaryFile()
+        t = f.name
+        supervisor.options.logfile = t
+        handler = self._makeOne(supervisor)
+        request = DummyRequest('/mainlogtail', None, None, None)
+        handler.handle_request(request)
+        self.assertEqual(request._error, None)
+        from medusa import http_date
+        self.assertEqual(request.headers['Last-Modified'],
+                         http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
+        self.assertEqual(request.headers['Content-Type'], 'text/plain')
+        self.assertEqual(len(request.producers), 1)
+        self.assertEqual(request._done, True)
+    
 
 class TailFProducerTests(unittest.TestCase):
     def _getTargetClass(self):

@@ -321,6 +321,9 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
     def __init__(self, supervisord, subinterfaces):
         self.rpcinterface = RootRPCInterface(subinterfaces)
         self.supervisord = supervisord
+
+    def match(self, request):
+        return request.uri.startswith('/RPC2')
         
     def continue_request (self, data, request):
         logger = self.supervisord.options.logger

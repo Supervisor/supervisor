@@ -654,9 +654,8 @@ class logtail_handler:
         self.supervisord = supervisord
 
     def match(self, request):
-        path, params, query, fragment = request.split_uri()
-        return (path[:len(self.path)] == self.path)
-
+        return request.uri.startswith(self.path)
+        
     def handle_request(self, request):
         if request.command != 'GET':
             request.error (400) # bad request
@@ -720,8 +719,7 @@ class mainlogtail_handler:
         self.supervisord = supervisord
 
     def match(self, request):
-        path, params, query, fragment = request.split_uri()
-        return (path[:len(self.path)] == self.path)
+        return request.uri.startswith(self.path)
 
     def handle_request(self, request):
         if request.command != 'GET':
@@ -807,8 +805,8 @@ def make_http_server(options, supervisord):
     else:
         options.logger.critical('Running without any HTTP authentication '
                                 'checking')
-    hs.install_handler(uihandler)
-    hs.install_handler(tailhandler)
     hs.install_handler(maintailhandler)
-    hs.install_handler(xmlrpchandler)
+    hs.install_handler(tailhandler)
+    hs.install_handler(uihandler) # second-to-last for speed
+    hs.install_handler(xmlrpchandler) # last for speed (first checked)
     return hs

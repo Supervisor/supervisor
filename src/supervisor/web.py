@@ -499,6 +499,14 @@ class StatusView(MeldView):
 
         return root.write_xhtmlstring()
 
+class OKView:
+    delay = 0
+    def __init__(self, context):
+        self.context = context
+        
+    def __call__(self):
+        return {'body':'OK'}
+
 VIEWS = {
     'index.html': {
           'template':'ui/status.html',
@@ -507,6 +515,10 @@ VIEWS = {
     'tail.html': {
            'template':'ui/tail.html',
            'view':TailView,
+           },
+    'ok.html': {
+           'template':None,
+           'view':OKView,
            },
     }
 
