@@ -107,6 +107,17 @@ Next Release
 
   - Removed EVENT_BUFFER_OVERFLOW event type.
 
+  - The supervisorctl xmlrpc proxy can now communicate with
+    supervisord using a persistent HTTP connection.
+
+  - A new module, "supervisor.childutils" was added.  This module
+    contains API functions useful for Python programs running under
+    supervisord (header parsing, obtaining an RPC proxy).
+
+  - A new envvar is added to child process environments:
+    SUPERVISOR_SERVER_URL.  This contains the server URL for the
+    supervisord running the child.
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC
