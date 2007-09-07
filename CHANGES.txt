@@ -114,8 +114,7 @@ Next Release
     plain-old-HTTP).
 
   - An additional command-line option '--profile_options' is accepted
-    by the supervisord script for developer use.  It accepts the same
-    command line arguments as the 'supervisord' script.
+    by the supervisord script for developer use.
 
       supervisord -n -c sample.conf --profile_options=cumulative,calls
 
