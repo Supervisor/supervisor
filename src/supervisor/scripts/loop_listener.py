@@ -26,8 +26,7 @@ def main():
     while 1:
         headers, payload = childutils.protocol.wait()
         if headers['eventname'].startswith('PROCESS_COMMUNICATION'):
-            pheaderinfo, pdata = payload.split('\n')
-            pheaders = childutils.get_headers(pheaderinfo)
+            pheaders, pdata = childutils.eventdata(payload)
             pname = '%s:%s' % (pheaders['processname'], pheaders['groupname'])
             rpcinterface.supervisor.sendProcessStdin(pname, 'Got it yo\n')
         childutils.protocol.ok()
