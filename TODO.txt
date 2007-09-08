@@ -8,10 +8,6 @@
     and fall through.  In an asyncore dispatcher represented by the
     file descriptor, attempt to dispatch the event.
 
-  - Make sure the transport passes the socket instead of calling
-    h.getfile().  See
-    http://mail.python.org/pipermail/patches/2002-February/007375.html
-
 - Fix CVS so not all checkins come from "chrism".
 
 - FATAL state for supervisor.
