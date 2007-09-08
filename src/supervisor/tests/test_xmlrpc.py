@@ -51,10 +51,15 @@ class XMLRPCHandlerTests(unittest.TestCase):
         request = DummyRequest('/what/ever', None, None, None)
         handler.continue_request(data, request)
         logdata = supervisor.options.logger.data
-        self.assertEqual(len(logdata), 2)
-        self.assertEqual(logdata[0],
+        from supervisor.xmlrpc import loads
+        if loads:
+            expected = 2
+        else:
+            expected = 3
+        self.assertEqual(len(logdata), expected)
+        self.assertEqual(logdata[-2],
                          u'XML-RPC method called: supervisor.noSuchMethod()')
-        self.assertEqual(logdata[1],
+        self.assertEqual(logdata[-1],
            (u'XML-RPC method supervisor.noSuchMethod() returned fault: '
             '[1] UNKNOWN_METHOD'))
         self.assertEqual(len(request.producers), 1)
@@ -70,10 +75,15 @@ class XMLRPCHandlerTests(unittest.TestCase):
         request = DummyRequest('/what/ever', None, None, None)
         handler.continue_request(data, request)
         logdata = supervisor.options.logger.data
-        self.assertEqual(len(logdata), 2)
-        self.assertEqual(logdata[0],
+        from supervisor.xmlrpc import loads
+        if loads:
+            expected = 2
+        else:
+            expected = 3
+        self.assertEqual(len(logdata), expected)
+        self.assertEqual(logdata[-2],
                u'XML-RPC method called: supervisor.getAPIVersion()')
-        self.assertEqual(logdata[1],
+        self.assertEqual(logdata[-1],
             u'XML-RPC method supervisor.getAPIVersion() returned successfully')
         self.assertEqual(len(request.producers), 1)
         xml_response = request.producers[0]
@@ -92,11 +102,16 @@ class XMLRPCHandlerTests(unittest.TestCase):
         request = DummyRequest('/what/ever', None, None, None)
         handler.continue_request(data, request)
         logdata = supervisor.options.logger.data
-        self.assertEqual(len(logdata), 2)
-        self.assertEqual(logdata[0],
+        from supervisor.xmlrpc import loads
+        if loads:
+            expected = 2
+        else:
+            expected = 3
+        self.assertEqual(len(logdata), expected)
+        self.assertEqual(logdata[-2],
                u'XML-RPC method called: supervisor.raiseError()')
-        self.failUnless(logdata[1].startswith('Traceback'))
-        self.failUnless(logdata[1].endswith('ValueError: error\n'))
+        self.failUnless(logdata[-1].startswith('Traceback'))
+        self.failUnless(logdata[-1].endswith('ValueError: error\n'))
         self.assertEqual(len(request.producers), 0)
         self.assertEqual(request._error, 500)
 
@@ -222,6 +237,70 @@ class TesstSupervisorTransport(unittest.TestCase):
         # the test is just to insure that this method can be called; failure
         # would be an AttributeError for _use_datetime under Python 2.5
         parser, unmarshaller = instance.getparser() # this uses _use_datetime
+
+class TestIterparseLoads(unittest.TestCase):
+    def test_iterparse_loads_methodcall(self):
+        s = """<?xml version="1.0"?>
+        <methodCall>
+        <methodName>examples.getStateName</methodName>
+        <params>
+        <param>
+        <value><i4>41</i4></value>
+        </param>
+        <param>
+        <value><int>14</int></value>
+        </param>
+        <param>
+        <value><boolean>1</boolean></value>
+        </param>
+        <param>
+        <value><string>hello world</string></value>
+        </param>
+        <param>
+        <value><double>-12.214</double></value>
+        </param>
+        <param>
+        <value><dateTime.iso8601>19980717T14:08:55</dateTime.iso8601></value>
+        </param>
+        <param>
+        <value><base64>eW91IGNhbid0IHJlYWQgdGhpcyE=</base64></value>
+        </param>
+        <param>
+        <struct>
+          <member><name>k</name><value><i4>5</i4></value></member>
+        </struct>
+        </param>
+        <param>
+        <array><data><value><i4>12</i4></value></data></array>
+        </param>
+        <param>
+        <struct>
+        <member>
+          <name>k</name>
+          <value><array><data><value><i4>1</i4></value></data></array></value>
+        </member>
+        </struct>
+        </param>
+        </params>
+        </methodCall>
+        """
+        from supervisor.xmlrpc import loads
+        if loads is None:
+            return # no cElementTree
+        result = loads(s)
+        params, method = result
+        import datetime
+        self.assertEqual(method, 'examples.getStateName')
+        self.assertEqual(params[0], 41)
+        self.assertEqual(params[1], 14)
+        self.assertEqual(params[2], True)
+        self.assertEqual(params[3], 'hello world')
+        self.assertEqual(params[4], -12.214)
+        self.assertEqual(params[5], datetime.datetime(1998, 7, 17, 14, 8, 55))
+        self.assertEqual(params[6], "you can't read this!")
+        self.assertEqual(params[7], {'k': 5})
+        self.assertEqual(params[8], [12])
+        self.assertEqual(params[9], {'k': [1]})
 
 class DummyResponse:
     def __init__(self, status=200, body='', reason='reason'):
