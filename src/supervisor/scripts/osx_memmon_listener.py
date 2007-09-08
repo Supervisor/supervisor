@@ -43,7 +43,7 @@ except ImportError:
 def main(maxkb):
     rpc = childutils.getRPCInterface(os.environ)
     while 1:
-        headers, payload = childutils.protocol.wait()
+        headers, payload = childutils.listener.wait()
         if headers['eventname'].startswith('PROCESS_COMMUNICATION'):
             pheaders, pdata = childutils.eventdata(payload)
             procname, groupname = pheaders['processname'], pheaders['groupname']
@@ -55,7 +55,7 @@ def main(maxkb):
                         if  rss > maxkb:
                             rpc.supervisor.stopProcess(name)
                             rpc.supervisor.startProcess(name)
-        childutils.protocol.ok()
+        childutils.listener.ok()
 
 if __name__ == '__main__':
     maxbytes = datatypes.byte_size(sys.argv[1])

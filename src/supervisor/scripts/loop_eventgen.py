@@ -27,7 +27,7 @@ def main(max):
     report = open('/tmp/report', 'w')
     i = 0
     while 1:
-        childutils.send_proc_comm_stdout('the_data')
+        childutils.pcomm.stdout('the_data')
         data = sys.stdin.readline()
         report.write(str(i) + ' @ %s\n' % childutils.get_asctime())
         report.flush()

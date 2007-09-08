@@ -223,7 +223,7 @@ def main(every):
     while 1:
         infos = rpc.supervisor.getAllProcessInfo()
         result = do(infos)
-        childutils.send_proc_comm_stdout(result)
+        childutils.pcomm.stdout(result)
         time.sleep(every)
 
 def do(infos):

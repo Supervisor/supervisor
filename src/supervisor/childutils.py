@@ -41,6 +41,11 @@ def write_stdout(msg):
 def get_headers(line):
     return dict([ x.split(':') for x in line.split() ])
 
+def eventdata(payload):
+    headerinfo, data = payload.split('\n')
+    headers = get_headers(headerinfo)
+    return headers, data
+
 def get_asctime():
     now = time.time()
     msecs = (now - long(now)) * 1000
@@ -48,21 +53,19 @@ def get_asctime():
     asctime = '%s,%03d' % (part1, msecs)
     return asctime
 
-def send_proc_comm(msg, write=write_stdout):
-    write(ProcessCommunicationEvent.BEGIN_TOKEN)
-    write(msg)
-    write(ProcessCommunicationEvent.END_TOKEN)
+class ProcessCommunicationsProtocol:
+    def send(self, msg, write=write_stdout):
+        write(ProcessCommunicationEvent.BEGIN_TOKEN)
+        write(msg)
+        write(ProcessCommunicationEvent.END_TOKEN)
 
-def send_proc_comm_stdout(msg):
-    return send_proc_comm(msg, write_stdout)
+    def stdout(self, msg):
+        return self.send(msg, write_stdout)
 
-def send_proc_comm_stderr(msg):
-    return send_proc_comm(msg, write_stderr)
+    def stderr(self, msg):
+        return self.send(msg, write_stderr)
 
-def eventdata(payload):
-    headerinfo, data = payload.split('\n')
-    headers = get_headers(headerinfo)
-    return headers, data
+pcomm = ProcessCommunicationsProtocol()
 
 class EventListenerProtocol:
     def wait(self):
@@ -78,4 +81,4 @@ class EventListenerProtocol:
     def fail(self, *ignored):
         write_stdout(PEventListenerDispatcher.EVENT_REJECTED_TOKEN)
 
-protocol = EventListenerProtocol()
+listener = EventListenerProtocol()
