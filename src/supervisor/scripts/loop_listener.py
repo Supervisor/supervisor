@@ -18,7 +18,6 @@
 # from loop_eventgen.py and uses RPC to write data to the event
 # generator's stdin.
 
-import sys
 import os
 from supervisor import childutils
 
