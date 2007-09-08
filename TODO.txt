@@ -1,6 +1,30 @@
 - Generalize eventlistener request/response protocol (wrap OK/FAIL in
   RESULT envelope) so we can use it for more specialized
-  communications.
+  communications, e.g.:
+
+  The listener would return 'RESULT %s\n%s' (len(result), result).
+  For event listeners, the "result" would be one of "OK" or "FAIL".
+  For a monitor process, it would be some serialization of the monitor
+  data (or maybe a failure token).
+
+  So an event listener conversation which transitions from
+  ACKNOWLEDGED to READY to BUSY back to ACKNOWLEDGED and to READY
+  again might go something like this:
+
+  -> READY\n
+  <- SUPERVISOR3.0 PROCESS_COMMUNICATION_STDOUT 30 22\n
+  <- process_name: foo\ngroup_name: bar\nThis is the data that was sent between the tags
+  -> RESULT 2\nOK
+  -> READY\n
+
+  An equivalent monitor process conversation might look like:
+
+  -> READY\n
+  <- SUPERVISOR3.0 MONITOR_QUERY 30 20\n
+  <- pids: 2601 2602 2603
+  -> RESULT 10672\n<... big mess o' XML maybe ...>
+  -> READY\n
+
 
 - Make it possible to listen on a domain socket *and* an HTTP socket.
 
