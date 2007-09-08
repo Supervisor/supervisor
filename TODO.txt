@@ -1,3 +1,6 @@
+- Implement event max_retry counter that means "after X retries of a
+  rejected event, go into FATAL state".
+
 - Generalize eventlistener request/response protocol (wrap OK/FAIL in
   RESULT envelope) so we can use it for more specialized
   communications, e.g.:
