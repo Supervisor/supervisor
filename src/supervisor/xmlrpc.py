@@ -18,7 +18,7 @@ import xmlrpclib
 import httplib
 import urllib
 import re
-import StringIO
+from cStringIO import StringIO
 import traceback
 import sys
 
@@ -321,6 +321,14 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
     def __init__(self, supervisord, subinterfaces):
         self.rpcinterface = RootRPCInterface(subinterfaces)
         self.supervisord = supervisord
+        if loads:
+            self.loads = loads
+        else:
+            self.supervisord.options.logger.warn(
+                'cElementTree not installed, using slower XML parser for '
+                'XML-RPC'
+                )
+            self.loads = xmlrpclib.loads
 
     def match(self, request):
         return request.uri.startswith('/RPC2')
@@ -330,7 +338,7 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
         
         try:
 
-            params, method = xmlrpclib.loads(data)
+            params, method = self.loads(data)
 
             try:
                 logger.debug('XML-RPC method called: %s()' % method)
@@ -369,7 +377,7 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                 request.done()
 
         except:
-            io = StringIO.StringIO()
+            io = StringIO()
             traceback.print_exc(file=io)
             val = io.getvalue()
             logger.critical(val)
@@ -513,4 +521,45 @@ def gettags(comment):
 
     return tags
 
+try:
+    from cElementTree import iterparse
+    import datetime, time
+    from base64 import decodestring
 
+    def make_datetime(text):
+        return datetime.datetime(
+            *time.strptime(text, "%Y%m%dT%H:%M:%S")[:6]
+        )
+
+    unmarshallers = {
+        "int": lambda x: int(x.text),
+        "i4": lambda x: int(x.text),
+        "boolean": lambda x: x.text == "1",
+        "string": lambda x: x.text or "",
+        "double": lambda x: float(x.text),
+        "dateTime.iso8601": lambda x: make_datetime(x.text),
+        "array": lambda x: [v.text for v in x],
+        "data": lambda x: x[0].text,
+        "struct": lambda x: dict((k.text or "", v.text) for k, v in x),
+        "base64": lambda x: decodestring(x.text or ""),
+        "value": lambda x: x[0].text,
+        "param": lambda x: x[0].text,
+    }
+
+    def loads(data):
+        params = method = None
+        for action, elem in iterparse(StringIO(data)):
+            unmarshal = unmarshallers.get(elem.tag)
+            if unmarshal:
+                data = unmarshal(elem)
+                elem.clear()
+                elem.text = data
+            elif elem.tag == "methodName":
+                method = elem.text
+            elif elem.tag == "params":
+                params = tuple(v.text for v in elem)
+        return params, method
+
+except ImportError:
+    loads = None
+    
