@@ -25,7 +25,7 @@ from supervisor import childutils
 def main():
     rpcinterface = childutils.getRPCInterface(os.environ)
     while 1:
-        childutils.write_stdout('READY\n')
+        childutils.protocol.ready()
         line = sys.stdin.readline()
         headers = childutils.get_headers(line)
         payload = sys.stdin.read(int(headers['len']))
@@ -34,7 +34,7 @@ def main():
             pheaders = childutils.get_headers(pheaderinfo)
             pname = '%s:%s' % (pheaders['processname'], pheaders['groupname'])
             rpcinterface.supervisor.sendProcessStdin(pname, 'Got it yo\n')
-        childutils.write_stdout('OK\n')
+        childutils.protocol.ok()
 
 if __name__ == '__main__':
     main()
