@@ -101,9 +101,16 @@ Next Release
   - The supervisorctl xmlrpc proxy can now communicate with
     supervisord using a persistent HTTP connection.
 
-  - A new module, "supervisor.childutils" was added.  This module
-    contains API functions useful for Python programs running under
-    supervisord (header parsing, obtaining an RPC proxy).
+  - A new module "supervisor.childutils" was added.  This module
+    provides utilities for Python scripts which act as children of
+    supervisord.  Most notably, it contains an API method
+    "getRPCInterface" allows you to obtain an xmlrpxlib ServerProxy
+    that is willing to communicate with the parent supervisor.  It
+    also contains utility functions that allow for parsing of
+    supervisor event listener protocol headers.  A pair of scripts
+    (loop_eventgen.py and loop_listener.py) were added to the script
+    directory that serve as examples about how to use the childutils
+    module.
 
   - A new envvar is added to child process environments:
     SUPERVISOR_SERVER_URL.  This contains the server URL for the
@@ -123,6 +130,11 @@ Next Release
 
     When you exit supervisor, it will print Python profiling output to
     stdout.
+
+  - If cElementTree is installed in the Python used to invoke
+    supervisor, an alternate (faster, by about 2X) XML parser will be
+    used to parse XML-RPC request bodies.  cElementTree was added as
+    an "extras_require" option in setup.py.
 
 3.0a2
 
