@@ -1,3 +1,7 @@
+- Generalize eventlistener request/response protocol (wrap OK/FAIL in
+  RESULT envelope) so we can use it for more specialized
+  communications.
+
 - Make it possible to listen on a domain socket *and* an HTTP socket.
 
 - General speed improvement wrangling:
