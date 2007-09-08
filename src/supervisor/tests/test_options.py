@@ -53,6 +53,7 @@ class ServerOptionsTests(unittest.TestCase):
         stopwaitsecs=5
         startsecs=5
         startretries=10
+        directory=/tmp
         
         [program:cat2]
         priority=2
@@ -127,6 +128,7 @@ class ServerOptionsTests(unittest.TestCase):
                          datatypes.byte_size('50MB'))
         self.assertEqual(proc1.stdout_logfile_backups, 10)
         self.assertEqual(proc1.exitcodes, [0,2])
+        self.assertEqual(proc1.directory, '/tmp')
 
         cat2 = options.process_group_configs[1]
         self.assertEqual(cat2.name, 'cat2')
@@ -145,6 +147,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc2.stdout_logfile_maxbytes, 1024)
         self.assertEqual(proc2.stdout_logfile_backups, 2)
         self.assertEqual(proc2.exitcodes, [0,2])
+        self.assertEqual(proc2.directory, None)
 
         cat3 = options.process_group_configs[2]
         self.assertEqual(cat3.name, 'cat3')
