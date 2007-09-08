@@ -136,6 +136,13 @@ Next Release
     used to parse XML-RPC request bodies.  cElementTree was added as
     an "extras_require" option in setup.py.
 
+  - Added the ability to start, stop, and restart process groups to
+    supervisorctl.  To start a group, use "start groupname:*".  To
+    start multiple groups, use "start groupname1:* groupname2:*".
+    Equivalent commands work for "stop" and "restart". You can mix and
+    match short processnames, fullly-specified group:process names,
+    and groupsplats on the same line for any of these commands.
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

@@ -234,6 +234,15 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(controller.stdout.getvalue(),
                          'foo: started\nbar: started\n')
 
+    def test_start_group(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_start('foo:')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(),
+                         'foo_00: started\nfoo_01: started\n')
+
     def test_start_all(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
@@ -296,6 +305,15 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(controller.stdout.getvalue(),
                          'foo: stopped\nbar: stopped\n')
+
+    def test_stop_group(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_stop('foo:')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.stdout.getvalue(),
+                         'foo_00: stopped\nfoo_01: stopped\n')
 
     def test_stop_all(self):
         options = DummyClientOptions()

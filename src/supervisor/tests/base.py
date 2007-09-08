@@ -647,6 +647,17 @@ class DummySupervisorRPCNamespace:
             raise Fault(xmlrpc.Faults.SPAWN_ERROR, 'SPAWN_ERROR')
         return True
 
+    def startProcessGroup(self, name):
+        from supervisor import xmlrpc
+        return [
+            {'name':'foo_00', 'group':'foo',
+             'status': xmlrpc.Faults.SUCCESS,
+             'description': 'OK'},
+            {'name':'foo_01', 'group':'foo',
+             'status':xmlrpc.Faults.SUCCESS,
+             'description': 'OK'},
+            ]
+
     def startAllProcesses(self):
         from supervisor import xmlrpc
         return [
@@ -659,6 +670,17 @@ class DummySupervisorRPCNamespace:
             {'name':'failed', 'group':'failed_group',
              'status':xmlrpc.Faults.SPAWN_ERROR,
              'description':'SPAWN_ERROR'}
+            ]
+
+    def stopProcessGroup(self, name):
+        from supervisor import xmlrpc
+        return [
+            {'name':'foo_00', 'group':'foo',
+             'status': xmlrpc.Faults.SUCCESS,
+             'description': 'OK'},
+            {'name':'foo_01', 'group':'foo',
+             'status':xmlrpc.Faults.SUCCESS,
+             'description': 'OK'},
             ]
 
     def stopProcess(self, name):

@@ -43,7 +43,9 @@ import errno
 import urlparse
 
 from supervisor.options import ClientOptions
+from supervisor.options import split_namespec
 from supervisor import xmlrpc
+
 
 class Controller(cmd.Cmd):
 
@@ -139,15 +141,15 @@ class Controller(cmd.Cmd):
         return True
 
     def help_help(self):
-        self._output("help\t\tPrint a list of available actions.")
-        self._output("help <action>\tPrint help for <action>.")
+        self._output("help\t\tPrint a list of available actions")
+        self._output("help <action>\tPrint help for <action>")
 
     def do_EOF(self, arg):
         self._output('')
         return 1
 
     def help_EOF(self):
-        self._output("To quit, type ^D or use the quit command.")
+        self._output("To quit, type ^D or use the quit command")
 
     def _tailf(self, path):
         if not self._upcheck():
@@ -196,10 +198,10 @@ class Controller(cmd.Cmd):
             modifier = args.pop(0)
 
         if len(args) == 1:
-            processname = args[-1]
+            name = args[-1]
             channel = 'stdout'
         else:
-            processname = args[0]
+            name = args[0]
             channel = args[-1].lower()
             if channel not in ('stderr', 'stdout'):
                 self._output('Error: bad channel %r' % channel)
@@ -221,37 +223,37 @@ class Controller(cmd.Cmd):
         supervisor = self._get_supervisor()
 
         if bytes is None:
-            return self._tailf('/logtail/%s/%s' % (processname, channel))
+            return self._tailf('/logtail/%s/%s' % (name, channel))
 
         else:
             try:
                 if channel is 'stdout':
-                    output = supervisor.readProcessStdoutLog(processname,
+                    output = supervisor.readProcessStdoutLog(name,
                                                              -bytes, 0)
                 else: # if channel is 'stderr'
-                    output = supervisor.readProcessStderrLog(processname,
+                    output = supervisor.readProcessStderrLog(name,
                                                              -bytes, 0)
             except xmlrpclib.Fault, e:
                 template = '%s: ERROR (%s)'
                 if e.faultCode == xmlrpc.Faults.NO_FILE:
-                    self._output(template % (processname, 'no log file'))
+                    self._output(template % (name, 'no log file'))
                 elif e.faultCode == xmlrpc.Faults.FAILED:
-                    self._output(template % (processname,
+                    self._output(template % (name,
                                              'unknown error reading log'))
                 elif e.faultCode == xmlrpc.Faults.BAD_NAME:
-                    self._output(template % (processname,
+                    self._output(template % (name,
                                              'no such process name'))
             else:
                 self._output(output)
 
     def help_tail(self):
         self._output(
-            "tail [-f] <processname> [stdout|stderr] (default stdout)\n"
+            "tail [-f] <name> [stdout|stderr] (default stdout)\n"
             "Ex:\n"
-            "tail -f <processname>\tContinuous tail of named process stdout\n"
+            "tail -f <name>\t\tContinuous tail of named process stdout\n"
             "\t\t\tCtrl-C to exit.\n"
-            "tail -100 <processname>\tlast 100 *bytes* of process stdout\n"
-            "tail <processname> stderr\tlast 1600 *bytes* of process stderr\n"
+            "tail -100 <name>\tlast 100 *bytes* of process stdout\n"
+            "tail <name> stderr\tlast 1600 *bytes* of process stderr"
             )
 
     def do_maintail(self, arg):
@@ -300,8 +302,8 @@ class Controller(cmd.Cmd):
 
     def help_maintail(self):
         self._output(
-            "maintail -f \tContinuous tail of supervisor main log file,\n"
-            "\t\t\tCtrl-C to exit.\n"
+            "maintail -f \tContinuous tail of supervisor main log file"
+            " (Ctrl-C to exit)\n"
             "maintail -100\tlast 100 *bytes* of supervisord main log file\n"
             "maintail\tlast 1600 *bytes* of supervisor main log file\n"
             )
@@ -333,15 +335,15 @@ class Controller(cmd.Cmd):
         
         supervisor = self._get_supervisor()
 
-        processnames = arg.strip().split()
+        names = arg.strip().split()
 
-        if processnames:
-            for processname in processnames:
+        if names:
+            for name in names:
                 try:
-                    info = supervisor.getProcessInfo(processname)
+                    info = supervisor.getProcessInfo(name)
                 except xmlrpclib.Fault, e:
                     if e.faultCode == xmlrpc.Faults.BAD_NAME:
-                        self._output('No such process %s' % processname)
+                        self._output('No such process %s' % name)
                     else:
                         raise
                     continue
@@ -356,143 +358,132 @@ class Controller(cmd.Cmd):
         self._output("status <name> <name>\tGet status on multiple named "
                      "processes.")
 
-    def _startresult(self, code, processname, default=None):
+    def _startresult(self, result):
+        name = result['name']
+        code = result['status']
         template = '%s: ERROR (%s)'
         if code == xmlrpc.Faults.BAD_NAME:
-            return template % (processname,'no such process')
+            return template % (name,'no such process')
         elif code == xmlrpc.Faults.ALREADY_STARTED:
-            return template % (processname,'already started')
+            return template % (name,'already started')
         elif code == xmlrpc.Faults.SPAWN_ERROR:
-            return template % (processname, 'spawn error')
+            return template % (name, 'spawn error')
         elif code == xmlrpc.Faults.ABNORMAL_TERMINATION:
-            return template % (processname, 'abnormal termination')
+            return template % (name, 'abnormal termination')
         elif code == xmlrpc.Faults.SUCCESS:
-            return '%s: started' % processname
-        
-        return default
+            return '%s: started' % name
+        # assertion
+        raise ValueError('Unknown result code %s for %s' % (code, name))
 
     def do_start(self, arg):
         if not self._upcheck():
             return
 
-        processnames = arg.strip().split()
+        names = arg.strip().split()
         supervisor = self._get_supervisor()
 
-        if not processnames:
+        if not names:
             self._output("Error: start requires a process name")
             self.help_start()
             return
 
-        if 'all' in processnames:
+        if 'all' in names:
             results = supervisor.startAllProcesses()
             for result in results:
-                name = result['name']
-                code = result['status']
-                result = self._startresult(code, name)
-                if result is None:
-                    # assertion
-                    raise ValueError('Unknown result code %s for %s' %
-                                     (code, name))
-                else:
-                    self._output(result)
+                result = self._startresult(result)
+                self._output(result)
                 
         else:
-            for processname in processnames:
-                try:
-                    result = supervisor.startProcess(processname)
-                except xmlrpclib.Fault, e:
-                    error = self._startresult(e.faultCode, processname)
-                    if error is not None:
+            for name in names:
+                group_name, process_name = split_namespec(name)
+                if process_name is None:
+                    results = supervisor.startProcessGroup(group_name)
+                    for result in results:
+                        result = self._startresult(result)
+                        self._output(result)
+                else:
+                    try:
+                        result = supervisor.startProcess(name)
+                    except xmlrpclib.Fault, e:
+                        error = self._startresult({'status':e.faultCode,
+                                                   'name':name,
+                                                   'description':e.faultString})
                         self._output(error)
                     else:
-                        raise
-                else:
-                    if result == True:
-                        self._output('%s: started' % processname)
-                    else:
-                        raise # assertion
+                        self._output('%s: started' % name)
 
     def help_start(self):
-        self._output("start <processname>\t\t\tStart a process.")
-        self._output("start <processname> <processname>\tStart multiple "
-                     "processes")
-        self._output("start all\t\t\t\tStart all processes")
-        self._output("  When all processes are started, they are started "
-                     "in")
-        self._output("  priority order (see config file)")
+        self._output("start <name>\t\tStart a process")
+        self._output("start <gname>:*\t\tStart all processes in a group")
+        self._output("start <name> <name>\tStart multiple processes or groups")
+        self._output("start all\t\tStart all processes")
 
-    def _stopresult(self, code, processname, fault_string=None):
+    def _stopresult(self, result):
+        name = result['name']
+        code = result['status']
+        fault_string = result['description']
         template = '%s: ERROR (%s)'
         if code == xmlrpc.Faults.BAD_NAME:
-            return template % (processname, 'no such process')
+            return template % (name, 'no such process')
         elif code == xmlrpc.Faults.NOT_RUNNING:
-            return template % (processname, 'not running')
+            return template % (name, 'not running')
         elif code == xmlrpc.Faults.SUCCESS:
-            return '%s: stopped' % processname
+            return '%s: stopped' % name
         elif code == xmlrpc.Faults.FAILED:
             return fault_string
-        return None
+        # assertion
+        raise ValueError('Unknown result code %s for %s' % (code, name))
 
     def do_stop(self, arg):
         if not self._upcheck():
             return
 
-        processnames = arg.strip().split()
+        names = arg.strip().split()
         supervisor = self._get_supervisor()
 
-        if not processnames:
+        if not names:
             self._output('Error: stop requires a process name')
             self.help_stop()
             return
 
-        if 'all' in processnames:
+        if 'all' in names:
             results = supervisor.stopAllProcesses()
             for result in results:
-                name = result['name']
-                code = result['status']
-                fault_string = result['description']
-                result = self._stopresult(code, name, fault_string)
-                if result is None:
-                    # assertion
-                    raise ValueError('Unknown result code %s for %s' %
-                                     (code, name))
-                else:
-                    self._output(result)
+                result = self._stopresult(result)
+                self._output(result)
 
         else:
-
-            for processname in processnames:
-                try:
-                    result = supervisor.stopProcess(processname)
-                except xmlrpclib.Fault, e:
-                    error = self._stopresult(e.faultCode, processname,
-                                             e.faultString)
-                    if error is not None:
+            for name in names:
+                group_name, process_name = split_namespec(name)
+                if process_name is None:
+                    results = supervisor.stopProcessGroup(group_name)
+                    for result in results:
+                        result = self._stopresult(result)
+                        self._output(result)
+                else:
+                    try:
+                        result = supervisor.stopProcess(name)
+                    except xmlrpclib.Fault, e:
+                        error = self._stopresult({'status':e.faultCode,
+                                                  'name':name,
+                                                  'description':e.faultString})
                         self._output(error)
                     else:
-                        raise
-                else:
-                    if result == True:
-                        self._output('%s: stopped' % processname)
-                    else:
-                        raise # assertion
+                        self._output('%s: stopped' % name)
 
     def help_stop(self):
-        self._output("stop <processname>\t\t\tStop a process.")
-        self._output("stop <processname> <processname>\tStop multiple "
-                     "processes")
-        self._output("stop all\t\t\t\tStop all processes")
-        self._output("  When all processes are stopped, they are stopped "
-                     "in")
-        self._output("  reverse priority order (see config file)")
+        self._output("stop <name>\t\tStop a process")
+        self._output("stop <gname>:*\t\tStop all processes in a group")
+        self._output("stop <name> <name>\tStop multiple processes or groups")
+        self._output("stop all\t\tStop all processes")
 
     def do_restart(self, arg):
         if not self._upcheck():
             return
 
-        processnames = arg.strip().split()
+        names = arg.strip().split()
 
-        if not processnames:
+        if not names:
             self._output('Error: restart requires a process name')
             self.help_restart()
             return
@@ -501,13 +492,11 @@ class Controller(cmd.Cmd):
         self.do_start(arg)
 
     def help_restart(self):
-        self._output("restart <processname>\t\t\tRestart a process.")
-        self._output("restart <processname> <processname>\tRestart multiple "
-                     "processes")
-        self._output("restart all\t\t\t\tRestart all processes")
-        self._output("  When all processes are restarted, they are "
-                     "started in")
-        self._output("  priority order (see config file)")
+        self._output("restart <name>\t\tRestart a process")
+        self._output("restart <gname>:*\tRestart all processes in a group")
+        self._output("restart <name> <name>\tRestart multiple processes or "
+                     "groups")
+        self._output("restart all\t\tRestart all processes")
 
     def do_shutdown(self, arg):
         if self.options.interactive:
@@ -527,7 +516,7 @@ class Controller(cmd.Cmd):
                 self._output('Shut down')
 
     def help_shutdown(self):
-        self._output("shutdown \t\tShut the remote supervisord down.")
+        self._output("shutdown \tShut the remote supervisord down.")
 
     def do_reload(self, arg):
         if self.options.interactive:
@@ -549,64 +538,54 @@ class Controller(cmd.Cmd):
     def help_reload(self):
         self._output("reload \t\tRestart the remote supervisord.")
 
-    def _clearresult(self, code, processname, default=None):
+    def _clearresult(self, result):
+        name = result['name']
+        code = result['status']
         template = '%s: ERROR (%s)'
         if code == xmlrpc.Faults.BAD_NAME:
-            return template % (processname, 'no such process')
+            return template % (name, 'no such process')
         elif code == xmlrpc.Faults.FAILED:
-            return template % (processname, 'failed')
+            return template % (name, 'failed')
         elif code == xmlrpc.Faults.SUCCESS:
-            return '%s: cleared' % processname
-        return default
+            return '%s: cleared' % name
+        raise ValueError('Unknown result code %s for %s' % (code, name))
 
     def do_clear(self, arg):
         if not self._upcheck():
             return
 
-        processnames = arg.strip().split()
+        names = arg.strip().split()
 
-        if not processnames:
+        if not names:
             self._output('Error: clear requires a process name')
             self.help_clear()
             return
 
         supervisor = self._get_supervisor()
 
-        if 'all' in processnames:
+        if 'all' in names:
             results = supervisor.clearAllProcessLogs()
             for result in results:
-                name = result['name']
-                code = result['status']
-                result = self._clearresult(code, name)
-                if result is None:
-                    # assertion
-                    raise ValueError('Unknown result code %s for %s' %
-                                     (code, name))
-                else:
-                    self._output(result)
+                result = self._clearresult(result)
+                self._output(result)
 
         else:
 
-            for processname in processnames:
+            for name in names:
                 try:
-                    result = supervisor.clearProcessLogs(processname)
+                    result = supervisor.clearProcessLogs(name)
                 except xmlrpclib.Fault, e:
-                    error = self._clearresult(e.faultCode, processname)
-                    if error is not None:
-                        self._output(error)
-                    else:
-                        raise
+                    error = self._clearresult({'status':e.faultCode,
+                                               'name':name,
+                                               'description':e.faultString})
+                    self._output(error)
                 else:
-                    if result == True:
-                        self._output('%s: cleared' % processname)
-                    else:
-                        raise # assertion
+                    self._output('%s: cleared' % name)
 
     def help_clear(self):
-        self._output("clear <processname>\t\t\tClear a process' log files.")
-        self._output("clear <processname> <processname>\tclear multiple "
-                     "process' log files")
-        self._output("clear all\t\t\t\tClear all process' log files")
+        self._output("clear <name>\t\tClear a process' log files.")
+        self._output("clear <name> <name>\tClear multiple process' log files")
+        self._output("clear all\t\tClear all process' log files")
 
     def do_open(self, arg):
         url = arg.strip()
@@ -618,8 +597,8 @@ class Controller(cmd.Cmd):
         self.do_status('')
 
     def help_open(self):
-        self._output("open <url>\t\t\tConnect to a remote supervisord process.")
-        self._output("\t\t\t(for UNIX domain socket, use unix:///socket/path)")
+        self._output("open <url>\tConnect to a remote supervisord process.")
+        self._output("\t\t(for UNIX domain socket, use unix:///socket/path)")
 
     def do_version(self, arg):
         if not self._upcheck():
@@ -628,8 +607,8 @@ class Controller(cmd.Cmd):
         self._output(supervisor.getSupervisorVersion())
 
     def help_version(self):
-        self._output("version\t\t\tShow the version of the remote supervisord ")
-        self._output("\t\t\tprocess")
+        self._output("version\t\t\tShow the version of the remote supervisord "
+                     "process")
 
 def main(args=None, options=None):
     if options is None:

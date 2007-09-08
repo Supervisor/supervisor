@@ -1581,6 +1581,8 @@ def split_namespec(namespec):
     if len(names) == 2:
         # group and and process name differ
         group_name, process_name = names
+        if not process_name or process_name == '*':
+            process_name = None
     else:
         # group name is same as process name
         group_name, process_name = namespec, namespec

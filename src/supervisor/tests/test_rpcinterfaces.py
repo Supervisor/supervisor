@@ -368,6 +368,22 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         from supervisor import xmlrpc
         self._assertRPCError(xmlrpc.Faults.ABNORMAL_TERMINATION, callback)
 
+    def test_startProcess_splat_calls_startProcessGroup(self):
+        from supervisor import http
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', __file__, autostart=False,
+                               startsecs=.01)
+        pconfig2 = DummyPConfig(options, 'process2', __file__, priority=2,
+                                startsecs=.01)
+        supervisord = PopulatedDummySupervisor(options, 'foo',
+                                               pconfig1, pconfig2)
+        from supervisor.process import ProcessStates
+        supervisord.set_procattr('process1', 'state', ProcessStates.STOPPED)
+        supervisord.set_procattr('process2', 'state', ProcessStates.STOPPED)
+        interface = self._makeOne(supervisord)
+        callback = interface.startProcess('foo:*')
+        self.assertEqual(interface.update_text, 'startProcessGroup')
+
     def test_startProcessGroup(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', __file__, priority=1,
@@ -612,6 +628,22 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
                              interface.stopProcessGroup, 'foo')
+
+    def test_stopProcess_splat_calls_stopProcessGroup(self):
+        from supervisor import http
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', __file__, autostart=False,
+                               startsecs=.01)
+        pconfig2 = DummyPConfig(options, 'process2', __file__, priority=2,
+                                startsecs=.01)
+        supervisord = PopulatedDummySupervisor(options, 'foo',
+                                               pconfig1, pconfig2)
+        from supervisor.process import ProcessStates
+        supervisord.set_procattr('process1', 'state', ProcessStates.STOPPED)
+        supervisord.set_procattr('process2', 'state', ProcessStates.STOPPED)
+        interface = self._makeOne(supervisord)
+        callback = interface.stopProcess('foo:*')
+        self.assertEqual(interface.update_text, 'stopProcessGroup')
 
     def test_stopAllProcesses(self):
         options = DummyOptions()

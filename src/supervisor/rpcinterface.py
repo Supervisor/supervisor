@@ -177,6 +177,9 @@ class SupervisorNamespaceRPCInterface:
         if group is None:
             raise RPCError(Faults.BAD_NAME, name)
 
+        if process_name is None:
+            return group, None
+
         process = group.processes.get(process_name)
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
@@ -186,13 +189,16 @@ class SupervisorNamespaceRPCInterface:
     def startProcess(self, name, wait=True):
         """ Start a process
 
-        @param string name Process name (or 'group:name')
+        @param string name Process name (or 'group:name', or 'group:*')
         @param boolean wait Wait for process to be fully started
         @return boolean result     Always true unless error
 
         """
         self._update('startProcess')
         group, process = self._getGroupAndProcess(name)
+        if process is None:
+            group_name, process_name = split_namespec(name)
+            return self.startProcessGroup(group_name, wait)
 
         # test filespec, don't bother trying to spawn if we know it will
         # eventually fail
@@ -297,6 +303,10 @@ class SupervisorNamespaceRPCInterface:
         self._update('stopProcess')
 
         group, process = self._getGroupAndProcess(name)
+
+        if process is None:
+            group_name, process_name = split_namespec(name)
+            return self.stopProcessGroup(group_name)
 
         stopped = []
         called  = []

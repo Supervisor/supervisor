@@ -777,7 +777,21 @@ class ProcessGroupConfigTests(unittest.TestCase):
         group = instance.make_group()
         from supervisor.process import ProcessGroup
         self.assertEqual(group.__class__, ProcessGroup)
-            
+
+class UtilFunctionsTests(unittest.TestCase):
+    def test_make_namespec(self):
+        from supervisor.options import make_namespec
+        self.assertEquals(make_namespec('group', 'process'), 'group:process')
+        self.assertEquals(make_namespec('process', 'process'), 'process')
+        
+    def test_split_namespec(self):
+        from supervisor.options import split_namespec
+        s = split_namespec
+        self.assertEquals(s('process:group'), ('process', 'group'))
+        self.assertEquals(s('process'), ('process', 'process'))
+        self.assertEquals(s('group:'), ('group', None))
+        self.assertEquals(s('group:*'), ('group', None))
+
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
 
