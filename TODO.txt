@@ -26,11 +26,10 @@
    - When we try to kill a process and the os.kill command raises an
      exception (stopProcess)
 
-- Support stopping and starting groups in supervisorctl / web
-  interface.
+- Support stopping and starting groups in web interface.
 
-- Support operations against both stderr and stdout logs within
-  supervisorctl / web interface. 
+- Support operations against both stderr and stdout logs within web
+  interface.
 
 - Revisit test_startProcessGroup and test_startAllProcesses (see XXX
   comment about ordering).
