@@ -1039,8 +1039,13 @@ Supervisor Events (New in 3.0)
 
 Event Listeners (New in 3.0)
 
-  Supervisor event listeners are subprocesses which are treated almost
-  exactly like supervisor "programs" with the following differences:
+  Event listeners are supervisor subprocesses which take actions when
+  a supervisor event is emitted.  They can perform arbitrary actions
+  (send an email, restart a supervisor process, etc).
+
+  Supervisor event listeners are treated almost exactly like
+  supervisor "programs" with the respect to their configuration with
+  the following differences:
 
   - They are defined using an [eventlistener:x] section in the config
     file instead of a [program:x] section in the configuration file.
@@ -1233,7 +1238,9 @@ Example Event Listener Implementation
         import sys
 
   Other sample event listeners are present within the supervisor
-  package's 'scripts' directory.
+  package's 'scripts' directory, including ones which can monitor
+  supervisor subprocesses and restart a process if it is using "too
+  much" memory.
 
 Event Listener Error Conditions
 
@@ -1391,6 +1398,12 @@ FAQ
   "command=" section, the program fails mysteriously.  Why?  This may
   be due to your process' dependence on environment variable settings.
   See "Subprocess Environment" in this document.
+
+  How can I make supervisor restart a process that's using "too much"
+  memory automatically?  See the files scripts/osx_memmon_eventgen.py
+  and scripts/osx_memmon_listener.py for an example of doing just this
+  (These are for Mac OS X only, but they should be easily
+  generalizable to other operating systems).
 
 Maillist, Reporting Bugs, and Viewing the CVS Repository
 

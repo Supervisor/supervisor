@@ -28,6 +28,23 @@
   -> RESULT 10672\n<... big mess o' XML maybe ...>
   -> READY\n
 
+  Once this works, extend the eventlistener configuration to accept a
+  "handler=" parameter, e.g. "handler=supervisor.process.stdhandler"
+  (the default) or "handler=mypackage.myhandler".  Handlers will
+  accept two arguments: one named "event" which represents the event,
+  and the other named "response", which represents the listener's
+  response to the event.  A handler either executes successfully or
+  raises an exception.  If it raises an exception, the event will be
+  rebuffered.  If it does not, the event is considered successfully
+  processed.  A handler's return value is ignored.  Writing a handler
+  is a "in case of emergency break glass" sort of thing.
+
+  The 'standard' eventlistener handler will essentially do nothing if
+  it receives an "OK" and will raise an exception if it receives a
+  "FAIL" (emulating the current behavior).  A custom monitor process
+  handler, on the other hand, might restart a process if it detected
+  one was using too much memory, or would raise an exception if the
+  serialization returned indicated failure.
 
 - Make it possible to listen on a domain socket *and* an HTTP socket.
 

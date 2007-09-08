@@ -151,6 +151,14 @@ Next Release
     supervisor will set the umask of the child program.  (Thanks to
     Ian Bicking for the suggestion).
 
+  - A pair of scripts "osx_memmon_eventgen.py" and
+    "osx_memmon_listener.py" have been added to the scripts directory.
+    If they are used together as described in their comments,
+    processes which are consuming "too much" memory will be restarted.
+    The 'eventgen' script only works on OSX (my main development
+    platform) but it should be trivially generalizable to other
+    operating systems.
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC
