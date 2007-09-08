@@ -65,6 +65,8 @@ class DummyOptions:
         self.readfd_result = ''
         self.parse_warnings = []
         self.serverurl = 'http://localhost:9001'
+        self.changed_directory = False
+        self.chdir_error = None
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -231,6 +233,11 @@ class DummyOptions:
         if self.openreturn:
             return self.openreturn
         return open(name, mode)
+
+    def chdir(self, dir):
+        if self.chdir_error:
+            raise OSError(self.chdir_error)
+        self.changed_directory = True
 
 class DummyLogger:
     def __init__(self):
@@ -410,7 +417,7 @@ class DummyPConfig:
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10,
-                 exitcodes=(0,2), environment=None):
+                 exitcodes=(0,2), environment=None, directory=None):
         self.options = options
         self.name = name
         self.command = command
@@ -436,6 +443,7 @@ class DummyPConfig:
         self.stopwaitsecs = stopwaitsecs
         self.exitcodes = exitcodes
         self.environment = environment
+        self.directory = directory
         self.autochildlogs_created = False
 
     def create_autochildlogs(self):

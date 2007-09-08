@@ -10,8 +10,6 @@
     h.getfile().  See
     http://mail.python.org/pipermail/patches/2002-February/007375.html
 
-- Add a new cwd option that will chdir after the fork-exec.
-
 - Fix CVS so not all checkins come from "chrism".
 
 - FATAL state for supervisor.

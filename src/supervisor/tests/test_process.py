@@ -314,6 +314,45 @@ class SubprocessTests(unittest.TestCase):
                          ('/good/filename', ['/good/filename']) )
         self.assertEqual(options._exitcode, 127)
 
+    def test_spawn_as_child_cwd_ok(self):
+        options = DummyOptions()
+        options.forkpid = 0
+        config = DummyPConfig(options, 'good', '/good/filename',
+                              directory='/tmp')
+        instance = self._makeOne(config)
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(options.parent_pipes_closed, None)
+        self.assertEqual(options.child_pipes_closed, None)
+        self.assertEqual(options.pgrp_set, True)
+        self.assertEqual(len(options.duped), 3)
+        self.assertEqual(len(options.fds_closed), options.minfds - 3)
+        self.assertEqual(options.written, {})
+        self.assertEqual(options.execv_args,
+                         ('/good/filename', ['/good/filename']) )
+        self.assertEqual(options._exitcode, 127)
+        self.assertEqual(options.changed_directory, True)
+
+    def test_spawn_as_child_cwd_fail(self):
+        options = DummyOptions()
+        options.forkpid = 0
+        options.chdir_error = 2
+        config = DummyPConfig(options, 'good', '/good/filename',
+                              directory='/tmp')
+        instance = self._makeOne(config)
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(options.parent_pipes_closed, None)
+        self.assertEqual(options.child_pipes_closed, None)
+        self.assertEqual(options.pgrp_set, True)
+        self.assertEqual(len(options.duped), 3)
+        self.assertEqual(len(options.fds_closed), options.minfds - 3)
+        self.assertEqual(options.execv_args, None)
+        self.assertEqual(options.written,
+                         {2: "couldn't chdir to /tmp: ENOENT\n"})
+        self.assertEqual(options._exitcode, 127)
+        self.assertEqual(options.changed_directory, False)
+
     def test_spawn_as_child_execv_fail_oserror(self):
         options = DummyOptions()
         options.forkpid = 0

@@ -653,6 +653,7 @@ class ServerOptions(Options):
         environment_str = get(section, 'environment', '')
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
+        directory = get(section, 'directory', None)
 
         command = get(section, 'command', None)
         if command is None:
@@ -726,7 +727,8 @@ class ServerOptions(Options):
                 stopwaitsecs=stopwaitsecs,
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
-                environment=environment)
+                environment=environment,
+                directory=directory)
 
             programs.append(pconfig)
 
@@ -1319,7 +1321,7 @@ class ProcessConfig(Config):
                  stderr_logfile, stderr_capture_maxbytes,
                  stderr_logfile_backups, stderr_logfile_maxbytes,
                  stopsignal, stopwaitsecs, exitcodes, redirect_stderr,
-                 environment=None):
+                 environment=None, directory=None):
         self.options = options
         self.name = name
         self.command = command
@@ -1342,6 +1344,7 @@ class ProcessConfig(Config):
         self.exitcodes = exitcodes
         self.redirect_stderr = redirect_stderr
         self.environment = environment
+        self.directory = directory
 
     def create_autochildlogs(self):
         # temporary logfiles which are erased at start time

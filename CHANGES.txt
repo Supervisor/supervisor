@@ -143,6 +143,10 @@ Next Release
     match short processnames, fullly-specified group:process names,
     and groupsplats on the same line for any of these commands.
 
+  - Added 'directory' option to process config.  If you set this
+    option, supervisor will chdir to this directory before executing
+    the child program (and thus it will be the child's cwd).
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

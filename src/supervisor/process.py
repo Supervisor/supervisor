@@ -170,11 +170,10 @@ class Subprocess:
 
         Return the process id.  If the fork() call fails, return None.
         """
-        pname = self.config.name
         options = self.config.options
 
         if self.pid:
-            msg = 'process %r already running' % pname
+            msg = 'process %r already running' % self.config.name
             options.logger.warn(msg)
             return
 
@@ -205,7 +204,7 @@ class Subprocess:
             code = why[0]
             if code == errno.EMFILE:
                 # too many file descriptors open
-                msg = 'too many open files to spawn %r' % pname
+                msg = 'too many open files to spawn %r' % self.config.name
             else:
                 msg = 'unknown error: %s' % errno.errorcode.get(code, code)
             self.record_spawnerr(msg)
@@ -219,7 +218,8 @@ class Subprocess:
             code = why[0]
             if code == errno.EAGAIN:
                 # process table full
-                msg  = 'Too many processes in process table to spawn %r' % pname
+                msg  = ('Too many processes in process table to spawn %r' %
+                        self.config.name)
             else:
                 msg = 'unknown error: %s' % errno.errorcode.get(code, code)
 
@@ -231,65 +231,81 @@ class Subprocess:
             return
 
         if pid != 0:
-            # Parent
-            self.pid = pid
-            options.close_child_pipes(self.pipes)
-            options.logger.info('spawned: %r with pid %s' % (pname, pid))
-            self.spawnerr = None
-            self.delay = time.time() + self.config.startsecs
-            options.pidhistory[pid] = self
-            return pid
+            return self._spawn_as_parent(pid)
         
         else:
-            # Child
+            return self._spawn_as_child(filename, argv)
+
+    def _spawn_as_parent(self, pid):
+        # Parent
+        self.pid = pid
+        options = self.config.options
+        options.close_child_pipes(self.pipes)
+        options.logger.info('spawned: %r with pid %s' % (self.config.name, pid))
+        self.spawnerr = None
+        self.delay = time.time() + self.config.startsecs
+        options.pidhistory[pid] = self
+        return pid
+
+    def _spawn_as_child(self, filename, argv):
+        options = self.config.options
+        try:
+            # prevent child from receiving signals sent to the
+            # parent by calling os.setpgrp to create a new process
+            # group for the child; this prevents, for instance,
+            # the case of child processes being sent a SIGINT when
+            # running supervisor in foreground mode and Ctrl-C in
+            # the terminal window running supervisord is pressed.
+            # Presumably it also prevents HUP, etc received by
+            # supervisord from being sent to children.
+            options.setpgrp()
+            options.dup2(self.pipes['child_stdin'], 0)
+            options.dup2(self.pipes['child_stdout'], 1)
+            if self.config.redirect_stderr:
+                options.dup2(self.pipes['child_stdout'], 2)
+            else:
+                options.dup2(self.pipes['child_stderr'], 2)
+            for i in range(3, options.minfds):
+                options.close_fd(i)
+            # sending to fd 2 will put this output in the stderr log
+            msg = self.set_uid()
+            if msg:
+                uid = self.config.uid
+                s = 'supervisor: error trying to setuid to %s ' % uid
+                options.write(2, s)
+                options.write(2, "(%s)\n" % msg)
+            env = os.environ.copy()
+            env['SUPERVISOR_ENABLED'] = '1'
+            serverurl = self.config.options.serverurl
+            if serverurl:
+                env['SUPERVISOR_SERVER_URL'] = serverurl
+            env['SUPERVISOR_PROCESS_NAME'] = self.config.name
+            if self.group:
+                env['SUPERVISOR_GROUP_NAME'] = self.group.config.name
+            if self.config.environment is not None:
+                env.update(self.config.environment)
             try:
-                # prevent child from receiving signals sent to the
-                # parent by calling os.setpgrp to create a new process
-                # group for the child; this prevents, for instance,
-                # the case of child processes being sent a SIGINT when
-                # running supervisor in foreground mode and Ctrl-C in
-                # the terminal window running supervisord is pressed.
-                # Presumably it also prevents HUP, etc received by
-                # supervisord from being sent to children.
-                options.setpgrp()
-                options.dup2(self.pipes['child_stdin'], 0)
-                options.dup2(self.pipes['child_stdout'], 1)
-                if self.config.redirect_stderr:
-                    options.dup2(self.pipes['child_stdout'], 2)
-                else:
-                    options.dup2(self.pipes['child_stderr'], 2)
-                for i in range(3, options.minfds):
-                    options.close_fd(i)
-                # sending to fd 2 will put this output in the stderr log
-                msg = self.set_uid()
-                if msg:
-                    uid = self.config.uid
-                    s = 'supervisor: error trying to setuid to %s ' % uid
-                    options.write(2, s)
-                    options.write(2, "(%s)\n" % msg)
+                cwd = self.config.directory
+                if cwd is not None:
+                    options.chdir(cwd)
+            except OSError, why:
+                code = errno.errorcode.get(why[0], why[0])
+                msg = "couldn't chdir to %s: %s\n" % (cwd, code)
+                options.write(2, msg)
+            else:
                 try:
-                    env = os.environ.copy()
-                    env['SUPERVISOR_ENABLED'] = '1'
-                    serverurl = self.config.options.serverurl
-                    if serverurl:
-                        env['SUPERVISOR_SERVER_URL'] = serverurl
-                    env['SUPERVISOR_PROCESS_NAME'] = self.config.name
-                    if self.group:
-                        env['SUPERVISOR_GROUP_NAME'] = self.group.config.name
-                    if self.config.environment is not None:
-                        env.update(self.config.environment)
                     options.execve(filename, argv, env)
                 except OSError, why:
-                    code = why[0]
-                    options.write(2, "couldn't exec %s: %s\n" % (
-                        argv[0], errno.errorcode.get(code, code)))
+                    code = errno.errorcode.get(why[0], why[0])
+                    msg = "couldn't exec %s: %s\n" % (argv[0], code)
+                    options.write(2, msg)
                 except:
                     (file, fun, line), t,v,tbinfo = asyncore.compact_traceback()
                     error = '%s, %s: file: %s line: %s' % (t, v, file, line)
                     options.write(2, "couldn't exec %s: %s\n" % (filename,
                                                                  error))
-            finally:
-                options._exit(127)
+        finally:
+            options._exit(127)
 
     def stop(self):
         """ Administrative stop """

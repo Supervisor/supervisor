@@ -551,6 +551,10 @@ Configuration File '[program:x]' Section Settings
   of the shell used to start "supervisord" except for the ones
   overridden here.  See "Subprocess Environment" below.
 
+  'directory' -- a file path representing a directory to which
+  supervisord should chdir before exec'ing the child.  Default: no
+  cwd.
+
   Note that a '[program:x]' section actually represents a "homogeneous
   process group" to supervisor (new in 3.0).  The members of the group
   are defined by the combination of the 'numprocs and 'process_name'
