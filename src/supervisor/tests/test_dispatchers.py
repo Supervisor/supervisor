@@ -129,6 +129,8 @@ class POutputDispatcherTests(unittest.TestCase):
         # stdout/stderr goes to the process log and the main log,
         # in non-capturemode, the data length doesn't matter
         options = DummyOptions()
+        from supervisor import loggers
+        options.loglevel = loggers.LevelsByName.TRAC
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile='/tmp/foo')
         process = DummyProcess(config)
@@ -145,6 +147,8 @@ class POutputDispatcherTests(unittest.TestCase):
         # in capturemode, the length of the data needs to be longer
         # than the capture token to make it out.
         options = DummyOptions()
+        from supervisor import loggers
+        options.loglevel = loggers.LevelsByName.TRAC
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile='/tmp/foo',
                               stdout_capture_maxbytes=100)

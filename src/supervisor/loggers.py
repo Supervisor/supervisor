@@ -243,32 +243,29 @@ class Logger:
 
     def trace(self, msg, **kw):
         if LevelsByName.TRAC >= self.level:
-            self._log(LevelsByName.TRAC, msg, **kw)
+            self.log(LevelsByName.TRAC, msg, **kw)
     
     def debug(self, msg, **kw):
         if LevelsByName.DEBG >= self.level:
-            self._log(LevelsByName.DEBG, msg, **kw)
+            self.log(LevelsByName.DEBG, msg, **kw)
     
     def info(self, msg, **kw):
         if LevelsByName.INFO >= self.level:
-            self._log(LevelsByName.INFO, msg, **kw)
+            self.log(LevelsByName.INFO, msg, **kw)
 
     def warn(self, msg, **kw):
         if LevelsByName.WARN >= self.level:
-            self._log(LevelsByName.WARN, msg, **kw)
+            self.log(LevelsByName.WARN, msg, **kw)
 
     def error(self, msg, **kw):
         if LevelsByName.ERRO >= self.level:
-            self._log(LevelsByName.ERRO, msg, **kw)
+            self.log(LevelsByName.ERRO, msg, **kw)
 
     def critical(self, msg, **kw):
         if LevelsByName.CRIT >= self.level:
-            self._log(LevelsByName.CRIT, msg, **kw)
+            self.log(LevelsByName.CRIT, msg, **kw)
 
     def log(self, level, msg, **kw):
-        self._log(level, msg, **kw)
-
-    def _log(self, level, msg, **kw):
         record = LogRecord(level, msg, **kw)
         for handler in self.handlers:
             if level >= handler.level:

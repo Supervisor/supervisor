@@ -103,11 +103,14 @@ class POutputDispatcher(PDispatcher):
 
         self.childlog = self.mainlog
 
-        # this is purely for a minor speedup
+        # all code below is purely for minor speedups
         begintoken = self.event_type.BEGIN_TOKEN
         endtoken = self.event_type.END_TOKEN
         self.begintoken_data = (begintoken, len(begintoken))
         self.endtoken_data = (endtoken, len(endtoken))
+        self.mainlog_level = loggers.LevelsByName.DEBG
+        options_loglevel = self.process.config.options.loglevel 
+        self.log_to_mainlog = options_loglevel <= self.mainlog_level
 
     def removelogs(self):
         for log in (self.mainlog, self.capturelog):
@@ -129,9 +132,11 @@ class POutputDispatcher(PDispatcher):
                 data = config.options.stripEscapes(data)
             if self.childlog:
                 self.childlog.info(data)
-            msg = '%(name)r %(channel)s output:\n%(data)s'
-            self.process.config.options.logger.debug(
-                msg, name=config.name, channel=self.channel, data=data)
+            if self.log_to_mainlog:
+                msg = '%(name)r %(channel)s output:\n%(data)s'
+                config.options.logger.log(
+                    self.mainlog_level, msg, name=config.name,
+                    channel=self.channel, data=data)
 
     def record_output(self):
         if self.capturelog is None:

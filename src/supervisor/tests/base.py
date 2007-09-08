@@ -8,6 +8,7 @@ class DummyOptions:
     execv_error = None
     kill_error = None
     minfds = 5
+    loglevel = 20
 
     def __init__(self):
         self.identifier = 'supervisor'
@@ -242,7 +243,13 @@ class DummyLogger:
         if kw:
             msg = msg % kw
         self.data.append(msg)
-    warn = log = debug = critical = trace = error = info
+    warn = debug = critical = trace = error = info
+
+    def log(self, level, msg, **kw):
+        if kw:
+            msg = msg % kw
+        self.data.append(msg)
+        
     def reopen(self):
         self.reopened = True
     def close(self):
