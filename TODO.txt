@@ -1,3 +1,5 @@
+- Make it possible to listen on a domain socket *and* an HTTP socket.
+
 - General speed improvement wrangling:
 
   - Play around with creating a select trigger file descriptor for
