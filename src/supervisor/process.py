@@ -294,6 +294,8 @@ class Subprocess:
                 options.write(2, msg)
             else:
                 try:
+                    if self.config.umask:
+                        options.setumask(self.config.umask)
                     options.execve(filename, argv, env)
                 except OSError, why:
                     code = errno.errorcode.get(why[0], why[0])

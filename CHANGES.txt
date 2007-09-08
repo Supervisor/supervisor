@@ -147,6 +147,10 @@ Next Release
     option, supervisor will chdir to this directory before executing
     the child program (and thus it will be the child's cwd).
 
+  - Added 'umask' option to process config.  If you set this option,
+    supervisor will set the umask of the child program.  (Thanks to
+    Ian Bicking for the suggestion).
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

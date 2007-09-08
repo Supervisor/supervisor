@@ -655,6 +655,10 @@ class ServerOptions(Options):
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
         directory = get(section, 'directory', None)
 
+        umask = get(section, 'umask', None)
+        if umask is not None:
+            umask = octal_type(umask)
+
         command = get(section, 'command', None)
         if command is None:
             raise ValueError, (
@@ -709,6 +713,8 @@ class ServerOptions(Options):
                 self,
                 name=expand(process_name, expansions, 'process_name'),
                 command=expand(command, expansions, 'command'),
+                directory=directory,
+                umask=umask,
                 priority=priority,
                 autostart=autostart,
                 autorestart=autorestart,
@@ -727,8 +733,7 @@ class ServerOptions(Options):
                 stopwaitsecs=stopwaitsecs,
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
-                environment=environment,
-                directory=directory)
+                environment=environment)
 
             programs.append(pconfig)
 
@@ -1119,6 +1124,9 @@ class ServerOptions(Options):
     def _exit(self, code):
         os._exit(code)
 
+    def setumask(self, mask):
+        os.umask(mask)
+
     def get_path(self):
         """Return a list corresponding to $PATH, or a default."""
         path = ["/bin", "/usr/bin", "/usr/local/bin"]
@@ -1317,17 +1325,19 @@ class Config:
                                                  self.name)
     
 class ProcessConfig(Config):
-    def __init__(self, options, name, command, priority, autostart,
-                 autorestart, startsecs, startretries, uid,
+    def __init__(self, options, name, command, directory, umask,
+                 priority, autostart, autorestart, startsecs, startretries, uid,
                  stdout_logfile, stdout_capture_maxbytes,
                  stdout_logfile_backups, stdout_logfile_maxbytes,
                  stderr_logfile, stderr_capture_maxbytes,
                  stderr_logfile_backups, stderr_logfile_maxbytes,
                  stopsignal, stopwaitsecs, exitcodes, redirect_stderr,
-                 environment=None, directory=None):
+                 environment=None):
         self.options = options
         self.name = name
         self.command = command
+        self.directory = directory
+        self.umask = umask
         self.priority = priority
         self.autostart = autostart
         self.autorestart = autorestart
@@ -1347,7 +1357,6 @@ class ProcessConfig(Config):
         self.exitcodes = exitcodes
         self.redirect_stderr = redirect_stderr
         self.environment = environment
-        self.directory = directory
 
     def create_autochildlogs(self):
         # temporary logfiles which are erased at start time

@@ -54,6 +54,7 @@ class ServerOptionsTests(unittest.TestCase):
         startsecs=5
         startretries=10
         directory=/tmp
+        umask=002
         
         [program:cat2]
         priority=2
@@ -129,6 +130,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.stdout_logfile_backups, 10)
         self.assertEqual(proc1.exitcodes, [0,2])
         self.assertEqual(proc1.directory, '/tmp')
+        self.assertEqual(proc1.umask, 002)
 
         cat2 = options.process_group_configs[1]
         self.assertEqual(cat2.name, 'cat2')
@@ -686,7 +688,8 @@ class TestProcessConfig(unittest.TestCase):
 
     def _makeOne(self, *arg, **kw):
         defaults = {}
-        for name in ('name', 'command', 'priority', 'autostart', 'autorestart',
+        for name in ('name', 'command', 'directory', 'umask',
+                     'priority', 'autostart', 'autorestart',
                      'startsecs', 'startretries', 'uid',
                      'stdout_logfile', 'stdout_capture_maxbytes',
                      'stdout_logfile_backups', 'stdout_logfile_maxbytes',

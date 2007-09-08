@@ -67,6 +67,7 @@ class DummyOptions:
         self.serverurl = 'http://localhost:9001'
         self.changed_directory = False
         self.chdir_error = None
+        self.umaskset = None
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -239,6 +240,9 @@ class DummyOptions:
             raise OSError(self.chdir_error)
         self.changed_directory = True
 
+    def setumask(self, mask):
+        self.umaskset = mask
+
 class DummyLogger:
     def __init__(self):
         self.reopened = False
@@ -409,7 +413,8 @@ class DummyProcess:
         self.transitioned = True
 
 class DummyPConfig:
-    def __init__(self, options, name, command, priority=999, autostart=True,
+    def __init__(self, options, name, command, directory=None, umask=None,
+                 priority=999, autostart=True,
                  autorestart=True, startsecs=10, startretries=999,
                  uid=None, stdout_logfile=None, stdout_capture_maxbytes=0,
                  stdout_logfile_backups=0, stdout_logfile_maxbytes=0,
@@ -417,7 +422,7 @@ class DummyPConfig:
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10,
-                 exitcodes=(0,2), environment=None, directory=None):
+                 exitcodes=(0,2), environment=None):
         self.options = options
         self.name = name
         self.command = command
@@ -444,6 +449,7 @@ class DummyPConfig:
         self.exitcodes = exitcodes
         self.environment = environment
         self.directory = directory
+        self.umask = umask
         self.autochildlogs_created = False
 
     def create_autochildlogs(self):

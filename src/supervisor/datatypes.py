@@ -164,7 +164,10 @@ def dot_separated_user_group(arg):
         raise ValueError, 'Invalid user.group definition %s' % arg
 
 def octal_type(arg):
-    return int(arg, 8)
+    try:
+        return int(arg, 8)
+    except TypeError:
+        raise ValueError('%s is not convertable to an octal type' % arg)
 
 def name_to_uid(name):
     if name is None:

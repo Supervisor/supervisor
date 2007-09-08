@@ -333,6 +333,19 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options._exitcode, 127)
         self.assertEqual(options.changed_directory, True)
 
+    def test_spawn_as_child_sets_umask(self):
+        options = DummyOptions()
+        options.forkpid = 0
+        config = DummyPConfig(options, 'good', '/good/filename', umask=002)
+        instance = self._makeOne(config)
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(options.written, {})
+        self.assertEqual(options.execv_args,
+                         ('/good/filename', ['/good/filename']) )
+        self.assertEqual(options._exitcode, 127)
+        self.assertEqual(options.umaskset, 002)
+
     def test_spawn_as_child_cwd_fail(self):
         options = DummyOptions()
         options.forkpid = 0

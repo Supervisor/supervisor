@@ -552,8 +552,10 @@ Configuration File '[program:x]' Section Settings
   overridden here.  See "Subprocess Environment" below.
 
   'directory' -- a file path representing a directory to which
-  supervisord should chdir before exec'ing the child.  Default: no
-  cwd.
+  supervisord should chdir before exec'ing the child. Default: no cwd.
+
+  'umask' -- an octal number (e.g. 002, 022) representing the umask of
+  the process.  Default: no special umask (inherit supervisor's).
 
   Note that a '[program:x]' section actually represents a "homogeneous
   process group" to supervisor (new in 3.0).  The members of the group
