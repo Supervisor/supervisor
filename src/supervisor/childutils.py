@@ -13,6 +13,7 @@
 ##############################################################################
 
 import sys
+import time
 import xmlrpclib
 from supervisor.xmlrpc import SupervisorTransport
 
@@ -37,3 +38,11 @@ def write_stdout(msg):
 
 def get_headers(line):
     return dict([ x.split(':') for x in line.split() ])
+
+def get_asctime():
+    now = time.time()
+    msecs = (now - long(now)) * 1000
+    part1 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
+    asctime = '%s,%03d' % (part1, msecs)
+    return asctime
+
