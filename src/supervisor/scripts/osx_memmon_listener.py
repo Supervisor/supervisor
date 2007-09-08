@@ -29,10 +29,6 @@
 # command=python osx_memmon_eventgen.py 5
 # stdout_capture_maxbytes=1MB
 
-autostart=true              ; start at supervisord start (default: true)
-autorestart=false            ; retstart at unexpected quit (default: true)
-stdout_capture_maxbytes=1MB
-
 import sys
 import os
 from supervisor import childutils
