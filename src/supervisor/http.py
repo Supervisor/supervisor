@@ -141,6 +141,24 @@ class deferring_http_request(http_server.http_request):
     deferred responses, so we override various methods here.  This was added
     to support tail -f like behavior on the logtail handler """
 
+    def get_header(self, header):
+        # this is overridden purely for speed (the base class doesn't
+        # use string methods
+        header = header.lower()
+        hc = self._header_cache
+        if not hc.has_key(header):
+            h = header + ': '
+            for line in self.header:
+                if line.lower().startswith(h):
+                    hl = len(h)
+                    r = line[hl:]
+                    hc[header] = r
+                    return r
+            hc[header] = None
+            return None
+        else:
+            return hc[header]
+
     def done(self, *arg, **kw):
 
         """ I didn't want to override this, but there's no way around
