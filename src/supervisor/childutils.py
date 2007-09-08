@@ -16,6 +16,8 @@ import sys
 import time
 import xmlrpclib
 from supervisor.xmlrpc import SupervisorTransport
+from supervisor.events import ProcessCommunicationEvent
+from supervisor.dispatchers import PEventListenerDispatcher
 
 def getRPCInterface(env):
     # dumbass ServerProxy won't allow us to pass in a non-HTTP url,
@@ -46,3 +48,28 @@ def get_asctime():
     asctime = '%s,%03d' % (part1, msecs)
     return asctime
 
+def send_proc_comm(msg, write=write_stdout):
+    write(ProcessCommunicationEvent.BEGIN_TOKEN)
+    write(msg)
+    write(ProcessCommunicationEvent.END_TOKEN)
+
+def send_proc_comm_stdout(msg):
+    return send_proc_comm(msg, write_stdout)
+
+def send_proc_comm_stderr(msg):
+    return send_proc_comm(msg, write_stderr)
+
+def eventdata(payload):
+    headerinfo, data = payload.split('\n')
+    headers = get_headers(headerinfo)
+    return headers, data
+
+class EventListenerProtocol:
+    def ready(self):
+        write_stdout(PEventListenerDispatcher.READY_FOR_EVENTS_TOKEN)
+    def ok(self, *ignored):
+        write_stdout(PEventListenerDispatcher.EVENT_PROCESSED_TOKEN)
+    def fail(self, *ignored):
+        write_stdout(PEventListenerDispatcher.EVENT_REJECTED_TOKEN)
+
+protocol = EventListenerProtocol()
