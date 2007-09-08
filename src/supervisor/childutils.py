@@ -65,6 +65,12 @@ def eventdata(payload):
     return headers, data
 
 class EventListenerProtocol:
+    def wait(self):
+        self.ready()
+        line = sys.stdin.readline()
+        headers = get_headers(line)
+        payload = sys.stdin.read(int(headers['len']))
+        return headers, payload
     def ready(self):
         write_stdout(PEventListenerDispatcher.READY_FOR_EVENTS_TOKEN)
     def ok(self, *ignored):

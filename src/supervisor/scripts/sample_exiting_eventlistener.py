@@ -14,9 +14,16 @@
 #
 ##############################################################################
 
-# A sample supervisor event listener which demonstrates how to accept
-# event notifications from supervisor and how to respond properly,
-# exiting after each event is accepted and processed
+# A sample long-running supervisor event listener which demonstrates
+# how to accept event notifications from supervisor and how to respond
+# properly.  It is the same as the sample_eventlistener.py script
+# except it exits after each request (presumably to be restarted by
+# supervisor).  This demonstration does *not* use the
+# supervisor.childutils module, which wraps the specifics of
+# communications in higher-level API functions.  If your listeners are
+# implemented using Python, it is recommended that you use the
+# childutils module API instead of modeling your scripts on the
+# lower-level protocol example below.
 
 import sys
 

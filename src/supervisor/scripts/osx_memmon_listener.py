@@ -43,10 +43,7 @@ except ImportError:
 def main(maxkb):
     rpc = childutils.getRPCInterface(os.environ)
     while 1:
-        childutils.protocol.ready()
-        line = sys.stdin.readline()
-        headers = childutils.get_headers(line)
-        payload = sys.stdin.read(int(headers['len']))
+        headers, payload = childutils.protocol.wait()
         if headers['eventname'].startswith('PROCESS_COMMUNICATION'):
             pheaders, pdata = childutils.eventdata(payload)
             procname, groupname = pheaders['processname'], pheaders['groupname']
