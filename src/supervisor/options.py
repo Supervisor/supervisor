@@ -1161,6 +1161,9 @@ class ServerOptions(Options):
 
     def open(self, fn, mode='r'):
         return open(fn, mode)
+
+    def chdir(self, dir):
+        os.chdir(dir)
         
     def make_pipes(self, stderr=True):
         """ Create pipes for parent to child stdin/stdout/stderr
