@@ -159,6 +159,9 @@ Next Release
     platform) but it should be trivially generalizable to other
     operating systems.
 
+  - The long form "--configuration" (-c) command line option for
+    supervisord was broken.  Reported by Mike Orr.  (Mike Naberezny)
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

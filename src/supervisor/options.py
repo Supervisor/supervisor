@@ -90,7 +90,7 @@ class Options:
         self.required_map = {}
         self.environ_map = {}
         self.add(None, None, "h", "help", self.help)
-        self.add("configfile", None, "c:", "configure=")
+        self.add("configfile", None, "c:", "configuration=")
 
     def help(self, dummy):
         """Print a long help message to stdout and exit(0).
