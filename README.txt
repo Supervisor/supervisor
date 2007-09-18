@@ -274,7 +274,8 @@ Configuration File '[supervisord]' Section Settings
   or a path to a UNIX domain socket (e.g. /tmp/supervisord.sock) on
   which supervisor will listen for HTTP/XML-RPC requests.
   Supervisorctl itself uses XML-RPC to communicate with supervisord
-  over this port.
+  over this port.  To listen on all interfaces in the machine, use
+  ":9001".
 
   'sockchmod' -- Change the UNIX permission mode bits of the http_port
   UNIX domain socket to this value (ignored if using a TCP socket).
