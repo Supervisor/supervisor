@@ -33,7 +33,8 @@ class LevelsByName:
     WARN = 30   # messages that indicate issues which aren't errors
     INFO = 20   # normal informational output
     DEBG = 10   # messages useful for users trying to debug configurations
-    TRAC = 5    # messages useful for developers trying to debug supervisor
+    TRAC = 5    # messages useful to developers trying to debug plugins
+    BLAT = 3    # messages useful for developers trying to debug supervisor
 
 class LevelsByDescription:
     critical = LevelsByName.CRIT
@@ -42,6 +43,7 @@ class LevelsByDescription:
     info = LevelsByName.INFO
     debug = LevelsByName.DEBG
     trace = LevelsByName.TRAC
+    blather = LevelsByName.BLAT
 
 def _levelNumbers():
     bynumber = {}
@@ -235,11 +237,17 @@ class LogRecord:
 
 class Logger:
     def __init__(self, level=None, handlers=None):
+        if level is None:
+            level = LevelsByName.INFO
         self.level = level
+
         if handlers is None:
-            self.handlers = []
-        else:
-            self.handlers = handlers
+            handlers = []
+        self.handlers = handlers
+
+    def blather(self, msg, **kw):
+        if LevelsByName.BLAT >= self.level:
+            self.log(LevelsByName.BLAT, msg, **kw)
 
     def trace(self, msg, **kw):
         if LevelsByName.TRAC >= self.level:

@@ -195,6 +195,89 @@ class BoundIOTests(unittest.TestCase):
         io.close()
         self.assertEqual(io.buf, '')
 
+class LoggerTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.loggers import Logger
+        return Logger
+
+    def _makeOne(self, level=None, handlers=None):
+        klass = self._getTargetClass()
+        return klass(level, handlers)
+
+    def test_blather(self):
+        from supervisor.loggers import LevelsByName
+        handler = DummyHandler(LevelsByName.BLAT)
+        logger = self._makeOne(LevelsByName.BLAT, (handler,))
+        logger.blather('hello')
+        self.assertEqual(len(handler.records), 1)
+        logger.level = LevelsByName.TRAC
+        logger.blather('hello')
+        self.assertEqual(len(handler.records), 1)
+
+    def test_trace(self):
+        from supervisor.loggers import LevelsByName
+        handler = DummyHandler(LevelsByName.TRAC)
+        logger = self._makeOne(LevelsByName.TRAC, (handler,))
+        logger.trace('hello')
+        self.assertEqual(len(handler.records), 1)
+        logger.level = LevelsByName.DEBG
+        logger.trace('hello')
+        self.assertEqual(len(handler.records), 1)
+        
+    def test_debug(self):
+        from supervisor.loggers import LevelsByName
+        handler = DummyHandler(LevelsByName.DEBG)
+        logger = self._makeOne(LevelsByName.DEBG, (handler,))
+        logger.debug('hello')
+        self.assertEqual(len(handler.records), 1)
+        logger.level = LevelsByName.INFO
+        logger.debug('hello')
+        self.assertEqual(len(handler.records), 1)
+
+    def test_info(self):
+        from supervisor.loggers import LevelsByName
+        handler = DummyHandler(LevelsByName.INFO)
+        logger = self._makeOne(LevelsByName.INFO, (handler,))
+        logger.info('hello')
+        self.assertEqual(len(handler.records), 1)
+        logger.level = LevelsByName.WARN
+        logger.info('hello')
+        self.assertEqual(len(handler.records), 1)
+
+    def test_warn(self):
+        from supervisor.loggers import LevelsByName
+        handler = DummyHandler(LevelsByName.WARN)
+        logger = self._makeOne(LevelsByName.WARN, (handler,))
+        logger.warn('hello')
+        self.assertEqual(len(handler.records), 1)
+        logger.level = LevelsByName.ERRO
+        logger.warn('hello')
+        self.assertEqual(len(handler.records), 1)
+
+    def test_error(self):
+        from supervisor.loggers import LevelsByName
+        handler = DummyHandler(LevelsByName.ERRO)
+        logger = self._makeOne(LevelsByName.ERRO, (handler,))
+        logger.error('hello')
+        self.assertEqual(len(handler.records), 1)
+        logger.level = LevelsByName.CRIT
+        logger.error('hello')
+        self.assertEqual(len(handler.records), 1)
+
+    def test_critical(self):
+        from supervisor.loggers import LevelsByName
+        handler = DummyHandler(LevelsByName.CRIT)
+        logger = self._makeOne(LevelsByName.CRIT, (handler,))
+        logger.critical('hello')
+        self.assertEqual(len(handler.records), 1)
+
+class DummyHandler:
+    def __init__(self, level):
+        self.level = level
+        self.records = []
+    def emit(self, record):
+        self.records.append(record)
+
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
 
