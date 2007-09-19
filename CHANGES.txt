@@ -162,6 +162,34 @@ Next Release
   - The long form "--configuration" (-c) command line option for
     supervisord was broken.  Reported by Mike Orr.  (Mike Naberezny)
 
+  - New log level: BLAT (blather).  We log all
+    supervisor-internal-related debugging info here.  Thanks to Mike
+    Orr for the suggestion.
+
+  - We now allow supervisor to listen on both a UNIX domain socket and
+    an inet socket instead of making them mutually exclusive.  As a
+    result, the options "http_port", "http_username", "http_password",
+    "sockchmod" and "sockchown" are no longer part of the
+    '[supervisord]' section configuration. These have been supplanted
+    by two other sections: '[unix_http_server]' and
+    '[inet_http_server'].  You'll need to insert one or the other
+    (depending on whether you want to listen on a UNIX domain socket
+    or a TCP socket respectively) or both into your supervisord.conf
+    file.  These sections have their own options (where applicable)
+    for port, username, password, chmod, and chown.  See README.txt
+    for more information about these sections.
+
+  - All supervisord command-line options related to "http_port",
+    "http_username", "http_password", "sockchmod" and "sockchown" have
+    been removed (see above point for rationale).
+
+  - The option that *used* to be 'sockchown' within the
+    '[supervisord]' section (and is now named 'chown' within the
+    '[unix_http_server]' section) used to accept a dot-separated
+    user.group value.  The separator now must be a colon ":",
+    e.g. "user:group".  Unices allow for dots in usernames, so this
+    change is a bugfix.  Thanks to Ian Bicking for the bug report.
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC
