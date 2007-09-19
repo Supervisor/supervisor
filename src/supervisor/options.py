@@ -50,8 +50,8 @@ from supervisor.datatypes import list_of_strings
 from supervisor.datatypes import octal_type
 from supervisor.datatypes import existing_directory
 from supervisor.datatypes import logging_level
-from supervisor.datatypes import dot_separated_user_group
-from supervisor.datatypes import SocketAddress
+from supervisor.datatypes import colon_separated_user_group
+from supervisor.datatypes import inet_address
 from supervisor.datatypes import url
 from supervisor.datatypes import Automatic
 from supervisor.datatypes import auto_restart
@@ -333,8 +333,8 @@ class ServerOptions(Options):
     nodaemon = None
     signal = None
     environment = None
-    httpserver = None
-    unlink_socketfile = True
+    httpservers = ()
+    unlink_socketfiles = True
     mood = states.SupervisorStates.RUNNING
     
     ANSI_ESCAPE_BEGIN = '\x1b['
@@ -368,12 +368,6 @@ class ServerOptions(Options):
                  existing_dirpath, default="supervisor")
         self.add("childlogdir", "supervisord.childlogdir", "q:", "childlogdir=",
                  existing_directory, default=tempfile.gettempdir())
-        self.add("http_port", "supervisord.http_port", "w:", "http_port=",
-                 SocketAddress, default=None)
-        self.add("http_username", "supervisord.http_username", "g:",
-                 "http_username=", str, default=None)
-        self.add("http_password", "supervisord.http_password", "r:",
-                 "http_password=", str, default=None)
         self.add("minfds", "supervisord.minfds",
                  "a:", "minfds=", int, default=1024)
         self.add("minprocs", "supervisord.minprocs",
@@ -384,10 +378,6 @@ class ServerOptions(Options):
                  "t", "strip_ansi", flag=1, default=0)
         self.add("profile_options", "supervisord.profile_options",
                  "", "profile_options=", profile_options, default=None)
-        self.add("sockchmod", "supervisord.sockchmod", "p:", "socket-mode=",
-                 octal_type, default=0700)
-        self.add("sockchown", "supervisord.sockchown", "o:", "socket-owner=",
-                 dot_separated_user_group)
         self.add("environment", "supervisord.environment", "b:", "environment=",
                  dict_of_key_value_pairs)
         self.pidhistory = {}
@@ -441,22 +431,35 @@ class ServerOptions(Options):
             self.pidfile = os.path.abspath(self.pidfile)
 
         self.process_group_configs = section.process_group_configs
+        self.rpcinterface_factories = section.rpcinterface_factories
 
-        if not self.sockchown:
-            self.sockchown = section.sockchown
+        self.serverurl = None
+
+        self.server_configs = sconfigs = section.server_configs
+
+        # we need to set a fallback serverurl that process.spawn can use
+
+        # prefer a unix domain socket
+        for config in [ config for config in sconfigs if
+                        config['family'] is socket.AF_UNIX ]:
+            path = config['file']
+            self.serverurl = 'unix://%s' % path
+            break
+
+        # fall back to an inet socket
+        if self.serverurl is None:
+            for config in [ config for config in sconfigs if
+                            config['family'] is socket.AF_INET]:
+                host = config['host']
+                port = config['port']
+                if not host:
+                    host = 'localhost'
+                self.serverurl = 'http://%s:%s' % (host, port)
+
+        # self.serverurl may still be None if no servers at all are
+        # configured in the config file
 
         self.identifier = section.identifier
-
-        if section.http_port is None:
-            self.serverurl = None
-
-        else:
-            if section.http_port.family == socket.AF_INET:
-                host, port = section.http_port.address
-                self.serverurl = 'http://%s:%s' % (host, port)
-            else:
-                # domain socket
-                self.serverurl = 'unix://%s' % section.http_port.address
 
     def convert_sockchown(self, sockchown):
         # Convert chown stuff to uid/gid
@@ -508,50 +511,13 @@ class ServerOptions(Options):
 
         tempdir = tempfile.gettempdir()
         section.childlogdir = existing_directory(get('childlogdir', tempdir))
-
-        http_port = get('http_port', None)
-        if http_port is None:
-            section.http_port = None
-        else:
-            section.http_port = SocketAddress(http_port)
-
-        http_password = get('http_password', None)
-        http_username = get('http_username', None)
-        if http_password or http_username:
-            if http_password is None:
-                raise ValueError('Must specify http_password if '
-                                 'http_username is specified')
-            if http_username is None:
-                raise ValueError('Must specify http_username if '
-                                 'http_password is specified')
-        section.http_password = http_password
-        section.http_username = http_username
-
         section.nocleanup = boolean(get('nocleanup', 'false'))
-
         section.strip_ansi = boolean(get('strip_ansi', 'false'))
-        
-        sockchown = get('sockchown', None)
-        if sockchown is None:
-            section.sockchown = (-1, -1)
-        else:
-            try:
-                section.sockchown = dot_separated_user_group(sockchown)
-            except ValueError:
-                raise ValueError('Invalid sockchown value %s' % sockchown)
-
-        sockchmod = get('sockchmod', None)
-        if sockchmod is None:
-            section.sockchmod = 0700
-        else:
-            try:
-                section.sockchmod = octal_type(sockchmod)
-            except (TypeError, ValueError):
-                raise ValueError('Invalid sockchmod value %s' % sockchmod)
 
         section.environment = dict_of_key_value_pairs(get('environment', ''))
         section.process_group_configs = self.process_groups_from_parser(parser)
         section.rpcinterface_factories = self.rpcinterfaces_from_parser(parser)
+        section.server_configs = self.server_configs_from_parser(parser)
         section.profile_options = None
         return section
 
@@ -654,6 +620,9 @@ class ServerOptions(Options):
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
         directory = get(section, 'directory', None)
+        serverurl = get(section, 'serverurl', None)
+        if serverurl and serverurl.strip().upper() == 'AUTO':
+            serverurl = None
 
         umask = get(section, 'umask', None)
         if umask is not None:
@@ -733,7 +702,8 @@ class ServerOptions(Options):
                 stopwaitsecs=stopwaitsecs,
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
-                environment=environment)
+                environment=environment,
+                serverurl=serverurl)
 
             programs.append(pconfig)
 
@@ -747,9 +717,7 @@ class ServerOptions(Options):
         for section in parser.sections():
             if not section.startswith('rpcinterface:'):
                 continue
-            options = parser.options(section)
             name = section.split(':', 1)[1]
-            realoptions = []
             factory_spec = parser.saneget(section, factory_key, None)
             if factory_spec is None:
                 raise ValueError('section [%s] does not specify a %s'  %
@@ -764,6 +732,80 @@ class ServerOptions(Options):
             factories.append((name, factory, dict(items)))
 
         return factories
+
+    def _parse_servernames(self, parser, stype):
+        options = []
+        for section in parser.sections():
+            if section.startswith(stype):
+                parts = section.split(':', 1)
+                if len(parts) > 1:
+                    name = parts[1]
+                else:
+                    name = None # default sentinel
+                options.append((name, section))
+        return options
+
+    def _parse_username_and_password(self, parser, section):
+        get = parser.saneget
+        username = get(section, 'username', None)
+        password = get(section, 'password', None)
+        if username is None and password is not None:
+            raise ValueError(
+                'Must specify username if password is specified in [%s]'
+                % section)
+        return {'username':username, 'password':password}
+
+    def server_configs_from_parser(self, parser):
+        configs = []
+        inet_serverdefs = self._parse_servernames(parser, 'inet_http_server')
+        for name, section in inet_serverdefs:
+            config = {}
+            get = parser.saneget
+            config.update(self._parse_username_and_password(parser, section))
+            config['name'] = name
+            config['family'] = socket.AF_INET
+            port = get(section, 'port', None)
+            if port is None:
+                raise ValueError('section [%s] has no port value' % section)
+            host, port = inet_address(port)
+            config['host'] = host
+            config['port'] = port
+            config['section'] = section
+            configs.append(config)
+
+        unix_serverdefs = self._parse_servernames(parser, 'unix_http_server')
+        for name, section in unix_serverdefs:
+            config = {}
+            get = parser.saneget
+            sfile = get(section, 'file', None)
+            if sfile is None:
+                raise ValueError('section [%s] has no file value' % section)
+            config['name'] = name
+            config['family'] = socket.AF_UNIX
+            config['file'] = sfile.strip()
+            config.update(self._parse_username_and_password(parser, section))
+            chown = get(section, 'chown', None)
+            if chown is not None:
+                try:
+                    chown = colon_separated_user_group(chown)
+                except ValueError:
+                    raise ValueError('Invalid sockchown value %s' % chown)
+            else:
+                chown = (-1, -1)
+            config['chown'] = chown
+            chmod = get(section, 'chmod', None)
+            if chmod is not None:
+                try:
+                    chmod = octal_type(chmod)
+                except (TypeError, ValueError):
+                    raise ValueError('Invalid chmod value %s' % chmod)
+            else:
+                chmod = 0700
+            config['chmod'] = chmod
+            config['section'] = section
+            configs.append(config)
+
+        return configs
 
     def import_spec(self, spec):
         return pkg_resources.EntryPoint.parse("x="+spec).load(False)
@@ -833,15 +875,14 @@ class ServerOptions(Options):
                 
     def cleanup(self):
         try:
-            if self.http_port is not None:
-                if self.http_port.family == socket.AF_UNIX:
-                    if self.httpserver is not None:
-                        if self.unlink_socketfile:
-                            socketname = self.http_port.address
-                            try:
-                                os.unlink(socketname)
-                            except OSError:
-                                pass
+            for config, server in self.httpservers:
+                if config['family'] == socket.AF_UNIX:
+                    if self.unlink_socketfiles:
+                        socketname = config['file']
+                        try:
+                            os.unlink(socketname)
+                        except OSError:
+                            pass
         except OSError:
             pass
         try:
@@ -860,19 +901,18 @@ class ServerOptions(Options):
     def sigreceiver(self, sig, frame):
         self.signal = sig
 
-    def openhttpserver(self, supervisord):
-        from http import make_http_server
+    def openhttpservers(self, supervisord):
+        from supervisor.http import make_http_servers
         try:
-            self.httpserver = make_http_server(self, supervisord)
+            self.httpservers = make_http_servers(self, supervisord)
         except socket.error, why:
             if why[0] == errno.EADDRINUSE:
-                port = str(self.http_port.address)
                 self.usage('Another program is already listening on '
-                           'the port that our HTTP server is '
-                           'configured to use (%s).  Shut this program '
+                           'a port that one of our HTTP servers is '
+                           'configured to use.  Shut this program '
                            'down first before starting supervisord. ' %
                            port)
-            self.unlink_socketfile = False
+            self.unlink_socketfiles = False
         except ValueError, why:
             self.usage(why[0])
 
@@ -1332,7 +1372,7 @@ class ProcessConfig(Config):
                  stderr_logfile, stderr_capture_maxbytes,
                  stderr_logfile_backups, stderr_logfile_maxbytes,
                  stopsignal, stopwaitsecs, exitcodes, redirect_stderr,
-                 environment=None):
+                 environment=None, serverurl=None):
         self.options = options
         self.name = name
         self.command = command
@@ -1357,6 +1397,7 @@ class ProcessConfig(Config):
         self.exitcodes = exitcodes
         self.redirect_stderr = redirect_stderr
         self.environment = environment
+        self.serverurl = serverurl
 
     def create_autochildlogs(self):
         # temporary logfiles which are erased at start time

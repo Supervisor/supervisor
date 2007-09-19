@@ -23,10 +23,12 @@ class ServerOptionsTests(unittest.TestCase):
         return self._getTargetClass()()
         
     def test_options(self):
-        s = lstrip("""[supervisord]
-        http_port=127.0.0.1:8999
-        http_username=chrism
-        http_password=foo   
+        s = lstrip("""[inet_http_server]
+        port=127.0.0.1:8999
+        username=chrism
+        password=foo
+
+        [supervisord]
         directory=%(tempdir)s
         backofflimit=10
         user=root
@@ -98,10 +100,12 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(options.nodaemon, True)
         self.assertEqual(options.identifier, 'fleeb')
         self.assertEqual(options.childlogdir, tempfile.gettempdir())
-        self.assertEqual(options.http_port.family, socket.AF_INET)
-        self.assertEqual(options.http_port.address, ('127.0.0.1', 8999))
-        self.assertEqual(options.http_username, 'chrism')
-        self.assertEqual(options.http_password, 'foo')
+        self.assertEqual(len(options.server_configs), 1)
+        self.assertEqual(options.server_configs[0]['family'], socket.AF_INET)
+        self.assertEqual(options.server_configs[0]['host'], '127.0.0.1')
+        self.assertEqual(options.server_configs[0]['port'], 8999)
+        self.assertEqual(options.server_configs[0]['username'], 'chrism')
+        self.assertEqual(options.server_configs[0]['password'], 'foo')
         self.assertEqual(options.nocleanup, True)
         self.assertEqual(options.minfds, 2048)
         self.assertEqual(options.minprocs, 300)
@@ -219,10 +223,14 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.passwdfile, None)
         self.assertEqual(instance.identifier, 'fleeb')
         self.assertEqual(instance.childlogdir, tempfile.gettempdir())
-        self.assertEqual(instance.http_port.family, socket.AF_INET)
-        self.assertEqual(instance.http_port.address, ('127.0.0.1', 8999))
-        self.assertEqual(instance.http_username, 'chrism')
-        self.assertEqual(instance.http_password, 'foo')
+
+        self.assertEqual(len(instance.server_configs), 1)
+        self.assertEqual(instance.server_configs[0]['family'], socket.AF_INET)
+        self.assertEqual(instance.server_configs[0]['host'], '127.0.0.1')
+        self.assertEqual(instance.server_configs[0]['port'], 8999)
+        self.assertEqual(instance.server_configs[0]['username'], 'chrism')
+        self.assertEqual(instance.server_configs[0]['password'], 'foo')
+
         self.assertEqual(instance.nocleanup, True)
         self.assertEqual(instance.minfds, 2048)
         self.assertEqual(instance.minprocs, 300)
@@ -267,8 +275,8 @@ class ServerOptionsTests(unittest.TestCase):
             address = fn
         class Server:
             pass
-        instance.http_port = Port()
-        instance.httpserver = Server()
+        instance.httpservers = [({'family':socket.AF_UNIX, 'file':fn},
+                                 Server())]
         instance.pidfile = ''
         instance.cleanup()
         self.failIf(os.path.exists(fn))
@@ -285,10 +293,10 @@ class ServerOptionsTests(unittest.TestCase):
                 address = fn
             class Server:
                 pass
-            instance.http_port = Port()
-            instance.httpserver = Server()
+            instance.httpservers = [({'family':socket.AF_UNIX, 'file':fn},
+                                     Server())]
             instance.pidfile = ''
-            instance.unlink_socketfile = False
+            instance.unlink_socketfiles = False
             instance.cleanup()
             self.failUnless(os.path.exists(fn))
         finally:

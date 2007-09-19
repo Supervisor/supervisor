@@ -225,8 +225,8 @@ Components
     supervisorctl may be accessed via a browser if you start
     supervisord against an internet socket.  Visit the server URL
     (e.g. http://localhost:9001/) to view and control process status
-    through the web interface after changing the configuration file's
-    'http_port' parameter appropriately.
+    through the web interface after activating the configuration
+    file's '[inet_http_server]' section.
 
   XML-RPC Interface
 
@@ -264,26 +264,60 @@ Components
     "Configuration File ['rpcinterface:x] Section Settings" in this
     file.
 
+Configuration File '[unix_http_server]' Section Settings
+
+  The supervisord.conf log file contains a section named
+  '[unix_http_server]' under which configuration parameters for an
+  HTTP server that listens on a UNIX domain socket should be inserted.
+  If the configuration file has no '[unix_http_server]' section, a
+  UNIX domain socket HTTP server will not be started.  The
+  configuration values are:
+
+  'file' -- a path to a UNIX domain socket
+  (e.g. /tmp/supervisord.sock) on which supervisor will listen for
+  HTTP/XML-RPC requests.  Supervisorctl itself uses XML-RPC to
+  communicate with supervisord over this port.
+
+  'sockchmod' -- Change the UNIX permission mode bits of the UNIX
+  domain socket to this value
+  Default: 0700.
+
+  'sockchown' -- Change the user and group of the socket file to this
+  value.  May be a UNIX username (e.g. chrism) or a UNIX username and
+  group separated by a colon (e.g. chrism:wheel) Default: do not
+  change.
+
+  'username' -- the username required for authentication to this
+  HTTP server.  Default: none.
+
+  'password' -- the password required for authentication to this
+  HTTP server.  Default: none.
+
+Configuration File '[inet_http_server]' Section Settings
+
+  The supervisord.conf log file contains a section named
+  '[inet_http_server]' under which configuration parameters for an
+  HTTP server that listens on a TCP port should be inserted.  If the
+  configuration file has no '[inet_http_server]' section, a TCP socket
+  HTTP server will not be started.  The configuration values are:
+
+  'port' -- A TCP host:port value or (e.g. 127.0.0.1:9001) on which
+  supervisor will listen for HTTP/XML-RPC requests.  Supervisorctl
+  itself may use XML-RPC to communicate with supervisord over this
+  port.  To listen on all interfaces in the machine, use ":9001" or
+  "*:9001".
+
+  'username' -- the username required for authentication to this
+  HTTP server.  Default: none.
+
+  'password' -- the password required for authentication to this
+  HTTP server.  Default: none.
+
 Configuration File '[supervisord]' Section Settings
 
   The supervisord.conf log file contains a section named
   '[supervisord]' in which global settings for the supervisord process
   should be inserted.  These are:
-
-  'http_port' -- Either a TCP host:port value or (e.g. 127.0.0.1:9001)
-  or a path to a UNIX domain socket (e.g. /tmp/supervisord.sock) on
-  which supervisor will listen for HTTP/XML-RPC requests.
-  Supervisorctl itself uses XML-RPC to communicate with supervisord
-  over this port.  To listen on all interfaces in the machine, use
-  ":9001".
-
-  'sockchmod' -- Change the UNIX permission mode bits of the http_port
-  UNIX domain socket to this value (ignored if using a TCP socket).
-  Default: 0700.
-
-  'sockchown' -- Change the user and group of the socket file to this
-  value.  May be a username (e.g. chrism) or a username and group
-  separated by a dot (e.g. chrism.wheel) Default: do not change.
 
   'umask' -- The umask of the supervisord process.  Default: 022.
 
@@ -322,12 +356,6 @@ Configuration File '[supervisord]' Section Settings
   'nocleanup' -- prevent supervisord from clearing any existing "AUTO"
   log files at startup time.  Default: false.
 
-  'http_username' -- the username required for authentication to our
-  HTTP server.  Default: none.
-
-  'http_password' -- the password required for authentication to our
-  HTTP server.  Default: none.
-
   'childlogdir' -- the directory used for AUTO log files.  Default:
   value of Python's tempfile.get_tempdir().
 
@@ -351,7 +379,7 @@ Configuration File '[supervisord]' Section Settings
   program's "environment" configuration stanza.  See "Subprocess
   Environment" below.
 
-  'identifier' -- The identifier for this supervisor server, used by
+  'identifier' -- The identifier for this supervisor process, used by
   the RPC interface.  Default: 'supervisor'.
 
 Configuration File '[supervisorctl]' Section Settings
@@ -364,12 +392,14 @@ Configuration File '[supervisorctl]' Section Settings
   "unix:///absolute/path/to/file.sock".
 
   'username' -- The username to pass to the supervisord server for use
-  in authentication (should be same as 'http_username' in supervisord
-  config).  Optional.
+  in authentication.  This should be same as 'username' from the
+  supervisord server configuration for the port or UNIX domain socket
+  you're attempting to access. Optional.
 
   'password' -- The password to pass to the supervisord server for use
-  in authentication (should be the same as 'http_password' in
-  supervisord config).  Optional.
+  in authentication. This should be same as 'password' from the
+  supervisord server configuration for the port or UNIX domain socket
+  you're attempting to access. Optional.
 
   'prompt' -- String used as supervisorctl prompt.  Default: supervisor.
 
@@ -403,6 +433,7 @@ Configuration File '[program:x]' Section Settings
     stderr_logfile_backups=10
     stderr_capture_maxbytes=1MB
     environment=A=1,B=2
+    serverurl=AUTO
 
   '[program:foo]' -- the section header, required for each program.
   'programname' is a descriptive name (arbitrary) used to describe the
@@ -558,6 +589,16 @@ Configuration File '[program:x]' Section Settings
 
   'umask' -- an octal number (e.g. 002, 022) representing the umask of
   the process.  Default: no special umask (inherit supervisor's).
+
+  'serverurl' -- the URL passed in the environment to the subprocess
+  process as 'SUPERVISOR_SERVER_URL' (see supervisor.childutils) to
+  allow the subprocess to easily communicate with the internal
+  supervisord HTTP server.  If provided, it should have the same
+  syntax and structure as the '[supervisorctl]' section option of the
+  same name.  If this is set to AUTO, or is unset, supervisor will
+  automatically construct a server URL, giving preference to a server
+  that listens on UNIX domain sockets over one that listens on an
+  internet socket.  Default: AUTO.
 
   Note that a '[program:x]' section actually represents a "homogeneous
   process group" to supervisor (new in 3.0).  The members of the group

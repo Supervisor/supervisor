@@ -24,11 +24,10 @@ class EntryPointTests(unittest.TestCase):
         old_stdout = sys.stdout
         try:
             tempdir = tempfile.mkdtemp()
-            sock = os.path.join(tempdir, 'sock')
             log = os.path.join(tempdir, 'log')
             pid = os.path.join(tempdir, 'pid')
             sys.stdout = new_stdout
-            main(args=['-c', conf, '-w', sock, '-l', log, '-j', pid, '-n'],
+            main(args=['-c', conf, '-l', log, '-j', pid, '-n'],
                  test=True)
         finally:
             sys.stdout = old_stdout
@@ -46,11 +45,10 @@ class EntryPointTests(unittest.TestCase):
         old_stdout = sys.stdout
         try:
             tempdir = tempfile.mkdtemp()
-            sock = os.path.join(tempdir, 'sock')
             log = os.path.join(tempdir, 'log')
             pid = os.path.join(tempdir, 'pid')
             sys.stdout = new_stdout
-            main(args=['-c', conf, '-w', sock, '-l', log, '-j', pid, '-n',
+            main(args=['-c', conf, '-l', log, '-j', pid, '-n',
                        '--profile_options=cumulative,calls'], test=True)
         finally:
             sys.stdout = old_stdout
@@ -90,7 +88,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(supervisord.process_groups['foo'].config.options,
                          options)
         self.assertEqual(options.environment_processed, True)
-        self.assertEqual(options.httpserver_opened, True)
+        self.assertEqual(options.httpservers_opened, True)
         self.assertEqual(options.signals_set, True)
         self.assertEqual(options.daemonized, True)
         self.assertEqual(options.pidfile_written, True)

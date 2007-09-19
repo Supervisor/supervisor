@@ -32,9 +32,6 @@ Options:
 -q/--childlogdir DIRECTORY -- the log directory for child process logs
 -k/--nocleanup --  prevent the process from performing cleanup (removal of
                    old automatic child log files) at startup.
--w/--http_port SOCKET -- the host/port that the HTTP server should listen on
--g/--http_username STR -- the username for HTTP auth
--r/--http_password STR -- the password for HTTP auth
 -a/--minfds NUM -- the minimum number of file descriptors for start success
 -t/--strip_ansi -- strip ansi escape codes from process output
 --minprocs NUM  -- the minimum number of processes available for start success
@@ -104,7 +101,7 @@ class Supervisor:
                 name = config.name
                 self.process_groups[name] = config.make_group()
             self.options.process_environment()
-            self.options.openhttpserver(self)
+            self.options.openhttpservers(self)
             self.options.setsignals()
             if not self.options.nodaemon:
                 self.options.daemonize()

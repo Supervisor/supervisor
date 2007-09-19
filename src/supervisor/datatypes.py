@@ -115,17 +115,16 @@ def inet_address(s):
     port = None
     if ":" in s:
         host, s = s.split(":", 1)
-        if s:
-            port = port_number(s)
+        if not s:
+            raise ValueError("no port number specified in %r" % s)
+        port = port_number(s)
         host = host.lower()
     else:
         try:
             port = port_number(s)
         except ValueError:
-            if len(s.split()) != 1:
-                raise ValueError("not a valid host name: " + repr(s))
-            host = s.lower()
-    if not host:
+            raise ValueError("not a valid port number: %r " %s)
+    if not host or host == '*':
         host = DEFAULT_HOST
     return host, port
 
@@ -140,9 +139,9 @@ class SocketAddress:
             self.family = socket.AF_INET
             self.address = inet_address(s)
 
-def dot_separated_user_group(arg):
+def colon_separated_user_group(arg):
     try:
-        result = arg.split('.', 1)
+        result = arg.split(':', 1)
         if len(result) == 1:
             username = result[0]
             uid = name_to_uid(username)

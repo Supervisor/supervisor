@@ -29,7 +29,7 @@ class DummyOptions:
         self.fds_cleaned_up = False
         self.rlimit_set = False
         self.setuid_called = False
-        self.httpserver_opened = False
+        self.httpservers_opened = False
         self.signals_set = False
         self.daemonized = False
         self.make_logger_messages = None
@@ -90,8 +90,8 @@ class DummyOptions:
         self.setuid_called = True
         return 'setuid_called'
 
-    def openhttpserver(self, supervisord):
-        self.httpserver_opened = True
+    def openhttpservers(self, supervisord):
+        self.httpservers_opened = True
 
     def daemonize(self):
         self.daemonized = True
@@ -422,7 +422,7 @@ class DummyPConfig:
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10,
-                 exitcodes=(0,2), environment=None):
+                 exitcodes=(0,2), environment=None, serverurl=None):
         self.options = options
         self.name = name
         self.command = command
@@ -451,6 +451,7 @@ class DummyPConfig:
         self.directory = directory
         self.umask = umask
         self.autochildlogs_created = False
+        self.serverurl = serverurl
 
     def create_autochildlogs(self):
         self.autochildlogs_created = True

@@ -760,13 +760,8 @@ class mainlogtail_handler:
 
         request.done()
 
-def make_http_server(options, supervisord):
-    if not options.http_port:
-        return
-
-    username = options.http_username
-    password = options.http_password
-
+def make_http_servers(options, supervisord):
+    servers = []
     class LogWrapper:
         def log(self, msg):
             if msg.endswith('\n'):
@@ -774,57 +769,66 @@ def make_http_server(options, supervisord):
             options.logger.trace(msg)
     wrapper = LogWrapper()
 
-    family = options.http_port.family
-    
-    if family == socket.AF_INET:
-        host, port = options.http_port.address
-        hs = supervisor_af_inet_http_server(host, port, logger_object=wrapper)
-    elif family == socket.AF_UNIX:
-        socketname = options.http_port.address
-        sockchmod = options.sockchmod
-        sockchown = options.sockchown
-        hs = supervisor_af_unix_http_server(socketname, sockchmod, sockchown,
-                                            logger_object=wrapper)
-    else:
-        raise ValueError('Cannot determine socket type %r' % family)
+    for config in options.server_configs:
+        family = config['family']
 
-    from xmlrpc import supervisor_xmlrpc_handler
-    from xmlrpc import SystemNamespaceRPCInterface
-    from web import supervisor_ui_handler
-    rpcfactories = options.configroot.supervisord.rpcinterface_factories
+        if family == socket.AF_INET:
+            host, port = config['host'], config['port']
+            hs = supervisor_af_inet_http_server(host, port,
+                                                logger_object=wrapper)
+        elif family == socket.AF_UNIX:
+            socketname = config['file']
+            sockchmod = config['chmod']
+            sockchown = config['chown']
+            hs = supervisor_af_unix_http_server(socketname,sockchmod, sockchown,
+                                                logger_object=wrapper)
+        else:
+            raise ValueError('Cannot determine socket type %r' % family)
 
-    subinterfaces = []
-    for name, factory, d in rpcfactories:
-        try:
-            inst = factory(supervisord, **d)
-        except:
-            import traceback; traceback.print_exc()
-            raise ValueError('Could not make %s rpc interface' % name)
-        subinterfaces.append((name, inst))
-        options.logger.info('RPC interface %r initialized' % name)
-        
-    subinterfaces.append(('system', SystemNamespaceRPCInterface(subinterfaces)))
-    xmlrpchandler = supervisor_xmlrpc_handler(supervisord, subinterfaces)
-    tailhandler = logtail_handler(supervisord)
-    maintailhandler = mainlogtail_handler(supervisord)
-    here = os.path.abspath(os.path.dirname(__file__))
-    templatedir = os.path.join(here, 'ui')
-    filesystem = filesys.os_filesystem(templatedir)
-    uihandler = supervisor_ui_handler(filesystem, supervisord)
+        from xmlrpc import supervisor_xmlrpc_handler
+        from xmlrpc import SystemNamespaceRPCInterface
+        from web import supervisor_ui_handler
 
-    if username:
-        # wrap the xmlrpc handler and tailhandler in an authentication handler
-        users = {username:password}
-        from medusa.auth_handler import auth_handler
-        xmlrpchandler = auth_handler(users, xmlrpchandler)
-        tailhandler = auth_handler(users, tailhandler)
-        maintailhandler = auth_handler(users, maintailhandler)
-        uihandler = auth_handler(users, uihandler)
-    else:
-        options.logger.critical('Running without any HTTP authentication '
-                                'checking')
-    hs.install_handler(maintailhandler)
-    hs.install_handler(tailhandler)
-    hs.install_handler(uihandler) # second-to-last for speed
-    hs.install_handler(xmlrpchandler) # last for speed (first checked)
-    return hs
+        subinterfaces = []
+        for name, factory, d in options.rpcinterface_factories:
+            try:
+                inst = factory(supervisord, **d)
+            except:
+                import traceback; traceback.print_exc()
+                raise ValueError('Could not make %s rpc interface' % name)
+            subinterfaces.append((name, inst))
+            options.logger.info('RPC interface %r initialized' % name)
+
+        subinterfaces.append(('system',
+                              SystemNamespaceRPCInterface(subinterfaces)))
+        xmlrpchandler = supervisor_xmlrpc_handler(supervisord, subinterfaces)
+        tailhandler = logtail_handler(supervisord)
+        maintailhandler = mainlogtail_handler(supervisord)
+        here = os.path.abspath(os.path.dirname(__file__))
+        templatedir = os.path.join(here, 'ui')
+        filesystem = filesys.os_filesystem(templatedir)
+        uihandler = supervisor_ui_handler(filesystem, supervisord)
+
+        username = config['username']
+        password = config['password']
+
+        if username:
+            # wrap the xmlrpc handler and tailhandler in an authentication
+            # handler
+            users = {username:password}
+            from medusa.auth_handler import auth_handler
+            xmlrpchandler = auth_handler(users, xmlrpchandler)
+            tailhandler = auth_handler(users, tailhandler)
+            maintailhandler = auth_handler(users, maintailhandler)
+            uihandler = auth_handler(users, uihandler)
+        else:
+            options.logger.critical(
+                'Server %r running without any HTTP '
+                'authentication checking' % config['section'])
+        hs.install_handler(maintailhandler)
+        hs.install_handler(tailhandler)
+        hs.install_handler(uihandler) # second-to-last for speed
+        hs.install_handler(xmlrpchandler) # last for speed (first checked)
+        servers.append((config, hs))
+
+    return servers
