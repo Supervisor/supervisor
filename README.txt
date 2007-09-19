@@ -301,8 +301,9 @@ Configuration File '[supervisord]' Section Settings
 
   'loglevel' -- The logging level, dictating what is written to the
   activity log.  One of 'critical', 'error', 'warn', 'info', 'debug'
-  or 'trace'.  Note that at log level 'debug', the supervisord log
-  file will record the stderr/stdout output of its child processes,
+  'trace', or 'blather'.  Note that at log level 'debug', the
+  supervisord log file will record the stderr/stdout output of its
+  child processes and extended info info about process state changes,
   which is useful for debugging a process which isn't starting
   properly.  See also: 'Supervisor Log Levels'.  Default: info.
 
@@ -1319,6 +1320,10 @@ Supervisor Log Levels
   state changes, event notifications, RPC communications information).
 
   trace (TRAC) -- messages useful for developers trying to debug
+  supervisor plugins, and information about HTTP and RPC requests and
+  responses.
+
+  blather (BLAT) -- messages useful for developers trying to debug
   supervisor itself.
 
 Signals
