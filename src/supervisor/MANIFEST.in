@@ -1,4 +1,0 @@
-include *.txt
-include ui/*.html ui/images/*.gif ui/stylesheets/*css
-include tests/fixtures/*.py
-
