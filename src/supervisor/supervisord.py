@@ -139,7 +139,7 @@ class Supervisor:
                 self.lastdelayreport = now
                 for proc in delayprocs:
                     state = getProcessStateDescription(proc.get_state())
-                    self.options.logger.debug(
+                    self.options.logger.blather(
                         '%s state: %s' % (proc.config.name, state))
         return delayprocs
 
@@ -203,7 +203,7 @@ class Supervisor:
             except select.error, err:
                 r = w = x = []
                 if err[0] == errno.EINTR:
-                    self.options.logger.trace('EINTR encountered in select')
+                    self.options.logger.blather('EINTR encountered in select')
                 else:
                     raise
 
@@ -211,7 +211,7 @@ class Supervisor:
                 if combined_map.has_key(fd):
                     try:
                         dispatcher = combined_map[fd]
-                        self.options.logger.trace(
+                        self.options.logger.blather(
                             'read event caused by %(dispatcher)s',
                             dispatcher=dispatcher)
                         dispatcher.handle_read_event()
@@ -224,7 +224,7 @@ class Supervisor:
                 if combined_map.has_key(fd):
                     try:
                         dispatcher = combined_map[fd]
-                        self.options.logger.trace(
+                        self.options.logger.blather(
                             'write event caused by %(dispatcher)s',
                             dispatcher=dispatcher)
                         dispatcher.handle_write_event()
@@ -277,7 +277,7 @@ class Supervisor:
                 for group in self.process_groups.values():
                     group.reopenlogs()
             else:
-                self.options.logger.trace(
+                self.options.logger.blather(
                     'received %s indicating nothing' % signame(sig))
         
     def get_state(self):

@@ -341,7 +341,7 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
             params, method = self.loads(data)
 
             try:
-                logger.debug('XML-RPC method called: %s()' % method)
+                logger.trace('XML-RPC method called: %s()' % method)
                 value = self.call(method, params)
                 # application-specific: instead of we never want to
                 # marshal None (even though we could by saying allow_none=True
@@ -351,12 +351,12 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                     'return value from method %r with params %r is None' %
                     (method, params)
                     )
-                logger.debug('XML-RPC method %s() returned successfully' %
+                logger.trace('XML-RPC method %s() returned successfully' %
                              method)
             except RPCError, err:
                 # turn RPCError reported by method into a Fault instance
                 value = xmlrpclib.Fault(err.code, err.text)
-                logger.debug('XML-RPC method %s() returned fault: [%d] %s' % (
+                logger.trace('XML-RPC method %s() returned fault: [%d] %s' % (
                     method,
                     err.code, err.text))
 

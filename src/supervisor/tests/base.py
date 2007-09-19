@@ -254,7 +254,7 @@ class DummyLogger:
         if kw:
             msg = msg % kw
         self.data.append(msg)
-    warn = debug = critical = trace = error = info
+    warn = debug = critical = trace = error = blather = info
 
     def log(self, level, msg, **kw):
         if kw:

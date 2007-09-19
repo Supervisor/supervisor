@@ -28,15 +28,6 @@
 - Make *:9001 work for port num (see
   http://www.plope.com/software/collector/247)
 
-- Inject BLATHER log level (from list):
-
-  """ I'll make one called BLAT (blather) below TRAC and move all the
-  current TRAC logging calls to that.  Currently RPC metainfo is
-  logged at DEBG, I'll move that to to TRAC.  The only things that
-  will log at BLAT will be supervisor internal, not including the
-  builtin RPC interfaces.  This should make DEBG mostly (if not
-  exclusively) about child process output then. """
-
 - Generalize eventlistener request/response protocol (wrap OK/FAIL in
   RESULT envelope) so we can use it for more specialized
   communications, e.g.:
