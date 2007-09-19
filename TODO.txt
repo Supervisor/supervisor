@@ -1,5 +1,41 @@
+- Make it possible to listen on a domain socket *and* an HTTP socket.
+
+  Perhaps:
+
+  [unix_http_server]
+  file =
+
+  [inet_http_server]
+  port = 
+
+  Unless we want to listen on an arbitrary number of ports.
+
 - Implement event max_retry counter that means "after X retries of a
   rejected event, go into FATAL state".
+
+- FATAL state for supervisor.
+
+   - When we try to clear the main log file and we get an IOError or an
+     OSError (clearLog)
+
+   - When we attempt to remove a process log file via os.remove (or
+     equivalent all into handlers) and we get an IOError or an OSError
+     (clearProcessLog)
+
+   - When we try to kill a process and the os.kill command raises an
+     exception (stopProcess)
+
+- Make *:9001 work for port num (see
+  http://www.plope.com/software/collector/247)
+
+- Inject BLATHER log level (from list):
+
+  """ I'll make one called BLAT (blather) below TRAC and move all the
+  current TRAC logging calls to that.  Currently RPC metainfo is
+  logged at DEBG, I'll move that to to TRAC.  The only things that
+  will log at BLAT will be supervisor internal, not including the
+  builtin RPC interfaces.  This should make DEBG mostly (if not
+  exclusively) about child process output then. """
 
 - Generalize eventlistener request/response protocol (wrap OK/FAIL in
   RESULT envelope) so we can use it for more specialized
@@ -46,8 +82,6 @@
   one was using too much memory, or would raise an exception if the
   serialization returned indicated failure.
 
-- Make it possible to listen on a domain socket *and* an HTTP socket.
-
 - General speed improvement wrangling:
 
   - Play around with creating a select trigger file descriptor for
@@ -58,18 +92,6 @@
 
 - Fix CVS so not all checkins come from "chrism".
 
-- FATAL state for supervisor.
-
-   - When we try to clear the main log file and we get an IOError or an
-     OSError (clearLog)
-
-   - When we attempt to remove a process log file via os.remove (or
-     equivalent all into handlers) and we get an IOError or an OSError
-     (clearProcessLog)
-
-   - When we try to kill a process and the os.kill command raises an
-     exception (stopProcess)
-
 - Support stopping and starting groups in web interface.
 
 - Support operations against both stderr and stdout logs within web
@@ -79,6 +101,8 @@
   comment about ordering).
 
 - Address outstanding collector issues.
+
+- http://swapoff.org/wiki/blog/2007-09-09--distutils-support-for-a-workingenv-sandbox
 
 - We *might* be able to delay shutdown until all buffered events have
   been processed (or a timeout has been reached).
