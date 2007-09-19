@@ -1317,7 +1317,7 @@ Supervisor Log Levels
 
   debug (DEBG) -- messages useful for users trying to debug process
   configuration and communications behavior (process output, listener
-  state changes, event notifications, RPC communications information).
+  state changes, event notifications).
 
   trace (TRAC) -- messages useful for developers trying to debug
   supervisor plugins, and information about HTTP and RPC requests and
