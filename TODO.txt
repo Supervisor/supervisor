@@ -1,14 +1,4 @@
-- Make it possible to listen on a domain socket *and* an HTTP socket.
-
-  Perhaps:
-
-  [unix_http_server]
-  file =
-
-  [inet_http_server]
-  port = 
-
-  Unless we want to listen on an arbitrary number of ports.
+- Allow configuration relative to %(here)s (the location of the config file).
 
 - Implement event max_retry counter that means "after X retries of a
   rejected event, go into FATAL state".
