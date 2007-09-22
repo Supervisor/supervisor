@@ -23,8 +23,6 @@ import errno
 import signal
 import re
 import xmlrpclib
-import httplib
-import urllib
 import pwd
 import grp
 import resource
@@ -38,7 +36,6 @@ from fcntl import F_SETFL, F_GETFL
 from supervisor.datatypes import boolean
 from supervisor.datatypes import integer
 from supervisor.datatypes import name_to_uid
-from supervisor.datatypes import name_to_gid
 from supervisor.datatypes import gid_for_uid
 from supervisor.datatypes import existing_dirpath
 from supervisor.datatypes import byte_size
@@ -908,8 +905,7 @@ class ServerOptions(Options):
                 self.usage('Another program is already listening on '
                            'a port that one of our HTTP servers is '
                            'configured to use.  Shut this program '
-                           'down first before starting supervisord. ' %
-                           port)
+                           'down first before starting supervisord.')
             self.unlink_socketfiles = False
         except ValueError, why:
             self.usage(why[0])
