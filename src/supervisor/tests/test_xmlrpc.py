@@ -152,7 +152,8 @@ class TesstSupervisorTransport(unittest.TestCase):
         transport = self._makeOne('user', 'pass', 'unix:///foo/bar')
         conn = transport._get_connection()
         self.failUnless(isinstance(conn, xmlrpc.UnixStreamHTTPConnection))
-        self.assertEqual(conn.host, '/foo/bar')
+        self.assertEqual(conn.host, 'localhost')
+        self.assertEqual(conn.socketfile, '/foo/bar')
 
     def test__get_connection_http_9001(self):
         from supervisor import xmlrpc

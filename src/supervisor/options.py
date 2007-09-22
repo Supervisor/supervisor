@@ -56,14 +56,18 @@ from supervisor.datatypes import url
 from supervisor.datatypes import Automatic
 from supervisor.datatypes import auto_restart
 from supervisor.datatypes import profile_options
+from supervisor.datatypes import set_here
 
 from supervisor import loggers
 from supervisor import states
 from supervisor import xmlrpc
 
-here = os.path.abspath(os.path.dirname(__file__))
-version_txt = os.path.join(here, 'version.txt')
+mydir = os.path.abspath(os.path.dirname(__file__))
+version_txt = os.path.join(mydir, 'version.txt')
 VERSION = open(version_txt).read().strip()
+
+def normalize_path(v):
+    return os.path.normpath(os.path.abspath(os.path.expanduser(v)))
 
 class Dummy:
     pass
@@ -76,6 +80,7 @@ class Options:
     configfile = None
     schemadir = None
     configroot = None
+    here = None
 
     # Class variable deciding whether positional arguments are allowed.
     # If you want positional arguments, set this to 1 in your subclass.
@@ -91,6 +96,21 @@ class Options:
         self.environ_map = {}
         self.add(None, None, "h", "help", self.help)
         self.add("configfile", None, "c:", "configuration=")
+
+    def default_configfile(self):
+        """Return the name of the found config file or raise. """
+        paths = ['supervisord.conf', 'etc/supervisord.conf',
+                 '/etc/supervisord.conf']
+        config = None
+        for path in paths:
+            if os.path.exists(path):
+                config = path
+                break
+        if config is None:
+            self.usage('No config file found at default paths (%s); '
+                       'use the -c option to specify a config file '
+                       'at a different path' % ', '.join(paths))
+        return config
 
     def help(self, dummy):
         """Print a long help message to stdout and exit(0).
@@ -292,12 +312,15 @@ class Options:
 
         if self.configfile is None:
             self.configfile = self.default_configfile()
-        if self.configfile is not None:
-            # Process config file
-            try:
-                self.read_config(self.configfile)
-            except ValueError, msg:
-                self.usage(str(msg))
+
+        # Process config file
+        if not hasattr(self.configfile, 'read'):
+            self.here = os.path.abspath(os.path.dirname(self.configfile))
+            set_here(self.here)
+        try:
+            self.read_config(self.configfile)
+        except ValueError, msg:
+            self.usage(str(msg))
 
         # Copy config options to attributes of self.  This only fills
         # in options that aren't already set from the command line.
@@ -365,7 +388,7 @@ class ServerOptions(Options):
         self.add("pidfile", "supervisord.pidfile", "j:", "pidfile=",
                  existing_dirpath, default="supervisord.pid")
         self.add("identifier", "supervisord.identifier", "i:", "identifier=",
-                 existing_dirpath, default="supervisor")
+                 str, default="supervisor")
         self.add("childlogdir", "supervisord.childlogdir", "q:", "childlogdir=",
                  existing_directory, default=tempfile.gettempdir())
         self.add("minfds", "supervisord.minfds",
@@ -378,8 +401,6 @@ class ServerOptions(Options):
                  "t", "strip_ansi", flag=1, default=0)
         self.add("profile_options", "supervisord.profile_options",
                  "", "profile_options=", profile_options, default=None)
-        self.add("environment", "supervisord.environment", "b:", "environment=",
-                 dict_of_key_value_pairs)
         self.pidhistory = {}
         self.parse_warnings = []
 
@@ -387,21 +408,6 @@ class ServerOptions(Options):
                   backups=0, stdout=False):
         return loggers.getLogger(filename, level, fmt, rotating, maxbytes,
                                  backups, stdout)
-
-    def default_configfile(self):
-        """Return the name of the default config file, or None."""
-        # This allows a default configuration file to be used without
-        # affecting the -c command line option; setting self.configfile
-        # before calling realize() makes the -C option unusable since
-        # then realize() thinks it has already seen the option.  If no
-        # -c is used, realize() will call this method to try to locate
-        # a configuration file.
-        config = '/etc/supervisord.conf'
-        if not os.path.exists(config):
-            self.usage('No config file found at default path "%s"; create '
-                       'this file or use the -c option to specify a config '
-                       'file at a different path' % config)
-        return config
 
     def realize(self, *arg, **kw):
         Options.realize(self, *arg, **kw)
@@ -415,20 +421,22 @@ class ServerOptions(Options):
             self.uid = uid
             self.gid = gid_for_uid(uid)
 
-        if not self.logfile:
-            logfile = os.path.abspath(section.logfile)
-        else:
-            logfile = os.path.abspath(self.logfile)
-
-        self.logfile = logfile
-
         if not self.loglevel:
             self.loglevel = section.loglevel
 
-        if not self.pidfile:
-            self.pidfile = os.path.abspath(section.pidfile)
+        if self.logfile:
+            logfile = self.logfile
         else:
-            self.pidfile = os.path.abspath(self.pidfile)
+            logfile = section.logfile
+
+        self.logfile = normalize_path(logfile)
+
+        if self.pidfile:
+            pidfile = self.pidfile
+        else:
+            pidfile = section.pidfile
+
+        self.pidfile = normalize_path(pidfile)
 
         self.process_group_configs = section.process_group_configs
         self.rpcinterface_factories = section.rpcinterface_factories
@@ -514,7 +522,9 @@ class ServerOptions(Options):
         section.nocleanup = boolean(get('nocleanup', 'false'))
         section.strip_ansi = boolean(get('strip_ansi', 'false'))
 
-        section.environment = dict_of_key_value_pairs(get('environment', ''))
+        environ_str = get('environment', '')
+        environ_str = expand(environ_str, {'here':self.here}, 'environment')
+        section.environment = dict_of_key_value_pairs(environ_str)
         section.process_group_configs = self.process_groups_from_parser(parser)
         section.rpcinterface_factories = self.rpcinterfaces_from_parser(parser)
         section.server_configs = self.server_configs_from_parser(parser)
@@ -654,7 +664,8 @@ class ServerOptions(Options):
                 
         for process_num in range(0, numprocs):
 
-            expansions = {'process_num':process_num,
+            expansions = {'here':self.here,
+                          'process_num':process_num,
                           'program_name':program_name,
                           'group_name':group_name}
 
@@ -780,9 +791,11 @@ class ServerOptions(Options):
             sfile = get(section, 'file', None)
             if sfile is None:
                 raise ValueError('section [%s] has no file value' % section)
+            sfile = sfile.strip()
             config['name'] = name
             config['family'] = socket.AF_UNIX
-            config['file'] = sfile.strip()
+            sfile = expand(sfile, {'here':self.here}, 'socket file')
+            config['file'] = normalize_path(sfile)
             config.update(self._parse_username_and_password(parser, section))
             chown = get(section, 'chown', None)
             if chown is not None:
@@ -1287,18 +1300,10 @@ class ClientOptions(Options):
         if not self.args:
             self.interactive = 1
 
-    def default_configfile(self):
-        """Return the name of the default config file, or None."""
-        config = '/etc/supervisord.conf'
-        if not os.path.exists(config):
-            self.usage('No config file found at default path "%s"; create '
-                       'this file or use the -c option to specify a config '
-                       'file at a different path' % config)
-        return config
-
     def read_config(self, fp):
         section = self.configroot.supervisorctl
         if not hasattr(fp, 'read'):
+            self.here = os.path.dirname(normalize_path(fp))
             try:
                 fp = open(fp, 'r')
             except (IOError, OSError):
@@ -1309,8 +1314,13 @@ class ClientOptions(Options):
         sections = config.sections()
         if not 'supervisorctl' in sections:
             raise ValueError,'.ini file does not include supervisorctl section' 
-        section.serverurl = config.getdefault('serverurl',
-                                              'http://localhost:9001')
+        serverurl = config.getdefault('serverurl', 'http://localhost:9001')
+        if serverurl.startswith('unix://'):
+            sf = serverurl[7:]
+            path = expand(sf, {'here':self.here}, 'serverurl')
+            path = normalize_path(path)
+            serverurl = 'unix://%s' % path
+        section.serverurl = serverurl
         section.prompt = config.getdefault('prompt', 'supervisor')
         section.username = config.getdefault('username', None)
         section.password = config.getdefault('password', None)

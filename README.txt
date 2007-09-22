@@ -276,7 +276,9 @@ Configuration File '[unix_http_server]' Section Settings
   'file' -- a path to a UNIX domain socket
   (e.g. /tmp/supervisord.sock) on which supervisor will listen for
   HTTP/XML-RPC requests.  Supervisorctl itself uses XML-RPC to
-  communicate with supervisord over this port.
+  communicate with supervisord over this port.  This option can
+  include the value '%(here)s', which expands to the directory in
+  which the supervisord configuration file was found.
 
   'sockchmod' -- Change the UNIX permission mode bits of the UNIX
   domain socket to this value
@@ -321,7 +323,10 @@ Configuration File '[supervisord]' Section Settings
 
   'umask' -- The umask of the supervisord process.  Default: 022.
 
-  'logfile' -- The path to the activity log of the supervisord process.
+  'logfile' -- The path to the activity log of the supervisord
+  process.  This option can include the value '%(here)s', which
+  expands to the directory in which the supervisord configuration file
+  was found.  Default: ./supervisord.log.
 
   'logfile_maxbytes' -- The maximum number of bytes that may be
   consumed by the activity log file before it is rotated (suffix
@@ -342,6 +347,9 @@ Configuration File '[supervisord]' Section Settings
   properly.  See also: 'Supervisor Log Levels'.  Default: info.
 
   'pidfile' -- The location in which supervisord keeps its pid file.
+  This option can include the value '%(here)s', which expands to the
+  directory in which the supervisord configuration file was found.
+  Default: ./supervisord.pid.
 
   'nodaemon' -- If true, supervisord will start in the foreground
   instead of daemonizing.  Default: false.
@@ -356,8 +364,10 @@ Configuration File '[supervisord]' Section Settings
   'nocleanup' -- prevent supervisord from clearing any existing "AUTO"
   log files at startup time.  Default: false.
 
-  'childlogdir' -- the directory used for AUTO log files.  Default:
-  value of Python's tempfile.get_tempdir().
+  'childlogdir' -- the directory used for AUTO log files.  This option
+  can include the value '%(here)s', which expands to the directory in
+  which the supervisord configuration file was found.  Default: value
+  of Python's tempfile.get_tempdir().
 
   'user' -- if supervisord is run as root, switch users to this UNIX
   user account before doing any meaningful processing.  This value has
@@ -365,7 +375,9 @@ Configuration File '[supervisord]' Section Settings
   users.
 
   'directory' -- When supervisord daemonizes, switch to this
-  directory.  Default: do not cd.
+  directory.  This option can include the value '%(here)s', which
+  expands to the directory in which the supervisord configuration file
+  was found.  Default: do not cd.
 
   'strip_ansi' -- Strip all ANSI escape sequences from process log
   files.
@@ -373,11 +385,13 @@ Configuration File '[supervisord]' Section Settings
   'environment' -- A list of key/value pairs in the form
   "KEY=val,KEY2=val2" that will be placed in the supervisord process'
   environment (and as a result in all of its child process'
-  environments).  Default: none.  **Note** that subprocesses will
-  inherit the environment variables of the shell used to start
-  "supervisord" except for the ones overridden here and within the
-  program's "environment" configuration stanza.  See "Subprocess
-  Environment" below.
+  environments).  This option can include the value '%(here)s', which
+  expands to the directory in which the supervisord configuration file
+  was found.  Default: none.  **Note** that subprocesses will inherit
+  the environment variables of the shell used to start "supervisord"
+  except for the ones overridden here and within the program's
+  "environment" configuration stanza.  See "Subprocess Environment"
+  below.
 
   'identifier' -- The identifier for this supervisor process, used by
   the RPC interface.  Default: 'supervisor'.
@@ -451,7 +465,8 @@ Configuration File '[program:x]' Section Settings
   expressions, e.g. "/path/to/programname --port=80%(process_num)02d"
   might expand to "/path/to/programname --port=8000" at runtime.
   String expressions are evaluated against a dictionary containing the
-  keys "group_name", "process_num" and "program_name".  **Controlled
+  keys "group_name", "process_num", "program_name" and "here" (the
+  directory of the supervisord config file).  **NOTE: Controlled
   programs should themselves not be daemons, as supervisord assumes it
   is responsible for daemonizing its subprocesses (see "Nondaemonizing
   of Subprocesses" later in this document).**
@@ -460,8 +475,9 @@ Configuration File '[program:x]' Section Settings
   the supervisor process name for this process.  You usually don't
   need to worry about setting this unless you change 'numprocs'.  The
   string expression is evaluated against a dictionary that includes
-  "group_name", "process_num" and "program_name".  Default:
-  %(program_name)s.  (New in 3.0)
+  "group_name", "process_num", "program_name" and "here" (the
+  directory of the supervisord config file).  Default: %(program_name)s.
+  (New in 3.0)
 
   'numprocs' -- Supervisor will start as many instances of this
   program as named by numprocs.  Note that if numprocs > 1, the
@@ -534,8 +550,9 @@ Configuration File '[program:x]' Section Settings
   backups will be deleted when supervisord restarts.  The
   stdout_logfile value can contain Python string expressions that will
   evaluated against a dictionary that contains the keys "process_num",
-  "program_name" and "group_name".  Default: AUTO.  (New in 3.0,
-  replaces 2.0's "logfile")
+  "program_name", "group_name", and "here" (the directory of the
+  supervisord config file).  Default: AUTO.  (New in 3.0, replaces
+  2.0's "logfile")
 
   'stdout_logfile_maxbytes' -- The maximum number of bytes that may be
   consumed by stdout_logfile before it is rotated (suffix multipliers
@@ -579,10 +596,11 @@ Configuration File '[program:x]' Section Settings
   "KEY=val,KEY2=val2" that will be placed in the child process'
   environment.  The environment string may contain Python string
   expressions that will be evaluated against a dictionary containing
-  "process_num", "program_name" and "group_name".  Default: none.
-  **Note** that the subprocess will inherit the environment variables
-  of the shell used to start "supervisord" except for the ones
-  overridden here.  See "Subprocess Environment" below.
+  "process_num", "program_name", "group_name" and "here" (the
+  directory of the supervisord config file).  Default: none.  **Note**
+  that the subprocess will inherit the environment variables of the
+  shell used to start "supervisord" except for the ones overridden
+  here.  See "Subprocess Environment" below.
 
   'directory' -- a file path representing a directory to which
   supervisord should chdir before exec'ing the child. Default: no cwd.

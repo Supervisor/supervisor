@@ -430,9 +430,12 @@ class SupervisorTransport(xmlrpclib.Transport):
                 return httplib.HTTPConnection(host, port)
             self._get_connection = get_connection
         elif serverurl.startswith('unix://'):
-            serverurl = serverurl[7:]
             def get_connection(serverurl=serverurl):
-                return UnixStreamHTTPConnection(serverurl)
+                # we use 'localhost' here because domain names must be
+                # < 64 chars (or we'd use the serverurl filename)
+                conn = UnixStreamHTTPConnection('localhost')
+                conn.socketfile = serverurl[7:]
+                return conn
             self._get_connection = get_connection
         else:
             raise ValueError('Unknown protocol for serverurl %s' % serverurl)
@@ -476,7 +479,7 @@ class UnixStreamHTTPConnection(httplib.HTTPConnection):
     def connect(self):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         # we abuse the host parameter as the socketname
-        self.sock.connect(self.host)
+        self.sock.connect(self.socketfile)
 
 def gettags(comment):
     """ Parse documentation strings into JavaDoc-like tokens """

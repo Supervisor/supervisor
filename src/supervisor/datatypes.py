@@ -23,6 +23,11 @@ if sys.platform[:3] == "win":
 else:
     DEFAULT_HOST = ""
 
+here = None
+
+def set_here(v):
+    global here
+    here = v
 
 def integer(value):
     try:
@@ -212,14 +217,16 @@ def gid_for_uid(uid):
 
 def existing_directory(v):
     import os
-    nv = os.path.expanduser(v)
+    nv = v % {'here':here}
+    nv = os.path.expanduser(nv)
     if os.path.isdir(nv):
         return nv
     raise ValueError('%s is not an existing directory' % v)
 
 def existing_dirpath(v):
     import os
-    nv = os.path.expanduser(v)
+    nv = v % {'here':here}
+    nv = os.path.expanduser(nv)
     dir = os.path.dirname(nv)
     if not dir:
         # relative pathname with no directory component

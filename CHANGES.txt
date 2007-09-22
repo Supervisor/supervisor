@@ -190,6 +190,41 @@ Next Release
     e.g. "user:group".  Unices allow for dots in usernames, so this
     change is a bugfix.  Thanks to Ian Bicking for the bug report.
 
+  - If a '-c' option is not specified on the command line, both
+    supervisord and supervisorctl will search for one in the paths
+    './supervisord.conf' , './etc/supervisord.conf' (relative to the
+    current working dir when supervisord or supervisorctl is invoked)
+    or in '/etc/supervisord.conf' (the old default path).  These paths
+    are searched in order, and supervisord and supervisorctl will use
+    the first one found.  If none are found, supervisor will fail to
+    start.
+
+  - The Python string expression '%(here)s' (referring to the
+    directory in which the the configuration file was found) can be
+    used within the following sections/options within the config file:
+
+        unix_http_server:file
+        supervisor:directory
+        supervisor:logfile
+        supervisor:pidfile
+        supervisor:childlogdir
+        supervisor:environment
+        program:environment
+        program:stdout_logfile
+        program:stderr_logfile
+        program:process_name
+        program:command
+
+  - The '--environment' aka '-b' option was removed from the list of
+    available command-line switches to supervisord (use "A=1 B=2
+    bin/supervisord" instead).
+
+  - If the socket filename (the tail-end of the unix:// URL) was
+    longer than 64 characters, supervisorctl would fail with an
+    encoding error at startup.
+
+  - The 'identifier' command-line argument was not functional.
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC
