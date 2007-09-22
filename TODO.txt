@@ -1,5 +1,13 @@
+- Allow supervisorctl's tail -f to work over unix domain socket.
+
+- Allow effective user to switch to a particular group instead of
+  defaulting to the user's primary group:
+  http://www.plope.com/software/collector/233.
+
+- Allow sockchown group only: http://www.plope.com/software/collector/214
+
 - Change license to http://dist.repoze.org/LICENSE.txt (same license,
-  just no mention of Zope).
+  just no "Zope" anywhere).
 
 - Implement event max_retry counter that means "after X retries of a
   rejected event, go into FATAL state".
@@ -15,9 +23,6 @@
 
    - When we try to kill a process and the os.kill command raises an
      exception (stopProcess)
-
-- Make *:9001 work for port num (see
-  http://www.plope.com/software/collector/247)
 
 - Generalize eventlistener request/response protocol (wrap OK/FAIL in
   RESULT envelope) so we can use it for more specialized

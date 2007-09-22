@@ -1579,6 +1579,8 @@ def _init_signames():
             d[v] = k
     _signames = d
 
+# miscellaneous utility functions
+
 def expand(s, expansions, name):
     try:
         return s % expansions
@@ -1619,6 +1621,8 @@ def dedupe(L):
     for thing in L:
         D[thing] = 1
     return D.keys()
+
+# exceptions
 
 class ProcessException(Exception):
     """ Specialized exceptions used when attempting to start a process """

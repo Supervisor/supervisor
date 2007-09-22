@@ -124,16 +124,20 @@ class Subprocess:
             
         else:
             path = self.config.options.get_path()
-            filename = None
+            found = None
             st = None
             for dir in path:
-                filename = os.path.join(dir, program)
+                found = os.path.join(dir, program)
                 try:
-                    st = self.config.options.stat(filename)
+                    st = self.config.options.stat(found)
                 except OSError:
-                    filename = None
+                    pass
                 else:
                     break
+            if st is None:
+                filename = program
+            else:
+                filename = found
 
         # check_execv_args will raise a ProcessException if the execv
         # args are bogus, we break it out into a separate options

@@ -225,6 +225,9 @@ Next Release
 
   - The 'identifier' command-line argument was not functional.
 
+  - Fixed http://www.plope.com/software/collector/215 (bad error
+    message in supervisorctl when program command not found on PATH).
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

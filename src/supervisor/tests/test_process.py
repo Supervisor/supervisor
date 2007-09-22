@@ -109,14 +109,14 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig(options, 'notthere', 'notthere')
         instance = self._makeOne(config)
         args = instance.get_execv_args()
-        self.assertEqual(args, (None, ['notthere']))
+        self.assertEqual(args, ('notthere', ['notthere']))
 
     def test_get_execv_args_rel_withquotes_missing(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'notthere', 'notthere "an argument"')
         instance = self._makeOne(config)
         args = instance.get_execv_args()
-        self.assertEqual(args, (None, ['notthere', 'an argument']))
+        self.assertEqual(args, ('notthere', ['notthere', 'an argument']))
 
     def test_get_execv_args_abs(self):
         executable = '/bin/sh foo'
