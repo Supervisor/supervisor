@@ -788,7 +788,6 @@ class DummyProcessGroup:
         self.config = config
         self.transitioned = False
         self.all_stopped = False
-        self.delay_processes = []
         self.dispatchers = {}
         self.unstopped_processes = []
 
@@ -797,9 +796,6 @@ class DummyProcessGroup:
 
     def stop_all(self):
         self.all_stopped = True
-
-    def get_delay_processes(self):
-        return self.delay_processes
 
     def get_unstopped_processes(self):
         return self.unstopped_processes

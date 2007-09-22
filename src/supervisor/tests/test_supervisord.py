@@ -294,7 +294,7 @@ class SupervisordTests(unittest.TestCase):
         process = DummyProcess(pconfig)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
         pgroup = DummyProcessGroup(gconfig)
-        pgroup.delay_processes = [process]
+        pgroup.unstopped_processes = [process]
         L = []
         def callback():
             L.append(1)
@@ -303,7 +303,7 @@ class SupervisordTests(unittest.TestCase):
         import asyncore
         supervisord.options.test = True
         supervisord.runforever()
-        self.assertNotEqual(supervisord.lastdelayreport, 0)
+        self.assertNotEqual(supervisord.lastshutdownreport, 0)
 
     def test_getSupervisorStateDescription(self):
         from supervisor.states import getSupervisorStateDescription

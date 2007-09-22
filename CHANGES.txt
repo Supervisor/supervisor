@@ -228,6 +228,9 @@ Next Release
   - Fixed http://www.plope.com/software/collector/215 (bad error
     message in supervisorctl when program command not found on PATH).
 
+  - Some child processes may not have been shut down properly at
+    supervisor shutdown time.
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

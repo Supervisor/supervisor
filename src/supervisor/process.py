@@ -572,10 +572,6 @@ class ProcessGroupBase:
                 # BACKOFF -> FATAL
                 proc.give_up()
 
-    def get_delay_processes(self):
-        """ Processes which are starting or stopping """
-        return [ x for x in self.processes.values() if x.delay ]
-
     def get_unstopped_processes(self):
         """ Processes which aren't in a state that is considered 'stopped' """
         return [ x for x in self.processes.values() if x.get_state() not in

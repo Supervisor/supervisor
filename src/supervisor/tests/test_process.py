@@ -1103,18 +1103,17 @@ class ProcessGroupBaseTests(unittest.TestCase):
     def _makeOne(self, *args, **kw):
         return self._getTargetClass()(*args, **kw)
 
-    def test_get_delay_processes(self):
+    def test_get_unstopped_processes(self):
         options = DummyOptions()
         from supervisor.states import ProcessStates
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
         process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
-        process1.delay = 1
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
         group = self._makeOne(gconfig)
         group.processes = { 'process1': process1 }
-        delayed = group.get_delay_processes()
-        self.assertEqual(delayed, [process1])
-        
+        unstopped = group.get_unstopped_processes()
+        self.assertEqual(unstopped, [process1])
+
     def test_stop_all(self):
         from supervisor.states import ProcessStates
         options = DummyOptions()

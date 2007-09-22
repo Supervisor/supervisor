@@ -56,7 +56,7 @@ from supervisor.states import getProcessStateDescription
 
 class Supervisor:
     stopping = False # set after we detect that we are handling a stop request
-    lastdelayreport = 0 # throttle for delayed process error reports at stop
+    lastshutdownreport = 0 # throttle for delayed process error reports at stop
     process_groups = None # map of process group name to process group object
     stop_groups = None # list used for priority ordered shutdown
 
@@ -118,26 +118,26 @@ class Supervisor:
             process_map.update(group.get_dispatchers())
         return process_map
 
-    def get_delay_processes(self):
-        delayprocs = []
+    def shutdown_report(self):
+        unstopped = []
 
         pgroups = self.process_groups.values()
         for group in pgroups:
-            delayprocs.extend(group.get_delay_processes())
+            unstopped.extend(group.get_unstopped_processes())
 
-        if delayprocs:
+        if unstopped:
             # throttle 'waiting for x to die' reports
             now = time.time()
-            if now > (self.lastdelayreport + 3): # every 3 secs
-                names = [ p.config.name for p in delayprocs]
+            if now > (self.lastshutdownreport + 3): # every 3 secs
+                names = [ p.config.name for p in unstopped ]
                 namestr = ', '.join(names)
                 self.options.logger.info('waiting for %s to die' % namestr)
-                self.lastdelayreport = now
-                for proc in delayprocs:
+                self.lastshutdownreport = now
+                for proc in unstopped:
                     state = getProcessStateDescription(proc.get_state())
                     self.options.logger.blather(
                         '%s state: %s' % (proc.config.name, state))
-        return delayprocs
+        return unstopped
 
     def ordered_stop_groups_phase_1(self):
         if self.stop_groups:
@@ -181,9 +181,9 @@ class Supervisor:
 
                 self.ordered_stop_groups_phase_1()
 
-                if not self.get_delay_processes():
-                    # if there are no delayed processes (we're done killing
-                    # everything), it's OK to stop or reload
+                if not self.shutdown_report():
+                    # if there are no unstopped processes (we're done
+                    # killing everything), it's OK to swtop or reload
                     raise asyncore.ExitNow
 
             r, w, x = [], [], []
