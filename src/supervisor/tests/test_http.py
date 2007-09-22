@@ -1,8 +1,12 @@
 import sys
+import os
+import socket
+import tempfile
 import unittest
 
 from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import PopulatedDummySupervisor
+from supervisor.tests.base import DummyRPCInterfaceFactory
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyRequest
@@ -246,6 +250,66 @@ class DeferringHookedProducerTests(unittest.TestCase):
         producer = self._makeOne(wrapped, callback)
         self.assertEqual(producer.more(), '')
         self.assertEqual(L, [0])
+
+class TopLevelFunctionTests(unittest.TestCase):
+    def _make_http_servers(self, sconfigs):
+        options = DummyOptions()
+        options.server_configs = sconfigs
+        options.rpcinterface_factories = [('dummy',DummyRPCInterfaceFactory,{})]
+        supervisord = DummySupervisor()
+        from supervisor.http import make_http_servers
+        try:
+            servers = make_http_servers(options, supervisord)
+            for s in servers:
+                try:
+                    s.close()
+                except:
+                    pass
+            return servers
+        finally:
+            from asyncore import socket_map
+            socket_map.clear()
+            try:
+                os.unlink(socketfile)
+            except:
+                pass
+        
+    def test_make_http_servers_noauth(self):
+        socketfile = tempfile.mktemp()
+        inet = {'family':socket.AF_INET, 'host':'localhost', 'port':17735,
+                'username':None, 'password':None, 'section':'inet_http_server'}
+        unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':0700,
+                'chown':(-1, -1), 'username':None, 'password':None,
+                'section':'unix_http_server'}
+        servers = self._make_http_servers([inet, unix])
+        self.assertEqual(len(servers), 2)
+
+        inetdata = servers[0]
+        self.assertEqual(inetdata[0], inet)
+        server = inetdata[1]
+        paths = ['/RPC2', '/logtail', '/mainlogtail', '']
+        self.assertEqual([x.path for x in server.handlers], paths)
+
+        unixdata = servers[1]
+        self.assertEqual(unixdata[0], unix)
+        server = unixdata[1]
+        paths = ['/RPC2', '/logtail', '/mainlogtail', '']
+        self.assertEqual([x.path for x in server.handlers], paths)
+
+    def test_make_http_servers_withauth(self):
+        socketfile = tempfile.mktemp()
+        inet = {'family':socket.AF_INET, 'host':'localhost', 'port':17736,
+                'username':'username', 'password':'password',
+                'section':'inet_http_server'}
+        unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':0700,
+                'chown':(-1, -1), 'username':'username', 'password':'password',
+                'section':'unix_http_server'}
+        servers = self._make_http_servers([inet, unix])
+        self.assertEqual(len(servers), 2)
+        from medusa.auth_handler import auth_handler
+        for config, server in servers:
+            for handler in server.handlers:
+                self.failUnless(isinstance(handler, auth_handler), handler)
 
 class DummyProducer:
     def __init__(self, *data):

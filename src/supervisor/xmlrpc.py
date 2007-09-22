@@ -318,6 +318,7 @@ class RootRPCInterface:
             setattr(self, name, rpcinterface)
 
 class supervisor_xmlrpc_handler(xmlrpc_handler):
+    path = '/RPC2'
     def __init__(self, supervisord, subinterfaces):
         self.rpcinterface = RootRPCInterface(subinterfaces)
         self.supervisord = supervisord
@@ -331,7 +332,7 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
             self.loads = xmlrpclib.loads
 
     def match(self, request):
-        return request.uri.startswith('/RPC2')
+        return request.uri.startswith(self.path)
         
     def continue_request (self, data, request):
         logger = self.supervisord.options.logger

@@ -525,10 +525,14 @@ VIEWS = {
 
 class supervisor_ui_handler(default_handler.default_handler):
     IDENT = 'Supervisor Web UI HTTP Request Handler'
+    path = ''
 
     def __init__(self, filesystem, supervisord):
         self.supervisord = supervisord
         default_handler.default_handler.__init__(self, filesystem)
+
+    def match(self, request):
+        return request.uri.startswith(self.path)
 
     def get_view(self, request):
         path, params, query, fragment = request.split_uri()

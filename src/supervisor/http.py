@@ -825,9 +825,11 @@ def make_http_servers(options, supervisord):
             options.logger.critical(
                 'Server %r running without any HTTP '
                 'authentication checking' % config['section'])
+        # uihandler must be consulted last as its match method matches
+        # everything, so it's first here (indicating last checked)
+        hs.install_handler(uihandler)
         hs.install_handler(maintailhandler)
         hs.install_handler(tailhandler)
-        hs.install_handler(uihandler) # second-to-last for speed
         hs.install_handler(xmlrpchandler) # last for speed (first checked)
         servers.append((config, hs))
 

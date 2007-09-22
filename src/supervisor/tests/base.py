@@ -556,6 +556,11 @@ class DummyRequest:
     def log(self, *arg, **kw):
         pass
 
+class DummyRPCInterfaceFactory:
+    def __init__(self, supervisord, **config):
+        self.supervisord = supervisord
+        self.config = config
+
 class DummyRPCServer:
     def __init__(self):
         self.supervisor = DummySupervisorRPCNamespace()
