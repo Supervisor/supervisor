@@ -1,3 +1,7 @@
+- Supervisorctl tab completion and history.
+
+- Supervisorctl "debug" command (communicate with a process over its stdin).
+
 - Allow supervisorctl's tail -f to work over unix domain socket.
 
 - Allow effective user to switch to a particular group instead of
