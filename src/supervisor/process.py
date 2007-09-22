@@ -36,7 +36,6 @@ from supervisor.dispatchers import EventListenerStates
 from supervisor import events
 
 from supervisor.datatypes import RestartUnconditionally
-from supervisor.datatypes import RestartWhenExitUnexpected
 
 class Subprocess:
 

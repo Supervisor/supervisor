@@ -3,8 +3,6 @@ import time
 import datetime
 import errno
 
-from supervisor.datatypes import Automatic
-
 from supervisor.options import readFile
 from supervisor.options import tailFile
 from supervisor.options import NotExecutable
