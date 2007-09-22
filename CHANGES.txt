@@ -231,6 +231,10 @@ Next Release
   - Some child processes may not have been shut down properly at
     supervisor shutdown time.
 
+  - Move to ZPL-derived (but not ZPL) license availble from
+    http://www.repoze.org/LICENSE.txt; it's slightly less restrictive
+    than the ZPL (no servicemark clause).
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

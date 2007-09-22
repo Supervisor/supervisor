@@ -3,12 +3,12 @@
 # Copyright (c) 2007 Agendaless Consulting and Contributors.
 # All Rights Reserved.
 #
-# This software is subject to the provisions of the Zope Public License,
-# Version 2.1 (ZPL).  A copy of the ZPL should accompany this distribution.
-# THIS SOFTWARE IS PROVIDED "AS IS" AND ANY AND ALL EXPRESS OR IMPLIED
-# WARRANTIES ARE DISCLAIMED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF TITLE, MERCHANTABILITY, AGAINST INFRINGEMENT, AND FITNESS
-# FOR A PARTICULAR PURPOSE
+# This software is subject to the provisions of the BSD-like license at
+# http://www.repoze.org/LICENSE.txt.  A copy of the license should accompany
+# this distribution.  THIS SOFTWARE IS PROVIDED "AS IS" AND ANY AND ALL
+# EXPRESS OR IMPLIED WARRANTIES ARE DISCLAIMED, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF TITLE, MERCHANTABILITY, AGAINST INFRINGEMENT, AND
+# FITNESS FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
 
@@ -47,7 +47,6 @@ CLASSIFIERS = [
     'Development Status :: 5 - Production/Stable',
     'Environment :: No Input/Output (Daemon)',
     'Intended Audience :: System Administrators',
-    'License :: OSI Approved :: Zope Public License',
     'Natural Language :: English',
     'Operating System :: POSIX',
     'Topic :: System :: Boot',
@@ -61,7 +60,7 @@ supervisor_version = open(version_txt).read().strip()
 dist = setup(
     name = 'supervisor',
     version = supervisor_version,
-    license = 'ZPL 2.1/others (see LICENSES.txt)',
+    license = 'BSD-derived (http://www.repoze.org/LICENSE.txt)',
     url = 'http://www.plope.com/software/supervisor2/',
     description = "A system for controlling process state under UNIX",
     long_description= DESC,

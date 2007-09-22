@@ -8,9 +8,6 @@
 
 - Allow sockchown group only: http://www.plope.com/software/collector/214
 
-- Change license to http://dist.repoze.org/LICENSE.txt (same license,
-  just no "Zope" anywhere).
-
 - Implement event max_retry counter that means "after X retries of a
   rejected event, go into FATAL state".
 
