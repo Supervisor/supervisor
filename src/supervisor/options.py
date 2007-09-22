@@ -469,21 +469,6 @@ class ServerOptions(Options):
 
         self.identifier = section.identifier
 
-    def convert_sockchown(self, sockchown):
-        # Convert chown stuff to uid/gid
-        user = sockchown[0]
-        group = sockchown[1]
-        uid = name_to_uid(user)
-        if uid is None:
-            self.usage("No such sockchown user %s" % user)
-        if group is None:
-            gid = gid_for_uid(uid)
-        else:
-            gid = name_to_gid(group)
-            if gid is None:
-                self.usage("No such sockchown group %s" % group)
-        return uid, gid
-
     def read_config(self, fp):
         section = self.configroot.supervisord
         if not hasattr(fp, 'read'):
