@@ -129,7 +129,7 @@ class POutputDispatcher(PDispatcher):
         if data:
             config = self.process.config
             if config.options.strip_ansi:
-                data = config.options.stripEscapes(data)
+                data = stripEscapes(data)
             if self.childlog:
                 self.childlog.info(data)
             if self.log_to_mainlog:
@@ -282,7 +282,7 @@ class PEventListenerDispatcher(PDispatcher):
 
             if self.childlog:
                 if self.process.config.options.strip_ansi:
-                    data = self.process.config.options.stripEscapes(data)
+                    data = stripEscapes(data)
                 self.childlog.info(data)
         else:
             # if we get no data back from the pipe, it means that the
@@ -407,4 +407,30 @@ class PInputDispatcher(PDispatcher):
                     self.close()
                 else:
                     raise
+
+ANSI_ESCAPE_BEGIN = '\x1b['
+ANSI_TERMINATORS = ('H', 'f', 'A', 'B', 'C', 'D', 'R', 's', 'u', 'J', 
+                    'K', 'h', 'l', 'p', 'm')    
+    
+def stripEscapes(string):
+    """
+    Remove all ANSI color escapes from the given string.
+    """
+    result = ''
+    show = 1
+    i = 0
+    L = len(string)
+    while i < L:
+        if show == 0 and string[i] in ANSI_TERMINATORS:
+            show = 1
+        elif show:
+            n = string.find(ANSI_ESCAPE_BEGIN, i)
+            if n == -1:
+                return result + string[i:]
+            else:
+                result = result + string[i:n]
+                i = n
+                show = 0
+        i = i + 1
+    return result
 

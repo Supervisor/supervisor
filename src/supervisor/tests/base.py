@@ -205,11 +205,6 @@ class DummyOptions:
     def process_environment(self):
         self.environment_processed = True
 
-    def stripEscapes(self, data):
-        from supervisor.options import ServerOptions
-        o = ServerOptions()
-        return o.stripEscapes(data)
-
     def mktempfile(self, prefix, suffix, dir):
         return self.tempfile_name
 

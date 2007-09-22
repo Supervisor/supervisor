@@ -360,10 +360,6 @@ class ServerOptions(Options):
     unlink_socketfiles = True
     mood = states.SupervisorStates.RUNNING
     
-    ANSI_ESCAPE_BEGIN = '\x1b['
-    ANSI_TERMINATORS = ('H', 'f', 'A', 'B', 'C', 'D', 'R', 's', 'u', 'J', 
-                        'K', 'h', 'l', 'p', 'm')    
-    
     def __init__(self):
         Options.__init__(self)
         self.configroot = Dummy()
@@ -1011,28 +1007,6 @@ class ServerOptions(Options):
         except OSError:
             return 'Could not set group id of effective user'
         os.setuid(uid)
-
-    def stripEscapes(self, string):
-        """
-        Remove all ANSI color escapes from the given string.
-        """
-        result = ''
-        show = 1
-        i = 0
-        L = len(string)
-        while i < L:
-            if show == 0 and string[i] in self.ANSI_TERMINATORS:
-                show = 1
-            elif show:
-                n = string.find(self.ANSI_ESCAPE_BEGIN, i)
-                if n == -1:
-                    return result + string[i:]
-                else:
-                    result = result + string[i:n]
-                    i = n
-                    show = 0
-            i = i + 1
-        return result
 
     def waitpid(self):
         # need pthread_sigmask here to avoid concurrent sigchild, but
