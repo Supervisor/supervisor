@@ -1,4 +1,5 @@
-- Allow configuration relative to %(here)s (the location of the config file).
+- Change license to http://dist.repoze.org/LICENSE.txt (same license,
+  just no mention of Zope).
 
 - Implement event max_retry counter that means "after X retries of a
   rejected event, go into FATAL state".
