@@ -903,6 +903,10 @@ class ServerOptions(Options):
         except OSError:
             pass
 
+    def close_httpservers(self):
+        for config, server in self.httpservers:
+            server.close()
+
     def setsignals(self):
         signal.signal(signal.SIGTERM, self.sigreceiver)
         signal.signal(signal.SIGINT, self.sigreceiver)

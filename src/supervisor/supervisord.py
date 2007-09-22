@@ -317,8 +317,7 @@ def main(args=None, test=False):
             go(options)
         if test or (options.mood < SupervisorStates.RESTARTING):
             break
-        if options.httpserver:
-            options.httpserver.close()
+        options.close_httpservers()
         first = False
 
 def go(options):
