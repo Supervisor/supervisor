@@ -826,17 +826,18 @@ Subprocess Environment
   shell invocation for a particular user, you must do it explicitly
   within the "environment=" program config option.  For example::
 
-    [program:apache]
-    command=/home/chrism/bin/httpd -DNO_DETACH
+    [program:apache2]
+    command=/home/chrism/bin/httpd -c "ErrorLog /dev/stdout" -DFOREGROUND
     user=chrism
     environment=HOME=/home/chrism,USER=chrism
 
 Examples of Program Configurations
 
-  Apache 2.0.54::
+  Apache 2.2.6::
 
-    [program:apache]
-    command=/usr/sbin/httpd -DNO_DETACH
+    [program:apache2]
+    command=/path/to/httpd -c "ErrorLog /dev/stdout" -DFOREGROUND
+    redirect_stderr=true
 
   Postgres 8.14::
 
@@ -846,7 +847,7 @@ Examples of Program Configurations
     stopsignal=INT
     redirect_stderr=true
  
-  Zope 2.8 instances and ZEO::
+  Zope 2.X instances and ZEO::
 
     [program:zeo]
     command=/path/to/runzeo
