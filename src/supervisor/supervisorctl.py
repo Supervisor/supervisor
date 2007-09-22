@@ -95,7 +95,6 @@ class Controller(cmd.Cmd):
             except SystemExit:
                 raise
             except Exception, e:
-                raise
                 (file, fun, line), t, v, tbinfo = asyncore.compact_traceback()
                 error = 'error: %s, %s: file: %s line: %s' % (t, v, file, line)
                 self._output(error)
