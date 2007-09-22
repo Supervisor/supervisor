@@ -112,8 +112,6 @@
 
 - Command-line arg tests.
 
-- Log logtail requests.
-
 - Provide a way to get the supervisord pid from supervisorctl/web interface.
 
 
