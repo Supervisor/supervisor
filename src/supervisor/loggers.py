@@ -70,11 +70,15 @@ class Handler:
         try:
             self.stream.flush()
         except IOError, why:
-            # if supervisor output is piped, this can be raised at exit
+            # if supervisor output is piped, EPIPE can be raised at exit
             if why[0] != errno.EPIPE:
                 raise
 
     def close(self):
+        if hasattr(self.stream, 'fileno'):
+            fd = self.stream.fileno()
+            if fd < 3: # don't ever close stdout or stderr
+                return
         self.stream.close()
 
     def emit(self, record):
@@ -194,7 +198,14 @@ class RotatingFileHandler(FileHandler):
         """
         if self.maxBytes <= 0:
             return
-        
+
+        try:
+            pos = self.stream.tell()
+        except IOError, why:
+            # Attempt to trap IOError: [Errno 29] Illegal seek
+            print self.baseFilename, self.maxBytes, self.stream
+            raise
+            
         if not (self.stream.tell() >= self.maxBytes):
             return
 
@@ -244,6 +255,10 @@ class Logger:
         if handlers is None:
             handlers = []
         self.handlers = handlers
+
+    def close(self):
+        for handler in self.handlers:
+            handler.close()
 
     def blather(self, msg, **kw):
         if LevelsByName.BLAT >= self.level:

@@ -267,7 +267,6 @@ class DummyLogger:
     def getvalue(self):
         return ''.join(self.data)
 
-
 class DummySupervisor:
     def __init__(self, options=None, state=None, process_groups=None):
         if options is None:

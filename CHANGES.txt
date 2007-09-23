@@ -235,6 +235,10 @@ Next Release
     http://www.repoze.org/LICENSE.txt; it's slightly less restrictive
     than the ZPL (no servicemark clause).
 
+  - Spurious errors related to unclosed files ("bad file descriptor",
+    typically) were evident at supervisord "reload" time (when using
+    the "reload" command from supervisorctl).
+
 3.0a2
 
   - Fixed the README.txt example for defining the supervisor RPC

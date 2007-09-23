@@ -885,6 +885,9 @@ class ServerOptions(Options):
         for config, server in self.httpservers:
             server.close()
 
+    def close_logger(self):
+        self.logger.close()
+
     def setsignals(self):
         signal.signal(signal.SIGTERM, self.sigreceiver)
         signal.signal(signal.SIGINT, self.sigreceiver)
@@ -940,14 +943,8 @@ class ServerOptions(Options):
         return asyncore.socket_map
 
     def cleanup_fds(self):
-        # try to close any unused file descriptors to prevent leakage.
-        # we start at the "highest" descriptor in the asyncore socket map
-        # because this might be called remotely and we don't want to close
-        # the internet channel during this call.
-        asyncore_fds = asyncore.socket_map.keys()
+        # try to close any leaked file descriptors (for reload)
         start = 5
-        if asyncore_fds:
-            start = max(asyncore_fds) + 1
         for x in range(start, self.minfds):
             try:
                 os.close(x)

@@ -305,6 +305,24 @@ class ServerOptionsTests(unittest.TestCase):
             except OSError:
                 pass
 
+    def test_close_httpservers(self):
+        instance = self._makeOne()
+        class Server:
+            closed = False
+            def close(self):
+                self.closed = True
+        server = Server()
+        instance.httpservers = [({}, server)]
+        instance.close_httpservers()
+        self.assertEqual(server.closed, True)
+        
+    def test_close_logger(self):
+        instance = self._makeOne()
+        logger = DummyLogger()
+        instance.logger = logger
+        instance.close_logger()
+        self.assertEqual(logger.closed, True)
+
     def test_write_pidfile_ok(self):
         fn = tempfile.mktemp()
         try:

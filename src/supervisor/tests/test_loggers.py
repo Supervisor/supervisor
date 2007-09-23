@@ -271,12 +271,22 @@ class LoggerTests(unittest.TestCase):
         logger.critical('hello')
         self.assertEqual(len(handler.records), 1)
 
+    def test_close(self):
+        from supervisor.loggers import LevelsByName
+        handler = DummyHandler(LevelsByName.CRIT)
+        logger = self._makeOne(LevelsByName.CRIT, (handler,))
+        logger.close()
+        self.assertEqual(handler.closed, True)
+
 class DummyHandler:
+    close = False
     def __init__(self, level):
         self.level = level
         self.records = []
     def emit(self, record):
         self.records.append(record)
+    def close(self):
+        self.closed = True
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
