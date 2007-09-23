@@ -199,12 +199,7 @@ class RotatingFileHandler(FileHandler):
         if self.maxBytes <= 0:
             return
 
-        try:
-            pos = self.stream.tell()
-        except IOError, why:
-            # Attempt to trap IOError: [Errno 29] Illegal seek
-            print self.baseFilename, self.maxBytes, self.stream
-            raise
+        pos = self.stream.tell()
             
         if not (self.stream.tell() >= self.maxBytes):
             return
