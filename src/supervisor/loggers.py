@@ -199,8 +199,6 @@ class RotatingFileHandler(FileHandler):
         if self.maxBytes <= 0:
             return
 
-        pos = self.stream.tell()
-            
         if not (self.stream.tell() >= self.maxBytes):
             return
 
