@@ -25,7 +25,7 @@ Next Release
     for the given process.
 
   - When a process encounters a spawn error as a result of a failed
-    execve or when it cannot setuid to a given uid, it now puts this
+    execv or when it cannot setuid to a given uid, it now puts this
     info into the process' stderr log rather than its stdout log.
 
   - The event listener protocol header now contains the 'server'
