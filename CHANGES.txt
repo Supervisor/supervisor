@@ -1,4 +1,4 @@
-Next Release
+3.0a3
 
   - Supervisorctl now reports a better error message when the main
     supervisor XML-RPC namespace is not registered.  Thanks to
@@ -238,6 +238,8 @@ Next Release
   - Spurious errors related to unclosed files ("bad file descriptor",
     typically) were evident at supervisord "reload" time (when using
     the "reload" command from supervisorctl).
+
+  - Updated ez_setup.py to one that knows about setuptools 0.6c7.
 
 3.0a2
 
