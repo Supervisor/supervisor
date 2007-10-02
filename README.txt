@@ -12,7 +12,7 @@ History
 
   8/21/2007: updated for version 3.0a2
 
-  9/2/2007:  updated for version 3.0a3
+  10/2/2007:  updated for version 3.0a3
 
 Upgrading
 
