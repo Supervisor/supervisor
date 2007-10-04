@@ -283,6 +283,9 @@ class DummySupervisor:
         else:
             self.process_groups = process_groups
 
+    def get_state(self):
+        return self.options.mood
+
 class DummyProcess:
     # Initial state; overridden by instance variables
     pid = 0 # Subprocess pid; 0 when not running
