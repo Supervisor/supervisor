@@ -286,7 +286,10 @@ def profile(cmd, globals, locals, sort_order, callers):
     import tempfile
     fd, fn = tempfile.mkstemp()
     try:
-        profile.runctx(cmd, globals, locals, fn)
+        if hasattr(profile, 'runctx'):
+            profile.runctx(cmd, globals, locals, fn)
+        else:
+            raise NotImplementedError('No profiling support under Python 2.3')
         stats = pstats.Stats(fn)
         stats.strip_dirs()
         # calls,time,cumulative and cumulative,calls,time are useful

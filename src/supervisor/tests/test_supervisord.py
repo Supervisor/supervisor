@@ -35,27 +35,28 @@ class EntryPointTests(unittest.TestCase):
         output = new_stdout.getvalue()
         self.failUnless(output.find('supervisord started') != 1, output)
 
-    def test_main_profile(self):
-        from supervisor.supervisord import main
-        conf = os.path.join(
-            os.path.abspath(os.path.dirname(__file__)), 'fixtures',
-            'donothing.conf')
-        import StringIO
-        new_stdout = StringIO.StringIO()
-        old_stdout = sys.stdout
-        try:
-            tempdir = tempfile.mkdtemp()
-            log = os.path.join(tempdir, 'log')
-            pid = os.path.join(tempdir, 'pid')
-            sys.stdout = new_stdout
-            main(args=['-c', conf, '-l', log, '-j', pid, '-n',
-                       '--profile_options=cumulative,calls'], test=True)
-        finally:
-            sys.stdout = old_stdout
-            shutil.rmtree(tempdir)
-        output = new_stdout.getvalue()
-        self.failUnless(output.find('cumulative time, call count') != -1,
-                        output)
+    if sys.version_info[:2] >= (2, 4):
+        def test_main_profile(self):
+            from supervisor.supervisord import main
+            conf = os.path.join(
+                os.path.abspath(os.path.dirname(__file__)), 'fixtures',
+                'donothing.conf')
+            import StringIO
+            new_stdout = StringIO.StringIO()
+            old_stdout = sys.stdout
+            try:
+                tempdir = tempfile.mkdtemp()
+                log = os.path.join(tempdir, 'log')
+                pid = os.path.join(tempdir, 'pid')
+                sys.stdout = new_stdout
+                main(args=['-c', conf, '-l', log, '-j', pid, '-n',
+                           '--profile_options=cumulative,calls'], test=True)
+            finally:
+                sys.stdout = old_stdout
+                shutil.rmtree(tempdir)
+            output = new_stdout.getvalue()
+            self.failUnless(output.find('cumulative time, call count') != -1,
+                            output)
 
 class SupervisordTests(unittest.TestCase):
     def tearDown(self):

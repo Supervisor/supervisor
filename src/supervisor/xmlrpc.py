@@ -544,7 +544,7 @@ try:
         "dateTime.iso8601": lambda x: make_datetime(x.text),
         "array": lambda x: [v.text for v in x],
         "data": lambda x: x[0].text,
-        "struct": lambda x: dict((k.text or "", v.text) for k, v in x),
+        "struct": lambda x: dict([(k.text or "", v.text) for k, v in x]),
         "base64": lambda x: decodestring(x.text or ""),
         "value": lambda x: x[0].text,
         "param": lambda x: x[0].text,
@@ -561,7 +561,7 @@ try:
             elif elem.tag == "methodName":
                 method = elem.text
             elif elem.tag == "params":
-                params = tuple(v.text for v in elem)
+                params = tuple([v.text for v in elem])
         return params, method
 
 except ImportError:

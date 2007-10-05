@@ -1,3 +1,7 @@
+Next Release
+
+  - 3.0a3 broke Python 2.3 backwards compatibility.
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main
