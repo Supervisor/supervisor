@@ -2,6 +2,14 @@ Next Release
 
   - 3.0a3 broke Python 2.3 backwards compatibility.
 
+  - On Debian Sarge, one user reported that a call to
+    options.mktempfile would fail with an "[Errno 9] Bad file
+    descriptor" at supervisord startup time.  I was unable to
+    reproduce this, but we found a workaround that seemed to work for
+    him and it's included in this release.  See
+    http://www.plope.com/software/collector/252 for more information.
+    Thanks to William Dode.
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main

@@ -1120,6 +1120,10 @@ class ServerOptions(Options):
         return os.execve(filename, argv, env)
 
     def mktempfile(self, suffix, prefix, dir):
+        # set os._urandomfd as a hack around bad file descriptor bug
+        # seen in the wild, see
+        # http://www.plope.com/software/collector/252
+        os._urandomfd = None 
         fd, filename = tempfile.mkstemp(suffix, prefix, dir)
         os.close(fd)
         return filename
