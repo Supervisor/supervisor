@@ -10,6 +10,10 @@ Next Release
     http://www.plope.com/software/collector/252 for more information.
     Thanks to William Dode.
 
+  - The fault ALREADY_TERMINATED has been removed.  It was only 
+    raised by supervisor.sendProcessStdin().  That method now returns 
+    NOT_RUNNING for parity with the other methods. (Mike Naberezny)
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main

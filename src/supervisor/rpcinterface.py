@@ -634,9 +634,9 @@ class SupervisorNamespaceRPCInterface:
         If non-7-bit data is sent (unicode), it is encoded to utf-8
         before being sent to the process' stdin.  If chars is not a
         string or is not unicode, raise INCORRECT_PARAMETERS.  If the
-        process has already been terminated, raise ALREADY_TERMINATED.
-        If the process' stdin cannot accept input (e.g. it was closed
-        by the child process), raise NO_FILE.
+        process is not running, raise NOT_RUNNING.  If the process' 
+        stdin cannot accept input (e.g. it was closed by the child 
+        process), raise NO_FILE.
 
         @param string name        The process name to send to (or 'group:name')
         @param string chars       The character data to send to the process
@@ -656,7 +656,7 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.BAD_NAME, name)
 
         if not process.pid or process.killing:
-            raise RPCError(Faults.ALREADY_TERMINATED, name)
+            raise RPCError(Faults.NOT_RUNNING, name)
 
         try:
             process.write(chars)

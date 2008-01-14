@@ -1327,18 +1327,18 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                              interface.sendProcessStdin,
                              'nonexistant_process_name', 'chars for stdin')
 
-    def test_sendProcessStdin_raises_already_termed_when_not_process_pid(self):
+    def test_sendProcessStdin_raises_not_running_when_not_process_pid(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', 'foo')
         supervisord = PopulatedDummySupervisor(options, 'process1', pconfig1)
         supervisord.set_procattr('process1', 'pid', 0)
         interface = self._makeOne(supervisord)
         from supervisor import xmlrpc
-        self._assertRPCError(xmlrpc.Faults.ALREADY_TERMINATED,
+        self._assertRPCError(xmlrpc.Faults.NOT_RUNNING,
                             interface.sendProcessStdin,
                             'process1', 'chars for stdin')
 
-    def test_sendProcessStdin_raises_already_termed_when_killing(self):
+    def test_sendProcessStdin_raises_not_running_when_killing(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', 'foo')
         supervisord = PopulatedDummySupervisor(options, 'process1', pconfig1)
@@ -1346,7 +1346,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.set_procattr('process1', 'killing',True)
         interface   = self._makeOne(supervisord)
         from supervisor import xmlrpc
-        self._assertRPCError(xmlrpc.Faults.ALREADY_TERMINATED,
+        self._assertRPCError(xmlrpc.Faults.NOT_RUNNING,
                              interface.sendProcessStdin,
                              'process1', 'chars for stdin')
         

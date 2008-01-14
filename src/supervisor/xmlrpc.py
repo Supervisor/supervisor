@@ -44,7 +44,6 @@ class Faults:
     NOT_RUNNING = 70
     SUCCESS = 80
     TIMED_OUT = 90
-    ALREADY_TERMINATED = 200
 
 def getFaultDescription(code):
     for faultname in Faults.__dict__:
