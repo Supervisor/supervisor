@@ -14,6 +14,8 @@ Next Release
     raised by supervisor.sendProcessStdin().  That method now returns 
     NOT_RUNNING for parity with the other methods. (Mike Naberezny)
 
+  - The fault TIMED_OUT has been removed.  It was not used.
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main
