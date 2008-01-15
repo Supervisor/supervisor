@@ -1,3 +1,5 @@
+- Allow users to specify SHA hash of stored password in supervisord.conf.
+
 - Supervisorctl tab completion and history.
 
 - Supervisorctl "debug" command (communicate with a process over its stdin).
