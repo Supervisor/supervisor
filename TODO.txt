@@ -1,3 +1,5 @@
+- Create a PROCESS_STATE_CHANGE_EXITED_UNEXPECTEDLY event.
+
 - Allow users to specify SHA hash of stored password in supervisord.conf.
 
 - Supervisorctl tab completion and history.
