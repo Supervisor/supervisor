@@ -16,6 +16,7 @@ Next Release
 
   - The fault TIMED_OUT has been removed.  It was not used.
 
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main
