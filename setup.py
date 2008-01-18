@@ -1,4 +1,3 @@
-
 ##############################################################################
 #
 # Copyright (c) 2007 Agendaless Consulting and Contributors.
@@ -12,7 +11,6 @@
 # FITNESS FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
-
 
 __revision__ = '$Id$'
 
@@ -77,7 +75,7 @@ dist = setup(
     data_files=[ ('doc', ['sample.conf', 'README.txt', 'UPGRADING.txt',
                           'CHANGES.txt', 'TODO.txt', 'LICENSES.txt',
                           'COPYRIGHT.txt'])],
-    install_requires = ['medusa >= 0.5.4', 'meld3 >= 0.6.3',
+    install_requires = ['medusa >= 0.5.4', 'meld3 >= 0.6.4',
                         'elementtree >= 1.2.6,<1.2.7'],
     extras_require = {'iterparse':['cElementTree >= 1.0.2']},
     tests_require = ['meld3 >= 0.6.3', 'medusa >= 0.5.4'],
