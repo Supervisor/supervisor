@@ -29,6 +29,7 @@ import resource
 import stat
 import pkg_resources
 import select
+import glob
 
 from fcntl import fcntl
 from fcntl import F_SETFL, F_GETFL
@@ -471,6 +472,23 @@ class ServerOptions(Options):
                 raise ValueError("could not find config file %s" % fp)
         parser = UnhosedConfigParser()
         parser.readfp(fp)
+
+        if parser.has_section('include'):
+            if not parser.has_option('include', 'files'):
+                raise ValueError(".ini file has [include] section, but no "
+                "files setting")
+            files = parser.get('include', 'files')
+            files = files.split()
+            if hasattr(fp, 'name'):
+                base = os.path.dirname(os.path.abspath(fp.name))
+            else:
+                base = '.'
+            for pattern in files:
+                pattern = os.path.join(base, pattern)
+                for filename in glob.glob(pattern):
+                    self.parse_warnings.append(
+                        'Included extra file "%s" during parsing' % filename)
+                    parser.read(filename)
 
         sections = parser.sections()
         if not 'supervisord' in sections:

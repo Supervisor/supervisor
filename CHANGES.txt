@@ -33,6 +33,11 @@ Next Release
     the first integer that 'numprocs' will begin to start from.
     Contributed by Antonio Beamud Montero.
 
+  - Added capability for '[include]' config section to config format.
+    This section must contain a single key "files", which must name a
+    space-separated list of file globs that will be included in
+    supervisor's configuration.  Contributed by Ian Bicking.
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main
