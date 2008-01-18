@@ -16,6 +16,11 @@ Next Release
 
   - The fault TIMED_OUT has been removed.  It was not used.
 
+  - Supervisor now depends on meld3 0.6.4, which does not compile its
+    C extensions by default, so there is no more need to faff around
+    with NO_MELD3_EXTENSION_MODULES during installation if you don't
+    have a C compiler or the Python development libraries on your
+    system.
 
 3.0a3
 
