@@ -22,6 +22,12 @@ Next Release
     have a C compiler or the Python development libraries on your
     system.
 
+  - Instead of making a user root around for the sample.conf file,
+    provide a convenience command "echo_supervisord_conf", which he can
+    use to echo the sample.conf to his terminal (and redirect to a file 
+    appropriately).  This is a new user convenience (especially one who
+    has no Python experience).
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main
