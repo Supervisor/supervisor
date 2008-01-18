@@ -603,6 +603,7 @@ class ServerOptions(Options):
         exitcodes = list_of_exitcodes(get(section, 'exitcodes', '0,2'))
         redirect_stderr = boolean(get(section, 'redirect_stderr','false'))
         numprocs = integer(get(section, 'numprocs', 1))
+        numprocs_start = integer(get(section, 'numprocs_start', 0))
         process_name = get(section, 'process_name', '%(program_name)s')
         environment_str = get(section, 'environment', '')
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
@@ -640,8 +641,7 @@ class ServerOptions(Options):
                     'rollover, set maxbytes > 0 to avoid filling up '
                     'filesystem unintentionally' % (section, n))
                 
-        for process_num in range(0, numprocs):
-
+        for process_num in range(numprocs_start, numprocs + numprocs_start):
             expansions = {'here':self.here,
                           'process_num':process_num,
                           'program_name':program_name,

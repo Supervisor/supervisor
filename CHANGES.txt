@@ -28,6 +28,11 @@ Next Release
     appropriately).  This is a new user convenience (especially one who
     has no Python experience).
 
+  - Added 'numprocs_start' config option to '[program:x]' and
+    '[eventlistener:x]' sections.  This is an offset used to compute
+    the first integer that 'numprocs' will begin to start from.
+    Contributed by Antonio Beamud Montero.
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main
