@@ -72,9 +72,15 @@ dist = setup(
     package_dir = {'':'src'},
     packages = find_packages(os.path.join(here, 'src')),
     # put data files in egg 'doc' dir
-    data_files=[ ('doc', ['sample.conf', 'README.txt', 'UPGRADING.txt',
-                          'CHANGES.txt', 'TODO.txt', 'LICENSES.txt',
-                          'COPYRIGHT.txt'])],
+    data_files=[ ('doc', [
+        'README.txt',
+        'UPGRADING.txt',
+        'CHANGES.txt',
+        'TODO.txt',
+        'LICENSES.txt',
+        'COPYRIGHT.txt'
+        ]
+    )],
     install_requires = ['medusa >= 0.5.4', 'meld3 >= 0.6.4',
                         'elementtree >= 1.2.6,<1.2.7'],
     extras_require = {'iterparse':['cElementTree >= 1.0.2']},
@@ -88,6 +94,7 @@ dist = setup(
      'console_scripts': [
          'supervisord = supervisor.supervisord:main',
          'supervisorctl = supervisor.supervisorctl:main',
+         'echo_supervisord_conf = supervisor.confecho:main',
          ],
       },
     )
