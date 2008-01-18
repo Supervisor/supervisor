@@ -1474,13 +1474,13 @@ FAQ
 Maillist, Reporting Bugs, and Viewing the CVS Repository
 
   You may subscribe to the 'Supervisor-users'
-  "maillist":http://lists.palladion.com/mailman/listinfo/supervisor-users
+  "maillist":http://supervisord.org/mailman/listinfo/supervisor-users
 
   Please report bugs at "the
   collector":http://www.plope.com/software/collector .
 
-  You can view the CVS repository for supervisor at
-  http://cvs.plope.com/viewcvs/Packages/supervisor2/ 
+  You can view the Subversion repository for supervisor at
+  http://svn.supervisord.org
 
 Contributing
 
