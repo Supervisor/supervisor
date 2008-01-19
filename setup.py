@@ -95,6 +95,7 @@ dist = setup(
          'supervisord = supervisor.supervisord:main',
          'supervisorctl = supervisor.supervisorctl:main',
          'echo_supervisord_conf = supervisor.confecho:main',
+         'pidproxy = supervisor.pidproxy:main',
          ],
       },
     )
