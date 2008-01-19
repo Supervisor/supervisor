@@ -38,6 +38,11 @@ Next Release
     space-separated list of file globs that will be included in
     supervisor's configuration.  Contributed by Ian Bicking.
 
+  - Invoking the 'reload' supervisorctl command could trigger a bug in
+    supervisord which caused it to crash.  See
+    http://www.plope.com/software/collector/253 .  Thanks to William
+    Dode for a bug report.
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main

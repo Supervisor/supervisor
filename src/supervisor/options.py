@@ -902,6 +902,22 @@ class ServerOptions(Options):
     def close_httpservers(self):
         for config, server in self.httpservers:
             server.close()
+            map = self.get_socket_map()
+            # server._map is a reference to the asyncore socket_map
+            for dispatcher in map.values():
+                # For unknown reasons, sometimes an http_channel
+                # dispatcher in the socket map related to servers
+                # remains open *during a reload*.  If one of these
+                # exists at this point, we need to close it by hand
+                # (thus removing it from the asyncore.socket_map).  If
+                # we don't do this, 'cleanup_fds' will cause its file
+                # descriptor to be closed, but it will still remain in
+                # the socket_map, and eventually its file descriptor
+                # will be passed to # select(), which will bomb.  See
+                # also http://www.plope.com/software/collector/253
+                dispatcher_server = getattr(dispatcher, 'server', None)
+                if dispatcher_server is server:
+                    dispatcher.close()
 
     def close_logger(self):
         self.logger.close()
