@@ -45,6 +45,17 @@ Next Release
 
   - The 'pidproxy' script was made into a console script.
 
+  - The 'password' value in both the '[inet_http_server]' and
+    '[unix_http_server]' sections can now optionally be specified as a
+    SHA hexdigest instead of as cleartext.  Values prefixed with
+    '{SHA}' will be considered SHA hex digests.  To encrypt a password
+    to a form suitable for pasting into the configuration file using
+    Python, do, e.g.:
+
+       >>> import sha
+       >>> '{SHA}' + sha.new('thepassword').hexdigest()
+       '{SHA}82ab876d1387bfafe46cc1c8a2ef074eae50cb1d'
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main

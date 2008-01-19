@@ -27,6 +27,8 @@ from medusa import http_server
 from medusa import producers
 from medusa import filesys
 
+from medusa.auth_handler import auth_handler
+
 class NOT_DONE_YET:
     pass
 
@@ -817,11 +819,10 @@ def make_http_servers(options, supervisord):
             # wrap the xmlrpc handler and tailhandler in an authentication
             # handler
             users = {username:password}
-            from medusa.auth_handler import auth_handler
-            xmlrpchandler = auth_handler(users, xmlrpchandler)
-            tailhandler = auth_handler(users, tailhandler)
-            maintailhandler = auth_handler(users, maintailhandler)
-            uihandler = auth_handler(users, uihandler)
+            xmlrpchandler = supervisor_auth_handler(users, xmlrpchandler)
+            tailhandler = supervisor_auth_handler(users, tailhandler)
+            maintailhandler = supervisor_auth_handler(users, maintailhandler)
+            uihandler = supervisor_auth_handler(users, uihandler)
         else:
             options.logger.critical(
                 'Server %r running without any HTTP '
@@ -835,3 +836,27 @@ def make_http_servers(options, supervisord):
         servers.append((config, hs))
 
     return servers
+
+class encrypted_dictionary_authorizer:
+    def __init__ (self, dict):
+        self.dict = dict
+
+    def authorize(self, auth_info):
+        username, password = auth_info
+        if self.dict.has_key(username):
+            stored_password = self.dict[username]
+            if stored_password.startswith('{SHA}'):
+                import sha
+                password_hash = sha.new(password).hexdigest()
+                return stored_password[5:] == password_hash
+            else:
+                return stored_password == password
+        else:
+            return False
+
+class supervisor_auth_handler(auth_handler):
+    def __init__(self, dict, handler, realm='default'):
+        auth_handler.__init__(self, dict, handler, realm)
+        # override the authorizer with one that knows about SHA hashes too
+        self.authorizer = encrypted_dictionary_authorizer(dict)
+        

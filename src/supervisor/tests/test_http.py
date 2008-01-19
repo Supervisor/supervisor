@@ -10,7 +10,6 @@ from supervisor.tests.base import DummyRPCInterfaceFactory
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyRequest
-from supervisor.tests.base import DummyProcess
 
 from supervisor.http import NOT_DONE_YET
 
@@ -251,6 +250,53 @@ class DeferringHookedProducerTests(unittest.TestCase):
         self.assertEqual(producer.more(), '')
         self.assertEqual(L, [0])
 
+class EncryptedDictionaryAuthorizedTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.http import encrypted_dictionary_authorizer
+        return encrypted_dictionary_authorizer
+
+    def _makeOne(self, dict):
+        return self._getTargetClass()(dict)
+
+    def test_authorize_baduser(self):
+        authorizer = self._makeOne({})
+        self.assertEqual(authorizer.authorize(('foo', 'bar')), False)
+        
+    def test_authorize_gooduser_badpassword(self):
+        authorizer = self._makeOne({'foo':'password'})
+        self.assertEqual(authorizer.authorize(('foo', 'bar')), False)
+
+    def test_authorize_gooduser_goodpassword(self):
+        authorizer = self._makeOne({'foo':'password'})
+        self.assertEqual(authorizer.authorize(('foo', 'password')), True)
+    
+    def test_authorize_gooduser_badpassword_sha(self):
+        import sha
+        password = '{SHA}' + sha.new('password').hexdigest()
+        authorizer = self._makeOne({'foo':password})
+        self.assertEqual(authorizer.authorize(('foo', 'bar')), False)
+
+    def test_authorize_gooduser_goodpassword_sha(self):
+        import sha
+        password = '{SHA}' + sha.new('password').hexdigest()
+        authorizer = self._makeOne({'foo':password})
+        self.assertEqual(authorizer.authorize(('foo', 'password')), True)
+
+class SupervisorAuthHandlerTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.http import supervisor_auth_handler
+        return supervisor_auth_handler
+
+    def _makeOne(self, dict, handler):
+        return self._getTargetClass()(dict, handler)
+
+    def test_ctor(self):
+        handler = self._makeOne({'a':1}, None)
+        from supervisor.http import encrypted_dictionary_authorizer
+        self.assertEqual(handler.authorizer.__class__,
+                         encrypted_dictionary_authorizer)
+    
+
 class TopLevelFunctionTests(unittest.TestCase):
     def _make_http_servers(self, sconfigs):
         options = DummyOptions()
@@ -306,10 +352,11 @@ class TopLevelFunctionTests(unittest.TestCase):
                 'section':'unix_http_server'}
         servers = self._make_http_servers([inet, unix])
         self.assertEqual(len(servers), 2)
-        from medusa.auth_handler import auth_handler
+        from supervisor.http import supervisor_auth_handler
         for config, server in servers:
             for handler in server.handlers:
-                self.failUnless(isinstance(handler, auth_handler), handler)
+                self.failUnless(isinstance(handler, supervisor_auth_handler),
+                                handler)
 
 class DummyProducer:
     def __init__(self, *data):
