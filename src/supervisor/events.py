@@ -12,9 +12,6 @@
 #
 ##############################################################################
 
-import types
-
-from supervisor.states import ProcessStates
 from supervisor.states import getProcessStateDescription
 
 callbacks = []
@@ -38,6 +35,7 @@ class ProcessCommunicationEvent(Event):
     # event mode tokens
     BEGIN_TOKEN = '<!--XSUPERVISOR:BEGIN-->'
     END_TOKEN   = '<!--XSUPERVISOR:END-->'
+
     def __init__(self, process, pid, data):
         self.process = process
         self.pid = pid
@@ -59,78 +57,6 @@ class ProcessCommunicationStdoutEvent(ProcessCommunicationEvent):
 class ProcessCommunicationStderrEvent(ProcessCommunicationEvent):
     channel = 'stderr'
 
-class ProcessStateChangeEvent(Event):
-    """ Abstract class, never raised directly """
-    frm = None
-    to = None
-    def __init__(self, process, pid):
-        self.process = process
-        self.pid = pid
-
-    def __str__(self):
-        groupname = ''
-        if self.process.group is not None:
-            groupname = self.process.group.config.name
-        return 'processname:%s groupname:%s pid:%s' % (
-            self.process.config.name,
-            groupname,
-            self.pid)
-
-class StartingFromStoppedEvent(ProcessStateChangeEvent):
-    frm = ProcessStates.STOPPED
-    to = ProcessStates.STARTING
-
-class StartingFromBackoffEvent(ProcessStateChangeEvent):
-    frm = ProcessStates.BACKOFF
-    to = ProcessStates.STARTING
-
-class StartingFromExitedEvent(ProcessStateChangeEvent):
-    frm = ProcessStates.EXITED
-    to = ProcessStates.STARTING
-
-class StartingFromFatalEvent(ProcessStateChangeEvent):
-    frm = ProcessStates.FATAL
-    to = ProcessStates.STARTING
-
-class RunningFromStartingEvent(ProcessStateChangeEvent):
-    frm = ProcessStates.STARTING
-    to = ProcessStates.RUNNING
-
-class BackoffFromStartingEvent(ProcessStateChangeEvent):
-    frm = ProcessStates.STARTING
-    to = ProcessStates.BACKOFF
-
-class StoppingFromRunningEvent(ProcessStateChangeEvent):
-    frm = ProcessStates.RUNNING
-    to = ProcessStates.STOPPING
-
-class StoppingFromStartingEvent(ProcessStateChangeEvent):
-    frm = ProcessStates.STARTING
-    to = ProcessStates.STOPPING
-
-class ExitedOrStoppedEvent(ProcessStateChangeEvent):
-    """ Abstract class, never raised directly """
-    frm = None
-    to = None
-
-class ExitedFromRunningEvent(ExitedOrStoppedEvent):
-    frm = ProcessStates.RUNNING
-    to = ProcessStates.EXITED
-
-class StoppedFromStoppingEvent(ExitedOrStoppedEvent):
-    frm = ProcessStates.STOPPING
-    to = ProcessStates.STOPPED
-
-class FatalFromBackoffEvent(ProcessStateChangeEvent):
-    frm = ProcessStates.BACKOFF
-    to = ProcessStates.FATAL
-
-_ANY = ()
-
-class ToUnknownEvent(ProcessStateChangeEvent):
-    frm = _ANY
-    to = ProcessStates.UNKNOWN
-
 class SupervisorStateChangeEvent(Event):
     """ Abstract class """
     def __str__(self):
@@ -147,26 +73,80 @@ class EventRejectedEvent:
         self.process = process
         self.event = event
 
+class ProcessStateEvent(Event):
+    """ Abstract class, never raised directly """
+    frm = None
+    to = None
+    def __init__(self, process, from_state, expected=True):
+        self.process = process
+        self.from_state = from_state
+        self.expected = expected
+        # we eagerly render these so if the process pid, etc changes beneath
+        # us, we stash the values at the time the event was sent
+        self.extra_values = self.get_extra_values()
+
+    def __str__(self):
+        groupname = ''
+        if self.process.group is not None:
+            groupname = self.process.group.config.name
+        L = []
+        L.append(('processname',  self.process.config.name))
+        L.append(('groupname', groupname))
+        L.append(('from_state', getProcessStateDescription(self.from_state)))
+        L.extend(self.extra_values)
+        s = ' '.join( [ '%s:%s' % (name, val) for (name, val) in L ] )
+        return s
+
+    def get_extra_values(self):
+        return []
+
+class ProcessStateFatalEvent(ProcessStateEvent):
+    pass
+
+class ProcessStateUnknownEvent(ProcessStateEvent):
+    pass
+
+class ProcessStateStartingOrBackoffEvent(ProcessStateEvent):
+    def get_extra_values(self):
+        return [('tries', int(self.process.backoff))]
+
+class ProcessStateBackoffEvent(ProcessStateStartingOrBackoffEvent):
+    pass
+
+class ProcessStateStartingEvent(ProcessStateStartingOrBackoffEvent):
+    pass
+
+class ProcessStateExitedEvent(ProcessStateEvent):
+    def get_extra_values(self):
+        return [('expected', int(self.expected)), ('pid', self.process.pid)]
+
+class ProcessStateRunningEvent(ProcessStateEvent):
+    def get_extra_values(self):
+        return [('pid', self.process.pid)]
+
+class ProcessStateStoppingEvent(ProcessStateEvent):
+    def get_extra_values(self):
+        return [('pid', self.process.pid)]
+
+class ProcessStateStoppedEvent(ProcessStateEvent):
+    def get_extra_values(self):
+        return [('pid', self.process.pid)]
+
 class EventTypes:
-    EVENT = Event
-    PROCESS_STATE_CHANGE = ProcessStateChangeEvent
-    PROCESS_STATE_CHANGE_STARTING_FROM_STOPPED = StartingFromStoppedEvent
-    PROCESS_STATE_CHANGE_STARTING_FROM_BACKOFF = StartingFromBackoffEvent
-    PROCESS_STATE_CHANGE_STARTING_FROM_EXITED = StartingFromExitedEvent
-    PROCESS_STATE_CHANGE_STARTING_FROM_FATAL = StartingFromFatalEvent
-    PROCESS_STATE_CHANGE_RUNNING_FROM_STARTING = RunningFromStartingEvent
-    PROCESS_STATE_CHANGE_BACKOFF_FROM_STARTING = BackoffFromStartingEvent
-    PROCESS_STATE_CHANGE_STOPPING_FROM_RUNNING = StoppingFromRunningEvent
-    PROCESS_STATE_CHANGE_STOPPING_FROM_STARTING = StoppingFromStartingEvent
-    PROCESS_STATE_CHANGE_EXITED_OR_STOPPED = ExitedOrStoppedEvent
-    PROCESS_STATE_CHANGE_EXITED_FROM_RUNNING = ExitedFromRunningEvent
-    PROCESS_STATE_CHANGE_STOPPED_FROM_STOPPING = StoppedFromStoppingEvent
-    PROCESS_STATE_CHANGE_FATAL_FROM_BACKOFF = FatalFromBackoffEvent
-    PROCESS_STATE_CHANGE_TO_UNKNOWN = ToUnknownEvent
-    PROCESS_COMMUNICATION = ProcessCommunicationEvent
+    EVENT = Event # abstract
+    PROCESS_STATE = ProcessStateEvent # abstract
+    PROCESS_STATE_STOPPED = ProcessStateStoppedEvent
+    PROCESS_STATE_EXITED = ProcessStateExitedEvent
+    PROCESS_STATE_STARTING = ProcessStateStartingEvent
+    PROCESS_STATE_STOPPING = ProcessStateStoppingEvent
+    PROCESS_STATE_BACKOFF = ProcessStateBackoffEvent
+    PROCESS_STATE_FATAL = ProcessStateFatalEvent
+    PROCESS_STATE_RUNNING = ProcessStateRunningEvent
+    PROCESS_STATE_UNKNOWN = ProcessStateUnknownEvent
+    PROCESS_COMMUNICATION = ProcessCommunicationEvent # abstract
     PROCESS_COMMUNICATION_STDOUT = ProcessCommunicationStdoutEvent
     PROCESS_COMMUNICATION_STDERR = ProcessCommunicationStderrEvent
-    SUPERVISOR_STATE_CHANGE = SupervisorStateChangeEvent
+    SUPERVISOR_STATE_CHANGE = SupervisorStateChangeEvent # abstract
     SUPERVISOR_STATE_CHANGE_RUNNING = SupervisorRunningEvent
     SUPERVISOR_STATE_CHANGE_STOPPING = SupervisorStoppingEvent
 
@@ -175,31 +155,7 @@ def getEventNameByType(requested):
         if typ is requested:
             return name
 
-_map = {}
 
-def _makeProcessStateChangeMap():
-    states = ProcessStates.__dict__.values()
-    for old_state in states:
-        for new_state in states:
-            for name, typ in EventTypes.__dict__.items():
-                if type(typ) is types.ClassType:
-                    if issubclass(typ, ProcessStateChangeEvent):
-                        if typ.frm == old_state or typ.frm is _ANY:
-                            if typ.to == new_state or typ.to is _ANY:
-                                _map[(old_state, new_state)] = typ
-
-_makeProcessStateChangeMap()
-
-def getProcessStateChangeEventType(old_state, new_state):
-    typ = _map.get((old_state, new_state))
-    if typ is None:
-        old_desc = getProcessStateDescription(old_state)
-        new_desc = getProcessStateDescription(new_state)
-        raise NotImplementedError(
-            'Unknown transition (%s (%s) -> %s (%s))' % (
-            old_desc, old_state, new_desc, new_state)
-            )
-    return typ
         
         
 

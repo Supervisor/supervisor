@@ -146,12 +146,33 @@ class Subprocess:
 
         return filename, commandargs
 
-    def change_state(self, new_state):
+    event_map = {
+        ProcessStates.BACKOFF: events.ProcessStateBackoffEvent,
+        ProcessStates.FATAL:   events.ProcessStateFatalEvent,
+        ProcessStates.UNKNOWN: events.ProcessStateUnknownEvent,
+        ProcessStates.STOPPED: events.ProcessStateStoppedEvent,
+        ProcessStates.EXITED:  events.ProcessStateExitedEvent,
+        ProcessStates.RUNNING: events.ProcessStateRunningEvent,
+        ProcessStates.STARTING: events.ProcessStateStartingEvent,
+        ProcessStates.STOPPING: events.ProcessStateStoppingEvent,
+        }
+
+    def change_state(self, new_state, expected=True):
         old_state = self.state
         if new_state is old_state:
+            # exists for unit tests
             return False
-        event_type = events.getProcessStateChangeEventType(old_state, new_state)
-        events.notify(event_type(self, self.pid))
+
+        event_class = self.event_map.get(new_state)
+        if event_class is not None:
+            event = event_class(self, old_state, expected)
+            events.notify(event)
+
+        if new_state == ProcessStates.BACKOFF:
+            now = time.time()
+            self.backoff = self.backoff + 1
+            self.delay = now + self.backoff
+
         self.state = new_state
 
     def _assertInState(self, *states):
@@ -162,11 +183,8 @@ class Subprocess:
                 self.config.name, current_state, allowable_states))
 
     def record_spawnerr(self, msg):
-        now = time.time()
         self.spawnerr = msg
         self.config.options.logger.info("spawnerr: %s" % msg)
-        self.backoff = self.backoff + 1
-        self.delay = now + self.backoff
 
     def spawn(self):
         """Start the subprocess.  It must not be running already.
@@ -340,24 +358,24 @@ class Subprocess:
                    (self.config.name, signame(sig)))
             options.logger.debug(msg)
             return msg
+
+        options.logger.debug('killing %s (pid %s) with signal %s'
+                             % (self.config.name,
+                                self.pid,
+                                signame(sig))
+                             )
+
+        # RUNNING/STARTING/STOPPING -> STOPPING
+        self.killing = 1
+        self.delay = now + self.config.stopwaitsecs
+        # we will already be in the STOPPING state if we're doing a
+        # SIGKILL as a result of overrunning stopwaitsecs
+        self._assertInState(ProcessStates.RUNNING,ProcessStates.STARTING,
+                            ProcessStates.STOPPING)
+        self.change_state(ProcessStates.STOPPING)
+
         try:
-            options.logger.debug('killing %s (pid %s) with signal %s'
-                                 % (self.config.name,
-                                    self.pid,
-                                    signame(sig)))
-            # RUNNING -> STOPPING
-            self.killing = 1
-            self.delay = now + self.config.stopwaitsecs
-            # we will already be in the STOPPING state if we're doing a
-            # SIGKILL as a result of overrunning stopwaitsecs
-            self._assertInState(ProcessStates.RUNNING,ProcessStates.STARTING,
-                                ProcessStates.STOPPING)
-            self.change_state(ProcessStates.STOPPING)
             options.kill(self.pid, sig)
-        except (AssertionError, NotImplementedError):
-            # AssertionError may be raised by _assertInState,
-            # NotImplementedError potentially raised by change_state
-            raise
         except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
@@ -402,39 +420,38 @@ class Subprocess:
             # the program did not stay up long enough to make it to RUNNING
             # implies STARTING -> BACKOFF
             self.exitstatus = None
-            self.backoff = self.backoff + 1
-            self.delay = now + self.backoff
-
             self.spawnerr = 'Exited too quickly (process log may have details)'
             msg = "exited: %s (%s)" % (processname, msg + "; not expected")
             self._assertInState(ProcessStates.STARTING)
             self.change_state(ProcessStates.BACKOFF)
 
         else:
-            # this finish was not the result of a stop request,
-            # the program was in the RUNNING state but exited
-            # implies RUNNING -> EXITED
+            # this finish was not the result of a stop request, the
+            # program was in the RUNNING state but exited implies
+            # RUNNING -> EXITED
             self.delay = 0
             self.backoff = 0
             self.exitstatus = es
 
             if self.state == ProcessStates.STARTING:
-                # XXX I dont know under which circumstances this happens,
-                # but in the wild, there is a transition that subverts
-                # the RUNNING state (directly from STARTING to EXITED),
-                # so we perform the correct transition here.
+                # XXX I dont know under which circumstances this
+                # happens, but in the wild, there is a transition that
+                # subverts the RUNNING state (directly from STARTING
+                # to EXITED), so we perform the correct transition
+                # here.
                 self.change_state(ProcessStates.RUNNING)
+
+            self._assertInState(ProcessStates.RUNNING)
 
             if exit_expected:
                 # expected exit code
                 msg = "exited: %s (%s)" % (processname, msg + "; expected")
+                self.change_state(ProcessStates.EXITED, expected=True)
             else:
                 # unexpected exit code
                 self.spawnerr = 'Bad exit code %s' % es
                 msg = "exited: %s (%s)" % (processname, msg + "; not expected")
-
-            self._assertInState(ProcessStates.RUNNING)
-            self.change_state(ProcessStates.EXITED)
+                self.change_state(ProcessStates.EXITED, expected=False)
 
         self.config.options.logger.info(msg)
 

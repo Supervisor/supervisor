@@ -896,8 +896,13 @@ class DummyStream:
         return len(self.written)
         
 class DummyEvent:
-    serial = 'abc'
-        
+    def __init__(self, serial='abc'):
+        if serial is not None:
+            self.serial = serial
+
+    def __str__(self):
+        return 'dummy event'
+
 def lstrip(s):
     strings = [x.strip() for x in s.split('\n')]
     return '\n'.join(strings)

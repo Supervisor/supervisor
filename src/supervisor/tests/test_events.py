@@ -4,6 +4,7 @@ import unittest
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyProcess
+from supervisor.tests.base import DummyEvent
 
 class EventSubscriptionNotificationTests(unittest.TestCase):
     def setUp(self):
@@ -87,11 +88,42 @@ class TestEventTypes(unittest.TestCase):
         self.assertEqual(inst.data, 3)
         self.assertEqual(inst.channel, 'stderr')
 
-    def test_ProcessStateChangeEvent(self):
-        from supervisor.events import ProcessStateChangeEvent
-        inst = ProcessStateChangeEvent(1, 2)
-        self.assertEqual(inst.process, 1)
-        self.assertEqual(inst.pid, 2)
+    # nothing to test for SupervisorStateChangeEvent and subtypes
+
+    def test_EventRejectedEvent(self):
+        from supervisor.events import EventRejectedEvent
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process = DummyProcess(pconfig1)
+        rejected_event = DummyEvent()
+        event = EventRejectedEvent(process, rejected_event)
+        self.assertEqual(event.process, process)
+        self.assertEqual(event.event, rejected_event)
+
+    def _test_ProcessStateEvent(self, klass):
+        from supervisor.states import ProcessStates
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process = DummyProcess(pconfig1)
+        inst = klass(process, ProcessStates.STARTING)
+        self.assertEqual(inst.process, process)
+        self.assertEqual(inst.from_state, ProcessStates.STARTING)
+        self.assertEqual(inst.expected, True)
+
+    def test_ProcessStateEvents(self):
+        from supervisor import events
+        for klass in (
+            events.ProcessStateEvent,
+            events.ProcessStateStoppedEvent,
+            events.ProcessStateExitedEvent,
+            events.ProcessStateFatalEvent,
+            events.ProcessStateBackoffEvent,
+            events.ProcessStateRunningEvent,
+            events.ProcessStateUnknownEvent,
+            events.ProcessStateStoppingEvent,
+            events.ProcessStateStartingEvent,
+            ):
+            self._test_ProcessStateEvent(klass)
         
 class TestSerializations(unittest.TestCase):
     def _deserialize(self, serialization):
@@ -138,26 +170,136 @@ class TestSerializations(unittest.TestCase):
         self.assertEqual(headers['processname'], 'process1', headers)
         self.assertEqual(headers['groupname'], 'process1', headers)
         self.assertEqual(headers['pid'], '1', headers)
+        self.assertEqual(payload, 'yo')
 
-    def test_process_sc_event(self):
+    def test_process_state_events_without_extra_values(self):
+        from supervisor.states import ProcessStates
         from supervisor import events
+        for klass in (
+            events.ProcessStateFatalEvent,
+            events.ProcessStateUnknownEvent,
+            ):
+            options = DummyOptions()
+            pconfig1 = DummyPConfig(options, 'process1', 'process1',
+                                    '/bin/process1')
+            class DummyGroup:
+                config = pconfig1
+            process1 = DummyProcess(pconfig1)
+            process1.group = DummyGroup
+            event = klass(process1, ProcessStates.STARTING)
+            headers, payload = self._deserialize(str(event))
+            self.assertEqual(len(headers), 3)
+            self.assertEqual(headers['processname'], 'process1')
+            self.assertEqual(headers['groupname'], 'process1')
+            self.assertEqual(headers['from_state'], 'STARTING')
+            self.assertEqual(payload, '')
+
+    def test_process_state_events_with_pid(self):
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        for klass in (
+            events.ProcessStateRunningEvent,
+            events.ProcessStateStoppedEvent,
+            events.ProcessStateStoppingEvent,
+            ):
+            options = DummyOptions()
+            pconfig1 = DummyPConfig(options, 'process1', 'process1',
+                                    '/bin/process1')
+            class DummyGroup:
+                config = pconfig1
+            process1 = DummyProcess(pconfig1)
+            process1.group = DummyGroup
+            process1.pid = 1
+            event = klass(process1, ProcessStates.STARTING)
+            headers, payload = self._deserialize(str(event))
+            self.assertEqual(len(headers), 4)
+            self.assertEqual(headers['processname'], 'process1')
+            self.assertEqual(headers['groupname'], 'process1')
+            self.assertEqual(headers['from_state'], 'STARTING')
+            self.assertEqual(headers['pid'], '1')
+            self.assertEqual(payload, '')
+
+    def test_process_state_events_starting_and_backoff(self):
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        for klass in (
+            events.ProcessStateStartingEvent,
+            events.ProcessStateBackoffEvent,
+            ):
+            options = DummyOptions()
+            pconfig1 = DummyPConfig(options, 'process1', 'process1',
+                                    '/bin/process1')
+            class DummyGroup:
+                config = pconfig1
+            process1 = DummyProcess(pconfig1)
+            process1.group = DummyGroup
+            event = klass(process1, ProcessStates.STARTING)
+            headers, payload = self._deserialize(str(event))
+            self.assertEqual(len(headers), 4)
+            self.assertEqual(headers['processname'], 'process1')
+            self.assertEqual(headers['groupname'], 'process1')
+            self.assertEqual(headers['from_state'], 'STARTING')
+            self.assertEqual(headers['tries'], '0')
+            self.assertEqual(payload, '')
+            process1.backoff = 1
+            event = klass(process1, ProcessStates.STARTING)
+            headers, payload = self._deserialize(str(event))
+            self.assertEqual(headers['tries'], '1')
+            process1.backoff = 2
+            event = klass(process1, ProcessStates.STARTING)
+            headers, payload = self._deserialize(str(event))
+            self.assertEqual(headers['tries'], '2')
+        
+    def test_process_state_exited_event_expected(self):
+        from supervisor import events
+        from supervisor.states import ProcessStates
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
         process1 = DummyProcess(pconfig1)
         class DummyGroup:
             config = pconfig1
         process1.group = DummyGroup
-        event = events.StartingFromStoppedEvent(process1, 1)
+        process1.pid = 1
+        event = events.ProcessStateExitedEvent(process1,
+                                               ProcessStates.STARTING,
+                                               expected=True)
         headers, payload = self._deserialize(str(event))
+        self.assertEqual(len(headers), 5)
         self.assertEqual(headers['processname'], 'process1')
         self.assertEqual(headers['groupname'], 'process1')
         self.assertEqual(headers['pid'], '1')
+        self.assertEqual(headers['from_state'], 'STARTING')
+        self.assertEqual(headers['expected'], '1')
+        self.assertEqual(payload, '')
+
+    def test_process_state_exited_event_unexpected(self):
+        from supervisor import events
+        from supervisor.states import ProcessStates
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1)
+        class DummyGroup:
+            config = pconfig1
+        process1.group = DummyGroup
+        process1.pid = 1
+        event = events.ProcessStateExitedEvent(process1,
+                                               ProcessStates.STARTING,
+                                               expected=False)
+        headers, payload = self._deserialize(str(event))
+        self.assertEqual(len(headers), 5)
+        self.assertEqual(headers['processname'], 'process1')
+        self.assertEqual(headers['groupname'], 'process1')
+        self.assertEqual(headers['pid'], '1')
+        self.assertEqual(headers['from_state'], 'STARTING')
+        self.assertEqual(headers['expected'], '0')
+        self.assertEqual(payload, '')
 
     def test_supervisor_sc_event(self):
         from supervisor import events
         event = events.SupervisorRunningEvent()
         headers, payload = self._deserialize(str(event))
         self.assertEqual(headers, {})
+        self.assertEqual(payload, '')
 
 class TestUtilityFunctions(unittest.TestCase):
     def test_getEventNameByType(self):
@@ -170,71 +312,6 @@ class TestUtilityFunctions(unittest.TestCase):
         klass = getProcessStateChangeEventType(old, new)
         self.assertEqual(expected, klass)
 
-    def test_getProcessStateChangeEventType_STOPPED_TO_STARTING(self):
-        from supervisor.states import ProcessStates
-        from supervisor import events
-        self._assertStateChange(ProcessStates.STOPPED, ProcessStates.STARTING,
-                                events.StartingFromStoppedEvent)
-        
-    def test_getProcessStateChangeEventType_STARTING_TO_RUNNING(self):
-        from supervisor.states import ProcessStates
-        from supervisor import events
-        self._assertStateChange(ProcessStates.STARTING, ProcessStates.RUNNING,
-                                events.RunningFromStartingEvent)
-
-    def test_getProcessStateChangeEventType_STARTING_TO_BACKOFF(self):
-        from supervisor.states import ProcessStates
-        from supervisor import events
-        self._assertStateChange(ProcessStates.STARTING, ProcessStates.BACKOFF,
-                                events.BackoffFromStartingEvent)
-
-    def test_getProcessStateChangeEventType_BACKOFF_TO_STARTING(self):
-        from supervisor.states import ProcessStates
-        from supervisor import events
-        self._assertStateChange(ProcessStates.BACKOFF, ProcessStates.STARTING,
-                                events.StartingFromBackoffEvent)
-
-    def test_getProcessStateChangeEventType_BACKOFF_TO_FATAL(self):
-        from supervisor.states import ProcessStates
-        from supervisor import events
-        self._assertStateChange(ProcessStates.BACKOFF, ProcessStates.FATAL,
-                                events.FatalFromBackoffEvent)
-
-    def test_getProcessStateChangeEventType_FATAL_TO_STARTING(self):
-        from supervisor.states import ProcessStates
-        from supervisor import events
-        self._assertStateChange(ProcessStates.FATAL, ProcessStates.STARTING,
-                                events.StartingFromFatalEvent)
-
-    def test_getProcessStateChangeEventType_STARTING_TO_RUNNING(self):
-        from supervisor.states import ProcessStates
-        from supervisor import events
-        self._assertStateChange(ProcessStates.STARTING, ProcessStates.RUNNING,
-                                events.RunningFromStartingEvent)
-
-    def test_getProcessStateChangeEventType_RUNNING_TO_EXITED(self):
-        from supervisor.states import ProcessStates
-        from supervisor import events
-        self._assertStateChange(ProcessStates.RUNNING, ProcessStates.EXITED,
-                                events.ExitedFromRunningEvent)
-
-    def test_getProcessStateChangeEventType_EXITED_TO_STARTING(self):
-        from supervisor.states import ProcessStates
-        from supervisor import events
-        self._assertStateChange(ProcessStates.EXITED, ProcessStates.STARTING,
-                                events.StartingFromExitedEvent)
-
-    def test_getProcessStateChangeEventType_RUNNING_TO_STOPPING(self):
-        from supervisor.states import ProcessStates
-        from supervisor import events
-        self._assertStateChange(ProcessStates.RUNNING, ProcessStates.STOPPING,
-                                events.StoppingFromRunningEvent)
-
-    def test_getProcessStateChangeEventType_STOPPING_TO_STOPPED(self):
-        from supervisor.states import ProcessStates
-        from supervisor import events
-        self._assertStateChange(ProcessStates.STOPPING, ProcessStates.STOPPED,
-                                events.StoppedFromStoppingEvent)
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
