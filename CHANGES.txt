@@ -120,6 +120,8 @@ Next Release
     their serialization (initially "0", bumped +1 each time a start
     retry happens).
 
+3.0a3
+
   - Supervisorctl now reports a better error message when the main
     supervisor XML-RPC namespace is not registered.  Thanks to
     Mike Orr for reporting this. (Mike Naberezny)
