@@ -56,7 +56,69 @@ Next Release
        >>> '{SHA}' + sha.new('thepassword').hexdigest()
        '{SHA}82ab876d1387bfafe46cc1c8a2ef074eae50cb1d'
 
-3.0a3
+  - The subtypes of the events PROCESS_STATE_CHANGE (and
+    PROCESS_STATE_CHANGE itself) have been removed, replaced with a
+    simpler set of PROCESS_STATE subscribable event types.
+
+    The new event types are:
+
+      PROCESS_STATE_STOPPED
+      PROCESS_STATE_EXITED
+      PROCESS_STATE_STARTING
+      PROCESS_STATE_STOPPING
+      PROCESS_STATE_BACKOFF
+      PROCESS_STATE_FATAL
+      PROCESS_STATE_RUNNING
+      PROCESS_STATE_UNKNOWN
+      PROCESS_STATE # abstract
+
+    PROCESS_STATE_STARTING replaces:
+
+      PROCESS_STATE_CHANGE_STARTING_FROM_STOPPED
+      PROCESS_STATE_CHANGE_STARTING_FROM_BACKOFF
+      PROCESS_STATE_CHANGE_STARTING_FROM_EXITED
+      PROCESS_STATE_CHANGE_STARTING_FROM_FATAL
+
+    PROCESS_STATE_RUNNING replaces
+    PROCESS_STATE_CHANGE_RUNNING_FROM_STARTED
+
+    PROCESS_STATE_BACKOFF replaces
+    PROCESS_STATE_CHANGE_BACKOFF_FROM_STARTING
+
+    PROCESS_STATE_STOPPING replaces:
+
+      PROCESS_STATE_CHANGE_STOPPING_FROM_RUNNING
+      PROCESS_STATE_CHANGE_STOPPING_FROM_STARTING
+
+    PROCESS_STATE_EXITED replaces
+    PROCESS_STATE_CHANGE_EXITED_FROM_RUNNING
+
+    PROCESS_STATE_STOPPED replaces
+    PROCESS_STATE_CHANGE_STOPPED_FROM_STOPPING
+
+    PROCESS_STATE_FATAL replaces
+    PROCESS_STATE_CHANGE_FATAL_FROM_BACKOFF
+
+    PROCESS_STATE_UNKNOWN replaces PROCESS_STATE_CHANGE_TO_UNKNOWN
+
+    PROCESS_STATE replaces PROCESS_STATE_CHANGE
+
+    The PROCESS_STATE_CHANGE_EXITED_OR_STOPPED abstract event is gone.
+
+    All process state changes have at least "processname",
+    "groupname", and "from_state" (the name of the previous state) in
+    their serializations.
+
+    PROCESS_STATE_EXITED additionaly has "expected" (1 or 0) and "pid"
+    (the process id) in its serialization.
+
+    PROCESS_STATE_RUNNING, PROCESS_STATE_STOPPING,
+    PROCESS_STATE_STOPPED additionally have "pid" in their
+    serializations.
+
+    PROCESS_STATE_STARTING and PROCESS_STATE_BACKOFF have "tries" in
+    their serialization (initially "0", bumped +1 each time a start
+    retry happens).
 
   - Supervisorctl now reports a better error message when the main
     supervisor XML-RPC namespace is not registered.  Thanks to
