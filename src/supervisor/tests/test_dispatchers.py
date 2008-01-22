@@ -82,7 +82,6 @@ class POutputDispatcherTests(unittest.TestCase):
     def test_toggle_capturemode_sends_event(self):
         executable = '/bin/cat'
         options = DummyOptions()
-        from StringIO import StringIO
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile='/tmp/foo',
                               stdout_capture_maxbytes=500)

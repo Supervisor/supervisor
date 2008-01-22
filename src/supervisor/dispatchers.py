@@ -231,7 +231,8 @@ class POutputDispatcher(PDispatcher):
             self.close()
 
 class PEventListenerDispatcher(PDispatcher):
-    """ An output dispatcher that monitors and changes listener_states """
+    """ An output dispatcher that monitors and changes a process'
+    listener_state """
     process = None # process which "owns" this dispatcher
     channel = None # 'stderr' or 'stdout'
     childlog = None # the logger

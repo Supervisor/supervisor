@@ -14,7 +14,6 @@
 
 # a process which leaks on purpose so we can test the memmon killer
 
-import sys
 import time
 L = []
 
