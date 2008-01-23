@@ -13,10 +13,10 @@
 #
 ##############################################################################
 
-# A event listener is meant to be subscribed to TICK_60 events, which
-# restarts any processes that are children of supervisord that consume
-# "too much" memory.  Performs horrendous screenscrapes of Mac OS X
-# (Tiger/Leopard) ps output.
+# A event listener meant to be subscribed to TICK_60 (or TICK_5)
+# events, which restarts any processes that are children of
+# supervisord that consume "too much" memory.  Performs horrendous
+# screenscrapes of Mac OS X (Tiger/Leopard) ps output.
 
 # A supervisor config snippet that tells supervisor to use this script
 # as a listener is below.
@@ -46,7 +46,8 @@ Options:
       /usr/sbin/sendmail.
 
 -m -- specify an email address.  The script will send mail to this
-      address when any process is restarted.
+      address when any process is restarted.  If no email address is
+      specified, email will not be sent.
 
 The -p and -g options may be specified more than once, allowing for
 specification of multiple groups and processes.
@@ -58,7 +59,6 @@ and 'GB'.
 A sample invocation:
 
 osx_memmon.py -p program1=200MB -p theprog:thegroup=100MB -g thegroup=100MB -a 1GB -s /usr/sbin/sendmail -m chrism@plope.com
-
 """
 
 import os
@@ -179,7 +179,7 @@ def main():
         "program=",
         "group=",
         "any=",
-        "mail_program=",
+        "sendmail_program=",
         "email=",
         ]
     try:
@@ -211,7 +211,7 @@ def main():
             size = parse_size(option, value)
             any = size
 
-        if option in ('-s', '--mail_program'):
+        if option in ('-s', '--sendmail_program'):
             sendmail = value
 
         if option in ('-m', '--email'):
