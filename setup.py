@@ -74,7 +74,6 @@ dist = setup(
     # put data files in egg 'doc' dir
     data_files=[ ('doc', [
         'README.txt',
-        'UPGRADING.txt',
         'CHANGES.txt',
         'TODO.txt',
         'LICENSES.txt',
