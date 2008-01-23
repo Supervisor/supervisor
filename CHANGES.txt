@@ -123,6 +123,55 @@ Next Release
   - Remove documentation from README.txt, point people to
     http://supervisord.org/manual/ .
 
+  - The eventlistener request/response protocol has changed.  OK/FAIL
+    must now be wrapped in a RESULT envelope so we can use it for more
+    specialized communications.
+
+    Previously, to signify success, an event listener would write the
+    string 'OK\n' to its stdout.  To signify that the event was seen
+    but couldn't be handled by the listener and should be rebuffered,
+    an event listener would write the string 'FAIL\n' to its stdout.
+
+    In the new protocol, the listener must write the string:
+
+      RESULT {resultlen}\n{result}
+
+    For example, to signify OK:
+
+      RESULT 2\nOK
+
+    To signify FAIL:
+
+      RESULT 4\nFAIL
+
+    See the scripts/sample_eventlistener.py script for an example.
+
+  - To provide a hook point for custom results returned from event
+    handlers (see above) the [eventlistener:x] configuration sections
+    now accept a "result_handler=" parameter,
+    e.g. "result_handler=supervisor.dispatchers:default_handler" (the
+    default) or "handler=mypackage:myhandler".  The keys are pkgutil
+    "entry point" specifications (importable Python function names).
+    Result handlers must be callables which accept two arguments: one
+    named "event" which represents the event, and the other named
+    "result", which represents the listener's result.  A result
+    handler either executes successfully or raises an exception.  If
+    it raises a supervisor.dispatchers.RejectEvent exception, the
+    event will be rebuffered, and the eventhandler will be placed back
+    into the ACKNOWLEDGED state.  If it raises any other exception,
+    the event handler will be placed in the UNKNOWN state.  If it does
+    not raise any exception, the event is considered successfully
+    processed.  A result handler's return value is ignored.  Writing a
+    result handler is a "in case of emergency break glass" sort of
+    thing, it is not something to be used for arbitrary business code.
+    In particular, handlers *must not block* for any appreciable
+    amount of time.
+
+    The 'standard' eventlistener result handler
+    (supervisor.dispatchers:default_handler) does nothing if it
+    receives an "OK" and will raise an exception if it receives any
+    other value.
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main

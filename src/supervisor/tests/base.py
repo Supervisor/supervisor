@@ -903,6 +903,17 @@ class DummyEvent:
     def __str__(self):
         return 'dummy event'
 
+def dummy_handler(event, result):
+    pass
+
+def rejecting_handler(event, result):
+    from supervisor.dispatchers import RejectEvent
+    raise RejectEvent(result)
+
+def exception_handler(event, result):
+    raise ValueError(result)
+
 def lstrip(s):
     strings = [x.strip() for x in s.split('\n')]
     return '\n'.join(strings)
+

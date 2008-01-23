@@ -132,6 +132,25 @@ class ProcessStateStoppedEvent(ProcessStateEvent):
     def get_extra_values(self):
         return [('pid', self.process.pid)]
 
+class TickEvent(Event):
+    def __init__(self, when, supervisord):
+        self.when = when
+        self.supervisord = supervisord
+
+    def __str__(self):
+        return 'when:%s' % self.when
+
+class Tick5Event(TickEvent):
+    period = 5
+
+class Tick60Event(TickEvent):
+    period = 60
+
+class Tick3600Event(TickEvent):
+    period = 3600
+
+TICK_EVENTS = [ Tick5Event, Tick60Event, Tick3600Event ] # imported elsewhere
+
 class EventTypes:
     EVENT = Event # abstract
     PROCESS_STATE = ProcessStateEvent # abstract
@@ -149,6 +168,10 @@ class EventTypes:
     SUPERVISOR_STATE_CHANGE = SupervisorStateChangeEvent # abstract
     SUPERVISOR_STATE_CHANGE_RUNNING = SupervisorRunningEvent
     SUPERVISOR_STATE_CHANGE_STOPPING = SupervisorStoppingEvent
+    TICK = TickEvent # abstract
+    TICK_5 = Tick5Event
+    TICK_60 = Tick60Event
+    TICK_3600 = Tick3600Event
 
 def getEventNameByType(requested):
     for name, typ in EventTypes.__dict__.items():

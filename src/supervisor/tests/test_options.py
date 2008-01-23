@@ -516,6 +516,7 @@ class ServerOptionsTests(unittest.TestCase):
         numprocs = 3
         """)
         from supervisor.options import UnhosedConfigParser
+        from supervisor.dispatchers import default_handler
         config = UnhosedConfigParser()
         config.read_string(text)
         instance = self._makeOne()
@@ -525,12 +526,32 @@ class ServerOptionsTests(unittest.TestCase):
         gconfig1 = gconfigs[0]
         self.assertEqual(gconfig1.name, 'cat')
         self.assertEqual(gconfig1.priority, -1)
+        self.assertEqual(gconfig1.result_handler, default_handler)
         self.assertEqual(len(gconfig1.process_configs), 3)
 
         gconfig1 = gconfigs[1]
         self.assertEqual(gconfig1.name, 'dog')
         self.assertEqual(gconfig1.priority, 1)
+        self.assertEqual(gconfig1.result_handler, default_handler)
         self.assertEqual(len(gconfig1.process_configs), 2)
+
+    def test_event_listener_pool_with_event_results_handler(self):
+        text = lstrip("""\
+        [eventlistener:dog]
+        events=PROCESS_COMMUNICATION
+        command = /bin/dog
+        result_handler = supervisor.tests.base:dummy_handler
+        """)
+        from supervisor.options import UnhosedConfigParser
+        from supervisor.tests.base import dummy_handler
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        gconfigs = instance.process_groups_from_parser(config)
+        self.assertEqual(len(gconfigs), 1)
+
+        gconfig1 = gconfigs[0]
+        self.assertEqual(gconfig1.result_handler, dummy_handler)
 
     def test_event_listener_pool_noeventsline(self):
         text = lstrip("""\

@@ -124,6 +124,19 @@ class TestEventTypes(unittest.TestCase):
             events.ProcessStateStartingEvent,
             ):
             self._test_ProcessStateEvent(klass)
+
+    def test_TickEvents(self):
+        from supervisor import events
+        for klass in (
+            events.TickEvent,
+            events.Tick5Event,
+            events.Tick60Event,
+            events.Tick3600Event,
+            ):
+            
+            event = klass(1, 2)
+            self.assertEqual(event.when, 1)
+            self.assertEqual(event.supervisord, 2)
         
 class TestSerializations(unittest.TestCase):
     def _deserialize(self, serialization):
@@ -300,6 +313,18 @@ class TestSerializations(unittest.TestCase):
         headers, payload = self._deserialize(str(event))
         self.assertEqual(headers, {})
         self.assertEqual(payload, '')
+
+    def test_tick_events(self):
+        from supervisor import events
+        for klass in (
+            events.Tick5Event,
+            events.Tick60Event,
+            events.Tick3600Event,
+            ):
+            event = klass(1, 2)
+            headers, payload = self._deserialize(str(event))
+            self.assertEqual(headers, {'when':'1'})
+            self.assertEqual(payload, '')
 
 class TestUtilityFunctions(unittest.TestCase):
     def test_getEventNameByType(self):

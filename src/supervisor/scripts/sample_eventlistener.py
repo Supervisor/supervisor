@@ -40,7 +40,8 @@ def main():
         headers = dict([ x.split(':') for x in line.split() ])
         data = sys.stdin.read(int(headers['len'])) # read the event payload
         write_stderr(data) # print the event payload to stderr (testing only)
-        write_stdout('OK\n') # transition from READY to ACKNOWLEDGED
+        write_stdout('RESULT 2\nOK') # transition from BUSY to ACKNOWLEDGED
+        #write_stdout('RESULT 4\nFAIL') # transition from BUSY TO ACKNOWLEDGED
 
 if __name__ == '__main__':
     main()

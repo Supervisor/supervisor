@@ -713,7 +713,13 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         from supervisor.dispatchers import EventListenerStates
         dispatcher = self._makeOne(process)
         process.listener_state = EventListenerStates.BUSY
-        dispatcher.state_buffer = dispatcher.EVENT_PROCESSED_TOKEN + 'abc'
+        class Dummy:
+            pass
+        process.group = Dummy()
+        process.group.config = Dummy()
+        from supervisor.dispatchers import default_handler
+        process.group.config.result_handler = default_handler
+        dispatcher.state_buffer = 'RESULT 2\nOKabc'
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, 'abc')
         self.assertEqual(options.logger.data[0],
@@ -728,7 +734,13 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         from supervisor.dispatchers import EventListenerStates
         dispatcher = self._makeOne(process)
         process.listener_state = EventListenerStates.BUSY
-        dispatcher.state_buffer = dispatcher.EVENT_REJECTED_TOKEN + 'abc'
+        class Dummy:
+            pass
+        process.group = Dummy()
+        process.group.config = Dummy()
+        from supervisor.dispatchers import default_handler
+        process.group.config.result_handler = default_handler
+        dispatcher.state_buffer = 'RESULT 4\nFAILabc'
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, 'abc')
         self.assertEqual(options.logger.data[0],
@@ -755,7 +767,7 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, '')
         self.assertEqual(options.logger.data[0],
-                         'process1: BUSY -> UNKNOWN')
+                'process1: BUSY -> UNKNOWN (bad result line \'bogus data\')')
         self.assertEqual(process.listener_state,
                          EventListenerStates.UNKNOWN)
         self.assertEqual(events[0].process, process)
@@ -768,7 +780,13 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         from supervisor.dispatchers import EventListenerStates
         dispatcher = self._makeOne(process)
         process.listener_state = EventListenerStates.BUSY
-        dispatcher.state_buffer = 'OK\nbogus data\n'
+        class Dummy:
+            pass
+        process.group = Dummy()
+        process.group.config = Dummy()
+        from supervisor.dispatchers import default_handler
+        process.group.config.result_handler = default_handler
+        dispatcher.state_buffer = 'RESULT 2\nOKbogus data\n'
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, '')
         self.assertEqual(options.logger.data[0],
@@ -777,6 +795,91 @@ class PEventListenerDispatcherTests(unittest.TestCase):
                          'process1: ACKNOWLEDGED -> UNKNOWN')
         self.assertEqual(process.listener_state,
                          EventListenerStates.UNKNOWN)
+
+    def test_handle_result_accept(self):
+        from supervisor.events import subscribe
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        L = []
+        def doit(event):
+            L.append(event)
+        from supervisor import events
+        subscribe(events.EventRejectedEvent, doit)
+        from supervisor.dispatchers import EventListenerStates
+        dispatcher = self._makeOne(process)
+        def handle(event, result):
+            pass
+        class Dummy:
+            pass
+        process.group = Dummy()
+        process.group.config = Dummy()
+        process.group.config.result_handler = handle
+        process.listener_state = EventListenerStates.BUSY
+        dispatcher.handle_result('foo')
+        self.assertEqual(len(L), 0)
+        self.assertEqual(process.listener_state,
+                         EventListenerStates.ACKNOWLEDGED)
+        result = options.logger.data[0]
+        self.assertTrue(result.endswith('BUSY -> ACKNOWLEDGED (processed)'))
+
+    def test_handle_result_rejectevent(self):
+        from supervisor.events import subscribe
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        L = []
+        def doit(event):
+            L.append(event)
+        from supervisor import events
+        subscribe(events.EventRejectedEvent, doit)
+        from supervisor.dispatchers import EventListenerStates
+        dispatcher = self._makeOne(process)
+        def rejected(event, result):
+            from supervisor.dispatchers import RejectEvent
+            raise RejectEvent(result)
+        class Dummy:
+            pass
+        process.group = Dummy()
+        process.group.config = Dummy()
+        process.group.config.result_handler = rejected
+        process.listener_state = EventListenerStates.BUSY
+        dispatcher.handle_result('foo')
+        self.assertEqual(len(L), 1)
+        self.assertEqual(L[0].__class__, events.EventRejectedEvent)
+        self.assertEqual(process.listener_state,
+                         EventListenerStates.ACKNOWLEDGED)
+        result = options.logger.data[0]
+        self.assertTrue(result.endswith('BUSY -> ACKNOWLEDGED (rejected)'))
+
+    def test_handle_result_exception(self):
+        from supervisor.events import subscribe
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        L = []
+        def doit(event):
+            L.append(event)
+        from supervisor import events
+        subscribe(events.EventRejectedEvent, doit)
+        from supervisor.dispatchers import EventListenerStates
+        dispatcher = self._makeOne(process)
+        def exception(event, result):
+            raise ValueError
+        class Dummy:
+            pass
+        process.group = Dummy()
+        process.group.config = Dummy()
+        process.group.config.result_handler = exception
+        process.group.result_handler = exception
+        process.listener_state = EventListenerStates.BUSY
+        dispatcher.handle_result('foo')
+        self.assertEqual(len(L), 1)
+        self.assertEqual(L[0].__class__, events.EventRejectedEvent)
+        self.assertEqual(process.listener_state,
+                         EventListenerStates.UNKNOWN)
+        result = options.logger.data[0]
+        self.assertTrue(result.endswith('BUSY -> UNKNOWN'))
 
     def test_handle_error(self):
         options = DummyOptions()

@@ -239,11 +239,9 @@ class PEventListenerDispatcher(PDispatcher):
     state_buffer = ''  # data waiting to be reviewed for state changes
 
     READY_FOR_EVENTS_TOKEN = 'READY\n'
-    EVENT_PROCESSED_TOKEN = 'OK\n'
-    EVENT_REJECTED_TOKEN = 'FAIL\n'
+    RESULT_TOKEN_START = 'RESULT '
     READY_FOR_EVENTS_LEN = len(READY_FOR_EVENTS_TOKEN)
-    EVENT_PROCESSED_LEN = len(EVENT_PROCESSED_TOKEN)
-    EVENT_REJECTED_LEN = len(EVENT_REJECTED_TOKEN)
+    RESULT_TOKEN_START_LEN = len(RESULT_TOKEN_START)
 
     def __init__(self, process, channel, fd):
         self.process = process
@@ -251,6 +249,8 @@ class PEventListenerDispatcher(PDispatcher):
         # "busy" state that implies we're awaiting a READY_FOR_EVENTS_TOKEN
         self.process.listener_state = EventListenerStates.ACKNOWLEDGED
         self.process.event = None
+        self.result = ''
+        self.resultlen = None
         self.channel = channel
         self.fd = fd
 
@@ -355,36 +355,67 @@ class PEventListenerDispatcher(PDispatcher):
             return
                 
         elif state == EventListenerStates.BUSY:
-            if data.find('\n') == -1:
-                # we can't make a determination yet
-                return
-            elif data.startswith(self.EVENT_PROCESSED_TOKEN):
-                msg = '%s: BUSY -> ACKNOWLEDGED (processed)' % procname
-                process.config.options.logger.debug(msg)
-                tokenlen = self.EVENT_PROCESSED_LEN
-                self.state_buffer = self.state_buffer[tokenlen:]
-                process.listener_state = EventListenerStates.ACKNOWLEDGED
-                process.event = None
-            elif data.startswith(self.EVENT_REJECTED_TOKEN):
-                msg = '%s: BUSY -> ACKNOWLEDGED (rejected)' % procname
-                process.config.options.logger.debug(msg)
-                tokenlen = self.EVENT_REJECTED_LEN
-                self.state_buffer = self.state_buffer[tokenlen:]
-                process.listener_state = EventListenerStates.ACKNOWLEDGED
-                notify(EventRejectedEvent(process, process.event))
-                process.event = None
+            if self.resultlen is None:
+                # we haven't begun gathering result data yet
+                pos = data.find('\n')
+                if pos == -1:
+                    # we can't make a determination yet, we dont have a full
+                    # results line
+                    return
+
+                result_line = self.state_buffer[:pos]
+                self.state_buffer = self.state_buffer[pos+1:] # rid LF
+                resultlen = result_line[self.RESULT_TOKEN_START_LEN:]
+                try:
+                    self.resultlen = int(resultlen)
+                except ValueError:
+                    msg = ('%s: BUSY -> UNKNOWN (bad result line %r)'
+                           % (procname, result_line))
+                    process.config.options.logger.debug(msg)
+                    process.listener_state = EventListenerStates.UNKNOWN
+                    self.state_buffer = ''
+                    notify(EventRejectedEvent(process, process.event))
+                    process.event = None
+                    return
+
             else:
-                msg = '%s: BUSY -> UNKNOWN' % procname
-                process.config.options.logger.debug(msg)
-                process.listener_state = EventListenerStates.UNKNOWN
-                self.state_buffer = ''
-                notify(EventRejectedEvent(process, process.event))
-                process.event = None
+                needed = self.resultlen - len(self.result)
+
+                if needed:
+                    self.result += self.state_buffer[:needed]
+                    self.state_buffer = self.state_buffer[needed:]
+                    needed = self.resultlen - len(self.result)
+
+                if not needed:
+                    self.handle_result(self.result)
+                    self.process.event = None
+                    self.result = ''
+                    self.resultlen = None
+
             if self.state_buffer:
                 # keep going til its too short
                 self.handle_listener_state_change()
             else:
                 return
+
+    def handle_result(self, result):
+        process = self.process
+        procname = process.config.name
+
+        try:
+            self.process.group.config.result_handler(process.event, result)
+            msg = '%s: BUSY -> ACKNOWLEDGED (processed)' % procname
+            process.listener_state = EventListenerStates.ACKNOWLEDGED
+        except RejectEvent:
+            msg = '%s: BUSY -> ACKNOWLEDGED (rejected)' % procname
+            process.listener_state = EventListenerStates.ACKNOWLEDGED
+            notify(EventRejectedEvent(process, process.event))
+        except:
+            msg = '%s: BUSY -> UNKNOWN' % procname
+            process.listener_state = EventListenerStates.UNKNOWN
+            notify(EventRejectedEvent(process, process.event))
+
+        process.config.options.logger.debug(msg)
 
 class PInputDispatcher(PDispatcher):
     """ Input (stdin) dispatcher """
@@ -449,3 +480,10 @@ def stripEscapes(string):
         i = i + 1
     return result
 
+class RejectEvent(Exception):
+    """ The exception type expected by a dispatcher when a handler wants
+    to reject an event """
+
+def default_handler(event, response):
+    if response != 'OK':
+        raise RejectEvent(response)

@@ -63,6 +63,7 @@ class Supervisor:
     def __init__(self, options):
         self.options = options
         self.process_groups = {}
+        self.ticks = {}
 
     def main(self):
         self.options.cleanup_fds()
@@ -159,7 +160,7 @@ class Supervisor:
 
     def runforever(self):
         events.notify(events.SupervisorRunningEvent())
-        timeout = 1
+        timeout = 1 # this cannot be fewer than the smallest TickEvent (5)
 
         socket_map = self.options.get_socket_map()
 
@@ -233,12 +234,30 @@ class Supervisor:
 
             self.reap()
             self.handle_signal()
+            self.tick()
 
             if self.options.mood < SupervisorStates.RUNNING:
                 self.ordered_stop_groups_phase_2()
 
             if self.options.test:
                 break
+
+    def tick(self, now=None):
+        """ Send one or more 'tick' events when the timeslice related to
+        the period for the event type rolls over """
+        if now is None:
+            # now won't be None in unit tests
+            now = time.time()
+        for event in events.TICK_EVENTS:
+            period = event.period
+            last_tick = self.ticks.get(period)
+            if last_tick is None:
+                # we just started up
+                last_tick = self.ticks[period] = timeslice(period, now)
+            this_tick = timeslice(period, now)
+            if this_tick != last_tick:
+                self.ticks[period] = this_tick
+                events.notify(event(this_tick, self))
 
     def reap(self, once=False):
         pid, sts = self.options.waitpid()
@@ -278,6 +297,9 @@ class Supervisor:
         
     def get_state(self):
         return self.options.mood
+
+def timeslice(period, when):
+    return int(when - (when % period))
 
 # profile entry point
 def profile(cmd, globals, locals, sort_order, callers):

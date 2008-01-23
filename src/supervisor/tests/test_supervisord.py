@@ -197,6 +197,14 @@ class SupervisordTests(unittest.TestCase):
         supervisord.runforever()
         self.assertEqual(L, [2])
 
+    def test_runforever_calls_tick(self):
+        options = DummyOptions()
+        options.test = True
+        supervisord = self._makeOne(options)
+        self.assertEqual(len(supervisord.ticks), 0)
+        supervisord.runforever()
+        self.assertEqual(len(supervisord.ticks), 3)
+
     def test_runforever_select_eintr(self):
         options = DummyOptions()
         import errno
@@ -301,7 +309,6 @@ class SupervisordTests(unittest.TestCase):
             L.append(1)
         supervisord.process_groups = {'foo': pgroup}
         supervisord.options.mood = 0
-        import asyncore
         supervisord.options.test = True
         supervisord.runforever()
         self.assertNotEqual(supervisord.lastshutdownreport, 0)
@@ -311,6 +318,42 @@ class SupervisordTests(unittest.TestCase):
         from supervisor.states import SupervisorStates
         result = getSupervisorStateDescription(SupervisorStates.RUNNING)
         self.assertEqual(result, 'RUNNING')
+
+    def test_tick(self):
+        from supervisor import events
+        L = []
+        def callback(event):
+            L.append(event)
+        events.subscribe(events.TickEvent, callback)
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+
+        supervisord.tick(now=0)
+        self.assertEqual(supervisord.ticks[5], 0)
+        self.assertEqual(supervisord.ticks[60], 0)
+        self.assertEqual(supervisord.ticks[3600], 0)
+        self.assertEqual(len(L), 0)
+
+        supervisord.tick(now=6)
+        self.assertEqual(supervisord.ticks[5], 5)
+        self.assertEqual(supervisord.ticks[60], 0)
+        self.assertEqual(supervisord.ticks[3600], 0)
+        self.assertEqual(len(L), 1)
+        self.assertEqual(L[-1].__class__, events.Tick5Event)
+        
+        supervisord.tick(now=61)
+        self.assertEqual(supervisord.ticks[5], 60)
+        self.assertEqual(supervisord.ticks[60], 60)
+        self.assertEqual(supervisord.ticks[3600], 0)
+        self.assertEqual(len(L), 3)
+        self.assertEqual(L[-1].__class__, events.Tick60Event)
+        
+        supervisord.tick(now=3601)
+        self.assertEqual(supervisord.ticks[5], 3600)
+        self.assertEqual(supervisord.ticks[60], 3600)
+        self.assertEqual(supervisord.ticks[3600], 3600)
+        self.assertEqual(len(L), 6)
+        self.assertEqual(L[-1].__class__, events.Tick3600Event)
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
