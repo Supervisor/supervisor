@@ -12,12 +12,14 @@
 #
 ##############################################################################
 
-# a process which leaks on purpose so we can test the memmon killer
+# A process which leaks 1MB per second on purpose so we can test the
+# memmon killer
 
 import time
 L = []
+M = pow(2, 20)
 
 while 1:
-    L.append('x'*1024*1024)
-    time.sleep(2)
+    L.append('x'*M)
+    time.sleep(1)
     
