@@ -34,11 +34,6 @@
     and fall through.  In an asyncore dispatcher represented by the
     file descriptor, attempt to dispatch the event.
 
-- Support stopping and starting groups in web interface.
-
-- Support operations against both stderr and stdout logs within web
-  interface.
-
 - Revisit test_startProcessGroup and test_startAllProcesses (see XXX
   comment about ordering).
 
@@ -56,6 +51,14 @@
    - Unit tests for meld classes and ui server.
 
    - Meta-refresh on tail page.
+
+   - Organize processes by group and allow groups to be started/stopped.
+
+   - Support operations against both stderr and stdout logs.
+   
+   - Allow a supervisorctl-like command line through the web interface.
+
+   - Display more information about Supervisor (identification, pid, etc.)
 
 - Expat error on Jens' system running slapd as root after reload.
 
