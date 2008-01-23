@@ -22,6 +22,9 @@
 
    - When we try to kill a process and the os.kill command raises an
      exception (stopProcess)
+     
+   - If eventlisteners repeatedly reject (or crash on) an event, causing
+     the event to be rebuffered above a reasonable threshold.
 
 - General speed improvement wrangling:
 
