@@ -169,7 +169,8 @@ Next Release
 
     The 'standard' eventlistener result handler
     (supervisor.dispatchers:default_handler) does nothing if it
-    receives an "OK" and will raise an exception if it receives any
+    receives an "OK" and will raise a
+    supervisor.dispatchers.RejectEvent exception if it receives any
     other value.
 
   - Supervisord now emits TICK events, which happen every N seconds.
