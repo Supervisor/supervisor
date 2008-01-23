@@ -172,6 +172,13 @@ Next Release
     receives an "OK" and will raise an exception if it receives any
     other value.
 
+  - Supervisord now emits TICK events, which happen every N seconds.
+    Three types of TICK events are available: TICK_5 (every five
+    seconds), TICK_60 (every minute), TICK_3600 (every hour).  Event
+    listeners may subscribe to one of these types of events to perform
+    every-so-often processing.  TICK events are subtypes of the EVENT
+    type.
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main
