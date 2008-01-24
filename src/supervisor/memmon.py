@@ -144,7 +144,7 @@ def restart(rpc, name, sendmail, email, rss):
         msg = (
             'memmon.py restarted the process named %s at %s because '
             'it was consuming too much memory (%s bytes RSS)\n' % (
-            name, time.asctime()), rss
+            name, time.asctime(), rss
             )
         subject = 'memmon: process %s restarted' % name
         mail(sendmail, subject, email, msg, rss)
