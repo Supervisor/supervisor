@@ -180,6 +180,9 @@ Next Release
     every-so-often processing.  TICK events are subtypes of the EVENT
     type.
 
+ - Get rid of OSX platform-specific memory monitor and replace with
+   memmon.py, which works on both Linux and Mac OS.
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main

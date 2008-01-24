@@ -16,16 +16,17 @@
 # A event listener meant to be subscribed to TICK_60 (or TICK_5)
 # events, which restarts any processes that are children of
 # supervisord that consume "too much" memory.  Performs horrendous
-# screenscrapes of Mac OS X (Tiger/Leopard) ps output.
+# screenscrapes of ps output.  Works on Linux and OS X (Tiger/Leopard)
+# as far as I know.
 
 # A supervisor config snippet that tells supervisor to use this script
 # as a listener is below.
 #
 # [eventlistener:memmon]
-# command=python osx_memmon.py [options]
+# command=python memmon.py [options]
 # events=TICK_60
 
-doc = """osx_memmon.py [-p processname=byte_size] | [-g groupname=byte_size] |
+doc = """memmon.py [-p processname=byte_size] | [-g groupname=byte_size] |
               [-a byte_size] [-s sendmail_program] [-m email_address]
 
 Options:
@@ -58,7 +59,7 @@ and 'GB'.
 
 A sample invocation:
 
-osx_memmon.py -p program1=200MB -p theprog:thegroup=100MB -g thegroup=100MB -a 1GB -s /usr/sbin/sendmail -m chrism@plope.com
+memmon.py -p program1=200MB -p theprog:thegroup=100MB -g thegroup=100MB -a 1GB -s /usr/sbin/sendmail -m chrism@plope.com
 """
 
 import os
@@ -140,7 +141,7 @@ def restart(rpc, name, sendmail, email):
     rpc.supervisor.startProcess(name)
 
     if email:
-        msg = ('osx_memmon.py restarted the process named %s at %s because'
+        msg = ('memmon.py restarted the process named %s at %s because'
                'it was consuming too much memory\n' % (name, time.asctime()))
         subject = 'memmon: process %s restarted' % name
         mail(sendmail, subject, email, msg)
