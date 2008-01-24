@@ -56,6 +56,130 @@ Next Release
        >>> '{SHA}' + sha.new('thepassword').hexdigest()
        '{SHA}82ab876d1387bfafe46cc1c8a2ef074eae50cb1d'
 
+  - The subtypes of the events PROCESS_STATE_CHANGE (and
+    PROCESS_STATE_CHANGE itself) have been removed, replaced with a
+    simpler set of PROCESS_STATE subscribable event types.
+
+    The new event types are:
+
+      PROCESS_STATE_STOPPED
+      PROCESS_STATE_EXITED
+      PROCESS_STATE_STARTING
+      PROCESS_STATE_STOPPING
+      PROCESS_STATE_BACKOFF
+      PROCESS_STATE_FATAL
+      PROCESS_STATE_RUNNING
+      PROCESS_STATE_UNKNOWN
+      PROCESS_STATE # abstract
+
+    PROCESS_STATE_STARTING replaces:
+
+      PROCESS_STATE_CHANGE_STARTING_FROM_STOPPED
+      PROCESS_STATE_CHANGE_STARTING_FROM_BACKOFF
+      PROCESS_STATE_CHANGE_STARTING_FROM_EXITED
+      PROCESS_STATE_CHANGE_STARTING_FROM_FATAL
+
+    PROCESS_STATE_RUNNING replaces
+    PROCESS_STATE_CHANGE_RUNNING_FROM_STARTED
+
+    PROCESS_STATE_BACKOFF replaces
+    PROCESS_STATE_CHANGE_BACKOFF_FROM_STARTING
+
+    PROCESS_STATE_STOPPING replaces:
+
+      PROCESS_STATE_CHANGE_STOPPING_FROM_RUNNING
+      PROCESS_STATE_CHANGE_STOPPING_FROM_STARTING
+
+    PROCESS_STATE_EXITED replaces
+    PROCESS_STATE_CHANGE_EXITED_FROM_RUNNING
+
+    PROCESS_STATE_STOPPED replaces
+    PROCESS_STATE_CHANGE_STOPPED_FROM_STOPPING
+
+    PROCESS_STATE_FATAL replaces
+    PROCESS_STATE_CHANGE_FATAL_FROM_BACKOFF
+
+    PROCESS_STATE_UNKNOWN replaces PROCESS_STATE_CHANGE_TO_UNKNOWN
+
+    PROCESS_STATE replaces PROCESS_STATE_CHANGE
+
+    The PROCESS_STATE_CHANGE_EXITED_OR_STOPPED abstract event is gone.
+
+    All process state changes have at least "processname",
+    "groupname", and "from_state" (the name of the previous state) in
+    their serializations.
+
+    PROCESS_STATE_EXITED additionaly has "expected" (1 or 0) and "pid"
+    (the process id) in its serialization.
+
+    PROCESS_STATE_RUNNING, PROCESS_STATE_STOPPING,
+    PROCESS_STATE_STOPPED additionally have "pid" in their
+    serializations.
+
+    PROCESS_STATE_STARTING and PROCESS_STATE_BACKOFF have "tries" in
+    their serialization (initially "0", bumped +1 each time a start
+    retry happens).
+
+  - Remove documentation from README.txt, point people to
+    http://supervisord.org/manual/ .
+
+  - The eventlistener request/response protocol has changed.  OK/FAIL
+    must now be wrapped in a RESULT envelope so we can use it for more
+    specialized communications.
+
+    Previously, to signify success, an event listener would write the
+    string 'OK\n' to its stdout.  To signify that the event was seen
+    but couldn't be handled by the listener and should be rebuffered,
+    an event listener would write the string 'FAIL\n' to its stdout.
+
+    In the new protocol, the listener must write the string:
+
+      RESULT {resultlen}\n{result}
+
+    For example, to signify OK:
+
+      RESULT 2\nOK
+
+    To signify FAIL:
+
+      RESULT 4\nFAIL
+
+    See the scripts/sample_eventlistener.py script for an example.
+
+  - To provide a hook point for custom results returned from event
+    handlers (see above) the [eventlistener:x] configuration sections
+    now accept a "result_handler=" parameter,
+    e.g. "result_handler=supervisor.dispatchers:default_handler" (the
+    default) or "handler=mypackage:myhandler".  The keys are pkgutil
+    "entry point" specifications (importable Python function names).
+    Result handlers must be callables which accept two arguments: one
+    named "event" which represents the event, and the other named
+    "result", which represents the listener's result.  A result
+    handler either executes successfully or raises an exception.  If
+    it raises a supervisor.dispatchers.RejectEvent exception, the
+    event will be rebuffered, and the eventhandler will be placed back
+    into the ACKNOWLEDGED state.  If it raises any other exception,
+    the event handler will be placed in the UNKNOWN state.  If it does
+    not raise any exception, the event is considered successfully
+    processed.  A result handler's return value is ignored.  Writing a
+    result handler is a "in case of emergency break glass" sort of
+    thing, it is not something to be used for arbitrary business code.
+    In particular, handlers *must not block* for any appreciable
+    amount of time.
+
+    The 'standard' eventlistener result handler
+    (supervisor.dispatchers:default_handler) does nothing if it
+    receives an "OK" and will raise a
+    supervisor.dispatchers.RejectEvent exception if it receives any
+    other value.
+
+  - Supervisord now emits TICK events, which happen every N seconds.
+    Three types of TICK events are available: TICK_5 (every five
+    seconds), TICK_60 (every minute), TICK_3600 (every hour).  Event
+    listeners may subscribe to one of these types of events to perform
+    every-so-often processing.  TICK events are subtypes of the EVENT
+    type.
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main

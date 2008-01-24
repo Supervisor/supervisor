@@ -577,6 +577,13 @@ class ServerOptions(Options):
             # and stopped last at mainloop exit
             priority = integer(get(section, 'priority', -1)) 
             buffer_size = integer(get(section, 'buffer_size', 10))
+            result_handler = get(section, 'result_handler',
+                                       'supervisor.dispatchers:default_handler')
+            try:
+                result_handler = self.import_spec(result_handler)
+            except ImportError:
+                raise ValueError('%s cannot be resolved within [%s]' % (
+                    result_handler, section))
             pool_event_names = [x.upper() for x in
                                 list_of_strings(get(section, 'events', ''))]
             pool_event_names = dedupe(pool_event_names)
@@ -596,7 +603,8 @@ class ServerOptions(Options):
 
             groups.append(
                 EventListenerPoolConfig(self, pool_name, priority, processes,
-                                        buffer_size, pool_events)
+                                        buffer_size, pool_events,
+                                        result_handler)
                 )
 
         groups.sort()
@@ -1474,13 +1482,14 @@ class ProcessGroupConfig(Config):
 
 class EventListenerPoolConfig(Config):
     def __init__(self, options, name, priority, process_configs, buffer_size,
-                 pool_events):
+                 pool_events, result_handler):
         self.options = options
         self.name = name
         self.priority = priority
         self.process_configs = process_configs
         self.buffer_size = buffer_size
         self.pool_events = pool_events
+        self.result_handler = result_handler
 
     def after_setuid(self):
         for config in self.process_configs:

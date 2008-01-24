@@ -77,8 +77,14 @@ class EventListenerProtocol:
     def ready(self):
         write_stdout(PEventListenerDispatcher.READY_FOR_EVENTS_TOKEN)
     def ok(self, *ignored):
-        write_stdout(PEventListenerDispatcher.EVENT_PROCESSED_TOKEN)
+        self.send('OK')
     def fail(self, *ignored):
-        write_stdout(PEventListenerDispatcher.EVENT_REJECTED_TOKEN)
+        self.send('FAIL')
+    def send(self, data):
+        resultlen = len(data)
+        result = '%s%s\n%s' % (PEventListenerDispatcher.RESULT_TOKEN_START,
+                               str(resultlen),
+                               data)
+        write_stdout(result)
 
 listener = EventListenerProtocol()

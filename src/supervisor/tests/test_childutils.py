@@ -134,28 +134,44 @@ class TestEventListenerProtocol(unittest.TestCase):
     def test_ok(self):
         from supervisor.childutils import listener
         from supervisor.dispatchers import PEventListenerDispatcher
-        token = PEventListenerDispatcher.EVENT_PROCESSED_TOKEN
+        begin = PEventListenerDispatcher.RESULT_TOKEN_START
 
         old = sys.stdout
         try:
             sys.stdout = StringIO()
             listener.ok()
-            self.assertEqual(sys.stdout.getvalue(), token)
+            self.assertEqual(sys.stdout.getvalue(), begin + '2\nOK')
         finally:
             sys.stdout = old
 
     def test_fail(self):
         from supervisor.childutils import listener
         from supervisor.dispatchers import PEventListenerDispatcher
-        token = PEventListenerDispatcher.EVENT_REJECTED_TOKEN
+        begin = PEventListenerDispatcher.RESULT_TOKEN_START
 
         old = sys.stdout
         try:
             sys.stdout = StringIO()
             listener.fail()
-            self.assertEqual(sys.stdout.getvalue(), token)
+            self.assertEqual(sys.stdout.getvalue(), begin + '4\nFAIL')
         finally:
             sys.stdout = old
+
+    def test_send(self):
+        from supervisor.childutils import listener
+        from supervisor.dispatchers import PEventListenerDispatcher
+        begin = PEventListenerDispatcher.RESULT_TOKEN_START
+
+        old = sys.stdout
+        try:
+            sys.stdout = StringIO()
+            msg = 'the body data ya fool\n'
+            listener.send(msg)
+            expected = '%s%s\n%s' % (begin, len(msg), msg)
+            self.assertEqual(sys.stdout.getvalue(), expected)
+        finally:
+            sys.stdout = old
+        
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
