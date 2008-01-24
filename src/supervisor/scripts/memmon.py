@@ -141,7 +141,7 @@ def restart(rpc, name, sendmail, email):
     rpc.supervisor.startProcess(name)
 
     if email:
-        msg = ('memmon.py restarted the process named %s at %s because'
+        msg = ('memmon.py restarted the process named %s at %s because '
                'it was consuming too much memory\n' % (name, time.asctime()))
         subject = 'memmon: process %s restarted' % name
         mail(sendmail, subject, email, msg)
