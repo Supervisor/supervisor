@@ -119,32 +119,35 @@ def wait(programs, groups, any, sendmail, email):
             for n in name, pname:
                 if n in programs:
                     if  rss > programs[name]:
-                        restart(rpc, pname, sendmail, email)
+                        restart(rpc, pname, sendmail, email, rss)
                         continue
 
             if group in groups:
                 if rss > groups[group]:
-                    restart(rpc, pname, sendmail, email)
+                    restart(rpc, pname, sendmail, email, rss)
                     continue
 
             if any:
                 if rss > any:
-                    restart(rpc, pname, sendmail, email)
+                    restart(rpc, pname, sendmail, email, rss)
                     continue
             
         sys.stderr.flush()
         childutils.listener.ok()
 
-def restart(rpc, name, sendmail, email):
+def restart(rpc, name, sendmail, email, rss):
     sys.stderr.write('Restarting %s\n' % name)
     rpc.supervisor.stopProcess(name)
     rpc.supervisor.startProcess(name)
 
     if email:
-        msg = ('memmon.py restarted the process named %s at %s because '
-               'it was consuming too much memory\n' % (name, time.asctime()))
+        msg = (
+            'memmon.py restarted the process named %s at %s because '
+            'it was consuming too much memory (%s bytes RSS)\n' % (
+            name, time.asctime()), rss
+            )
         subject = 'memmon: process %s restarted' % name
-        mail(sendmail, subject, email, msg)
+        mail(sendmail, subject, email, msg, rss)
 
 def mail(sendmail, subject, to, message):
     m = os.popen('%s -t -i' % sendmail, 'w')
@@ -183,8 +186,11 @@ def main():
         "sendmail_program=",
         "email=",
         ]
+    arguments = sys.argv[1:]
+    if not arguments:
+        usage()
     try:
-        opts, args=getopt.getopt(sys.argv[1:], short_args, long_args)
+        opts, args=getopt.getopt(arguments, short_args, long_args)
     except:
         print __doc__
         sys.exit(2)
