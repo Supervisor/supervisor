@@ -181,7 +181,8 @@ Next Release
     type.
 
  - Get rid of OSX platform-specific memory monitor and replace with
-   memmon.py, which works on both Linux and Mac OS.
+   memmon.py, which works on both Linux and Mac OS.  This script is
+   now a console script named "memmon".
 
 3.0a3
 
