@@ -147,7 +147,7 @@ def restart(rpc, name, sendmail, email, rss):
             name, time.asctime(), rss)
             )
         subject = 'memmon: process %s restarted' % name
-        mail(sendmail, subject, email, msg, rss)
+        mail(sendmail, subject, email, msg)
 
 def mail(sendmail, subject, to, message):
     m = os.popen('%s -t -i' % sendmail, 'w')
