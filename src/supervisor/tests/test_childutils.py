@@ -25,26 +25,6 @@ class ChildUtilsTests(unittest.TestCase):
         self.assertEqual(t.password, 'abc123')
         self.assertEqual(t.serverurl, 'http://localhost:9001')
 
-    def test_write_stderr(self):
-        from supervisor.childutils import write_stderr
-        old = sys.stderr
-        try:
-            sys.stderr = StringIO()
-            write_stderr('hello')
-            self.assertEqual(sys.stderr.getvalue(),'hello')
-        finally:
-            sys.stderr = old
-
-    def test_write_stdout(self):
-        from supervisor.childutils import write_stdout
-        old = sys.stdout
-        try:
-            sys.stdout = StringIO()
-            write_stdout('hello')
-            self.assertEqual(sys.stdout.getvalue(),'hello')
-        finally:
-            sys.stdout = old
-
     def test_get_headers(self):
         from supervisor.childutils import get_headers
         line = 'a:1 b:2'
@@ -61,13 +41,12 @@ class ChildUtilsTests(unittest.TestCase):
 class TestProcessCommunicationsProtocol(unittest.TestCase):
     def test_send(self):
         from supervisor.childutils import pcomm
-        io = StringIO()
-        write = io.write
-        pcomm.send('hello', write)
+        stdout = StringIO()
+        pcomm.send('hello', stdout)
         from supervisor.events import ProcessCommunicationEvent
         begin = ProcessCommunicationEvent.BEGIN_TOKEN
         end = ProcessCommunicationEvent.END_TOKEN
-        self.assertEqual(io.getvalue(), '%s%s%s' % (begin, 'hello', end))
+        self.assertEqual(stdout.getvalue(), '%s%s%s' % (begin, 'hello', end))
 
     def test_stdout(self):
         from supervisor.childutils import pcomm
@@ -105,72 +84,44 @@ class TestEventListenerProtocol(unittest.TestCase):
                 return 'len:5'
             def read(self, *ignored):
                 return 'hello'
-        old_stdin = sys.stdin
-        old_stdout = sys.stdout
-        try:
-            sys.stdin = Dummy()
-            sys.stdout = StringIO()
-            headers, payload = listener.wait()
-            self.assertEqual(headers, {'len':'5'})
-            self.assertEqual(payload, 'hello')
-            self.assertEqual(sys.stdout.getvalue(), token)
-        finally:
-            sys.stdin = old_stdin
-            sys.stdout = old_stdout
+        stdin = Dummy()
+        headers, payload = listener.wait(stdin)
+        self.assertEqual(headers, {'len':'5'})
+        self.assertEqual(payload, 'hello')
 
     def test_token(self):
         from supervisor.childutils import listener
         from supervisor.dispatchers import PEventListenerDispatcher
         token = PEventListenerDispatcher.READY_FOR_EVENTS_TOKEN
-        
-        old = sys.stdout
-        try:
-            sys.stdout = StringIO()
-            listener.ready()
-            self.assertEqual(sys.stdout.getvalue(), token)
-        finally:
-            sys.stdout = old
+        stdout = StringIO()
+        listener.ready(stdout)
+        self.assertEqual(stdout.getvalue(), token)
 
     def test_ok(self):
         from supervisor.childutils import listener
         from supervisor.dispatchers import PEventListenerDispatcher
         begin = PEventListenerDispatcher.RESULT_TOKEN_START
-
-        old = sys.stdout
-        try:
-            sys.stdout = StringIO()
-            listener.ok()
-            self.assertEqual(sys.stdout.getvalue(), begin + '2\nOK')
-        finally:
-            sys.stdout = old
+        stdout = StringIO()
+        listener.ok(stdout)
+        self.assertEqual(stdout.getvalue(), begin + '2\nOK')
 
     def test_fail(self):
         from supervisor.childutils import listener
         from supervisor.dispatchers import PEventListenerDispatcher
         begin = PEventListenerDispatcher.RESULT_TOKEN_START
-
-        old = sys.stdout
-        try:
-            sys.stdout = StringIO()
-            listener.fail()
-            self.assertEqual(sys.stdout.getvalue(), begin + '4\nFAIL')
-        finally:
-            sys.stdout = old
+        stdout = StringIO()
+        listener.fail(stdout)
+        self.assertEqual(stdout.getvalue(), begin + '4\nFAIL')
 
     def test_send(self):
         from supervisor.childutils import listener
         from supervisor.dispatchers import PEventListenerDispatcher
         begin = PEventListenerDispatcher.RESULT_TOKEN_START
-
-        old = sys.stdout
-        try:
-            sys.stdout = StringIO()
-            msg = 'the body data ya fool\n'
-            listener.send(msg)
-            expected = '%s%s\n%s' % (begin, len(msg), msg)
-            self.assertEqual(sys.stdout.getvalue(), expected)
-        finally:
-            sys.stdout = old
+        stdout = StringIO()
+        msg = 'the body data ya fool\n'
+        listener.send(msg, stdout)
+        expected = '%s%s\n%s' % (begin, len(msg), msg)
+        self.assertEqual(stdout.getvalue(), expected)
         
 
 def test_suite():

@@ -26,8 +26,9 @@
 # command=python memmon.py [options]
 # events=TICK_60
 
-doc = """memmon.py [-p processname=byte_size] | [-g groupname=byte_size] |
-              [-a byte_size] [-s sendmail_program] [-m email_address]
+doc = """\
+memmon.py [-p processname=byte_size]  [-g groupname=byte_size] 
+          [-a byte_size] [-s sendmail] [-m email_address]
 
 Options:
 
@@ -42,9 +43,10 @@ Options:
 -a -- specify a global byte_size.  Restart any child of the supervisord
       under which this runs if it uses more than byte_size RSS.
 
--s -- the sendmail program to use to send email
-      (e.g. /usr/sbin/sendmail).  Must be a full path.  Default is
-      /usr/sbin/sendmail.
+-s -- the sendmail command to use to send email
+      (e.g. "/usr/sbin/sendmail -t -i").  Must be a command which accepts
+      header and message data on stdin and sends mail.
+      Default is "/usr/sbin/sendmail -t -i".
 
 -m -- specify an email address.  The script will send mail to this
       address when any process is restarted.  If no email address is
@@ -59,7 +61,7 @@ and 'GB'.
 
 A sample invocation:
 
-memmon.py -p program1=200MB -p theprog:thegroup=100MB -g thegroup=100MB -a 1GB -s /usr/sbin/sendmail -m chrism@plope.com
+memmon.py -p program1=200MB -p theprog:thegroup=100MB -g thegroup=100MB -a 1GB -s "/usr/sbin/sendmail -t -i" -m chrism@plope.com
 """
 
 import os
@@ -76,86 +78,115 @@ def usage():
 def shell(cmd):
     return os.popen(cmd).read()
 
-def wait(programs, groups, any, sendmail, email):
-    rpc = childutils.getRPCInterface(os.environ)
 
-    while 1:
-        headers, payload = childutils.listener.wait()
+class Memmon:
+    def __init__(self, programs, groups, any, sendmail, email, rpc):
+        self.programs = programs
+        self.groups = groups
+        self.any = any
+        self.sendmail = sendmail
+        self.email = email
+        self.rpc = rpc
+        self.stdin = sys.stdin
+        self.stdout = sys.stdout
+        self.stderr = sys.stderr
+        self.pscommand = 'ps -orss= -p %s'
+        self.mailed = False # for unit tests
 
-        if not headers['eventname'].startswith('TICK'):
-            # do nothing with non-TICK events
-            childutils.listener.ok()
-            continue
+    def runforever(self, test=False):
+        while 1:
+            # we explicitly use self.stdin, self.stdout, and self.stderr
+            # instead of sys.* so we can unit test this code
+            headers, payload = childutils.listener.wait(self.stdin)
 
-        sys.stderr.write(
-            'Checking programs %r, groups %r, any %r' %
-            (programs, groups, any)
-            )
-        
-        infos = rpc.supervisor.getAllProcessInfo()
-
-        for info in infos:
-            pid = info['pid']
-            name = info['name']
-            group = info['group']
-            pname = '%s:%s' % (group, name)
-
-            data = shell('ps -orss -p %s' % pid)
-            dlines = data.split('\n')
-            if len(dlines) < 2:
-                # no data
+            if not headers['eventname'].startswith('TICK'):
+                # do nothing with non-TICK events
+                childutils.listener.ok(self.stdout)
+                if test:
+                    break
                 continue
 
-            line = dlines[1]
-            try:
-                rss = line.lstrip().rstrip()
-                rss = int(rss) * 1024 # rss is in KB
-            except ValueError:
-                # line doesn't contain any data, or rss cant be intified
-                continue
+            status = []
+            if self.programs:
+                status.append(
+                    'Checking programs %s' % ', '.join(
+                    [ '%s=%s' % x for x in self.programs.items() ] )
+                    )
 
-            sys.stderr.write('RSS of %s is %s\n' % (pname, rss))
+            if self.groups:
+                status.append(
+                    'Checking groups %s' % ', '.join(
+                    [ '%s=%s' % x for x in self.groups.items() ] )
+                    )
+            if self.any is not None:
+                status.append('Checking any=%s' % self.any)
 
-            for n in name, pname:
-                if n in programs:
-                    if  rss > programs[name]:
-                        restart(rpc, pname, sendmail, email, rss)
+            self.stderr.write('\n'.join(status) + '\n')
+
+            infos = self.rpc.supervisor.getAllProcessInfo()
+
+            for info in infos:
+                pid = info['pid']
+                name = info['name']
+                group = info['group']
+                pname = '%s:%s' % (group, name)
+
+                data = shell(self.pscommand % pid)
+                if not data:
+                    # no such pid (deal with race conditions)
+                    continue
+
+                try:
+                    rss = data.lstrip().rstrip()
+                    rss = int(rss) * 1024 # rss is in KB
+                except ValueError:
+                    # line doesn't contain any data, or rss cant be intified
+                    continue
+
+                for n in name, pname:
+                    if n in self.programs:
+                        self.stderr.write('RSS of %s is %s\n' % (pname, rss))
+                        if  rss > self.programs[name]:
+                            self.restart(pname, rss)
+                            continue
+
+                if group in self.groups:
+                    self.stderr.write('RSS of %s is %s\n' % (pname, rss))
+                    if rss > self.groups[group]:
+                        self.restart(pname, rss)
                         continue
 
-            if group in groups:
-                if rss > groups[group]:
-                    restart(rpc, pname, sendmail, email, rss)
-                    continue
+                if self.any is not None:
+                    self.stderr.write('RSS of %s is %s\n' % (pname, rss))
+                    if rss > self.any:
+                        self.restart(pname, rss)
+                        continue
 
-            if any:
-                if rss > any:
-                    restart(rpc, pname, sendmail, email, rss)
-                    continue
-            
-        sys.stderr.flush()
-        childutils.listener.ok()
+            self.stderr.flush()
+            childutils.listener.ok(self.stdout)
+            if test:
+                break
 
-def restart(rpc, name, sendmail, email, rss):
-    sys.stderr.write('Restarting %s\n' % name)
-    rpc.supervisor.stopProcess(name)
-    rpc.supervisor.startProcess(name)
+    def restart(self, name, rss):
+        self.stderr.write('Restarting %s\n' % name)
+        self.rpc.supervisor.stopProcess(name)
+        self.rpc.supervisor.startProcess(name)
 
-    if email:
-        msg = (
-            'memmon.py restarted the process named %s at %s because '
-            'it was consuming too much memory (%s bytes RSS)\n' % (
-            name, time.asctime(), rss)
-            )
-        subject = 'memmon: process %s restarted' % name
-        mail(sendmail, subject, email, msg)
-
-def mail(sendmail, subject, to, message):
-    m = os.popen('%s -t -i' % sendmail, 'w')
-    m.write('To: %s\n' % to)
-    m.write('Subject: %s\n' % subject)
-    m.write('\n')
-    m.write(message)
-    m.close()
+        if self.email:
+            now = time.asctime()
+            msg = (
+                'memmon.py restarted the process named %s at %s because '
+                'it was consuming too much memory (%s bytes RSS)\n' % (
+                name, now, rss)
+                )
+            subject = 'memmon: process %s restarted' % name
+            m = os.popen(self.sendmail, 'w')
+            m.write('To: %s\n' % self.email)
+            m.write('Subject: %s\n' % subject)
+            m.write('\n')
+            m.write(msg)
+            m.close()
+            self.mailed = True
         
 def parse_namesize(option, value):
     try:
@@ -198,7 +229,7 @@ def main():
     programs = {}
     groups = {}
     any = None
-    sendmail = '/usr/sbin/sendmail'
+    sendmail = '/usr/sbin/sendmail -t -i'
     email = None
 
     for option, value in opts:
@@ -224,7 +255,9 @@ def main():
         if option in ('-m', '--email'):
             email = value
 
-    wait(programs, groups, any, sendmail, email)
+    rpc = childutils.getRPCInterface(os.environ)
+    memmon = Memmon(programs, groups, any, sendmail, email, rpc)
+    memmon.runforever()
 
 if __name__ == '__main__':
     main()

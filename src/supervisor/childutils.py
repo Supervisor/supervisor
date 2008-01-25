@@ -30,14 +30,6 @@ def getRPCInterface(env):
     # 'serverurl' to figure out what to attach to
     return xmlrpclib.ServerProxy('http://127.0.0.1', getRPCTransport(env))
 
-def write_stderr(msg):
-    sys.stderr.write(msg)
-    sys.stderr.flush()
-
-def write_stdout(msg):
-    sys.stdout.write(msg)
-    sys.stdout.flush()
-
 def get_headers(line):
     return dict([ x.split(':') for x in line.split() ])
 
@@ -54,37 +46,43 @@ def get_asctime():
     return asctime
 
 class ProcessCommunicationsProtocol:
-    def send(self, msg, write=write_stdout):
-        write(ProcessCommunicationEvent.BEGIN_TOKEN)
-        write(msg)
-        write(ProcessCommunicationEvent.END_TOKEN)
+    def send(self, msg, fp=sys.stdout):
+        fp.write(ProcessCommunicationEvent.BEGIN_TOKEN)
+        fp.write(msg)
+        fp.write(ProcessCommunicationEvent.END_TOKEN)
 
     def stdout(self, msg):
-        return self.send(msg, write_stdout)
+        return self.send(msg, sys.stdout)
 
     def stderr(self, msg):
-        return self.send(msg, write_stderr)
+        return self.send(msg, sys.stderr)
 
 pcomm = ProcessCommunicationsProtocol()
 
 class EventListenerProtocol:
-    def wait(self):
+    def wait(self, stdin=sys.stdin):
         self.ready()
-        line = sys.stdin.readline()
+        line = stdin.readline()
         headers = get_headers(line)
-        payload = sys.stdin.read(int(headers['len']))
+        payload = stdin.read(int(headers['len']))
         return headers, payload
-    def ready(self):
-        write_stdout(PEventListenerDispatcher.READY_FOR_EVENTS_TOKEN)
-    def ok(self, *ignored):
-        self.send('OK')
-    def fail(self, *ignored):
-        self.send('FAIL')
-    def send(self, data):
+
+    def ready(self, stdout=sys.stdout):
+        stdout.write(PEventListenerDispatcher.READY_FOR_EVENTS_TOKEN)
+        stdout.flush()
+
+    def ok(self, stdout=sys.stdout):
+        self.send('OK', stdout)
+
+    def fail(self, stdout=sys.stdout):
+        self.send('FAIL', stdout)
+
+    def send(self, data, stdout=sys.stdout):
         resultlen = len(data)
         result = '%s%s\n%s' % (PEventListenerDispatcher.RESULT_TOKEN_START,
                                str(resultlen),
                                data)
-        write_stdout(result)
+        stdout.write(result)
+        stdout.flush()
 
 listener = EventListenerProtocol()
