@@ -67,6 +67,7 @@ memmon.py -p program1=200MB -p theprog:thegroup=100MB -g thegroup=100MB -a 1GB -
 import os
 import sys
 import time
+import xmlrpclib
 
 from supervisor import childutils
 from supervisor.datatypes import byte_size
@@ -169,24 +170,48 @@ class Memmon:
 
     def restart(self, name, rss):
         self.stderr.write('Restarting %s\n' % name)
-        self.rpc.supervisor.stopProcess(name)
-        self.rpc.supervisor.startProcess(name)
+
+        try:
+            self.rpc.supervisor.stopProcess(name)
+        except xmlrpclib.Fault, what:
+            msg = ('Failed to stop process %s (RSS %s), exiting: %s' %
+                   (name, rss, what))
+            self.stderr.write(str(msg))
+            if self.email:
+                subject = 'memmon: failed to stop process %s, exiting' % name
+                self.mail(self.email, subject, msg)
+            raise
+
+        try:
+            self.rpc.supervisor.startProcess(name)
+        except xmlrpclib.Fault, what:
+            msg = ('Failed to start process %s after stopping it, '
+                   'exiting: %s' % (name, what))
+            self.stderr.write(str(msg))
+            if self.email:
+                subject = 'memmon: failed to start process %s, exiting' % name
+                self.mail(self.email, subject, msg)
+            raise
 
         if self.email:
             now = time.asctime()
             msg = (
                 'memmon.py restarted the process named %s at %s because '
-                'it was consuming too much memory (%s bytes RSS)\n' % (
+                'it was consuming too much memory (%s bytes RSS)' % (
                 name, now, rss)
                 )
             subject = 'memmon: process %s restarted' % name
-            m = os.popen(self.sendmail, 'w')
-            m.write('To: %s\n' % self.email)
-            m.write('Subject: %s\n' % subject)
-            m.write('\n')
-            m.write(msg)
-            m.close()
-            self.mailed = True
+            self.mail(self.email, subject, msg)
+
+    def mail(self, email, subject, msg):
+        body =  'To: %s\n' % self.email
+        body += 'Subject: %s\n' % subject
+        body += '\n'
+        body += msg
+        m = os.popen(self.sendmail, 'w')
+        m.write(body)
+        m.close()
+        self.mailed = body
         
 def parse_namesize(option, value):
     try:
