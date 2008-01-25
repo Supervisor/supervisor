@@ -39,8 +39,6 @@
 
 - Address outstanding collector issues.
 
-- http://swapoff.org/wiki/blog/2007-09-09--distutils-support-for-a-workingenv-sandbox
-
 - We *might* be able to delay shutdown until all buffered events have
   been processed (or a timeout has been reached).
 
