@@ -44,8 +44,6 @@
 
 - Web interface:
 
-   - Support POST requests.
-
    - Unit tests for meld classes and ui server.
 
    - Meta-refresh on tail page.
