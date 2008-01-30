@@ -187,6 +187,10 @@ Next Release
  - Allow "web handler" (the handler which receives http requests from 
    browsers visiting the web UI of supervisor) to deal with POST requests.
 
+ - RPC interface methods stopProcess(), stopProcessGroup(), and
+   stopAllProcesses() now take an optional "wait" argument that defaults
+   to True for parity with the start methods.  
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main
