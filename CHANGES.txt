@@ -184,6 +184,9 @@ Next Release
    memmon.py, which works on both Linux and Mac OS.  This script is
    now a console script named "memmon".
 
+ - Allow "web handler" (the handler which receives http requests from 
+   browsers visiting the web UI of supervisor) to deal with POST requests.
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main

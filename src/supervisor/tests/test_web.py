@@ -76,43 +76,19 @@ class UIHandlerTests(unittest.TestCase):
         return supervisor_ui_handler
 
     def _makeOne(self):
-        filesystem = DummyFilesystem()
         supervisord = DummySupervisor()
-        handler = self._getTargetClass()(filesystem, supervisord)
+        handler = self._getTargetClass()(supervisord)
         return handler
 
-    def test_get_view_index_html(self):
-        request = DummyRequest('/index.html', [], '', '')
-        handler = self._makeOne()
-        viewdata = handler.get_view(request)
-        from supervisor.web import StatusView
-        self.assertEqual(viewdata['template'], 'ui/status.html')
-        self.assertEqual(viewdata['view'], StatusView)
-
-    def test_get_view_tail_html(self):
-        request = DummyRequest('/tail.html', [], '', '')
-        handler = self._makeOne()
-        viewdata = handler.get_view(request)
-        from supervisor.web import TailView
-        self.assertEqual(viewdata['template'], 'ui/tail.html')
-        self.assertEqual(viewdata['view'], TailView)
-
-    def test_get_view_default(self):
-        request = DummyRequest('/', [], '', '')
-        handler = self._makeOne()
-        viewdata = handler.get_view(request)
-        from supervisor.web import StatusView
-        self.assertEqual(viewdata['template'], 'ui/status.html')
-        self.assertEqual(viewdata['view'], StatusView)
-
     def test_handle_request_no_view_method(self):
-        request = DummyRequest('/foo.css', [], '', '')
+        request = DummyRequest('/foo.css', [], '', '', {'PATH_INFO':'/foo.css'})
         handler = self._makeOne()
         data = handler.handle_request(request)
         self.assertEqual(data, None)
         
-    def test_handle_request_view_method(self):
-        request = DummyRequest('/index.html', [], '', '')
+    def test_handle_request_default(self):
+        request = DummyRequest('/index.html', [], '', '',
+                               {'PATH_INFO':'/index.html'})
         handler = self._makeOne()
         data = handler.handle_request(request)
         self.assertEqual(data, None)
@@ -120,14 +96,36 @@ class UIHandlerTests(unittest.TestCase):
         from supervisor.web import StatusView
         self.assertEqual(request.channel.producer.callback.__class__,StatusView)
 
-    def test_do_view_request(self):
-        request = DummyRequest('/index.html', [], '', '')
+    def test_handle_request_index_html(self):
+        request = DummyRequest('/index.html', [], '', '',
+                               {'PATH_INFO':'/index.html'})
         handler = self._makeOne()
+        data = handler.handle_request(request)
         from supervisor.web import StatusView
-        viewdata = {'template':'ui/status.html', 'view':StatusView}
-        handler.do_view_request(viewdata, request)
-        self.assertEqual(request.channel.producer.request, request)
-        self.assertEqual(request.channel.producer.callback.__class__,StatusView)
+        view = request.channel.producer.callback
+        self.assertEqual(view.__class__, StatusView)
+        self.assertEqual(view.context.template, 'ui/status.html')
+
+    def test_handle_request_tail_html(self):
+        request = DummyRequest('/tail.html', [], '', '',
+                               {'PATH_INFO':'/tail.html'})
+        handler = self._makeOne()
+        data = handler.handle_request(request)
+        from supervisor.web import TailView
+        view = request.channel.producer.callback
+        self.assertEqual(view.__class__, TailView)
+        self.assertEqual(view.context.template, 'ui/tail.html')
+
+    def test_handle_request_ok_html(self):
+        request = DummyRequest('/tail.html', [], '', '',
+                               {'PATH_INFO':'/ok.html'})
+        handler = self._makeOne()
+        data = handler.handle_request(request)
+        from supervisor.web import OKView
+        view = request.channel.producer.callback
+        self.assertEqual(view.__class__, OKView)
+        self.assertEqual(view.context.template, None)
+
 
 class StatusViewTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -142,6 +140,7 @@ class StatusViewTests(unittest.TestCase):
         context = DummyContext()
         context.supervisord = DummySupervisor()
         context.template = 'ui/status.html'
+        context.form = {}
         view = self._makeOne(context)
         self.assertRaises(ValueError, view.make_callback, 'process', None)
 
@@ -150,6 +149,7 @@ class StatusViewTests(unittest.TestCase):
         context.supervisord = DummySupervisor()
         context.template = 'ui/status.html'
         context.request = DummyRequest('/foo', [], '', '')
+        context.form = {}
         context.response = {}
         view = self._makeOne(context)
         data = view.render()
@@ -159,8 +159,8 @@ class StatusViewTests(unittest.TestCase):
         context = DummyContext()
         context.supervisord = DummySupervisor()
         context.template = 'ui/status.html'
-        context.request = DummyRequest('/foo', [], '?action=refresh', '')
         context.response = {}
+        context.form = {'action':'refresh'}
         view = self._makeOne(context)
         data = view.render()
         from supervisor.http import NOT_DONE_YET
@@ -168,21 +168,6 @@ class StatusViewTests(unittest.TestCase):
 
 class DummyContext:
     pass
-
-class DummyFilesystem:
-    def __init__(self):
-        self.stat_return = (16877, 12515682L, 234881026L, 24, 501, 501,
-                            816L, 1187846057, 1187819244, 1187819244)
-        import StringIO
-        self.file = StringIO.StringIO()
-    def isdir(self, path):
-        return False
-    def isfile(self, path):
-        return True
-    def stat(self, path):
-        return self.stat_return
-    def open(self, *arg, **kw):
-        return self.file
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

@@ -526,13 +526,17 @@ class DummyRequest:
     _error = None
     _done = False
     version = '1.0'
-    def __init__(self, path, params, query, fragment):
+    def __init__(self, path, params, query, fragment, env=None):
         self.args = path, params, query, fragment
         self.producers = []
         self.headers = {}
         self.header = []
         self.outgoing = []
         self.channel = DummyMedusaChannel()
+        if env is None:
+            self.env = {}
+        else:
+            self.env = env
 
     def split_uri(self):
         return self.args
@@ -557,6 +561,13 @@ class DummyRequest:
 
     def log(self, *arg, **kw):
         pass
+
+    def cgi_environment(self):
+        return self.env
+
+    def get_server_url(self):
+        return 'http://example.com'
+        
 
 class DummyRPCInterfaceFactory:
     def __init__(self, supervisord, **config):

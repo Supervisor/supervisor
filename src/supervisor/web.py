@@ -21,10 +21,10 @@ import urllib
 import datetime
 import StringIO
 
-from medusa import default_handler
 from medusa import producers
 from medusa.http_server import http_date
 from medusa.http_server import get_header
+from medusa.xmlrpc_handler import collector
 
 import meld3
 
@@ -194,18 +194,13 @@ class MeldView:
 class TailView(MeldView):
     def render(self):
         supervisord = self.context.supervisord
-        request = self.context.request
+        form = self.context.form
 
-        path, params, query, fragment = request.split_uri()
-
-        if not query:
+        if not 'processname' in form:
             tail = 'No process name found'
             processname = None
         else:
-            while query.startswith('?'):
-                query = query[1:]
-            params = cgi.parse_qs(query)
-            processname = params.get('processname',[None])[0]
+            processname = form['processname']
 
             if not processname:
                 tail = 'No process name found'
@@ -390,18 +385,11 @@ class StatusView(MeldView):
         raise ValueError(action)
     
     def render(self):
-        request = self.context.request
+        form = self.context.form
         response = self.context.response
-        path, params, query, fragment = request.split_uri()
-
-        if query:
-            while query.startswith('?'):
-                query = query[1:]
-
-        qparams = cgi.parse_qs(query or '')
-        processname = qparams.get('processname',[None])[0]
-        action = qparams.get('action', [None])[0]
-        message = qparams.get('message', [None])[0]
+        processname = form.get('processname')
+        action = form.get('action')
+        message = form.get('message')
 
         if action:
             if not self.callback:
@@ -413,7 +401,7 @@ class StatusView(MeldView):
                 if message is NOT_DONE_YET:
                     return NOT_DONE_YET
                 if message is not None:
-                    server_url = request.get_server_url()
+                    server_url = form['SERVER_URL']
                     location = server_url + '?message=%s' % urllib.quote(
                         message)
                     response['headers']['Location'] = location
@@ -523,49 +511,78 @@ VIEWS = {
     }
 
 
-class supervisor_ui_handler(default_handler.default_handler):
+class supervisor_ui_handler:
     IDENT = 'Supervisor Web UI HTTP Request Handler'
-    path = ''
 
-    def __init__(self, filesystem, supervisord):
+    def __init__(self, supervisord):
         self.supervisord = supervisord
-        default_handler.default_handler.__init__(self, filesystem)
 
     def match(self, request):
-        return request.uri.startswith(self.path)
+        if request.command not in ('POST', 'GET'):
+            return False
 
-    def get_view(self, request):
         path, params, query, fragment = request.split_uri()
 
-        if '%' in path:
-            path = cgi.unquote(path)
-
-        # strip off all leading slashes
-        while path and path[0] == '/':
+        while path.startswith('/'):
             path = path[1:]
 
         if not path:
             path = 'index.html'
-
-        viewdata = VIEWS.get(path)
-        return viewdata
+            
+        for viewname in VIEWS.keys():
+            if viewname == path:
+                return True
 
     def handle_request(self, request):
-        viewdata = self.get_view(request)
-        if viewdata:
-            self.do_view_request(viewdata, request)
+        if request.command == 'POST':
+            request.collector = collector(self, request)
         else:
-            return default_handler.default_handler.handle_request(self, request)
+            self.continue_request('', request)
 
-    def do_view_request(self, viewdata, request):
+    def continue_request (self, data, request):
+        form = {}
+        cgi_env = request.cgi_environment()
+        form.update(cgi_env)
+        if not form.has_key('QUERY_STRING'):
+            form['QUERY_STRING'] = ''
+
+        query = form['QUERY_STRING']
+
+        # we only handle x-www-form-urlencoded values from POSTs
+        form_urlencoded = cgi.parse_qsl(data)
+        query_data = cgi.parse_qs(query)
+
+        for k, v in query_data.items():
+            # ignore dupes
+            form[k] = v[0]
+
+        for k, v in form_urlencoded:
+            # ignore dupes
+            form[k] = v
+
+        form['SERVER_URL'] = request.get_server_url()
+
+        path = form['PATH_INFO']
+        # strip off all leading slashes
+        while path and path[0] == '/':
+            path = path[1:]
+        if not path:
+            path = 'index.html'
+
+        viewinfo = VIEWS.get(path)
+        if viewinfo is None:
+            # this should never happen if our match method works
+            return
+
         response = {}
         response['headers'] = {}
 
-        viewclass = viewdata['view']
-        viewtemplate = viewdata['template']
+        viewclass = viewinfo['view']
+        viewtemplate = viewinfo['template']
         context = ViewContext(template=viewtemplate,
-                              request=request,
-                              response=response,
+                              request = request,
+                              form = form,
+                              response = response,
                               supervisord=self.supervisord)
         view = viewclass(context)
         pushproducer = request.channel.push_with_producer

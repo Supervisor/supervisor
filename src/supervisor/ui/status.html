@@ -17,10 +17,14 @@
     <div class="hidden" meld:id="statusmessage">#</div>
 
     <form meld:id="form" action="index.html" method="post">
-      <ul id="buttons" class="clr">
-        <li id="refresh"><a href="/index.html?action=refresh">&amp;nbsp;</a></li>
-        <li id="restart_all"><a href="/index.html?action=restartall">&amp;nbsp;</a></li>
-        <li id="stop_all"><a href="/index.html?action=stopall">&amp;nbsp;</a></li>
+
+      <ul class="clr" id="buttons">
+        <li id="refresh"><button type="submit" name="action"
+                  value="refresh"/>&amp;nbsp;</li>
+        <li id="restart_all"><button type="submit" name="action"
+                  value="restartall"/>&amp;nbsp;</li>
+        <li id="stop_all"><button type="submit" name="action"
+                 value="stopall"/>&amp;nbsp;</li>
       </ul>
 
       <table cellspacing="0" meld:id="statustable">

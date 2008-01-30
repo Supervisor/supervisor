@@ -317,6 +317,7 @@ class RootRPCInterface:
 
 class supervisor_xmlrpc_handler(xmlrpc_handler):
     path = '/RPC2'
+    IDENT = 'Supervisor XML-RPC Handler'
     def __init__(self, supervisord, subinterfaces):
         self.rpcinterface = RootRPCInterface(subinterfaces)
         self.supervisord = supervisord
