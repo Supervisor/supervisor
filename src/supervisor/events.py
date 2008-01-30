@@ -32,6 +32,7 @@ class Event:
     pass
 
 class ProcessCommunicationEvent(Event):
+    """ Abstract """
     # event mode tokens
     BEGIN_TOKEN = '<!--XSUPERVISOR:BEGIN-->'
     END_TOKEN   = '<!--XSUPERVISOR:END-->'
@@ -133,6 +134,7 @@ class ProcessStateStoppedEvent(ProcessStateEvent):
         return [('pid', self.process.pid)]
 
 class TickEvent(Event):
+    """ Abstract """
     def __init__(self, when, supervisord):
         self.when = when
         self.supervisord = supervisord
