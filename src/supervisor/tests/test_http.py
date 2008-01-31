@@ -333,14 +333,19 @@ class TopLevelFunctionTests(unittest.TestCase):
         inetdata = servers[0]
         self.assertEqual(inetdata[0], inet)
         server = inetdata[1]
-        paths = ['/RPC2', '/logtail', '/mainlogtail', '']
-        self.assertEqual([x.path for x in server.handlers], paths)
+        idents = [
+            'Supervisor XML-RPC Handler',
+            'Logtail HTTP Request Handler',
+            'Main Logtail HTTP Request Handler',
+            'Supervisor Web UI HTTP Request Handler',
+            'Default HTTP Request Handler'
+            ]
+        self.assertEqual([x.IDENT for x in server.handlers], idents)
 
         unixdata = servers[1]
         self.assertEqual(unixdata[0], unix)
         server = unixdata[1]
-        paths = ['/RPC2', '/logtail', '/mainlogtail', '']
-        self.assertEqual([x.path for x in server.handlers], paths)
+        self.assertEqual([x.IDENT for x in server.handlers], idents)
 
     def test_make_http_servers_withauth(self):
         socketfile = tempfile.mktemp()

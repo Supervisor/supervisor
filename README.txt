@@ -72,8 +72,8 @@ Supported Platforms
 Documentation
 
   You can view the current Supervisor documentation online "in html
-  format":http://supervisord.org/manual/html/ .  This is where you
-  should go for detailed installation and configuration documentation.
+  format":http://supervisord.org/manual/ .  This is where you should
+  go for detailed installation and configuration documentation.
 
   XXX We need some way of getting people the entire docs set without
   needing to read it via HTML online.

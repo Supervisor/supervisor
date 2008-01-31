@@ -180,6 +180,17 @@ Next Release
     every-so-often processing.  TICK events are subtypes of the EVENT
     type.
 
+ - Get rid of OSX platform-specific memory monitor and replace with
+   memmon.py, which works on both Linux and Mac OS.  This script is
+   now a console script named "memmon".
+
+ - Allow "web handler" (the handler which receives http requests from 
+   browsers visiting the web UI of supervisor) to deal with POST requests.
+
+ - RPC interface methods stopProcess(), stopProcessGroup(), and
+   stopAllProcesses() now take an optional "wait" argument that defaults
+   to True for parity with the start methods.  
+
 3.0a3
 
   - Supervisorctl now reports a better error message when the main

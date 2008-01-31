@@ -26,6 +26,7 @@ from medusa import http_date
 from medusa import http_server
 from medusa import producers
 from medusa import filesys
+from medusa import default_handler
 
 from medusa.auth_handler import auth_handler
 
@@ -807,10 +808,11 @@ def make_http_servers(options, supervisord):
         xmlrpchandler = supervisor_xmlrpc_handler(supervisord, subinterfaces)
         tailhandler = logtail_handler(supervisord)
         maintailhandler = mainlogtail_handler(supervisord)
+        uihandler = supervisor_ui_handler(supervisord)
         here = os.path.abspath(os.path.dirname(__file__))
         templatedir = os.path.join(here, 'ui')
         filesystem = filesys.os_filesystem(templatedir)
-        uihandler = supervisor_ui_handler(filesystem, supervisord)
+        defaulthandler = default_handler.default_handler(filesystem)
 
         username = config['username']
         password = config['password']
@@ -823,12 +825,14 @@ def make_http_servers(options, supervisord):
             tailhandler = supervisor_auth_handler(users, tailhandler)
             maintailhandler = supervisor_auth_handler(users, maintailhandler)
             uihandler = supervisor_auth_handler(users, uihandler)
+            defaulthandler = supervisor_auth_handler(users, defaulthandler)
         else:
             options.logger.critical(
                 'Server %r running without any HTTP '
                 'authentication checking' % config['section'])
-        # uihandler must be consulted last as its match method matches
+        # defaulthandler must be consulted last as its match method matches
         # everything, so it's first here (indicating last checked)
+        hs.install_handler(defaulthandler)
         hs.install_handler(uihandler)
         hs.install_handler(maintailhandler)
         hs.install_handler(tailhandler)

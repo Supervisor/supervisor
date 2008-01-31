@@ -306,10 +306,11 @@ class SupervisorNamespaceRPCInterface:
         startall.rpcinterface = self
         return startall # deferred
 
-    def stopProcess(self, name):
+    def stopProcess(self, name, wait=True):
         """ Stop a process named by name
 
         @param string name  The name of the process to stop (or 'group:name')
+        @param boolean wait        Wait for the process to be fully stopped
         @return boolean result     Always return True unless error
         """
         self._update('stopProcess')
@@ -318,7 +319,7 @@ class SupervisorNamespaceRPCInterface:
 
         if process is None:
             group_name, process_name = split_namespec(name)
-            return self.stopProcessGroup(group_name)
+            return self.stopProcessGroup(group_name, wait)
 
         stopped = []
         called  = []
@@ -335,7 +336,11 @@ class SupervisorNamespaceRPCInterface:
                 if msg is not None:
                     raise RPCError(Faults.FAILED, msg)
                 stopped.append(1)
-                return NOT_DONE_YET
+                
+                if wait:
+                    return NOT_DONE_YET
+                else:
+                    return True
             
             if process.get_state() not in (ProcessStates.STOPPED,
                                            ProcessStates.EXITED):
@@ -347,10 +352,11 @@ class SupervisorNamespaceRPCInterface:
         killit.rpcinterface = self
         return killit # deferred
 
-    def stopProcessGroup(self, name):
+    def stopProcessGroup(self, name, wait=True):
         """ Stop all processes in the process group named 'name'
 
         @param string name  The group name
+        @param boolean wait    Wait for each process to be fully stopped
         @return boolean result Always return true unless error.
         """
         self._update('stopProcessGroup')
@@ -364,22 +370,25 @@ class SupervisorNamespaceRPCInterface:
         processes.sort()
         processes = [ (group, process) for process in processes ]
 
-        killall = make_allfunc(processes, isRunning, self.stopProcess)
+        killall = make_allfunc(processes, isRunning, self.stopProcess,
+                               wait=wait)
             
         killall.delay = 0.05
         killall.rpcinterface = self
         return killall # deferred
 
-    def stopAllProcesses(self):
+    def stopAllProcesses(self, wait=True):
         """ Stop all processes in the process list
 
+        @param boolean wait    Wait for each process to be fully stopped
         @return boolean result Always return true unless error.
         """
         self._update('stopAllProcesses')
         
         processes = self._getAllProcesses()
 
-        killall = make_allfunc(processes, isRunning, self.stopProcess)
+        killall = make_allfunc(processes, isRunning, self.stopProcess,
+                               wait=wait)
 
         killall.delay = 0.05
         killall.rpcinterface = self

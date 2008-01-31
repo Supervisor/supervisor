@@ -526,13 +526,17 @@ class DummyRequest:
     _error = None
     _done = False
     version = '1.0'
-    def __init__(self, path, params, query, fragment):
+    def __init__(self, path, params, query, fragment, env=None):
         self.args = path, params, query, fragment
         self.producers = []
         self.headers = {}
         self.header = []
         self.outgoing = []
         self.channel = DummyMedusaChannel()
+        if env is None:
+            self.env = {}
+        else:
+            self.env = env
 
     def split_uri(self):
         return self.args
@@ -558,6 +562,13 @@ class DummyRequest:
     def log(self, *arg, **kw):
         pass
 
+    def cgi_environment(self):
+        return self.env
+
+    def get_server_url(self):
+        return 'http://example.com'
+        
+
 class DummyRPCInterfaceFactory:
     def __init__(self, supervisord, **config):
         self.supervisord = supervisord
@@ -575,6 +586,47 @@ class DummySupervisorRPCNamespace:
     _restartable = True
     _restarted = False
     _shutdown = False
+
+
+    from supervisor.process import ProcessStates
+    all_process_info = [
+        {
+        'name':'foo',
+        'group':'foo',
+        'pid':11,
+        'state':ProcessStates.RUNNING,
+        'statename':'RUNNING',
+        'start':_NOW - 100,
+        'stop':0,
+        'spawnerr':'',
+        'now':_NOW,
+        'description':'foo description',
+        },
+        {
+        'name':'bar',
+        'group':'bar',
+        'pid':12,
+        'state':ProcessStates.FATAL,
+        'statename':'FATAL',
+        'start':_NOW - 100,
+        'stop':_NOW - 50,
+        'spawnerr':'screwed',
+        'now':_NOW,
+        'description':'bar description',
+        },
+        {
+        'name':'baz_01',
+        'group':'baz',
+        'pid':12,
+        'state':ProcessStates.STOPPED,
+        'statename':'STOPPED',
+        'start':_NOW - 100,
+        'stop':_NOW - 25,
+        'spawnerr':'',
+        'now':_NOW,
+        'description':'baz description',
+        },
+        ]
 
     def getAPIVersion(self):
         return '3.0'
@@ -597,46 +649,7 @@ class DummySupervisorRPCNamespace:
     readProcessStderrLog = readProcessStdoutLog
 
     def getAllProcessInfo(self):
-        from supervisor.process import ProcessStates
-        return [
-            {
-            'name':'foo',
-            'group':'foo',
-            'pid':11,
-            'state':ProcessStates.RUNNING,
-            'statename':'RUNNING',
-            'start':_NOW - 100,
-            'stop':0,
-            'spawnerr':'',
-            'now':_NOW,
-            'description':'foo description',
-             },
-            {
-            'name':'bar',
-            'group':'bar',
-            'pid':12,
-            'state':ProcessStates.FATAL,
-            'statename':'FATAL',
-            'start':_NOW - 100,
-            'stop':_NOW - 50,
-            'spawnerr':'screwed',
-            'now':_NOW,
-            'description':'bar description',
-             },
-            {
-            'name':'baz_01',
-            'group':'baz',
-            'pid':12,
-            'state':ProcessStates.STOPPED,
-            'statename':'STOPPED',
-            'start':_NOW - 100,
-            'stop':_NOW - 25,
-            'spawnerr':'',
-            'now':_NOW,
-            'description':'baz description',
-             },
-            ]
-                
+        return self.all_process_info
 
     def getProcessInfo(self, name):
         from supervisor.process import ProcessStates
@@ -656,6 +669,8 @@ class DummySupervisorRPCNamespace:
     def startProcess(self, name):
         from supervisor import xmlrpc
         from xmlrpclib import Fault
+        if name == 'BAD_NAME:BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME:BAD_NAME')
         if name == 'BAD_NAME':
             raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
         if name == 'ALREADY_STARTED':
@@ -703,6 +718,8 @@ class DummySupervisorRPCNamespace:
     def stopProcess(self, name):
         from supervisor import xmlrpc
         from xmlrpclib import Fault
+        if name == 'BAD_NAME:BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME:BAD_NAME')
         if name == 'BAD_NAME':
             raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
         if name == 'NOT_RUNNING':

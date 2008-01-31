@@ -61,7 +61,8 @@ dist = setup(
     name = 'supervisor',
     version = supervisor_version,
     license = 'BSD-derived (http://www.repoze.org/LICENSE.txt)',
-    url = 'http://www.plope.com/software/supervisor2/',
+    url = 'http://supervisord.org/',
+    download_url = 'http://supervisord.org/dist/',
     description = "A system for controlling process state under UNIX",
     long_description= DESC,
     classifiers = CLASSIFIERS,
@@ -95,6 +96,7 @@ dist = setup(
          'supervisorctl = supervisor.supervisorctl:main',
          'echo_supervisord_conf = supervisor.confecho:main',
          'pidproxy = supervisor.pidproxy:main',
+         'memmon = supervisor.memmon:main',
          ],
       },
     )
