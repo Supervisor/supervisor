@@ -1,5 +1,9 @@
 Next Release
 
+  - ...
+
+3.0a4
+
   - 3.0a3 broke Python 2.3 backwards compatibility.
 
   - On Debian Sarge, one user reported that a call to
