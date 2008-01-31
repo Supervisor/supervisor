@@ -89,7 +89,6 @@ a:hover {
   padding: 10px 0 13px 0;
   background: url("../images/rule.gif") left bottom repeat-x;
 }
-
 .status_msg {
   padding: 5px 10px;
   border: 1px solid #919191;
@@ -100,44 +99,39 @@ a:hover {
 #buttons {
   margin: 13px 0;
 }
-
 #buttons li {
   float: left;
   display: block;
   margin: 0 7px 0 0;
 }
-
-#buttons button {
-   float: left;
-   display: block;
-   padding: 1px 0 0 0 0;
-   text-decoration: none;
+#buttons a {
+  float: left;
+  display: block;
+  padding: 1px 0 0 0;
+}
+#buttons a, #buttons a:link {
+  text-decoration: none;
 }
 
-#refresh button {
+#refresh a {
   width: 62px;
   background: url("../images/button_refresh.gif") 0 0 no-repeat;
 }
-
-#refresh button:hover {
+#refresh a:hover {
   background-position: -62px;
 }
-
-#restart_all button {
+#restart_all a {
   width: 84px;
   background: url("../images/button_restart.gif") 0 0 no-repeat;
 }
-
-#restart_all button:hover {
+#restart_all a:hover {
   background-position: -84px;
 }
-
-#stop_all button {
-  width: 64px;
+#stop_all a {
+  width: 65px;
   background: url("../images/button_stop.gif") 0 0 no-repeat;
 }
-
-#stop_all button:hover {
+#stop_all a:hover {
   background-position: -65px;
 }
 
