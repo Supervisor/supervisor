@@ -60,8 +60,8 @@ class ProcessCommunicationsProtocol:
 pcomm = ProcessCommunicationsProtocol()
 
 class EventListenerProtocol:
-    def wait(self, stdin=sys.stdin):
-        self.ready()
+    def wait(self, stdin=sys.stdin, stdout=sys.stdout):
+        self.ready(stdout)
         line = stdin.readline()
         headers = get_headers(line)
         payload = stdin.read(int(headers['len']))

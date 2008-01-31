@@ -85,9 +85,11 @@ class TestEventListenerProtocol(unittest.TestCase):
             def read(self, *ignored):
                 return 'hello'
         stdin = Dummy()
-        headers, payload = listener.wait(stdin)
+        stdout = StringIO()
+        headers, payload = listener.wait(stdin, stdout)
         self.assertEqual(headers, {'len':'5'})
         self.assertEqual(payload, 'hello')
+        self.assertEqual(stdout.getvalue(), 'READY\n')
 
     def test_token(self):
         from supervisor.childutils import listener

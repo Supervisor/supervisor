@@ -13,7 +13,7 @@ class MemmonTests(unittest.TestCase):
     def _makeOnePopulated(self, programs, groups, any):
         from supervisor.tests.base import DummyRPCServer
         rpc = DummyRPCServer()
-        sendmail = 'echo'
+        sendmail = 'cat - > /dev/null'
         email = 'chrism@plope.com'
         memmon = self._makeOne(programs, groups, any, sendmail, email, rpc)
         memmon.stdin = StringIO()

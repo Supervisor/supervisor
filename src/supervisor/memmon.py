@@ -79,7 +79,6 @@ def usage():
 def shell(cmd):
     return os.popen(cmd).read()
 
-
 class Memmon:
     def __init__(self, programs, groups, any, sendmail, email, rpc):
         self.programs = programs
@@ -98,7 +97,7 @@ class Memmon:
         while 1:
             # we explicitly use self.stdin, self.stdout, and self.stderr
             # instead of sys.* so we can unit test this code
-            headers, payload = childutils.listener.wait(self.stdin)
+            headers, payload = childutils.listener.wait(self.stdin, self.stdout)
 
             if not headers['eventname'].startswith('TICK'):
                 # do nothing with non-TICK events
