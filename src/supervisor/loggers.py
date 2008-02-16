@@ -48,7 +48,8 @@ class LevelsByDescription:
 def _levelNumbers():
     bynumber = {}
     for name, number in LevelsByName.__dict__.items():
-        bynumber[number] = name
+        if not name.startswith('_'):
+            bynumber[number] = name
     return bynumber
 
 LOG_LEVELS_BY_NUM = _levelNumbers()

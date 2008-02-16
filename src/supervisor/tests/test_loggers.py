@@ -6,6 +6,12 @@ import os
 
 from supervisor.tests.base import DummyStream
 
+class LevelTests(unittest.TestCase):
+    def test_LOG_LEVELS_BY_NUM_doesnt_include_builtins(self):
+        from supervisor import loggers
+        for level_name in loggers.LOG_LEVELS_BY_NUM.values():
+            self.assertFalse(level_name.startswith('_'))
+
 class HandlerTests:
     def setUp(self):
         self.basedir = tempfile.mkdtemp()
