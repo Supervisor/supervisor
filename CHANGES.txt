@@ -1,6 +1,13 @@
 Next Release
 
-  - ...
+  - Supervisorctl now supports persistent readline history.  To
+    enable, add "history_file = <pathname>" to the '[supervisorctl']
+    section in your supervisord.conf file.
+
+  - Multiple commands may now be issued on one supervisorctl command
+    line, e.g. "restart prog; tail -f prog".  Separate commands with a
+    single semicolon; they will be executed in order as you would
+    expect.
 
 3.0a4
 

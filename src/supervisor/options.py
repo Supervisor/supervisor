@@ -1277,6 +1277,7 @@ class ClientOptions(Options):
     serverurl = None
     username = None
     password = None
+    history_file = None
 
     def __init__(self):
         Options.__init__(self)
@@ -1287,6 +1288,7 @@ class ClientOptions(Options):
         self.configroot.supervisorctl.serverurl = None
         self.configroot.supervisorctl.username = None
         self.configroot.supervisorctl.password = None
+        self.configroot.supervisorctl.history_file = None
 
 
         self.add("interactive", "supervisorctl.interactive", "i",
@@ -1296,6 +1298,7 @@ class ClientOptions(Options):
                  url, default="http://localhost:9001")
         self.add("username", "supervisorctl.username", "u:", "username=")
         self.add("password", "supervisorctl.password", "p:", "password=")
+        self.add("history", "supervisorctl.history_file", "r:", "history_file=")
 
     def realize(self, *arg, **kw):
         Options.realize(self, *arg, **kw)
@@ -1326,6 +1329,15 @@ class ClientOptions(Options):
         section.prompt = config.getdefault('prompt', 'supervisor')
         section.username = config.getdefault('username', None)
         section.password = config.getdefault('password', None)
+        history_file = config.getdefault('history_file', None)
+
+        if history_file:
+            history_file = normalize_path(history_file)
+            section.history_file = history_file
+            self.history_file = history_file
+        else:
+            section.history_file = None
+            self.history_file = None
         
         return section
 

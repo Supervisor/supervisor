@@ -14,6 +14,40 @@ from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import lstrip
 
+class ClientOptionsTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.options import ClientOptions
+        return ClientOptions
+
+    def _makeOne(self):
+        return self._getTargetClass()()
+        
+    def test_options(self):
+        tempdir = tempfile.gettempdir()
+        s = lstrip("""[supervisorctl]
+        serverurl=http://localhost:9001
+        username=chris
+        password=123
+        prompt=mysupervisor
+        history_file=%s/sc_history
+        """ % tempdir)
+
+        from StringIO import StringIO
+        fp = StringIO(s)
+        instance = self._makeOne()
+        instance.configfile = fp
+        instance.realize(args=[])
+        self.assertEqual(instance.interactive, True)
+        history_file = os.path.join(tempdir, 'sc_history')
+        self.assertEqual(instance.history_file, history_file)
+        options = instance.configroot.supervisorctl
+        self.assertEqual(options.prompt, 'mysupervisor')
+        self.assertEqual(options.serverurl, 'http://localhost:9001')
+        self.assertEqual(options.username, 'chris')
+        self.assertEqual(options.password, '123')
+        self.assertEqual(options.history_file, history_file)
+                   
+
 class ServerOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ServerOptions

@@ -24,6 +24,7 @@ Options:
      (default "http://localhost:9001").  
 -u/--username -- username to use for authentication with server
 -p/--password -- password to use for authentication with server
+-r/--history-file -- keep a readline history (if readline is available)
 
 action [arguments] -- see below
 
@@ -34,6 +35,7 @@ actions.
 """
 
 import cmd
+import os
 import sys
 import getpass
 import xmlrpclib
@@ -45,6 +47,7 @@ import urlparse
 from supervisor.options import ClientOptions
 from supervisor.options import split_namespec
 from supervisor import xmlrpc
+
 
 
 class Controller(cmd.Cmd):
@@ -62,6 +65,13 @@ class Controller(cmd.Cmd):
         """ Override the onecmd method to catch and print all exceptions
         """
         origline = line
+        # allow for composite commands in interactive mode
+        # (e.g. "restart prog; tail -f prog")
+        lines = line.split(';') # don't filter(None, line.split), as we pop
+        line = lines.pop(0)
+        # stuffing the remainder into cmdqueue will cause cmdloop to
+        # call us again for each command.
+        self.cmdqueue.extend(lines)
         cmd, arg, line = self.parseline(line)
         if not line:
             return self.emptyline()
@@ -201,10 +211,14 @@ class Controller(cmd.Cmd):
             name = args[-1]
             channel = 'stdout'
         else:
-            name = args[0]
-            channel = args[-1].lower()
-            if channel not in ('stderr', 'stdout'):
-                self._output('Error: bad channel %r' % channel)
+            if args:
+                name = args[0]
+                channel = args[-1].lower()
+                if channel not in ('stderr', 'stdout'):
+                    self._output('Error: bad channel %r' % channel)
+                    return
+            else:
+                self._output('Error: tail requires process name')
                 return
 
         bytes = 1600
@@ -620,10 +634,22 @@ def main(args=None, options=None):
     if options.interactive:
         try:
             import readline
+            if options.history_file:
+                try:
+                    readline.read_history_file(options.history_file)
+                except IOError:
+                    pass
+                def save():
+                    try:
+                        readline.write_history_file(options.history_file)
+                    except IOError:
+                        pass
+                import atexit
+                atexit.register(save)
         except ImportError:
             pass
         try:
-            c.onecmd('status')
+            c.cmdqueue.append('status')
             c.cmdloop()
         except KeyboardInterrupt:
             c._output('')

@@ -63,6 +63,15 @@ class ControllerTests(unittest.TestCase):
             controller.stdout.getvalue().find('Documented commands') != -1
             )
 
+    def test_onecmd_multi_colonseparated(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.onecmd('version; version')
+        self.assertEqual(result, None)
+        self.assertEqual(controller.cmdqueue, [' version'])
+        self.assertEqual(controller.stdout.getvalue(), '3000\n')
+
     def test_tail_toofewargs(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
@@ -80,6 +89,15 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(result, None)
         lines = controller.stdout.getvalue().split('\n')
         self.assertEqual(lines[0], 'Error: too many arguments')
+
+    def test_tail_f_noprocname(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_tail('-f')
+        self.assertEqual(result, None)
+        lines = controller.stdout.getvalue().split('\n')
+        self.assertEqual(lines[0], 'Error: tail requires process name')
 
     def test_tail_defaults(self):
         options = DummyClientOptions()
@@ -482,6 +500,7 @@ class DummyClientOptions:
         self.serverurl = 'http://localhost:9001'
         self.username = 'chrism'
         self.password = '123'
+        self.history_file = None
         self._server = DummyRPCServer()
 
     def getServerProxy(self):
