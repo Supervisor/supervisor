@@ -1,4 +1,4 @@
-Next Release
+3.0a5
 
   - Supervisorctl now supports persistent readline history.  To
     enable, add "history_file = <pathname>" to the '[supervisorctl']
