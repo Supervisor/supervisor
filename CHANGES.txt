@@ -1,5 +1,8 @@
 Next Release
 
+  - Supervisorctl now supports a plugin model for supervisorctl
+    commands.
+
   - Added the ability to retrieve supervisord's own pid through
     supervisor.getPID() on the XML-RPC interface or a new
     "pid" command on supervisorctl.

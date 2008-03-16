@@ -20,7 +20,7 @@ class ControllerTests(unittest.TestCase):
     def test__upcheck(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
-        result = controller._upcheck()
+        result = controller.upcheck()
         self.assertEqual(result, True)
 
     def test__upcheck_wrong_server_version(self):
@@ -28,7 +28,7 @@ class ControllerTests(unittest.TestCase):
         options._server.supervisor.getVersion = lambda *x: '1.0'
         controller = self._makeOne(options)
         controller.stdout = StringIO()
-        result = controller._upcheck()
+        result = controller.upcheck()
         self.assertEqual(result, False)
         value = controller.stdout.getvalue()
         self.assertEqual(value, 'Sorry, this version of supervisorctl expects '
@@ -44,7 +44,7 @@ class ControllerTests(unittest.TestCase):
         options._server.supervisor.getVersion = getVersion
         controller = self._makeOne(options)
         controller.stdout = StringIO()
-        result = controller._upcheck()
+        result = controller.upcheck()
         self.assertEqual(result, False)
         value = controller.stdout.getvalue()
         self.assertEqual(value, 'Sorry, supervisord responded but did not '
@@ -57,151 +57,130 @@ class ControllerTests(unittest.TestCase):
         options = DummyClientOptions()
         controller = self._makeOne(options)
         controller.stdout = StringIO()
+        plugin = DummyPlugin()
+        controller.options.plugins = (plugin,)
         result = controller.onecmd('help')
         self.assertEqual(result, None)
-        self.failUnless(
-            controller.stdout.getvalue().find('Documented commands') != -1
-            )
+        self.assertEqual(plugin.helped, True)
 
     def test_onecmd_multi_colonseparated(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
         controller.stdout = StringIO()
-        result = controller.onecmd('version; version')
+        plugin = DummyPlugin()
+        controller.options.plugins = (plugin,)
+        result = controller.onecmd('help; help')
         self.assertEqual(result, None)
-        self.assertEqual(controller.cmdqueue, [' version'])
-        self.assertEqual(controller.stdout.getvalue(), '3000\n')
+        self.assertEqual(controller.cmdqueue, [' help'])
+        self.assertEqual(plugin.helped, True)
         
-    def test_pid(self):
+class TestDefaultPlugin(unittest.TestCase):
+
+    def _getTargetClass(self):
+        from supervisor.supervisorctl import DefaultControllerPlugin
+        return DefaultControllerPlugin
+
+    def _makeOne(self, *arg, **kw):
+        klass = self._getTargetClass()
         options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_pid('')
-        self.assertEqual(result, None)
-        lines = controller.stdout.getvalue().split('\n')
-        self.assertEqual(len(lines), 2)
-        self.assertEqual(lines[0], str(options._server.supervisor.getPID()))
+        ctl = DummyController(options)
+        plugin = klass(ctl, *arg, **kw)
+        return plugin
 
     def test_tail_toofewargs(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_tail('')
+        plugin = self._makeOne()
+        result = plugin.do_tail('')
         self.assertEqual(result, None)
-        lines = controller.stdout.getvalue().split('\n')
+        lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(lines[0], 'Error: too few arguments')
 
     def test_tail_toomanyargs(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_tail('one two three four')
+        plugin = self._makeOne()
+        result = plugin.do_tail('one two three four')
         self.assertEqual(result, None)
-        lines = controller.stdout.getvalue().split('\n')
+        lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(lines[0], 'Error: too many arguments')
 
     def test_tail_f_noprocname(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_tail('-f')
+        plugin = self._makeOne()
+        result = plugin.do_tail('-f')
         self.assertEqual(result, None)
-        lines = controller.stdout.getvalue().split('\n')
+        lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(lines[0], 'Error: tail requires process name')
 
     def test_tail_defaults(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_tail('foo')
+        plugin = self._makeOne()
+        result = plugin.do_tail('foo')
         self.assertEqual(result, None)
-        lines = controller.stdout.getvalue().split('\n')
+        lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 12)
         self.assertEqual(lines[0], 'output line')
 
     def test_tail_no_file(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_tail('NO_FILE')
-        lines = controller.stdout.getvalue().split('\n')
+        plugin = self._makeOne()
+        result = plugin.do_tail('NO_FILE')
+        lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0], 'NO_FILE: ERROR (no log file)')
 
     def test_tail_failed(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_tail('FAILED')
-        lines = controller.stdout.getvalue().split('\n')
+        plugin = self._makeOne()
+        result = plugin.do_tail('FAILED')
+        lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0], 'FAILED: ERROR (unknown error reading log)')
 
     def test_tail_bad_name(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_tail('BAD_NAME')
-        lines = controller.stdout.getvalue().split('\n')
+        plugin = self._makeOne()
+        result = plugin.do_tail('BAD_NAME')
+        lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0], 'BAD_NAME: ERROR (no such process name)')
 
     def test_tail_bytesmodifier(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_tail('-10 foo')
+        plugin = self._makeOne()
+        result = plugin.do_tail('-10 foo')
         self.assertEqual(result, None)
-        lines = controller.stdout.getvalue().split('\n')
+        lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0], 'tput line')
 
     def test_tail_explicit_channel_stdout_nomodifier(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_tail('foo stdout')
+        plugin = self._makeOne()
+        result = plugin.do_tail('foo stdout')
         self.assertEqual(result, None)
-        lines = controller.stdout.getvalue().split('\n')
+        lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 12)
         self.assertEqual(lines[0], 'output line')
 
     def test_tail_explicit_channel_stderr_nomodifier(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_tail('foo stderr')
-        lines = controller.stdout.getvalue().split('\n')
+        plugin = self._makeOne()
+        result = plugin.do_tail('foo stderr')
+        lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 12)
         self.assertEqual(lines[0], 'output line')
 
     def test_tail_explicit_channel_unrecognized(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_tail('foo fudge')
+        plugin = self._makeOne()
+        result = plugin.do_tail('foo fudge')
         self.assertEqual(result, None)
-        value = controller.stdout.getvalue().strip()
+        value = plugin.ctl.stdout.getvalue().strip()
         self.assertEqual(value, "Error: bad channel 'fudge'")
 
     def test_status_oneprocess(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_status('foo')
+        plugin = self._makeOne()
+        result = plugin.do_status('foo')
         self.assertEqual(result, None)
-        value = controller.stdout.getvalue().strip()
+        value = plugin.ctl.stdout.getvalue().strip()
         self.assertEqual(value.split(None, 2),
                          ['foo', 'RUNNING', 'foo description'])
                          
 
     def test_status_allprocesses(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_status('')
+        plugin = self._makeOne()
+        result = plugin.do_status('')
         self.assertEqual(result, None)
-        value = controller.stdout.getvalue().split('\n')
+        value = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(value[0].split(None, 2),
                          ['foo', 'RUNNING', 'foo description'])
         self.assertEqual(value[1].split(None, 2),
@@ -210,299 +189,241 @@ class ControllerTests(unittest.TestCase):
                          ['baz:baz_01', 'STOPPED', 'baz description'])
 
     def test_start_fail(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_start('')
+        plugin = self._makeOne()
+        result = plugin.do_start('')
         self.assertEqual(result, None)
         expected = "Error: start requires a process name"
-        self.assertEqual(controller.stdout.getvalue().split('\n')[0], expected)
+        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0], expected)
 
     def test_start_badname(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_start('BAD_NAME')
+        plugin = self._makeOne()
+        result = plugin.do_start('BAD_NAME')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'BAD_NAME: ERROR (no such process)\n')
 
     def test_start_alreadystarted(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_start('ALREADY_STARTED')
+        plugin = self._makeOne()
+        result = plugin.do_start('ALREADY_STARTED')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ALREADY_STARTED: ERROR (already started)\n')
 
     def test_start_spawnerror(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_start('SPAWN_ERROR')
+        plugin = self._makeOne()
+        result = plugin.do_start('SPAWN_ERROR')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'SPAWN_ERROR: ERROR (spawn error)\n')
 
     def test_start_one_success(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_start('foo')
+        plugin = self._makeOne()
+        result = plugin.do_start('foo')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(), 'foo: started\n')
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 'foo: started\n')
 
     def test_start_many(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_start('foo bar')
+        plugin = self._makeOne()
+        result = plugin.do_start('foo bar')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: started\nbar: started\n')
 
     def test_start_group(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_start('foo:')
+        plugin = self._makeOne()
+        result = plugin.do_start('foo:')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo_00: started\nfoo_01: started\n')
 
     def test_start_all(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_start('all')
+        plugin = self._makeOne()
+        result = plugin.do_start('all')
         self.assertEqual(result, None)
 
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                 'foo: started\nfoo2: started\nfailed: ERROR (spawn error)\n')
 
 
     def test_stop_fail(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_stop('')
+        plugin = self._makeOne()
+        result = plugin.do_stop('')
         self.assertEqual(result, None)
         expected = "Error: stop requires a process name"
-        self.assertEqual(controller.stdout.getvalue().split('\n')[0], expected)
+        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0], expected)
 
     def test_stop_badname(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_stop('BAD_NAME')
+        plugin = self._makeOne()
+        result = plugin.do_stop('BAD_NAME')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'BAD_NAME: ERROR (no such process)\n')
 
     def test_stop_notrunning(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_stop('NOT_RUNNING')
+        plugin = self._makeOne()
+        result = plugin.do_stop('NOT_RUNNING')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'NOT_RUNNING: ERROR (not running)\n')
 
     def test_stop_failed(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_stop('FAILED')
+        plugin = self._makeOne()
+        result = plugin.do_stop('FAILED')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(), 'FAILED\n')
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 'FAILED\n')
 
     def test_stop_one_success(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_stop('foo')
+        plugin = self._makeOne()
+        result = plugin.do_stop('foo')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(), 'foo: stopped\n')
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 'foo: stopped\n')
 
     def test_stop_many(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_stop('foo bar')
+        plugin = self._makeOne()
+        result = plugin.do_stop('foo bar')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: stopped\nbar: stopped\n')
 
     def test_stop_group(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_stop('foo:')
+        plugin = self._makeOne()
+        result = plugin.do_stop('foo:')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo_00: stopped\nfoo_01: stopped\n')
 
     def test_stop_all(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_stop('all')
+        plugin = self._makeOne()
+        result = plugin.do_stop('all')
         self.assertEqual(result, None)
 
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
          'foo: stopped\nfoo2: stopped\nfailed: ERROR (no such process)\n')
 
     def test_restart_fail(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_restart('')
+        plugin = self._makeOne()
+        result = plugin.do_restart('')
         self.assertEqual(result, None)
 
-        self.assertEqual(controller.stdout.getvalue().split('\n')[0],
+        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0],
          'Error: restart requires a process name')
 
     def test_restart_one(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_restart('foo')
+        plugin = self._makeOne()
+        result = plugin.do_restart('foo')
         self.assertEqual(result, None)
 
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: stopped\nfoo: started\n')
 
     def test_restart_all(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_restart('all')
+        plugin = self._makeOne()
+        result = plugin.do_restart('all')
         self.assertEqual(result, None)
 
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          ('foo: stopped\nfoo2: stopped\n'
                           'failed: ERROR (no such process)\n'
                           'foo: started\nfoo2: started\n'
                           'failed: ERROR (spawn error)\n'))
 
-    def test_reload_fail(self):
-        options = DummyClientOptions()
-        options.interactive = False
-        options._server.supervisor._restartable = False
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_reload('')
-        self.assertEqual(result, None)
-        self.assertEqual(options._server.supervisor._restarted, False)
-        
-    def test_reload(self):
-        options = DummyClientOptions()
-        options.interactive = False
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_reload('')
-        self.assertEqual(result, None)
-        self.assertEqual(options._server.supervisor._restarted, True)
-        
-    def test_shutdown_fail(self):
-        options = DummyClientOptions()
-        options.interactive = False
-        options._server.supervisor._restartable = False
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_shutdown('')
-        self.assertEqual(result, None)
-        self.assertEqual(options._server.supervisor._shutdown, False)
-
-    def test_shutdown(self):
-        options = DummyClientOptions()
-        options.interactive = False
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_shutdown('')
-        self.assertEqual(result, None)
-        self.assertEqual(options._server.supervisor._shutdown, True)
-
-
-
-
-
     def test_clear_fail(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_clear('')
+        plugin = self._makeOne()
+        result = plugin.do_clear('')
         self.assertEqual(result, None)
         expected = "Error: clear requires a process name"
-        self.assertEqual(controller.stdout.getvalue().split('\n')[0], expected)
+        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0], expected)
 
     def test_clear_badname(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_clear('BAD_NAME')
+        plugin = self._makeOne()
+        result = plugin.do_clear('BAD_NAME')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'BAD_NAME: ERROR (no such process)\n')
 
     def test_clear_one_success(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_clear('foo')
+        plugin = self._makeOne()
+        result = plugin.do_clear('foo')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(), 'foo: cleared\n')
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 'foo: cleared\n')
 
     def test_clear_many(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_clear('foo bar')
+        plugin = self._makeOne()
+        result = plugin.do_clear('foo bar')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: cleared\nbar: cleared\n')
 
     def test_clear_all(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_clear('all')
+        plugin = self._makeOne()
+        result = plugin.do_clear('all')
         self.assertEqual(result, None)
 
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
          'foo: cleared\nfoo2: cleared\nfailed: ERROR (failed)\n')
 
     def test_open_fail(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_open('badname')
+        plugin = self._makeOne()
+        result = plugin.do_open('badname')
         self.assertEqual(result, None)
-        self.assertEqual(controller.stdout.getvalue(),
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ERROR: url must be http:// or unix://\n')
 
     def test_open_succeed(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        result = controller.do_open('http://localhost:9002')
+        plugin = self._makeOne()
+        result = plugin.do_open('http://localhost:9002')
         self.assertEqual(result, None)
-        value = controller.stdout.getvalue().split('\n')
+        value = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(value[0].split(None, 2),
                          ['foo', 'RUNNING', 'foo description'])
         self.assertEqual(value[1].split(None, 2),
                          ['bar', 'FATAL', 'bar description'])
         self.assertEqual(value[2].split(None, 2),
                          ['baz:baz_01', 'STOPPED', 'baz description'])
-#""")
 
     def test_version(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        controller.do_version(None)
-        self.assertEqual(controller.stdout.getvalue(), '3000\n')
+        plugin = self._makeOne()
+        plugin.do_version(None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(), '3000\n')
+
+    def test_reload_fail(self):
+        plugin = self._makeOne()
+        options = plugin.ctl.options
+        options._server.supervisor._restartable = False
+        result = plugin.do_reload('')
+        self.assertEqual(result, None)
+        self.assertEqual(options._server.supervisor._restarted, False)
+        
+    def test_reload(self):
+        plugin = self._makeOne()
+        options = plugin.ctl.options
+        result = plugin.do_reload('')
+        self.assertEqual(result, None)
+        self.assertEqual(options._server.supervisor._restarted, True)
+        
+    def test_shutdown_fail(self):
+        plugin = self._makeOne()
+        options = plugin.ctl.options
+        options._server.supervisor._restartable = False
+        result = plugin.do_shutdown('')
+        self.assertEqual(result, None)
+        self.assertEqual(options._server.supervisor._shutdown, False)
+
+    def test_shutdown(self):
+        plugin = self._makeOne()
+        options = plugin.ctl.options
+        result = plugin.do_shutdown('')
+        self.assertEqual(result, None)
+        self.assertEqual(options._server.supervisor._shutdown, True)
+
+    def test_pid(self):
+        plugin = self._makeOne()
+        result = plugin.do_pid('')
+        options = plugin.ctl.options
+        self.assertEqual(result, None)
+        lines = plugin.ctl.stdout.getvalue().split('\n')
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[0], str(options._server.supervisor.getPID()))
 
 class DummyClientOptions:
     def __init__(self):
@@ -511,10 +432,34 @@ class DummyClientOptions:
         self.username = 'chrism'
         self.password = '123'
         self.history_file = None
+        self.plugins = ()
         self._server = DummyRPCServer()
+        self.interactive = False
+        self.plugin_factories = []
 
     def getServerProxy(self):
         return self._server
+
+class DummyController:
+    def __init__(self, options):
+        self.options = options
+        self.stdout = StringIO()
+        
+    def upcheck(self):
+        return True
+
+    def get_supervisor(self):
+        return self.options.getServerProxy().supervisor
+
+    def output(self, data):
+        self.stdout.write(data + '\n')
+
+class DummyPlugin:
+    def __init__(self, controller=None):
+        self.ctl = controller
+        
+    def do_help(self, arg):
+        self.helped = True
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

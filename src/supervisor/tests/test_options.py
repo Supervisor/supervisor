@@ -733,7 +733,9 @@ class ServerOptionsTests(unittest.TestCase):
         config = UnhosedConfigParser()
         config.read_string(text)
         instance = self._makeOne()
-        factories = instance.rpcinterfaces_from_parser(config)
+        factories = instance.get_plugins(config,
+                                         'supervisor.rpcinterface_factory',
+                                         'rpcinterface:')
         self.assertEqual(len(factories), 1)
         factory = factories[0]
         self.assertEqual(factory[0], 'dummy')

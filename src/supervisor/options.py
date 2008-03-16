@@ -343,6 +343,32 @@ class Options:
             if getattr(self, name) is None:
                 self.usage(message)
 
+    def get_plugins(self, parser, factory_key, section_prefix):
+        factories = []
+
+        for section in parser.sections():
+            if not section.startswith(section_prefix):
+                continue
+            name = section.split(':', 1)[1]
+            factory_spec = parser.saneget(section, factory_key, None)
+            if factory_spec is None:
+                raise ValueError('section [%s] does not specify a %s'  %
+                                 (section, factory_key))
+            try:
+                factory = self.import_spec(factory_spec)
+            except ImportError:
+                raise ValueError('%s cannot be resolved within [%s]' % (
+                    factory_spec, section))
+            items = parser.items(section)
+            items.remove((factory_key, factory_spec))
+            factories.append((name, factory, dict(items)))
+
+        return factories
+
+    def import_spec(self, spec):
+        return pkg_resources.EntryPoint.parse("x="+spec).load(False)
+
+
 class ServerOptions(Options):
     user = None
     sockchown = None
@@ -522,7 +548,11 @@ class ServerOptions(Options):
         environ_str = expand(environ_str, {'here':self.here}, 'environment')
         section.environment = dict_of_key_value_pairs(environ_str)
         section.process_group_configs = self.process_groups_from_parser(parser)
-        section.rpcinterface_factories = self.rpcinterfaces_from_parser(parser)
+        section.rpcinterface_factories = self.get_plugins(
+            parser,
+            'supervisor.rpcinterface_factory',
+            'rpcinterface:'
+            )
         section.server_configs = self.server_configs_from_parser(parser)
         section.profile_options = None
         return section
@@ -725,29 +755,6 @@ class ServerOptions(Options):
         programs.sort() # asc by priority
         return programs
 
-    def rpcinterfaces_from_parser(self, parser):
-        factories = []
-        factory_key = 'supervisor.rpcinterface_factory'
-
-        for section in parser.sections():
-            if not section.startswith('rpcinterface:'):
-                continue
-            name = section.split(':', 1)[1]
-            factory_spec = parser.saneget(section, factory_key, None)
-            if factory_spec is None:
-                raise ValueError('section [%s] does not specify a %s'  %
-                                 (section, factory_key))
-            try:
-                factory = self.import_spec(factory_spec)
-            except ImportError:
-                raise ValueError('%s cannot be resolved within [%s]' % (
-                    factory_spec, section))
-            items = parser.items(section)
-            items.remove((factory_key, factory_spec))
-            factories.append((name, factory, dict(items)))
-
-        return factories
-
     def _parse_servernames(self, parser, stype):
         options = []
         for section in parser.sections():
@@ -823,9 +830,6 @@ class ServerOptions(Options):
             configs.append(config)
 
         return configs
-
-    def import_spec(self, spec):
-        return pkg_resources.EntryPoint.parse("x="+spec).load(False)
 
     def daemonize(self):
         # To daemonize, we need to become the leader of our own session
@@ -1341,7 +1345,18 @@ class ClientOptions(Options):
         else:
             section.history_file = None
             self.history_file = None
-        
+
+        from supervisor.supervisorctl import DefaultControllerPlugin
+        self.plugin_factories = self.get_plugins(
+            config,
+            'supervisor.ctl_factory',
+            'ctlplugin:'
+            )
+        default_factory = ('default', DefaultControllerPlugin, {})
+        # if you want to a supervisorctl without the default plugin,
+        # please write your own supervisorctl.
+        self.plugin_factories.insert(0, default_factory)
+
         return section
 
     def getServerProxy(self):

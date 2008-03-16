@@ -35,7 +35,6 @@ actions.
 """
 
 import cmd
-import os
 import sys
 import getpass
 import xmlrpclib
@@ -48,25 +47,30 @@ from supervisor.options import ClientOptions
 from supervisor.options import split_namespec
 from supervisor import xmlrpc
 
-
-
 class Controller(cmd.Cmd):
 
-    def __init__(self, options, completekey='tab', stdin=None, stdout=None):
+    def __init__(self, options, completekey='tab', stdin=None,
+                 stdout=None):
         self.options = options
         self.prompt = self.options.prompt + '> '
+        self.options.plugins = []
         cmd.Cmd.__init__(self, completekey, stdin, stdout)
+        for name, factory, kwargs in self.options.plugin_factories:
+            plugin = factory(self, **kwargs)
+            self.options.plugins.append(plugin)
+            plugin.name = name
 
     def emptyline(self):
         # We don't want a blank line to repeat the last command.
         return
 
     def onecmd(self, line):
-        """ Override the onecmd method to catch and print all exceptions
+        """ Override the onecmd method to:
+          - catch and print all exceptions
+          - allow for composite commands in interactive mode (foo; bar)
+          - call 'do_foo' on plugins rather than ourself
         """
         origline = line
-        # allow for composite commands in interactive mode
-        # (e.g. "restart prog; tail -f prog")
         lines = line.split(';') # don't filter(None, line.split), as we pop
         line = lines.pop(0)
         # stuffing the remainder into cmdqueue will cause cmdloop to
@@ -81,20 +85,19 @@ class Controller(cmd.Cmd):
         if cmd == '':
             return self.default(line)
         else:
-            try:
-                func = getattr(self, 'do_' + cmd)
-            except AttributeError:
+            do_func = self._get_do_func(cmd)
+            if do_func is None:
                 return self.default(line)
             try:
                 try:
-                    return func(arg)
+                    return do_func(arg)
                 except xmlrpclib.ProtocolError, e:
                     if e.errcode == 401:
                         if self.options.interactive:
-                            self._output('Server requires authentication')
+                            self.output('Server requires authentication')
                             username = raw_input('Username:')
                             password = getpass.getpass(prompt='Password:')
-                            self._output('')
+                            self.output('')
                             self.options.username = username
                             self.options.password = password
                             return self.onecmd(origline)
@@ -102,40 +105,47 @@ class Controller(cmd.Cmd):
                             self.options.usage('Server requires authentication')
                     else:
                         raise
+                do_func(arg)
             except SystemExit:
                 raise
             except Exception, e:
                 (file, fun, line), t, v, tbinfo = asyncore.compact_traceback()
                 error = 'error: %s, %s: file: %s line: %s' % (t, v, file, line)
-                self._output(error)
+                self.output(error)
 
-    def _output(self, stuff):
+    def _get_do_func(self, cmd):
+        func_name = 'do_' + cmd
+        func = getattr(self, func_name, None)
+        if not func:
+            for plugin in self.options.plugins:
+                func = getattr(plugin, func_name, None)
+                if func is not None:
+                    break
+        return func
+
+    def output(self, stuff):
         if stuff is not None:
             self.stdout.write(stuff + '\n')
 
-    def _makeNamespace(self, namespace):
+    def get_supervisor(self):
         proxy = self.options.getServerProxy()
-        namespace = getattr(proxy, namespace)
+        namespace = getattr(proxy, 'supervisor')
         return namespace
 
-    def _get_supervisor(self):
-        supervisor = self._makeNamespace('supervisor')
-        return supervisor
-
-    def _upcheck(self):
+    def upcheck(self):
         try:
-            supervisor = self._get_supervisor()
+            supervisor = self.get_supervisor()
             api = supervisor.getVersion() # deprecated
             from supervisor import rpcinterface
             if api != rpcinterface.API_VERSION:
-                self._output(
+                self.output(
                     'Sorry, this version of supervisorctl expects to '
                     'talk to a server with API version %s, but the '
                     'remote version is %s.' % (rpcinterface.API_VERSION, api))
                 return False
         except xmlrpclib.Fault, e:
             if e.faultCode == xmlrpc.Faults.UNKNOWN_METHOD:
-                self._output(
+                self.output(
                     'Sorry, supervisord responded but did not recognize '
                     'the supervisor namespace commands that supervisorctl '
                     'uses to control it.  Please check that the '
@@ -145,30 +155,101 @@ class Controller(cmd.Cmd):
             raise 
         except socket.error, why:
             if why[0] == errno.ECONNREFUSED:
-                self._output('%s refused connection' % self.options.serverurl)
+                self.output('%s refused connection' % self.options.serverurl)
                 return False
             raise
         return True
 
+    def do_help(self, arg):
+        for plugin in self.options.plugins:
+            plugin.do_help(arg)
+
     def help_help(self):
-        self._output("help\t\tPrint a list of available actions")
-        self._output("help <action>\tPrint help for <action>")
+        self.output("help\t\tPrint a list of available actions")
+        self.output("help <action>\tPrint help for <action>")
 
     def do_EOF(self, arg):
-        self._output('')
+        self.output('')
         return 1
 
     def help_EOF(self):
-        self._output("To quit, type ^D or use the quit command")
+        self.output("To quit, type ^D or use the quit command")
 
+def get_names(inst):
+    # Inheritance says we have to look in class and
+    # base classes; order is not important.
+    names = []
+    classes = [inst.__class__]
+    while classes:
+        aclass = classes.pop(0)
+        if aclass.__bases__:
+            classes = classes + list(aclass.__bases__)
+        names = names + dir(aclass)
+    return names
+
+class ControllerPluginBase:
+    name = 'unnamed'
+
+    def __init__(self, controller):
+        self.ctl = controller
+
+    def _doc_header(self):
+        return "%s commands (type help <topic>):" % self.name
+    doc_header = property(_doc_header)
+
+    def do_help(self, arg):
+        if arg:
+            # XXX check arg syntax
+            try:
+                func = getattr(self, 'help_' + arg)
+            except AttributeError:
+                try:
+                    doc=getattr(self, 'do_' + arg).__doc__
+                    if doc:
+                        self.ctl.stdout.write("%s\n"%str(doc))
+                        return
+                except AttributeError:
+                    pass
+                self.ctl.stdout.write("%s\n"%str(self.ctl.nohelp % (arg,)))
+                return
+            func()
+        else:
+            names = get_names(self)
+            cmds_doc = []
+            cmds_undoc = []
+            help = {}
+            for name in names:
+                if name[:5] == 'help_':
+                    help[name[5:]]=1
+            names.sort()
+            # There can be duplicates if routines overridden
+            prevname = ''
+            for name in names:
+                if name[:3] == 'do_':
+                    if name == prevname:
+                        continue
+                    prevname = name
+                    cmd=name[3:]
+                    if cmd in help:
+                        cmds_doc.append(cmd)
+                        del help[cmd]
+                    elif getattr(self, name).__doc__:
+                        cmds_doc.append(cmd)
+                    else:
+                        cmds_undoc.append(cmd)
+            self.ctl.stdout.write("\n")
+            self.ctl.print_topics(self.doc_header,   cmds_doc,   15,80)
+
+class DefaultControllerPlugin(ControllerPluginBase):
+    name = 'default'
     def _tailf(self, path):
-        if not self._upcheck():
+        if not self.ctl.upcheck():
             return
 
-        self._output('==> Press Ctrl-C to exit <==')
+        self.ctl.output('==> Press Ctrl-C to exit <==')
 
-        username = self.options.username
-        password = self.options.password
+        username = self.ctl.options.username
+        password = self.ctl.options.password
         try:
             # Python's urllib2 (at least as of Python 2.4.2) isn't up
             # to this task; it doesn't actually implement a proper
@@ -179,26 +260,26 @@ class Controller(cmd.Cmd):
             import http_client
             listener = http_client.Listener()
             handler = http_client.HTTPHandler(listener, username, password)
-            handler.get(self.options.serverurl, path)
+            handler.get(self.ctl.options.serverurl, path)
             asyncore.loop()
         except KeyboardInterrupt:
             handler.close()
-            self._output('')
+            self.ctl.output('')
             return
 
     def do_tail(self, arg):
-        if not self._upcheck():
+        if not self.ctl.upcheck():
             return
         
         args = arg.strip().split()
 
         if len(args) < 1:
-            self._output('Error: too few arguments')
+            self.ctl.output('Error: too few arguments')
             self.help_tail()
             return
 
         elif len(args) > 3:
-            self._output('Error: too many arguments')
+            self.ctl.output('Error: too many arguments')
             self.help_tail()
             return
 
@@ -215,10 +296,10 @@ class Controller(cmd.Cmd):
                 name = args[0]
                 channel = args[-1].lower()
                 if channel not in ('stderr', 'stdout'):
-                    self._output('Error: bad channel %r' % channel)
+                    self.ctl.output('Error: bad channel %r' % channel)
                     return
             else:
-                self._output('Error: tail requires process name')
+                self.ctl.output('Error: tail requires process name')
                 return
 
         bytes = 1600
@@ -231,10 +312,10 @@ class Controller(cmd.Cmd):
                 try:
                     bytes = int(what)
                 except:
-                    self._output('Error: bad argument %s' % modifier)
+                    self.ctl.output('Error: bad argument %s' % modifier)
                     return
 
-        supervisor = self._get_supervisor()
+        supervisor = self.ctl.get_supervisor()
 
         if bytes is None:
             return self._tailf('/logtail/%s/%s' % (name, channel))
@@ -250,18 +331,18 @@ class Controller(cmd.Cmd):
             except xmlrpclib.Fault, e:
                 template = '%s: ERROR (%s)'
                 if e.faultCode == xmlrpc.Faults.NO_FILE:
-                    self._output(template % (name, 'no log file'))
+                    self.ctl.output(template % (name, 'no log file'))
                 elif e.faultCode == xmlrpc.Faults.FAILED:
-                    self._output(template % (name,
+                    self.ctl.output(template % (name,
                                              'unknown error reading log'))
                 elif e.faultCode == xmlrpc.Faults.BAD_NAME:
-                    self._output(template % (name,
+                    self.ctl.output(template % (name,
                                              'no such process name'))
             else:
-                self._output(output)
+                self.ctl.output(output)
 
     def help_tail(self):
-        self._output(
+        self.ctl.output(
             "tail [-f] <name> [stdout|stderr] (default stdout)\n"
             "Ex:\n"
             "tail -f <name>\t\tContinuous tail of named process stdout\n"
@@ -271,13 +352,13 @@ class Controller(cmd.Cmd):
             )
 
     def do_maintail(self, arg):
-        if not self._upcheck():
+        if not self.ctl.upcheck():
             return
         
         args = arg.strip().split()
 
         if len(args) > 1:
-            self._output('Error: too many arguments')
+            self.ctl.output('Error: too many arguments')
             self.help_maintail()
             return
 
@@ -290,32 +371,32 @@ class Controller(cmd.Cmd):
                 try:
                     what = int(what)
                 except:
-                    self._output('Error: bad argument %s' % args[0])
+                    self.ctl.output('Error: bad argument %s' % args[0])
                     return
                 else:
                     bytes = what
             else:
-                self._output('Error: bad argument %s' % args[0])
+                self.ctl.output('Error: bad argument %s' % args[0])
                 
         else:
             bytes = 1600
 
-        supervisor = self._get_supervisor()
+        supervisor = self.ctl.get_supervisor()
 
         try:
             output = supervisor.readLog(-bytes, 0)
         except xmlrpclib.Fault, e:
             template = '%s: ERROR (%s)'
             if e.faultCode == xmlrpc.Faults.NO_FILE:
-                self._output(template % ('supervisord', 'no log file'))
+                self.ctl.output(template % ('supervisord', 'no log file'))
             elif e.faultCode == xmlrpc.Faults.FAILED:
-                self._output(template % ('supervisord',
+                self.ctl.output(template % ('supervisord',
                                          'unknown error reading log'))
         else:
-            self._output(output)
+            self.ctl.output(output)
 
     def help_maintail(self):
-        self._output(
+        self.ctl.output(
             "maintail -f \tContinuous tail of supervisor main log file"
             " (Ctrl-C to exit)\n"
             "maintail -100\tlast 100 *bytes* of supervisord main log file\n"
@@ -326,12 +407,12 @@ class Controller(cmd.Cmd):
         sys.exit(0)
 
     def help_quit(self):
-        self._output("quit\tExit the supervisor shell.")
+        self.ctl.output("quit\tExit the supervisor shell.")
 
     do_exit = do_quit
 
     def help_exit(self):
-        self._output("exit\tExit the supervisor shell.")
+        self.ctl.output("exit\tExit the supervisor shell.")
 
     def _procrepr(self, info):
         template = '%(name)-32s %(state)-10s %(desc)s'
@@ -344,10 +425,10 @@ class Controller(cmd.Cmd):
                            'desc':info['description']}
 
     def do_status(self, arg):
-        if not self._upcheck():
+        if not self.ctl.upcheck():
             return
         
-        supervisor = self._get_supervisor()
+        supervisor = self.ctl.get_supervisor()
 
         names = arg.strip().split()
 
@@ -357,28 +438,29 @@ class Controller(cmd.Cmd):
                     info = supervisor.getProcessInfo(name)
                 except xmlrpclib.Fault, e:
                     if e.faultCode == xmlrpc.Faults.BAD_NAME:
-                        self._output('No such process %s' % name)
+                        self.ctl.output('No such process %s' % name)
                     else:
                         raise
                     continue
-                self._output(self._procrepr(info))
+                self.ctl.output(self._procrepr(info))
         else:
             for info in supervisor.getAllProcessInfo():
-                self._output(self._procrepr(info))
+                self.ctl.output(self._procrepr(info))
 
     def help_status(self):
-        self._output("status\t\t\tGet all process status info.")
-        self._output("status <name>\t\tGet status on a single process by name.")
-        self._output("status <name> <name>\tGet status on multiple named "
+        self.ctl.output("status\t\t\tGet all process status info.")
+        self.ctl.output(
+            "status <name>\t\tGet status on a single process by name.")
+        self.ctl.output("status <name> <name>\tGet status on multiple named "
                      "processes.")
 
     def do_pid(self, arg):
-        supervisor = self._get_supervisor()
+        supervisor = self.ctl.get_supervisor()
         pid = supervisor.getPID()
-        self._output(str(pid))
+        self.ctl.output(str(pid))
 
     def help_pid(self):
-        self._output("pid\t\t\tGet the PID of supervisord.")    
+        self.ctl.output("pid\t\t\tGet the PID of supervisord.")    
 
     def _startresult(self, result):
         name = result['name']
@@ -398,14 +480,14 @@ class Controller(cmd.Cmd):
         raise ValueError('Unknown result code %s for %s' % (code, name))
 
     def do_start(self, arg):
-        if not self._upcheck():
+        if not self.ctl.upcheck():
             return
 
         names = arg.strip().split()
-        supervisor = self._get_supervisor()
+        supervisor = self.ctl.get_supervisor()
 
         if not names:
-            self._output("Error: start requires a process name")
+            self.ctl.output("Error: start requires a process name")
             self.help_start()
             return
 
@@ -413,7 +495,7 @@ class Controller(cmd.Cmd):
             results = supervisor.startAllProcesses()
             for result in results:
                 result = self._startresult(result)
-                self._output(result)
+                self.ctl.output(result)
                 
         else:
             for name in names:
@@ -422,7 +504,7 @@ class Controller(cmd.Cmd):
                     results = supervisor.startProcessGroup(group_name)
                     for result in results:
                         result = self._startresult(result)
-                        self._output(result)
+                        self.ctl.output(result)
                 else:
                     try:
                         result = supervisor.startProcess(name)
@@ -430,15 +512,16 @@ class Controller(cmd.Cmd):
                         error = self._startresult({'status':e.faultCode,
                                                    'name':name,
                                                    'description':e.faultString})
-                        self._output(error)
+                        self.ctl.output(error)
                     else:
-                        self._output('%s: started' % name)
+                        self.ctl.output('%s: started' % name)
 
     def help_start(self):
-        self._output("start <name>\t\tStart a process")
-        self._output("start <gname>:*\t\tStart all processes in a group")
-        self._output("start <name> <name>\tStart multiple processes or groups")
-        self._output("start all\t\tStart all processes")
+        self.ctl.output("start <name>\t\tStart a process")
+        self.ctl.output("start <gname>:*\t\tStart all processes in a group")
+        self.ctl.output(
+            "start <name> <name>\tStart multiple processes or groups")
+        self.ctl.output("start all\t\tStart all processes")
 
     def _stopresult(self, result):
         name = result['name']
@@ -457,14 +540,14 @@ class Controller(cmd.Cmd):
         raise ValueError('Unknown result code %s for %s' % (code, name))
 
     def do_stop(self, arg):
-        if not self._upcheck():
+        if not self.ctl.upcheck():
             return
 
         names = arg.strip().split()
-        supervisor = self._get_supervisor()
+        supervisor = self.ctl.get_supervisor()
 
         if not names:
-            self._output('Error: stop requires a process name')
+            self.ctl.output('Error: stop requires a process name')
             self.help_stop()
             return
 
@@ -472,7 +555,7 @@ class Controller(cmd.Cmd):
             results = supervisor.stopAllProcesses()
             for result in results:
                 result = self._stopresult(result)
-                self._output(result)
+                self.ctl.output(result)
 
         else:
             for name in names:
@@ -481,7 +564,7 @@ class Controller(cmd.Cmd):
                     results = supervisor.stopProcessGroup(group_name)
                     for result in results:
                         result = self._stopresult(result)
-                        self._output(result)
+                        self.ctl.output(result)
                 else:
                     try:
                         result = supervisor.stopProcess(name)
@@ -489,24 +572,24 @@ class Controller(cmd.Cmd):
                         error = self._stopresult({'status':e.faultCode,
                                                   'name':name,
                                                   'description':e.faultString})
-                        self._output(error)
+                        self.ctl.output(error)
                     else:
-                        self._output('%s: stopped' % name)
+                        self.ctl.output('%s: stopped' % name)
 
     def help_stop(self):
-        self._output("stop <name>\t\tStop a process")
-        self._output("stop <gname>:*\t\tStop all processes in a group")
-        self._output("stop <name> <name>\tStop multiple processes or groups")
-        self._output("stop all\t\tStop all processes")
+        self.ctl.output("stop <name>\t\tStop a process")
+        self.ctl.output("stop <gname>:*\t\tStop all processes in a group")
+        self.ctl.output("stop <name> <name>\tStop multiple processes or groups")
+        self.ctl.output("stop all\t\tStop all processes")
 
     def do_restart(self, arg):
-        if not self._upcheck():
+        if not self.ctl.upcheck():
             return
 
         names = arg.strip().split()
 
         if not names:
-            self._output('Error: restart requires a process name')
+            self.ctl.output('Error: restart requires a process name')
             self.help_restart()
             return
 
@@ -514,51 +597,51 @@ class Controller(cmd.Cmd):
         self.do_start(arg)
 
     def help_restart(self):
-        self._output("restart <name>\t\tRestart a process")
-        self._output("restart <gname>:*\tRestart all processes in a group")
-        self._output("restart <name> <name>\tRestart multiple processes or "
+        self.ctl.output("restart <name>\t\tRestart a process")
+        self.ctl.output("restart <gname>:*\tRestart all processes in a group")
+        self.ctl.output("restart <name> <name>\tRestart multiple processes or "
                      "groups")
-        self._output("restart all\t\tRestart all processes")
+        self.ctl.output("restart all\t\tRestart all processes")
 
     def do_shutdown(self, arg):
-        if self.options.interactive:
+        if self.ctl.options.interactive:
             yesno = raw_input('Really shut the remote supervisord process '
                               'down y/N? ')
             really = yesno.lower().startswith('y')
         else:
             really = 1
         if really:
-            supervisor = self._get_supervisor()
+            supervisor = self.ctl.get_supervisor()
             try:
                 supervisor.shutdown()
             except xmlrpclib.Fault, e:
                 if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
-                    self._output('ERROR: already shutting down')
+                    self.ctl.output('ERROR: already shutting down')
             else:
-                self._output('Shut down')
+                self.ctl.output('Shut down')
 
     def help_shutdown(self):
-        self._output("shutdown \tShut the remote supervisord down.")
+        self.ctl.output("shutdown \tShut the remote supervisord down.")
 
     def do_reload(self, arg):
-        if self.options.interactive:
+        if self.ctl.options.interactive:
             yesno = raw_input('Really restart the remote supervisord process '
                               'y/N? ')
             really = yesno.lower().startswith('y')
         else:
             really = 1
         if really:
-            supervisor = self._get_supervisor()
+            supervisor = self.ctl.get_supervisor()
             try:
                 supervisor.restart()
             except xmlrpclib.Fault, e:
                 if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
-                    self._output('ERROR: already shutting down')
+                    self.ctl.output('ERROR: already shutting down')
             else:
-                self._output('Restarted supervisord')
+                self.ctl.output('Restarted supervisord')
 
     def help_reload(self):
-        self._output("reload \t\tRestart the remote supervisord.")
+        self.ctl.output("reload \t\tRestart the remote supervisord.")
 
     def _clearresult(self, result):
         name = result['name']
@@ -573,23 +656,23 @@ class Controller(cmd.Cmd):
         raise ValueError('Unknown result code %s for %s' % (code, name))
 
     def do_clear(self, arg):
-        if not self._upcheck():
+        if not self.ctl.upcheck():
             return
 
         names = arg.strip().split()
 
         if not names:
-            self._output('Error: clear requires a process name')
+            self.ctl.output('Error: clear requires a process name')
             self.help_clear()
             return
 
-        supervisor = self._get_supervisor()
+        supervisor = self.ctl.get_supervisor()
 
         if 'all' in names:
             results = supervisor.clearAllProcessLogs()
             for result in results:
                 result = self._clearresult(result)
-                self._output(result)
+                self.ctl.output(result)
 
         else:
 
@@ -600,37 +683,39 @@ class Controller(cmd.Cmd):
                     error = self._clearresult({'status':e.faultCode,
                                                'name':name,
                                                'description':e.faultString})
-                    self._output(error)
+                    self.ctl.output(error)
                 else:
-                    self._output('%s: cleared' % name)
+                    self.ctl.output('%s: cleared' % name)
 
     def help_clear(self):
-        self._output("clear <name>\t\tClear a process' log files.")
-        self._output("clear <name> <name>\tClear multiple process' log files")
-        self._output("clear all\t\tClear all process' log files")
+        self.ctl.output("clear <name>\t\tClear a process' log files.")
+        self.ctl.output(
+            "clear <name> <name>\tClear multiple process' log files")
+        self.ctl.output("clear all\t\tClear all process' log files")
 
     def do_open(self, arg):
         url = arg.strip()
         parts = urlparse.urlparse(url)
         if parts[0] not in ('unix', 'http'):
-            self._output('ERROR: url must be http:// or unix://')
+            self.ctl.output('ERROR: url must be http:// or unix://')
             return
-        self.options.serverurl = url
+        self.ctl.options.serverurl = url
         self.do_status('')
 
     def help_open(self):
-        self._output("open <url>\tConnect to a remote supervisord process.")
-        self._output("\t\t(for UNIX domain socket, use unix:///socket/path)")
+        self.ctl.output("open <url>\tConnect to a remote supervisord process.")
+        self.ctl.output("\t\t(for UNIX domain socket, use unix:///socket/path)")
 
     def do_version(self, arg):
-        if not self._upcheck():
+        if not self.ctl.upcheck():
             return
-        supervisor = self._get_supervisor()
-        self._output(supervisor.getSupervisorVersion())
+        supervisor = self.ctl.get_supervisor()
+        self.ctl.output(supervisor.getSupervisorVersion())
 
     def help_version(self):
-        self._output("version\t\t\tShow the version of the remote supervisord "
-                     "process")
+        self.ctl.output(
+            "version\t\t\tShow the version of the remote supervisord "
+            "process")
 
 def main(args=None, options=None):
     if options is None:
@@ -660,7 +745,7 @@ def main(args=None, options=None):
             c.cmdqueue.append('status')
             c.cmdloop()
         except KeyboardInterrupt:
-            c._output('')
+            c.output('')
             pass
 
 if __name__ == "__main__":
