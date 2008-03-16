@@ -132,6 +132,10 @@ class DummyOptions:
     def get_path(self):
         return ["/bin", "/usr/bin", "/usr/local/bin"]
 
+    def get_pid(self):
+        import os
+        return os.getpid()
+        
     def check_execv_args(self, filename, argv, st):
         if filename == '/bad/filename':
             from supervisor.options import NotFound
@@ -632,6 +636,9 @@ class DummySupervisorRPCNamespace:
         return '3.0'
 
     getVersion = getAPIVersion # deprecated
+
+    def getPID(self):
+        return 42
 
     def readProcessStdoutLog(self, name, offset, length):
         from supervisor import xmlrpc

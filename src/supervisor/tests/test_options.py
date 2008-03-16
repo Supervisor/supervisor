@@ -278,6 +278,10 @@ class ServerOptionsTests(unittest.TestCase):
         else:
             raise AssertionError("Didn't raise")
 
+    def test_get_pid(self):
+        instance = self._makeOne()
+        self.assertEqual(os.getpid(), instance.get_pid())
+
     def test_check_execv_args_cant_find_command(self):
         instance = self._makeOne()
         from supervisor.options import NotFound

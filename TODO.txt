@@ -61,7 +61,3 @@
 - Unit tests for log rotation.
 
 - Command-line arg tests.
-
-- Provide a way to get the supervisord pid from supervisorctl/web interface.
-
-

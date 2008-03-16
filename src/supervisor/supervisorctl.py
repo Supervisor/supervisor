@@ -372,6 +372,14 @@ class Controller(cmd.Cmd):
         self._output("status <name> <name>\tGet status on multiple named "
                      "processes.")
 
+    def do_pid(self, arg):
+        supervisor = self._get_supervisor()
+        pid = supervisor.getPID()
+        self._output(str(pid))
+
+    def help_pid(self):
+        self._output("pid\t\t\tGet the PID of supervisord.")    
+
     def _startresult(self, result):
         name = result['name']
         code = result['status']

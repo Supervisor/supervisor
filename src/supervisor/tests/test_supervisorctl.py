@@ -71,6 +71,16 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(controller.cmdqueue, [' version'])
         self.assertEqual(controller.stdout.getvalue(), '3000\n')
+        
+    def test_pid(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        result = controller.do_pid('')
+        self.assertEqual(result, None)
+        lines = controller.stdout.getvalue().split('\n')
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[0], str(options._server.supervisor.getPID()))
 
     def test_tail_toofewargs(self):
         options = DummyClientOptions()

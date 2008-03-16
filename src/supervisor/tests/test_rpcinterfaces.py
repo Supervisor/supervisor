@@ -117,6 +117,13 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(stateinfo['statename'], statename)
         self.assertEqual(interface.update_text, 'getState')
 
+    def test_getPID(self):
+        options = DummyOptions()
+        supervisord = DummySupervisor(options)
+        interface = self._makeOne(supervisord)
+        self.assertEqual(interface.getPID(), options.get_pid())
+        self.assertEqual(interface.update_text, 'getPID')
+
     def test_readLog_aliased_to_deprecated_readMainLog(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)

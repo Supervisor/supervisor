@@ -1,3 +1,9 @@
+Next Release
+
+  - Added the ability to retrieve supervisord's own pid through
+    supervisor.getPID() on the XML-RPC interface or a new
+    "pid" command on supervisorctl.
+
 3.0a5
 
   - Supervisorctl now supports persistent readline history.  To

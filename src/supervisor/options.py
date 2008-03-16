@@ -1191,6 +1191,9 @@ class ServerOptions(Options):
                 path = p.split(os.pathsep)
         return path
 
+    def get_pid(self):
+        return os.getpid()
+
     def check_execv_args(self, filename, argv, st):
         if st is None:
             raise NotFound("can't find command %r" % filename)

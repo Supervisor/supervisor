@@ -90,6 +90,14 @@ class SupervisorNamespaceRPCInterface:
             }
         return data
 
+    def getPID(self):
+        """ Return the PID of supervisord
+        
+        @return int PID
+        """
+        self._update('getPID')
+        return self.supervisord.options.get_pid()
+
     def readLog(self, offset, length):
         """ Read length bytes from the main log starting at offset
 
