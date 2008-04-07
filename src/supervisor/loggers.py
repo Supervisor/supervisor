@@ -210,11 +210,21 @@ class RotatingFileHandler(FileHandler):
                 dfn = "%s.%d" % (self.baseFilename, i + 1)
                 if os.path.exists(sfn):
                     if os.path.exists(dfn):
-                        os.remove(dfn)
+                        try:
+                            os.remove(dfn)
+                        except OSError, why:
+                            # catch race condition (already deleted)
+                            if why[0] != errno.ENOENT:
+                                raise
                     os.rename(sfn, dfn)
             dfn = self.baseFilename + ".1"
             if os.path.exists(dfn):
-                os.remove(dfn)
+                try:
+                    os.remove(dfn)
+                except OSError, why:
+                    # catch race condition (already deleted)
+                    if why[0] != errno.ENOENT:
+                        raise
             os.rename(self.baseFilename, dfn)
         self.stream = open(self.baseFilename, 'w')
 
