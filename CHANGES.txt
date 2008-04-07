@@ -7,6 +7,13 @@ Next Release
     supervisor.getPID() on the XML-RPC interface or a new
     "pid" command on supervisorctl.
 
+3.0a6
+
+  - The RotatingFileLogger had a race condition in its doRollover
+    method whereby a file might not actually exist despite a call to
+    os.path.exists on the line above a place where we try to remove
+    it.  We catch the exception now and ignore the missing file.
+
 3.0a5
 
   - Supervisorctl now supports persistent readline history.  To
