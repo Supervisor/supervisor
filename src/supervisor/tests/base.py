@@ -590,6 +590,7 @@ class DummySupervisorRPCNamespace:
     _restartable = True
     _restarted = False
     _shutdown = False
+    _readlog_error = False
 
 
     from supervisor.process import ProcessStates
@@ -795,6 +796,12 @@ class DummySupervisorRPCNamespace:
 
     def getSupervisorVersion(self):
         return '3000'
+
+    def readLog(self, whence, offset):
+        if self._readlog_error:
+            from xmlrpclib import Fault
+            raise Fault(self._readlog_error, '')
+        return 'mainlogdata'
 
 class DummyPGroupConfig:
     def __init__(self, options, name='whatever', priority=999, pconfigs=None):

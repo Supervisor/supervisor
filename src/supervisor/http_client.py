@@ -17,7 +17,7 @@ class Listener(object):
         pass
 
     def error(self, url, error):
-        pass
+        print url, error
     
     def response_header(self, url, name, value):
         pass
@@ -94,12 +94,14 @@ class HTTPHandler(object, asynchat.async_chat):
             return
         if 1 or self.connected:
             t,v,tb = sys.exc_info()
-            print t, v, tb
-            msg = 'Cannot connect to %s, error: %s' % (self.url, t)
+            msg = 'Cannot connect, error: %s (%s)' % (t, v)
+            self.listener.error(self.url, msg)
             self.part = self.ignore                
             self.close()
-            print msg
             self.error_handled = True
+            del t
+            del v
+            del tb
         
     def handle_connect(self):
         self.connected = 1        
@@ -150,7 +152,8 @@ class HTTPHandler(object, asynchat.async_chat):
             self.part = self.headers
         else:
             self.part = self.ignore
-            print 'Cannot read %s, status code %s' % (self.url, status)
+            msg = 'Cannot read, status code %s' % status
+            self.listener.error(self.url, msg)
             self.close()
         return version, status, reason
 
@@ -219,5 +222,4 @@ if __name__ == '__main__':
         listener.error(url, "Error connecting '%s'" % e)
 
     asyncore.loop()
-    print "-"
 

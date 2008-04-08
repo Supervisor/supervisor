@@ -176,8 +176,6 @@ class Controller(cmd.Cmd):
         self.output("To quit, type ^D or use the quit command")
 
 def get_names(inst):
-    # Inheritance says we have to look in class and
-    # base classes; order is not important.
     names = []
     classes = [inst.__class__]
     while classes:
@@ -242,6 +240,7 @@ class ControllerPluginBase:
 
 class DefaultControllerPlugin(ControllerPluginBase):
     name = 'default'
+    listener = None # for unit tests
     def _tailf(self, path):
         if not self.ctl.upcheck():
             return
@@ -258,7 +257,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
             # homegrown client based on asyncore instead.  This makes
             # me sad.
             import http_client
-            listener = http_client.Listener()
+            if self.listener is None:
+                listener = http_client.Listener()
+            else:
+                listener = self.listener # for unit tests
             handler = http_client.HTTPHandler(listener, username, password)
             handler.get(self.ctl.options.serverurl, path)
             asyncore.loop()
@@ -377,7 +379,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     bytes = what
             else:
                 self.ctl.output('Error: bad argument %s' % args[0])
-                
+                return
+            
         else:
             bytes = 1600
 

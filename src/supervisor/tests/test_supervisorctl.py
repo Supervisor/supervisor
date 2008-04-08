@@ -73,8 +73,52 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(controller.cmdqueue, [' help'])
         self.assertEqual(plugin.helped, True)
+
+    def test_nohelp(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        self.assertEqual(controller.nohelp, '*** No help on %s')
         
-class TestDefaultPlugin(unittest.TestCase):
+    def test_do_help(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        results = controller.do_help(None)
+        helpval = controller.stdout.getvalue()
+        self.assertEqual(results, None)
+        self.assertEqual(helpval, 'foo helped')
+
+class TestControllerPluginBase(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.supervisorctl import ControllerPluginBase
+        return ControllerPluginBase
+
+    def _makeOne(self, *arg, **kw):
+        klass = self._getTargetClass()
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        plugin = klass(ctl, *arg, **kw)
+        return plugin
+
+    def test_do_help_noarg(self):
+        plugin = self._makeOne()
+        results = plugin.do_help(None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(), '\n')
+        self.assertEqual(len(plugin.ctl.topics_printed), 1)
+        topics = plugin.ctl.topics_printed[0]
+        self.assertEqual(topics[0], 'unnamed commands (type help <topic>):')
+        self.assertEqual(topics[1], [])
+        self.assertEqual(topics[2], 15) 
+        self.assertEqual(topics[3], 80)
+        self.assertEqual(results, None)
+
+    def test_do_help_witharg(self):
+        plugin = self._makeOne()
+        results = plugin.do_help('foo')
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 'no help on foo\n')
+        self.assertEqual(len(plugin.ctl.topics_printed), 0)
+        
+class TestDefaultControllerPlugin(unittest.TestCase):
 
     def _getTargetClass(self):
         from supervisor.supervisorctl import DefaultControllerPlugin
@@ -425,24 +469,101 @@ class TestDefaultPlugin(unittest.TestCase):
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0], str(options._server.supervisor.getPID()))
 
+    def test_maintail_toomanyargs(self):
+        plugin = self._makeOne()
+        result = plugin.do_maintail('foo bar')
+        val = plugin.ctl.stdout.getvalue()
+        self.failUnless(val.startswith('Error: too many'), val)
+
+    def test_maintail_minus_string_fails(self):
+        plugin = self._makeOne()
+        result = plugin.do_maintail('-wrong')
+        val = plugin.ctl.stdout.getvalue()
+        self.failUnless(val.startswith('Error: bad argument -wrong'), val)
+
+    def test_maintail_wrong(self):
+        plugin = self._makeOne()
+        result = plugin.do_maintail('wrong')
+        val = plugin.ctl.stdout.getvalue()
+        self.failUnless(val.startswith('Error: bad argument wrong'), val)
+
+    def test_maintail_dashf(self):
+        plugin = self._makeOne()
+        plugin.listener = DummyListener()
+        result = plugin.do_maintail('-f')
+        errors = plugin.listener.errors
+        self.assertEqual(len(errors), 1)
+        error = errors[0]
+        self.assertEqual(plugin.listener.closed,
+                         'http://localhost:92491/mainlogtail')
+        self.assertEqual(error[0],
+                         'http://localhost:92491/mainlogtail')
+        self.assertEqual(error[1],
+                  "Cannot connect, error: socket.error ((32, 'Broken pipe'))")
+
+    def test_maintail_nobytes(self):
+        plugin = self._makeOne()
+        result = plugin.do_maintail('')
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 'mainlogdata\n')
+
+    def test_maintail_dashbytes(self):
+        plugin = self._makeOne()
+        result = plugin.do_maintail('-100')
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 'mainlogdata\n')
+
+    def test_maintail_readlog_error_nofile(self):
+        plugin = self._makeOne()
+        supervisor_rpc = plugin.ctl.get_supervisor()
+        from supervisor import xmlrpc
+        supervisor_rpc._readlog_error = xmlrpc.Faults.NO_FILE
+        result = plugin.do_maintail('-100')
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'supervisord: ERROR (no log file)\n')
+
+    def test_maintail_readlog_error_failed(self):
+        plugin = self._makeOne()
+        supervisor_rpc = plugin.ctl.get_supervisor()
+        from supervisor import xmlrpc
+        supervisor_rpc._readlog_error = xmlrpc.Faults.FAILED
+        result = plugin.do_maintail('-100')
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'supervisord: ERROR (unknown error reading log)\n')
+
+class DummyListener:
+    def __init__(self):
+        self.errors = []
+    def error(self, url, msg):
+        self.errors.append((url, msg))
+    def close(self, url):
+        self.closed = url
+
+class DummyPluginFactory:
+    def __init__(self, ctl, **kw):
+        self.ctl = ctl
+
+    def do_help(self, arg):
+        self.ctl.stdout.write('foo helped')
+
 class DummyClientOptions:
     def __init__(self):
         self.prompt = 'supervisor'
-        self.serverurl = 'http://localhost:9001'
+        self.serverurl = 'http://localhost:92491' # should be uncontactable
         self.username = 'chrism'
         self.password = '123'
         self.history_file = None
         self.plugins = ()
         self._server = DummyRPCServer()
         self.interactive = False
-        self.plugin_factories = []
+        self.plugin_factories = [('dummy', DummyPluginFactory, {})]
 
     def getServerProxy(self):
         return self._server
 
 class DummyController:
+    nohelp = 'no help on %s'
     def __init__(self, options):
         self.options = options
+        self.topics_printed = []
         self.stdout = StringIO()
         
     def upcheck(self):
@@ -453,6 +574,9 @@ class DummyController:
 
     def output(self, data):
         self.stdout.write(data + '\n')
+
+    def print_topics(self, doc_headers, cmds_doc, rows, cols):
+        self.topics_printed.append((doc_headers, cmds_doc, rows, cols))
 
 class DummyPlugin:
     def __init__(self, controller=None):
