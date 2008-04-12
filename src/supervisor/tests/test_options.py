@@ -12,6 +12,7 @@ from supervisor.tests.base import DummyLogger
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyProcess
+from supervisor.tests.base import DummySocketManager
 from supervisor.tests.base import lstrip
 
 class ClientOptionsTests(unittest.TestCase):
@@ -620,6 +621,120 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         self.assertRaises(ValueError,instance.process_groups_from_parser,config)
 
+    def test_fcgi_programs_from_parser(self):
+        from supervisor.options import FastCGIGroupConfig
+        from supervisor.options import FastCGIProcessConfig
+        text = lstrip("""\
+        [fcgi-program:foo]
+        socket=unix:///tmp/%(program_name)s.sock
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/foo
+        numprocs = 2
+        priority = 1
+
+        [fcgi-program:bar]
+        socket=tcp://localhost:6000
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/bar
+        numprocs = 3
+        """)
+        from supervisor.options import UnhosedConfigParser
+        from supervisor.dispatchers import default_handler
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        gconfigs = instance.process_groups_from_parser(config)
+        self.assertEqual(len(gconfigs), 2)
+
+        gconfig0 = gconfigs[0]
+        self.assertEqual(gconfig0.__class__, FastCGIGroupConfig)
+        self.assertEqual(gconfig0.name, 'foo')
+        self.assertEqual(gconfig0.priority, 1)
+        self.assertEqual(gconfig0.socket_manager.config().url, 'unix:///tmp/foo.sock')
+        self.assertEqual(len(gconfig0.process_configs), 2)
+        self.assertEqual(gconfig0.process_configs[0].__class__, FastCGIProcessConfig)
+        self.assertEqual(gconfig0.process_configs[1].__class__, FastCGIProcessConfig)
+        
+        gconfig1 = gconfigs[1]
+        self.assertEqual(gconfig1.name, 'bar')
+        self.assertEqual(gconfig1.priority, 999)
+        self.assertEqual(gconfig1.socket_manager.config().url, 'tcp://localhost:6000')
+        self.assertEqual(len(gconfig1.process_configs), 3)
+
+    def test_fcgi_program_no_socket(self):
+        text = lstrip("""\
+        [fcgi-program:foo]
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/foo
+        numprocs = 2
+        priority = 1
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError,instance.process_groups_from_parser,config)
+        
+    def test_fcgi_program_unknown_socket_protocol(self):
+        text = lstrip("""\
+        [fcgi-program:foo]
+        socket=junk://blah
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/foo
+        numprocs = 2
+        priority = 1
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError,instance.process_groups_from_parser,config)
+        
+    def test_fcgi_program_rel_unix_sock_path(self):
+        text = lstrip("""\
+        [fcgi-program:foo]
+        socket=unix://relative/path
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/foo
+        numprocs = 2
+        priority = 1
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError,instance.process_groups_from_parser,config)
+    
+    def test_fcgi_program_bad_tcp_sock_format(self):
+        text = lstrip("""\
+        [fcgi-program:foo]
+        socket=tcp://missingport
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/foo
+        numprocs = 2
+        priority = 1
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError,instance.process_groups_from_parser,config)
+        
+    def test_fcgi_program_bad_expansion_proc_num(self):
+        text = lstrip("""\
+        [fcgi-program:foo]
+        socket=unix:///tmp/%(process_num)s.sock
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/foo
+        numprocs = 2
+        priority = 1
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError,instance.process_groups_from_parser,config)
+    
     def test_heterogeneous_process_groups_from_parser(self):
         text = lstrip("""\
         [program:one]
@@ -840,6 +955,58 @@ class TestProcessConfig(unittest.TestCase):
         self.assertEqual(pipes['stdout'], 5)
         self.assertEqual(pipes['stderr'], None)
 
+class FastCGIProcessConfigTest(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.options import FastCGIProcessConfig
+        return FastCGIProcessConfig
+
+    def _makeOne(self, *arg, **kw):
+        defaults = {}
+        for name in ('name', 'command', 'directory', 'umask',
+                     'priority', 'autostart', 'autorestart',
+                     'startsecs', 'startretries', 'uid',
+                     'stdout_logfile', 'stdout_capture_maxbytes',
+                     'stdout_logfile_backups', 'stdout_logfile_maxbytes',
+                     'stderr_logfile', 'stderr_capture_maxbytes',
+                     'stderr_logfile_backups', 'stderr_logfile_maxbytes',
+                     'stopsignal', 'stopwaitsecs', 'exitcodes',
+                     'redirect_stderr', 'environment'):
+            defaults[name] = name
+        defaults.update(kw)
+        return self._getTargetClass()(*arg, **defaults)
+
+    def test_make_process(self):
+        options = DummyOptions()
+        instance = self._makeOne(options)
+        self.assertRaises(NotImplementedError, instance.make_process)
+
+    def test_make_process_with_group(self):
+        options = DummyOptions()
+        instance = self._makeOne(options)
+        process = instance.make_process('abc')
+        from supervisor.process import FastCGISubprocess
+        self.assertEqual(process.__class__, FastCGISubprocess)
+        self.assertEqual(process.group, 'abc')
+
+    def test_make_dispatchers(self):
+        options = DummyOptions()
+        instance = self._makeOne(options)
+        instance.redirect_stderr = False
+        process1 = DummyProcess(instance)
+        dispatchers, pipes = instance.make_dispatchers(process1)
+        self.assertEqual(dispatchers[4].channel, 'stdin')
+        self.assertEqual(dispatchers[4].closed, True)
+        self.assertEqual(dispatchers[5].channel, 'stdout')
+        from supervisor.events import ProcessCommunicationStdoutEvent
+        self.assertEqual(dispatchers[5].event_type,
+                         ProcessCommunicationStdoutEvent)
+        self.assertEqual(pipes['stdout'], 5)
+        self.assertEqual(dispatchers[7].channel, 'stderr')
+        from supervisor.events import ProcessCommunicationStderrEvent
+        self.assertEqual(dispatchers[7].event_type,
+                         ProcessCommunicationStderrEvent)
+        self.assertEqual(pipes['stderr'], 7)
+
 class ProcessGroupConfigTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ProcessGroupConfig
@@ -870,6 +1037,33 @@ class ProcessGroupConfigTests(unittest.TestCase):
         group = instance.make_group()
         from supervisor.process import ProcessGroup
         self.assertEqual(group.__class__, ProcessGroup)
+
+class FastCGIGroupConfigTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.options import FastCGIGroupConfig
+        return FastCGIGroupConfig
+
+    def _makeOne(self, *args, **kw):
+        return self._getTargetClass()(*args, **kw)
+
+    def test_ctor(self):
+        options = DummyOptions()
+        sock_manager = DummySocketManager(6)
+        instance = self._makeOne(options, 'whatever', 999, [], sock_manager)
+        self.assertEqual(instance.options, options)
+        self.assertEqual(instance.name, 'whatever')
+        self.assertEqual(instance.priority, 999)
+        self.assertEqual(instance.process_configs, [])
+        self.assertEqual(instance.socket_manager, sock_manager)
+    
+    def test_after_setuid(self):
+        options = DummyOptions()
+        sock_manager = DummySocketManager(6)
+        pconfigs = [DummyPConfig(options, 'process1', '/bin/process1')]
+        instance = self._makeOne(options, 'whatever', 999, pconfigs, sock_manager)
+        instance.after_setuid()
+        self.assertTrue(pconfigs[0].autochildlogs_created)
+        self.assertTrue(instance.socket_manager.prepare_socket_called)
 
 class UtilFunctionsTests(unittest.TestCase):
     def test_make_namespec(self):

@@ -821,6 +821,11 @@ class DummyPGroupConfig:
     def make_group(self):
         return DummyProcessGroup(self)
 
+class DummyFCGIGroupConfig(DummyPGroupConfig):
+    def __init__(self, options, name, priority, pconfigs, socket_manager):
+        DummyPGroupConfig.__init__(self, options, name, priority, pconfigs)
+        self.socket_manager = socket_manager
+
 class DummyProcessGroup:
     def __init__(self, config):
         self.config = config
@@ -934,6 +939,54 @@ class DummyEvent:
     def __str__(self):
         return 'dummy event'
 
+class DummySocket:
+    bind_called = False
+    bind_addr = None
+    listen_called = False
+    listen_backlog = None
+    close_called = False
+    
+    def __init__(self, fd):
+        self.fd = fd
+        
+    def fileno(self):
+        return self.fd
+
+    def bind(self, addr):
+        self.bind_called = True
+        self.bind_addr = addr
+        
+    def listen(self, backlog):
+        self.listen_called = True
+        self.listen_backlog = backlog
+        
+    def close(self):
+        self.close_called = True
+
+    def __str__(self):
+        return 'dummy socket'
+
+class DummySocketConfig:
+    def __init__(self, fd):
+        self.fd = fd
+    
+    def addr(self):
+        return 'dummy addr'
+        
+    def create(self):
+        return DummySocket(self.fd)
+
+class DummySocketManager:
+    def __init__(self, sock_fd):
+        self.sock_fd = sock_fd
+        self.prepare_socket_called = False
+    
+    def prepare_socket(self):
+        self.prepare_socket_called = True
+        
+    def get_socket(self):
+        return DummySocket(self.sock_fd)
+        
 def dummy_handler(event, result):
     pass
 
@@ -947,4 +1000,3 @@ def exception_handler(event, result):
 def lstrip(s):
     strings = [x.strip() for x in s.split('\n')]
     return '\n'.join(strings)
-

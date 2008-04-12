@@ -268,6 +268,17 @@ class Subprocess:
         options.pidhistory[pid] = self
         return pid
 
+    def _prepare_child_fds(self):
+        options = self.config.options
+        options.dup2(self.pipes['child_stdin'], 0)
+        options.dup2(self.pipes['child_stdout'], 1)
+        if self.config.redirect_stderr:
+            options.dup2(self.pipes['child_stdout'], 2)
+        else:
+            options.dup2(self.pipes['child_stderr'], 2)
+        for i in range(3, options.minfds):
+            options.close_fd(i)        
+
     def _spawn_as_child(self, filename, argv):
         options = self.config.options
         try:
@@ -280,14 +291,7 @@ class Subprocess:
             # Presumably it also prevents HUP, etc received by
             # supervisord from being sent to children.
             options.setpgrp()
-            options.dup2(self.pipes['child_stdin'], 0)
-            options.dup2(self.pipes['child_stdout'], 1)
-            if self.config.redirect_stderr:
-                options.dup2(self.pipes['child_stdout'], 2)
-            else:
-                options.dup2(self.pipes['child_stderr'], 2)
-            for i in range(3, options.minfds):
-                options.close_fd(i)
+            self._prepare_child_fds()
             # sending to fd 2 will put this output in the stderr log
             msg = self.set_uid()
             if msg:
@@ -549,6 +553,31 @@ class Subprocess:
                                                       self.pid))
                 self.kill(signal.SIGKILL)
 
+class FastCGISubprocess(Subprocess):
+    """Extends Subprocess class to handle FastCGI subprocesses"""
+
+    def _prepare_child_fds(self):
+        if self.group is None:
+            raise NotImplementedError('No group set for FastCGISubprocess')
+        if not hasattr(self.group, 'config'):
+            raise NotImplementedError('No config found for group on '
+                                      'FastCGISubprocess')
+        if not hasattr(self.group.config, 'socket_manager'):
+            raise NotImplementedError('No SocketManager set for '
+                                      'FastCGISubprocess group')
+        sock = self.group.config.socket_manager.get_socket()
+        sock_fd = sock.fileno()
+        
+        options = self.config.options
+        options.dup2(sock_fd, 0)
+        options.dup2(self.pipes['child_stdout'], 1)
+        if self.config.redirect_stderr:
+            options.dup2(self.pipes['child_stdout'], 2)
+        else:
+            options.dup2(self.pipes['child_stderr'], 2)
+        for i in range(3, options.minfds):
+            options.close_fd(i)
+    
 class ProcessGroupBase:
     def __init__(self, config):
         self.config = config

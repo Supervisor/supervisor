@@ -50,11 +50,15 @@ from supervisor.datatypes import existing_directory
 from supervisor.datatypes import logging_level
 from supervisor.datatypes import colon_separated_user_group
 from supervisor.datatypes import inet_address
+from supervisor.datatypes import InetStreamSocketConfig
+from supervisor.datatypes import UnixStreamSocketConfig
 from supervisor.datatypes import url
 from supervisor.datatypes import Automatic
 from supervisor.datatypes import auto_restart
 from supervisor.datatypes import profile_options
 from supervisor.datatypes import set_here
+
+from supervisor.socket_manager import SocketManager
 
 from supervisor import loggers
 from supervisor import states
@@ -637,8 +641,55 @@ class ServerOptions(Options):
                                         result_handler)
                 )
 
+        # process fastcgi homogeneous groups
+        for section in all_sections:
+            if ( (not section.startswith('fcgi-program:') )
+                 or section in homogeneous_exclude ):
+                continue
+            program_name = section.split(':', 1)[1]
+            priority = integer(get(section, 'priority', 999))
+            socket = get(section, 'socket', None)
+            if not socket:
+                raise ValueError('[%s] section requires a "socket" line' %
+                                 section)
+
+            expansions = {'here':self.here,
+                          'program_name':program_name}
+            socket = expand(socket, expansions, 'socket')
+            try:
+                socket_config = self.parse_fcgi_socket(socket)
+            except ValueError, e:
+                raise ValueError('%s in [%s] socket' % (str(e), section))
+            
+            processes=self.processes_from_section(parser, section, program_name,
+                                                  FastCGIProcessConfig)
+            groups.append(
+                FastCGIGroupConfig(self, program_name, priority, processes,
+                                   SocketManager(socket_config))
+                )
+        
+
         groups.sort()
         return groups
+
+    def parse_fcgi_socket(self, sock):
+        if sock.startswith('unix://'):
+            path = sock[7:]
+            #Check it's an absolute path
+            if not os.path.isabs(path):
+                raise ValueError("Unix socket path %s is not an absolute path",
+                                 path)
+            path = normalize_path(path)
+            return UnixStreamSocketConfig(path)
+        
+        tcp_re = re.compile(r'^tcp://([^\s:]+):(\d+)$')
+        m = tcp_re.match(sock)
+        if m:
+            host = m.group(1)
+            port = int(m.group(2))
+            return InetStreamSocketConfig(host, port)
+        
+        raise ValueError("Bad socket format %s", sock)
 
     def processes_from_section(self, parser, section, group_name,
                                klass=None):
@@ -1495,6 +1546,25 @@ class EventListenerConfig(ProcessConfig):
             dispatchers[stdin_fd] = PInputDispatcher(proc, 'stdin', stdin_fd)
         return dispatchers, p
 
+class FastCGIProcessConfig(ProcessConfig):
+    def make_process(self, group=None):
+        if group is None:
+            raise NotImplementedError('FastCGI programs require a group')
+        from supervisor.process import FastCGISubprocess
+        process = FastCGISubprocess(self)
+        process.group = group
+        return process
+
+    def make_dispatchers(self, proc):
+        dispatchers, p = ProcessConfig.make_dispatchers(self, proc)
+        #FastCGI child processes expect the FastCGI socket set to
+        #file descriptor 0, so supervisord cannot use stdin
+        #to communicate with the child process
+        stdin_fd = p['stdin']
+        if stdin_fd is not None:
+            dispatchers[stdin_fd].close()
+        return dispatchers, p
+
 class ProcessGroupConfig(Config):
     def __init__(self, options, name, priority, process_configs):
         self.options = options
@@ -1529,6 +1599,19 @@ class EventListenerPoolConfig(Config):
         from supervisor.process import EventListenerPool
         return EventListenerPool(self)
 
+class FastCGIGroupConfig(ProcessGroupConfig):        
+    def __init__(self, options, name, priority, process_configs,
+                 socket_manager):
+        self.options = options
+        self.name = name
+        self.priority = priority
+        self.process_configs = process_configs
+        self.socket_manager = socket_manager
+
+    def after_setuid(self):
+        ProcessGroupConfig.after_setuid(self)
+        self.socket_manager.prepare_socket()
+    
 def readFile(filename, offset, length):
     """ Read length bytes from the file named by filename starting at
     offset """

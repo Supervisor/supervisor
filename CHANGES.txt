@@ -1,5 +1,19 @@
 Next Release
 
+  - Accepted patch from Roger Hoover to allow for a new sort of
+    process group: "fcgi-program".  Adding one of these to your
+    supervisord.conf allows you to control fastcgi programs.  FastCGI
+    programs cannot belong to heterogenous groups.
+
+    The configuration for FastCGI programs is the same as regular
+    programs except an additional "socket" parameter.  Substitution
+    happens on the socket parameter with the 'here' and 'program_name'
+    variables::
+
+     [fcgi-program:fcgi_test]
+     ;socket=tcp://localhost:8002
+     socket=unix:///path/to/fcgi/socket
+
   - Supervisorctl now supports a plugin model for supervisorctl
     commands.
 

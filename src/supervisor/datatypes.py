@@ -14,6 +14,7 @@
 
 import os
 import sys
+import socket
 from supervisor.loggers import getLevelNumByDescription
 
 # I dont know why we bother, this doesn't run on Windows, but just
@@ -143,6 +144,60 @@ class SocketAddress:
         else:
             self.family = socket.AF_INET
             self.address = inet_address(s)
+
+class SocketConfig:
+    """ Abstract base class which provides a uniform abstraction
+    for TCP vs Unix sockets """
+    url = '' # socket url
+    addr = None #socket addr
+
+    def __repr__(self):
+        return '<%s at %s for %s>' % (self.__class__,
+                                      id(self),
+                                      self.url)
+
+    def addr(self):
+        raise NotImplementedError
+        
+    def create(self):
+        raise NotImplementedError
+
+class InetStreamSocketConfig(SocketConfig):
+    """ TCP socket config helper """
+    
+    host = None # host name or ip to bind to
+    port = None # integer port to bind to
+    
+    def __init__(self, host, port):
+        self.host = host.lower()
+        self.port = port_number(port)
+        self.url = 'tcp://%s:%d' % (self.host, self.port)
+        
+    def addr(self):
+        return (self.host, self.port)
+        
+    def create(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return sock
+        
+class UnixStreamSocketConfig(SocketConfig):
+    """ Unix domain socket config helper """
+
+    path = None # Unix domain socket path
+    
+    def __init__(self, path):
+        self.path = path
+        self.url = 'unix://%s' % (path)
+        
+    def addr(self):
+        return self.path
+        
+    def create(self):
+        if os.path.exists(self.path):
+            os.unlink(self.path)
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        return sock
 
 def colon_separated_user_group(arg):
     try:
