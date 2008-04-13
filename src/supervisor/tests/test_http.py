@@ -304,21 +304,17 @@ class TopLevelFunctionTests(unittest.TestCase):
         options.rpcinterface_factories = [('dummy',DummyRPCInterfaceFactory,{})]
         supervisord = DummySupervisor()
         from supervisor.http import make_http_servers
+        servers = make_http_servers(options, supervisord)
         try:
-            servers = make_http_servers(options, supervisord)
-            for s in servers:
-                try:
-                    s.close()
-                except:
-                    pass
-            return servers
+            for config, s in servers:
+                s.close()
+                socketfile = config.get('file')
+                if socketfile is not None:
+                    os.unlink(socketfile)
         finally:
             from asyncore import socket_map
             socket_map.clear()
-            try:
-                os.unlink(socketfile)
-            except:
-                pass
+        return servers
         
     def test_make_http_servers_noauth(self):
         socketfile = tempfile.mktemp()

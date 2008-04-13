@@ -6,8 +6,6 @@ import unittest
 import socket
 import tempfile
 
-from supervisor.tests.base import DummySocket
-from supervisor.tests.base import DummySocketConfig
 from supervisor.datatypes import UnixStreamSocketConfig
 from supervisor.datatypes import InetStreamSocketConfig
 

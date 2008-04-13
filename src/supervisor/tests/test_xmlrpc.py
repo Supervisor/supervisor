@@ -4,7 +4,6 @@ import unittest
 from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import DummyRequest
 from supervisor.tests.base import DummySupervisorRPCNamespace
-from supervisor.tests.base import _NOW
 
 class XMLRPCMarshallingTests(unittest.TestCase):
     def test_xmlrpc_marshal(self):
@@ -156,7 +155,6 @@ class TesstSupervisorTransport(unittest.TestCase):
         self.assertEqual(conn.socketfile, '/foo/bar')
 
     def test__get_connection_http_9001(self):
-        from supervisor import xmlrpc
         import httplib
         transport = self._makeOne('user', 'pass', 'http://127.0.0.1:9001/')
         conn = transport._get_connection()
@@ -165,7 +163,6 @@ class TesstSupervisorTransport(unittest.TestCase):
         self.assertEqual(conn.port, 9001)
 
     def test__get_connection_http_80(self):
-        from supervisor import xmlrpc
         import httplib
         transport = self._makeOne('user', 'pass', 'http://127.0.0.1/')
         conn = transport._get_connection()
@@ -206,7 +203,6 @@ class TesstSupervisorTransport(unittest.TestCase):
         self.assertEqual(dummy_conn.requestargs[3]['Accept'], 'text/xml')
 
     def test_request_200_response(self):
-        import xmlrpclib
         transport = self._makeOne('user', 'pass', 'http://127.0.0.1/')
         response = """<?xml version="1.0"?>
         <methodResponse>

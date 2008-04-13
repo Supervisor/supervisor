@@ -427,7 +427,6 @@ class ServerOptionsTests(unittest.TestCase):
         pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
         self.assertEqual(len(pconfigs), 2)
         pconfig = pconfigs[0]
-        from supervisor import datatypes
         self.assertEqual(pconfig.name, 'bar_foo_00')
         self.assertEqual(pconfig.command, '/bin/cat')
         self.assertEqual(pconfig.autostart, False)
@@ -639,7 +638,6 @@ class ServerOptionsTests(unittest.TestCase):
         numprocs = 3
         """)
         from supervisor.options import UnhosedConfigParser
-        from supervisor.dispatchers import default_handler
         config = UnhosedConfigParser()
         config.read_string(text)
         instance = self._makeOne()
@@ -650,15 +648,19 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(gconfig0.__class__, FastCGIGroupConfig)
         self.assertEqual(gconfig0.name, 'foo')
         self.assertEqual(gconfig0.priority, 1)
-        self.assertEqual(gconfig0.socket_manager.config().url, 'unix:///tmp/foo.sock')
+        self.assertEqual(gconfig0.socket_manager.config().url,
+                         'unix:///tmp/foo.sock')
         self.assertEqual(len(gconfig0.process_configs), 2)
-        self.assertEqual(gconfig0.process_configs[0].__class__, FastCGIProcessConfig)
-        self.assertEqual(gconfig0.process_configs[1].__class__, FastCGIProcessConfig)
+        self.assertEqual(gconfig0.process_configs[0].__class__,
+                         FastCGIProcessConfig)
+        self.assertEqual(gconfig0.process_configs[1].__class__,
+                         FastCGIProcessConfig)
         
         gconfig1 = gconfigs[1]
         self.assertEqual(gconfig1.name, 'bar')
         self.assertEqual(gconfig1.priority, 999)
-        self.assertEqual(gconfig1.socket_manager.config().url, 'tcp://localhost:6000')
+        self.assertEqual(gconfig1.socket_manager.config().url,
+                         'tcp://localhost:6000')
         self.assertEqual(len(gconfig1.process_configs), 3)
 
     def test_fcgi_program_no_socket(self):

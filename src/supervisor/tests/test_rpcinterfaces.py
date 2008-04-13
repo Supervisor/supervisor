@@ -376,7 +376,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self._assertRPCError(xmlrpc.Faults.ABNORMAL_TERMINATION, callback)
 
     def test_startProcess_splat_calls_startProcessGroup(self):
-        from supervisor import http
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', __file__, autostart=False,
                                startsecs=.01)
@@ -681,7 +680,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                              interface.stopProcessGroup, 'foo')
 
     def test_stopProcess_splat_calls_stopProcessGroup(self):
-        from supervisor import http
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', __file__, autostart=False,
                                startsecs=.01)
@@ -850,8 +848,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.failUnless(data['description'].startswith('pid 111'))
 
     def test_getProcessInfo_logfile_NONE(self):
-        from supervisor.process import ProcessStates
-
         options = DummyOptions()
         config = DummyPConfig(options, 'foo', '/bin/foo',
                               stdout_logfile=None)
