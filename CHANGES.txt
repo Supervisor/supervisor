@@ -1,12 +1,14 @@
 Next Release
+  - Configuration options for logfiles now accept mixed case reserved 
+    words (e.g. "AUTO" or "auto") for consistency with other options.
 
   - childutils.eventdata was buggy, it could not deal with carriage returns
     in data.  See http://www.plope.com/software/collector/257.  Thanks
     to Ian Bicking.
 
   - Per-process exitcodes= configuration now will not accept exit
-    codes that are integers above 255 (supervisord will not start when
-    one of the exit codes is outside the range of 0 - 255).
+    codes that are not 8-bit unsigned integers (supervisord will not 
+    start when one of the exit codes is outside the range of 0 - 255).
 
   - Per-process 'directory' value can now contain expandable values
     like %(here)s. (See http://www.plope.com/software/collector/262).
