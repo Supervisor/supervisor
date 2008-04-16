@@ -72,15 +72,14 @@ class DatatypesTest(unittest.TestCase):
         self.assertRaises(ValueError,
                           datatypes.list_of_ints, '1, bad, 42')
 
-    def test_list_of_exitcodes_just_delegates_to_list_of_ints(self):
-        func = datatypes.list_of_ints
-        datatypes.list_of_ints = lambda s: 'test-spy'
-        try:
-            actual = datatypes.list_of_exitcodes('1,2,3')
-            self.assertEqual(actual, 'test-spy')
-        finally:
-            datatypes.list_of_ints = func
-    
+    def test_list_of_exitcodes(self):
+        vals = datatypes.list_of_exitcodes('1,2,3')
+        self.assertEqual(vals, [1,2,3])
+        vals = datatypes.list_of_exitcodes('1')
+        self.assertEqual(vals, [1])
+        self.assertRaises(ValueError, datatypes.list_of_exitcodes, 'a,b,c')
+        self.assertRaises(ValueError, datatypes.list_of_exitcodes, '1024')
+
     def test_hasattr_automatic(self):
         datatypes.Automatic
 
@@ -203,17 +202,6 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
         sock = conf.create()
         self.assertFalse(os.path.exists(tf_name))
         sock.close
-
-class TestTopLevelFunctions(unittest.TestCase):
-
-    def test_list_of_exitcodes(self):
-        from supervisor.datatypes import list_of_exitcodes
-        vals = list_of_exitcodes('1,2,3')
-        self.assertEqual(vals, [1,2,3])
-        vals = list_of_exitcodes('1')
-        self.assertEqual(vals, [1])
-        self.assertRaises(ValueError, list_of_exitcodes, 'a,b,c')
-        self.assertRaises(ValueError, list_of_exitcodes, '1024')
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
