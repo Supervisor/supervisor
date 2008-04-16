@@ -1,5 +1,9 @@
 Next Release
 
+  - Per-process exitcodes= configuration now will not accept exit
+    codes that are integers above 255 (supervisord will not start when
+    one of the exit codes is outside the range of 0 - 255).
+
   - Per-process 'directory' value can now contain expandable values
     like %(here)s. (See http://www.plope.com/software/collector/262).
 

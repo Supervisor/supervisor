@@ -204,6 +204,17 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
         self.assertFalse(os.path.exists(tf_name))
         sock.close
 
+class TestTopLevelFunctions(unittest.TestCase):
+
+    def test_list_of_exitcodes(self):
+        from supervisor.datatypes import list_of_exitcodes
+        vals = list_of_exitcodes('1,2,3')
+        self.assertEqual(vals, [1,2,3])
+        vals = list_of_exitcodes('1')
+        self.assertEqual(vals, [1])
+        self.assertRaises(ValueError, list_of_exitcodes, 'a,b,c')
+        self.assertRaises(ValueError, list_of_exitcodes, '1024')
+
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
 
