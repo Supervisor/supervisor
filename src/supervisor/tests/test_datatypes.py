@@ -5,13 +5,142 @@ import os
 import unittest
 import socket
 import tempfile
+from supervisor import datatypes
 
-from supervisor.datatypes import UnixStreamSocketConfig
-from supervisor.datatypes import InetStreamSocketConfig
+class DatatypesTest(unittest.TestCase):
+    def test_boolean_returns_true_for_truthy_values(self):
+        for s in datatypes.TRUTHY_STRINGS:    
+            actual = datatypes.boolean(s)
+            self.assertEqual(actual, True)
+
+    def test_boolean_returns_true_for_upper_truthy_values(self):
+        for s in map(str.upper, datatypes.TRUTHY_STRINGS):
+            actual = datatypes.boolean(s)
+            self.assert_(actual, True)
+
+    def test_boolean_returns_false_for_falsy_values(self):
+        for s in datatypes.FALSY_STRINGS:
+            actual = datatypes.boolean(s)
+            self.assertEqual(actual, False)
+
+    def test_boolean_returns_false_for_upper_falsy_values(self):
+        for s in map(str.upper, datatypes.FALSY_STRINGS):
+            actual = datatypes.boolean(s)
+            self.assertEqual(actual, False)
+
+    def test_boolean_raises_value_error_for_bad_value(self):
+        self.assertRaises(ValueError, 
+                          datatypes.boolean, 'not-a-value')
+
+    def test_list_of_strings_returns_empty_list_for_empty_string(self):
+        actual = datatypes.list_of_strings('')
+        self.assertEqual(actual, [])
+
+    def test_list_of_strings_returns_list_of_strings_by_comma_split(self):
+        actual = datatypes.list_of_strings('foo,bar')
+        self.assertEqual(actual, ['foo', 'bar'])
+
+    def test_list_of_strings_returns_list_of_strings_by_comma_split(self):
+        actual = datatypes.list_of_strings('foo,bar')
+        self.assertEqual(actual, ['foo', 'bar'])
+
+    def test_list_of_strings_returns_strings_with_whitespace_stripped(self):
+        actual = datatypes.list_of_strings(' foo , bar ')
+        self.assertEqual(actual, ['foo', 'bar'])
+
+    def test_list_of_strings_raises_value_error_when_comma_split_fails(self):
+        self.assertRaises(ValueError,
+                          datatypes.list_of_strings, 42)
+
+    def test_list_of_ints_returns_empty_list_for_empty_string(self):
+        actual = datatypes.list_of_ints('')
+        self.assertEqual(actual, [])
+    
+    def test_list_of_ints_returns_list_of_ints_by_comma_split(self):
+        actual = datatypes.list_of_ints('1,42')
+        self.assertEqual(actual, [1,42])
+        
+    def test_list_of_ints_returns_ints_even_if_whitespace_in_string(self):
+        actual = datatypes.list_of_ints(' 1 , 42 ')
+        self.assertEqual(actual, [1,42])
+        
+    def test_list_of_ints_raises_value_error_when_comma_split_fails(self):
+        self.assertRaises(ValueError,
+                          datatypes.list_of_ints, 42)
+
+    def test_list_of_ints_raises_value_error_when_one_value_is_bad(self):
+        self.assertRaises(ValueError,
+                          datatypes.list_of_ints, '1, bad, 42')
+
+    def test_list_of_exitcodes_just_delegates_to_list_of_ints(self):
+        func = datatypes.list_of_ints
+        datatypes.list_of_ints = lambda s: 'test-spy'
+        try:
+            actual = datatypes.list_of_exitcodes('1,2,3')
+            self.assertEqual(actual, 'test-spy')
+        finally:
+            datatypes.list_of_ints = func
+    
+    def test_hasattr_automatic(self):
+        datatypes.Automatic
+
+    def test_dict_of_key_value_pairs_returns_empty_dict_for_empty_str(self):
+        actual = datatypes.dict_of_key_value_pairs('')
+        self.assertEqual({}, actual)
+    
+    def test_dict_of_key_value_pairs_returns_dict_from_single_pair_str(self):
+        actual = datatypes.dict_of_key_value_pairs('foo=bar')
+        expected = {'foo': 'bar'}
+        self.assertEqual(actual, expected)
+
+    def test_dict_of_key_value_pairs_returns_dict_from_multi_pair_str(self):
+        actual = datatypes.dict_of_key_value_pairs('foo=bar,baz=qux')
+        expected = {'foo': 'bar', 'baz': 'qux'}
+        self.assertEqual(actual, expected)
+
+    def test_dict_of_key_value_pairs_returns_dict_even_if_whitespace(self):
+        actual = datatypes.dict_of_key_value_pairs(' foo = bar , baz = qux ')
+        expected = {'foo': 'bar', 'baz': 'qux'}
+        self.assertEqual(actual, expected)
+
+    def test_logfile_name_returns_none_for_none_values(self):
+        for thing in datatypes.LOGFILE_NONES:
+            actual = datatypes.logfile_name(thing)
+            self.assertEqual(actual, None)        
+    
+    def test_logfile_name_returns_none_for_uppered_none_values(self):
+        for thing in datatypes.LOGFILE_NONES:
+            if hasattr(thing, 'upper'):
+                thing = thing.upper()
+            actual = datatypes.logfile_name(thing)
+            self.assertEqual(actual, None)
+
+    def test_logfile_name_returns_automatic_for_auto_values(self):
+        for thing in datatypes.LOGFILE_AUTOS:
+            actual = datatypes.logfile_name(thing)
+            self.assertEqual(actual, datatypes.Automatic)        
+
+    def test_logfile_name_returns_automatic_for_uppered_auto_values(self):
+        for thing in datatypes.LOGFILE_AUTOS:
+            if hasattr(thing, 'upper'):
+                thing = thing.upper()
+            actual = datatypes.logfile_name(thing)
+            self.assertEqual(actual, datatypes.Automatic)        
+
+    def test_logfile_name_returns_existing_dirpath_for_other_values(self):
+        func = datatypes.existing_dirpath
+        datatypes.existing_dirpath = lambda path: path
+        try:
+            path = '/path/to/logfile/With/Case/Preserved'
+            actual = datatypes.logfile_name(path)
+            self.assertEqual(actual, path)
+        finally:
+            datatypes.existing_dirpath = func
+    
 
 class InetStreamSocketConfigTests(unittest.TestCase):
     def _getTargetClass(self):
-        return InetStreamSocketConfig
+        return datatypes.InetStreamSocketConfig
         
     def _makeOne(self, *args, **kw):
         return self._getTargetClass()(*args, **kw)
@@ -46,7 +175,7 @@ class InetStreamSocketConfigTests(unittest.TestCase):
         
 class UnixStreamSocketConfigTests(unittest.TestCase):
     def _getTargetClass(self):
-        return UnixStreamSocketConfig
+        return datatypes.UnixStreamSocketConfig
         
     def _makeOne(self, *args, **kw):
         return self._getTargetClass()(*args, **kw)

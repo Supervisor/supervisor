@@ -38,12 +38,15 @@ def integer(value):
     except OverflowError:
         return long(value)
 
+TRUTHY_STRINGS = ('yes', 'true', 'on', '1')
+FALSY_STRINGS  = ('no', 'false', 'off', '0')
+
 def boolean(s):
     """Convert a string value to a boolean value."""
     ss = str(s).lower()
-    if ss in ('yes', 'true', 'on', '1'):
+    if ss in TRUTHY_STRINGS:
         return True
-    elif ss in ('no', 'false', 'off', '0'):
+    elif ss in FALSY_STRINGS:
         return False
     else:
         raise ValueError("not a valid boolean value: " + repr(s))
@@ -74,23 +77,33 @@ def list_of_exitcodes(arg):
 def dict_of_key_value_pairs(arg):
     """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'} """
     D = {}
-    pairs = [ x.strip() for x in arg.split(',') ]
-    pairs = filter(None, pairs)
-    for pair in pairs:
-        try:
-            k, v = pair.split('=', 1)
-        except ValueError:
-            raise ValueError('Unknown key/value pair %s' % pair)
-        D[k] = v
+    try:
+        pairs = filter(None, arg.split(','))
+        for pair in pairs:
+            try:
+                k, v = pair.split('=', 1)
+            except ValueError:
+                raise ValueError('Unknown key/value pair %s' % pair)
+            D[k.strip()] = v.strip()
+    except:
+        raise ValueError("not a list of key/value pairs: " + repr(arg))        
     return D
 
 class Automatic:
     pass
 
+LOGFILE_NONES = ('none', 'off', None)
+LOGFILE_AUTOS = (Automatic, 'auto')
+
 def logfile_name(val):
-    if val in ('NONE', 'OFF', None):
+    if hasattr(val, 'lower'):
+        coerced = val.lower()
+    else:
+        coerced = val
+
+    if coerced in LOGFILE_NONES:
         return None
-    elif val in (Automatic, 'AUTO'):
+    elif coerced in LOGFILE_AUTOS:
         return Automatic
     else:
         return existing_dirpath(val)
