@@ -33,11 +33,11 @@ class ChildUtilsTests(unittest.TestCase):
 
     def test_eventdata(self):
         from supervisor.childutils import eventdata
-        payload = 'a:1 b:2\nthedata'
+        payload = 'a:1 b:2\nthedata\n'
         headers, data = eventdata(payload)
         self.assertEqual(headers, {'a':'1', 'b':'2'})
-        self.assertEqual(data, 'thedata')
-        
+        self.assertEqual(data, 'thedata\n')
+
 class TestProcessCommunicationsProtocol(unittest.TestCase):
     def test_send(self):
         from supervisor.childutils import pcomm

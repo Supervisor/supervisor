@@ -34,7 +34,7 @@ def get_headers(line):
     return dict([ x.split(':') for x in line.split() ])
 
 def eventdata(payload):
-    headerinfo, data = payload.split('\n')
+    headerinfo, data = payload.split('\n', 1)
     headers = get_headers(headerinfo)
     return headers, data
 
