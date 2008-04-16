@@ -79,6 +79,7 @@ class DatatypesTest(unittest.TestCase):
         self.assertEqual(vals, [1])
         self.assertRaises(ValueError, datatypes.list_of_exitcodes, 'a,b,c')
         self.assertRaises(ValueError, datatypes.list_of_exitcodes, '1024')
+        self.assertRaises(ValueError, datatypes.list_of_exitcodes, '-1,1')
 
     def test_hasattr_automatic(self):
         datatypes.Automatic
