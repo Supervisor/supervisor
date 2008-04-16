@@ -1000,15 +1000,22 @@ class ServerOptions(Options):
         self.signal = sig
 
     def openhttpservers(self, supervisord):
-        from supervisor.http import make_http_servers
         try:
-            self.httpservers = make_http_servers(self, supervisord)
+            self.httpservers = self.make_http_servers(supervisord)
         except socket.error, why:
             if why[0] == errno.EADDRINUSE:
                 self.usage('Another program is already listening on '
                            'a port that one of our HTTP servers is '
                            'configured to use.  Shut this program '
                            'down first before starting supervisord.')
+            else:
+                help = 'Cannot open an HTTP server: socket.error reported'
+                errorname = errno.errorcode.get(why[0])
+                if errorname is None:
+                    self.usage('%s %s' % (help, why[0]))
+                else:
+                    self.usage('%s errno.%s (%d)' % 
+                               (help, errorname, why[0]))
             self.unlink_socketfiles = False
         except ValueError, why:
             self.usage(why[0])
@@ -1194,6 +1201,10 @@ class ServerOptions(Options):
             self.logger.warn(msg)
         for msg in info_messages:
             self.logger.info(msg)
+
+    def make_http_servers(self, supervisord):
+        from supervisor.http import make_http_servers
+        return make_http_servers(self, supervisord)
 
     def close_fd(self, fd):
         try:

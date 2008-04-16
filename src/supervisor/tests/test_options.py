@@ -7,7 +7,9 @@ import socket
 import unittest
 import signal
 import shutil
+import errno
 
+from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import DummyLogger
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
@@ -884,6 +886,94 @@ class ServerOptionsTests(unittest.TestCase):
         instance.logger = DummyLogger()
         instance.clear_autochildlogdir()
         self.assertEqual(instance.logger.data, ['Could not clear childlog dir'])
+
+    def test_openhttpservers_reports_friendly_usage_when_eaddrinuse(self):
+        supervisord = DummySupervisor()
+        instance = self._makeOne()
+
+        def raise_eaddrinuse(supervisord):
+            raise socket.error(errno.EADDRINUSE)
+        instance.make_http_servers = raise_eaddrinuse
+
+        recorder = []
+        def record_usage(message):
+            recorder.append(message)
+        instance.usage = record_usage
+
+        instance.openhttpservers(supervisord)
+        self.assertEqual(len(recorder), 1)
+        expected = 'Another program is already listening'
+        self.assertTrue(recorder[0].startswith(expected))
+
+    def test_openhttpservers_reports_socket_error_with_errno(self):
+        supervisord = DummySupervisor()
+        instance = self._makeOne()
+        
+        def make_http_servers(supervisord):
+            raise socket.error(errno.EPERM)
+        instance.make_http_servers = make_http_servers        
+
+        recorder = []
+        def record_usage(message):
+            recorder.append(message)
+        instance.usage = record_usage
+        
+        instance.openhttpservers(supervisord)
+        self.assertEqual(len(recorder), 1)
+        expected = ('Cannot open an HTTP server: socket.error '
+                    'reported errno.EPERM (%d)' % errno.EPERM)
+        self.assertEqual(recorder[0], expected)
+
+    def test_openhttpservers_reports_other_socket_errors(self):
+        supervisord = DummySupervisor()
+        instance = self._makeOne()
+        
+        def make_http_servers(supervisord):
+            raise socket.error('uh oh')
+        instance.make_http_servers = make_http_servers            
+
+        recorder = []
+        def record_usage(message):
+            recorder.append(message)
+        instance.usage = record_usage
+        
+        instance.openhttpservers(supervisord)
+        self.assertEqual(len(recorder), 1)
+        expected = ('Cannot open an HTTP server: socket.error '
+                    'reported uh oh')
+        self.assertEqual(recorder[0], expected)                
+
+    def test_openhttpservers_reports_value_errors(self):
+        supervisord = DummySupervisor()
+        instance = self._makeOne()
+        
+        def make_http_servers(supervisord):
+            raise ValueError('not prefixed with help')
+        instance.make_http_servers = make_http_servers
+        
+        recorder = []
+        def record_usage(message):
+            recorder.append(message)
+        instance.usage = record_usage
+        
+        instance.openhttpservers(supervisord)
+        self.assertEqual(len(recorder), 1)
+        expected = 'not prefixed with help'
+        self.assertEqual(recorder[0], expected)                
+
+    def test_openhttpservers_does_not_catch_other_exception_types(self):
+        supervisord = DummySupervisor()
+        instance = self._makeOne()
+        
+        def make_http_servers(supervisord):
+            raise OverflowError
+        instance.make_http_servers = make_http_servers
+
+        # this scenario probably means a bug in supervisor.  we dump
+        # all the gory details on the poor user for troubleshooting
+        self.assertRaises(OverflowError,
+                          instance.openhttpservers, supervisord)
+
 
 class TestProcessConfig(unittest.TestCase):
     def _getTargetClass(self):
