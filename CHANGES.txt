@@ -1,5 +1,8 @@
 Next Release
 
+  - Per-process 'directory' value can now contain expandable values
+    like %(here)s. (See http://www.plope.com/software/collector/262).
+
   - Accepted patch from Roger Hoover to allow for a new sort of
     process group: "fcgi-program".  Adding one of these to your
     supervisord.conf allows you to control fastcgi programs.  FastCGI

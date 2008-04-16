@@ -757,6 +757,9 @@ class ServerOptions(Options):
             environment = dict_of_key_value_pairs(
                 expand(environment_str, expansions, 'environment'))
 
+            if directory:
+                directory = expand(directory, expansions, 'directory')
+
             logfiles = {}
 
             for k in ('stdout', 'stderr'):
