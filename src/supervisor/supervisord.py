@@ -103,7 +103,7 @@ class Supervisor:
             self.options.process_environment()
             self.options.openhttpservers(self)
             self.options.setsignals()
-            if not self.options.nodaemon:
+            if (not self.options.nodaemon) and self.options.first:
                 self.options.daemonize()
             # writing pid file needs to come *after* daemonizing or pid
             # will be wrong
