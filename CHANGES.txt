@@ -1,6 +1,11 @@
 Next Release
+
   - Fixed a bug where opening the HTTP servers would fail silently
     for socket errors other than errno.EADDRINUSE.
+
+  - Thanks to Dave Peticolas, using "reload" against a supervisord
+    that is running in the background no longer causes supervisord
+    to crash.
 
   - Configuration options for logfiles now accept mixed case reserved 
     words (e.g. "AUTO" or "auto") for consistency with other options.
