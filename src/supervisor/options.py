@@ -131,36 +131,6 @@ class Options:
         sys.stderr.write("For help, use %s -h\n" % self.progname)
         sys.exit(2)
 
-    def remove(self,
-               name=None,               # attribute name on self
-               confname=None,           # dotted config path name
-               short=None,              # short option name
-               long=None,               # long option name
-               ):
-        """Remove all traces of name, confname, short and/or long."""
-        if name:
-            for n, cn in self.names_list[:]:
-                if n == name:
-                    self.names_list.remove((n, cn))
-            if self.default_map.has_key(name):
-                del self.default_map[name]
-            if self.required_map.has_key(name):
-                del self.required_map[name]
-        if confname:
-            for n, cn in self.names_list[:]:
-                if cn == confname:
-                    self.names_list.remove((n, cn))
-        if short:
-            key = "-" + short[0]
-            if self.options_map.has_key(key):
-                del self.options_map[key]
-        if long:
-            key = "--" + long
-            if key[-1] == "=":
-                key = key[:-1]
-            if self.options_map.has_key(key):
-                del self.options_map[key]
-
     def add(self,
             name=None,                  # attribute name on self
             confname=None,              # dotted config path name
