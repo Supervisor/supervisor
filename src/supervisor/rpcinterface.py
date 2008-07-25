@@ -162,6 +162,46 @@ class SupervisorNamespaceRPCInterface:
         self.supervisord.options.mood = SupervisorStates.RESTARTING
         return True
 
+    def reloadConfig(self):
+        """
+        Reload configuration
+
+        @return boolean result  always return True unless error
+        """
+        self._update('reloadConfig')
+        added, changed, removed = self.supervisord.options.process_config_file()
+
+        added = [group.name for group in added]
+        changed = [group.name for group in changed]
+        removed = [group.name for group in removed]
+        return [[added, changed, removed]] # cannot return len > 1, apparently
+
+    def addProcess(self, name):
+        """ Update the config for a running process from config file.
+
+        @param string name         name of process to start
+        @return boolean result     true if successful
+        """
+        self._update('addProcess')
+
+        for config in self.supervisord.options.process_group_configs:
+            if config.name == name:
+                return self.supervisord.add_process_group(config)
+
+        return False
+
+    def removeProcess(self, name):
+        """ Remove a stopped process from the active configuration.
+
+        @param string name         name of process to remove
+        @return boolean result     Indicates wether the removal was successful
+        """
+        self._update('removeProcess')
+        if name not in self.supervisord.process_groups:
+            return False
+
+        return self.supervisord.remove_process_group(name)
+
     def _getAllProcesses(self, lexical=False):
         # if lexical is true, return processes sorted in lexical order,
         # otherwise, sort in priority order

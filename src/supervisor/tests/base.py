@@ -766,6 +766,18 @@ class DummySupervisorRPCNamespace:
         from supervisor import xmlrpc
         raise Fault(xmlrpc.Faults.SHUTDOWN_STATE, '')
 
+    def reloadConfig(self):
+        return [[['added'], ['changed'], ['dropped']]]
+
+    def addProcess(self, name):
+        if hasattr(self, 'processes'):
+            self.processes.append(name)
+        else:
+            self.processes = [name]
+
+    def removeProcess(self, name):
+        self.processes.remove(name)
+
     def clearProcessStdoutLog(self, name):
         from xmlrpclib import Fault
         from supervisor import xmlrpc
@@ -820,6 +832,10 @@ class DummyPGroupConfig:
 
     def make_group(self):
         return DummyProcessGroup(self)
+
+    def __repr__(self):
+        return '<%s instance at %s named %s>' % (self.__class__, id(self),
+                                                 self.name)
 
 class DummyFCGIGroupConfig(DummyPGroupConfig):
     def __init__(self, options, name, priority, pconfigs, socket_manager):

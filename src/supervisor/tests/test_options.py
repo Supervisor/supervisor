@@ -13,9 +13,80 @@ from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import DummyLogger
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
+from supervisor.tests.base import DummyPGroupConfig
 from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummySocketManager
 from supervisor.tests.base import lstrip
+
+class OptionTests(unittest.TestCase):
+
+    def _makeOptions(self):
+        from cStringIO import StringIO
+        from supervisor.options import Options
+        from supervisor.datatypes import integer
+
+        class MyOptions(Options):
+            master = {
+                'other': 41 }
+            def __init__(self):
+                Options.__init__(self)
+                class Foo(object): pass
+                self.configroot = Foo()
+
+            def read_config(self, fp):
+                # Pretend we read it from file:
+                self.configroot.__dict__.update(self.default_map)
+                self.configroot.__dict__.update(self.master)
+
+        options = MyOptions()
+        options.configfile = StringIO()
+        options.add(name='anoption', confname='anoption',
+                    short='o', long='option', default='default')
+        options.add(name='other', confname='other', env='OTHER',
+                    short='p:', long='other=', handler=integer)
+        return options
+
+    def test_options_and_args_order(self):
+        # Only config file exists
+        options = self._makeOptions()
+        options.realize([])
+        self.assertEquals(options.anoption, 'default')
+        self.assertEquals(options.other, 41)
+
+        # Env should trump config
+        options = self._makeOptions()
+        os.environ['OTHER'] = '42'
+        options.realize([])
+        self.assertEquals(options.other, 42)
+
+        # Opt should trump both env (still set) and config
+        options = self._makeOptions()
+        options.realize(['-p', '43'])
+        self.assertEquals(options.other, 43)
+        del os.environ['OTHER']
+
+    def test_config_reload(self):
+        options = self._makeOptions()
+        options.realize([])
+        self.assertEquals(options.other, 41)
+        options.master['other'] = 42
+        options.process_config_file()
+        self.assertEquals(options.other, 42)
+
+    def test__set(self):
+        from supervisor.options import Options
+        options = Options()
+        options._set('foo', 'bar', 0)
+        self.assertEquals(options.foo, 'bar')
+        self.assertEquals(options.attr_priorities['foo'], 0)
+        options._set('foo', 'baz', 1)
+        self.assertEquals(options.foo, 'baz')
+        self.assertEquals(options.attr_priorities['foo'], 1)
+        options._set('foo', 'gazonk', 0)
+        self.assertEquals(options.foo, 'baz')
+        self.assertEquals(options.attr_priorities['foo'], 1)
+        options._set('foo', 'gazonk', 1)
+        self.assertEquals(options.foo, 'gazonk')
 
 class ClientOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -271,6 +342,156 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.nocleanup, True)
         self.assertEqual(instance.minfds, 2048)
         self.assertEqual(instance.minprocs, 300)
+
+    def test_reload(self):
+        from cStringIO import StringIO
+        text = lstrip("""\
+        [supervisord]
+        user=root
+
+        [program:one]
+        command = /bin/cat
+
+        [program:two]
+        command = /bin/dog
+
+        [program:four]
+        command = /bin/sheep
+
+        [group:thegroup]
+        programs = one,two
+        """)
+
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+
+        section = instance.configroot.supervisord
+        self.assertEqual(len(section.process_group_configs), 2)
+        cat = section.process_group_configs[0]
+        self.assertEqual(len(cat.process_configs), 2)
+        self.assertTrue(section.process_group_configs is
+                        instance.process_group_configs)
+
+        text = lstrip("""\
+        [supervisord]
+        user=root
+
+        [program:one]
+        command = /bin/cat
+
+        [program:three]
+        command = /bin/pig
+
+        [group:thegroup]
+        programs = three
+        """)
+        instance.configfile = StringIO(text)
+        instance.process_config_file()
+
+        section = instance.configroot.supervisord
+        self.assertEqual(len(section.process_group_configs), 2)
+        cat = section.process_group_configs[0]
+        self.assertEqual(len(cat.process_configs), 1)
+        proc = cat.process_configs[0]
+        self.assertEqual(proc.name, 'three')
+        self.assertEqual(proc.command, '/bin/pig')
+
+        cat = section.process_group_configs[1]
+        self.assertEqual(len(cat.process_configs), 1)
+        proc = cat.process_configs[0]
+        self.assertEqual(proc.name, 'one')
+        self.assertEqual(proc.command, '/bin/cat')
+        self.assertTrue(section.process_group_configs is
+                        instance.process_group_configs)
+
+    def test_diff_add_remove(self):
+        options = self._makeOne()
+
+        pconfig = DummyPConfig(options, 'process1', 'process1')
+        group1 = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
+
+        pconfig = DummyPConfig(options, 'process2', 'process2')
+        group2 = DummyPGroupConfig(options, 'group2', pconfigs=[pconfig])
+
+        new = [group1, group2]
+
+        added, changed, removed = options.diff_process_groups([])
+        self.assertEqual(added, options.process_group_configs)
+        self.assertEqual(removed, [])
+
+        options.process_group_configs = list(new)
+        added, changed, removed = options.diff_process_groups(new)
+        self.assertEqual(added, [])
+        self.assertEqual(changed, [])
+        self.assertEqual(removed, [])
+
+        pconfig = DummyPConfig(options, 'process3', 'process3')
+        new_group1 = DummyPGroupConfig(options, pconfigs=[pconfig])
+
+        pconfig = DummyPConfig(options, 'process4', 'process4')
+        new_group2 = DummyPGroupConfig(options, pconfigs=[pconfig])
+
+        new = [group2, new_group1, new_group2]
+
+        added, changed, removed = options.diff_process_groups(new)
+        self.assertEqual(added, [new_group1, new_group2])
+        self.assertEqual(changed, [])
+        self.assertEqual(removed, [group1])
+
+    def test_diff_changed(self):
+        from supervisor.options import ProcessConfig, ProcessGroupConfig
+
+        options = self._makeOne()
+
+        def make_pconfig(name, command, **params):
+            result = {
+                'name': name, 'command': command,
+                'directory': None, 'umask': None, 'priority': 999, 'autostart': True,
+                'autorestart': True, 'startsecs': 10, 'startretries': 999,
+                'uid': None, 'stdout_logfile': None, 'stdout_capture_maxbytes': 0,
+                'stdout_logfile_backups': 0, 'stdout_logfile_maxbytes': 0,
+                'stderr_logfile': None, 'stderr_capture_maxbytes': 0,
+                'stderr_logfile_backups': 0, 'stderr_logfile_maxbytes': 0,
+                'redirect_stderr': False,
+                'stopsignal': None, 'stopwaitsecs': 10,
+                'exitcodes': (0,2), 'environment': None, 'serverurl': None }
+            result.update(params)
+            return ProcessConfig(options, **result)
+
+        def make_gconfig(name, pconfigs):
+            return ProcessGroupConfig(options, name, 25, pconfigs)
+
+        pconfig = make_pconfig('process1', 'process1', uid='new')
+        group1 = make_gconfig('group1', [pconfig])
+
+        pconfig = make_pconfig('process2', 'process2')
+        group2 = make_gconfig('group2', [pconfig])
+        new = [group1, group2]
+
+        pconfig = make_pconfig('process1', 'process1', uid='old')
+        group3 = make_gconfig('group1', [pconfig])
+
+        pconfig = make_pconfig('process2', 'process2')
+        group4 = make_gconfig('group2', [pconfig])
+        options.process_group_configs = [group4, group3]
+
+        added, changed, removed = options.diff_process_groups(new)
+
+        self.assertEqual([added, removed], [[], []])
+        self.assertEqual(changed, [group1])
+
+        options = self._makeOne()
+        pconfig1 = make_pconfig('process1', 'process1')
+        pconfig2 = make_pconfig('process2', 'process2')
+        group1 = make_gconfig('group1', [pconfig1, pconfig2])
+        new = [group1]
+
+        options.process_group_configs = [make_gconfig('group1', [pconfig1])]
+
+        added, changed, removed = options.diff_process_groups(new)
+        self.assertEqual([added, removed], [[], []])
+        self.assertEqual(changed, [group1])
 
     def test_readFile_failed(self):
         from supervisor.options import readFile

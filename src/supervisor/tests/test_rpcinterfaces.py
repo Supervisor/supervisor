@@ -218,6 +218,58 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(value, True)
         self.assertEqual(supervisord.options.mood, 0)
 
+    def test_reloadConfig(self):
+        options = DummyOptions()
+        supervisord = DummySupervisor(options)
+        interface = self._makeOne(supervisord)
+
+        changes = [ [DummyPGroupConfig(options, 'added')],
+                    [DummyPGroupConfig(options, 'changed')],
+                    [DummyPGroupConfig(options, 'dropped')] ]
+
+        supervisord.options.process_config_file = \
+            lambda : changes
+
+        value = interface.reloadConfig()
+        self.assertEqual(value, [[['added'], ['changed'], ['dropped']]])
+
+    def test_addProcess(self):
+        from supervisor.supervisord import Supervisor
+        options = DummyOptions()
+        supervisord = Supervisor(options)
+        pconfig = DummyPConfig(options, 'foo', __file__, autostart=False)
+        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
+        supervisord.options.process_group_configs = [gconfig]
+
+        interface = self._makeOne(supervisord)
+
+        result = interface.addProcess('group1')
+        self.assertTrue(result)
+        self.assertEqual(supervisord.process_groups.keys(), ['group1'])
+
+        result = interface.addProcess('group1')
+        self.assertTrue(not result)
+        self.assertEqual(supervisord.process_groups.keys(), ['group1'])
+
+        result = interface.addProcess('asdf')
+        self.assertTrue(not result)
+        self.assertEqual(supervisord.process_groups.keys(), ['group1'])
+
+    def test_removeProcess(self):
+        from supervisor.supervisord import Supervisor
+        options = DummyOptions()
+        supervisord = Supervisor(options)
+        pconfig = DummyPConfig(options, 'foo', __file__, autostart=False)
+        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
+        supervisord.options.process_group_configs = [gconfig]
+
+        interface = self._makeOne(supervisord)
+
+        interface.addProcess('group1')
+        result = interface.removeProcess('group1')
+        self.assertTrue(result)
+        self.assertEqual(supervisord.process_groups.keys(), [])
+
     def test_startProcess_already_started(self):
         from supervisor import xmlrpc
         options = DummyOptions()

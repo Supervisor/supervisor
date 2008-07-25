@@ -646,6 +646,74 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def help_reload(self):
         self.ctl.output("reload \t\tRestart the remote supervisord.")
 
+    def _formatChanges(self, (added, changed, dropped)):
+        changedict = {}
+        for n, t in [(added, 'available'),
+                     (changed, 'changed'),
+                     (dropped, 'disappeared')]:
+            changedict.update(dict(zip(n, [t] * len(n))))
+
+        if changedict:
+            for name in sorted(changedict):
+                self.ctl.output("%s: %s" % (name, changedict[name]))
+        else:
+            self.ctl.output("No config updates to proccesses")
+
+    def do_reread(self, arg):
+        supervisor = self.ctl.get_supervisor()
+        try:
+            result = supervisor.reloadConfig()
+        except xmlrpclib.Fault, e:
+            if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
+                self.ctl.output('ERROR: already shutting down')
+        else:
+            self._formatChanges(result[0])
+
+    def help_reread(self):
+        self.ctl.output("reread \t\t\tReload the daemon's configuration files")
+
+    def do_add(self, arg):
+        names = arg.strip().split()
+
+        supervisor = self.ctl.get_supervisor()
+        for name in names:
+            result = supervisor.addProcess(name)
+            if result:
+                self.ctl.output("%s: added process" % name)
+            else:
+                self.ctl.output("%s: ERROR (no such group or already active)" % name)
+
+    def help_add(self):
+        self.ctl.output("add <name> [...]\tActivates any updates in config for process/group")
+
+    def do_drop(self, arg):
+        names = arg.strip().split()
+
+        supervisor = self.ctl.get_supervisor()
+        for name in names:
+            result = supervisor.removeProcess(name)
+            if result:
+                self.ctl.output("%s: dropped" % name)
+            else:
+                self.ctl.output("%s: ERROR (no such group or already dropped)" % name)
+
+    def help_drop(self):
+        self.ctl.output("drop <name> [...]\tRemoves process/group from active config")
+
+    def do_refresh(self, arg):
+        pass
+
+    def help_refresh(self):
+        self.ctl.output("refresh\t\t\tReload config and stop, drop, "
+                        "add and restart \n"
+                        "\t\t\tprocesses as necessary")
+
+    def do_avail(self, arg):
+        pass
+
+    def help_avail(self):
+        self.ctl.output("avail\t\t\tDisplay all configured processes")
+
     def _clearresult(self, result):
         name = result['name']
         code = result['status']

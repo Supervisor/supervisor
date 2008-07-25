@@ -460,6 +460,35 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(options._server.supervisor._shutdown, True)
 
+    def test__formatChanges(self):
+        plugin = self._makeOne()
+        # Don't explode, plz
+        plugin._formatChanges([['added'], ['changed'], ['dropped']])
+        plugin._formatChanges([[], [], []])
+
+    def test_reread(self):
+        plugin = self._makeOne()
+        calls = []
+        plugin._formatChanges = lambda x: calls.append(x)
+        result = plugin.do_reread(None)
+        self.assertEqual(result, None)
+        self.assertEqual(calls[0], [['added'], ['changed'], ['dropped']])
+
+    def test_add(self):
+        plugin = self._makeOne()
+        result = plugin.do_add('foo')
+        self.assertEqual(result, None)
+        supervisor = plugin.ctl.options._server.supervisor
+        self.assertEqual(supervisor.processes, ['foo'])
+
+    def test_drop(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.processes = ['foo']
+        result = plugin.do_drop('foo')
+        self.assertEqual(result, None)
+        self.assertEqual(supervisor.processes, [])
+
     def test_pid(self):
         plugin = self._makeOne()
         result = plugin.do_pid('')

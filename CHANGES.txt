@@ -1,5 +1,13 @@
 Next Release
 
+  - Process config reloading implemented by Anders Quist.  The
+    supervisorctl program now has the commands "add" and "drop".
+    "add <programname>" adds the process group implied by <programname>
+    in the config file.  "drop <programname>" removes the process
+    group from the running configuration (it must already be stopped).
+    This makes it possible to add processes to and remove processes from
+    a running supervisord without restarting the supervisord process.
+
   - Fixed a bug where opening the HTTP servers would fail silently
     for socket errors other than errno.EADDRINUSE.
 

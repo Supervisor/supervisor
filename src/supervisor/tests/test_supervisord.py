@@ -173,6 +173,44 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(options.logger.data[0],
                          'received SIGUSR1 indicating nothing')
 
+    def test_add_process_group(self):
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
+        gconfig = DummyPGroupConfig(options,'foo', pconfigs=[pconfig])
+        options.process_group_configs = [gconfig]
+        supervisord = self._makeOne(options)
+
+        self.assertEqual(supervisord.process_groups, {})
+
+        result = supervisord.add_process_group(gconfig)
+        self.assertEqual(supervisord.process_groups.keys(), ['foo'])
+        self.assertTrue(result)
+
+        group = supervisord.process_groups['foo']
+        result = supervisord.add_process_group(gconfig)
+        self.assertEqual(group, supervisord.process_groups['foo'])
+        self.assertTrue(not result)
+
+    def test_remove_process_group(self):
+        from supervisor.states import ProcessStates
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
+        gconfig = DummyPGroupConfig(options, 'foo', pconfigs=[pconfig])
+        supervisord = self._makeOne(options)
+
+        self.assertRaises(KeyError, supervisord.remove_process_group, 'asdf')
+
+        supervisord.add_process_group(gconfig)
+        result = supervisord.remove_process_group('foo')
+        self.assertEqual(supervisord.process_groups, {})
+        self.assertTrue(result)
+
+        supervisord.add_process_group(gconfig)
+        supervisord.process_groups['foo'].unstopped_processes = [DummyProcess(None)]
+        result = supervisord.remove_process_group('foo')
+        self.assertEqual(supervisord.process_groups.keys(), ['foo'])
+        self.assertTrue(not result)
+
     def test_runforever_emits_generic_startup_event(self):
         from supervisor import events
         L = []

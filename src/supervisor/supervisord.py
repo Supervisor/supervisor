@@ -87,9 +87,6 @@ class Supervisor:
             # clean up old automatic logs
             self.options.clear_autochildlogdir()
 
-        for config in self.options.process_group_configs:
-            config.after_setuid()
-
         self.run()
 
     def run(self):
@@ -98,8 +95,7 @@ class Supervisor:
         events.clear()
         try:
             for config in self.options.process_group_configs:
-                name = config.name
-                self.process_groups[name] = config.make_group()
+                self.add_process_group(config)
             self.options.process_environment()
             self.options.openhttpservers(self)
             self.options.setsignals()
@@ -111,6 +107,20 @@ class Supervisor:
             self.runforever()
         finally:
             self.options.cleanup()
+
+    def add_process_group(self, config):
+        name = config.name
+        if name not in self.process_groups:
+            config.after_setuid()
+            self.process_groups[name] = config.make_group()
+            return True
+        return False
+
+    def remove_process_group(self, name):
+        if self.process_groups[name].get_unstopped_processes():
+            return False
+        del self.process_groups[name]
+        return True
 
     def get_process_map(self):
         process_map = {}

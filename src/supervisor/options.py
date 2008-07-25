@@ -96,6 +96,7 @@ class Options:
         self.default_map = {}
         self.required_map = {}
         self.environ_map = {}
+        self.attr_priorities = {}
         self.add(None, None, "h", "help", self.help)
         self.add("configfile", None, "c:", "configuration=")
 
@@ -216,6 +217,12 @@ class Options:
             if required:
                 self.required_map[name] = required
 
+    def _set(self, attr, value, prio):
+        current = self.attr_priorities.get(attr, -1)
+        if prio >= current:
+            setattr(self, attr, value)
+            self.attr_priorities[attr] = prio
+
     def realize(self, args=None, doc=None,
                 progname=None, raise_getopt_errs=True):
         """Realize a configuration.
@@ -264,13 +271,11 @@ class Options:
             if name and arg is not None:
                 if getattr(self, name) is not None:
                     self.usage("conflicting command line option %r" % opt)
-                setattr(self, name, arg)
+                self._set(name, arg, 2)
 
         # Process environment variables
         for envvar in self.environ_map.keys():
             name, handler = self.environ_map[envvar]
-            if name and getattr(self, name, None) is not None:
-                continue
             if os.environ.has_key(envvar):
                 value = os.environ[envvar]
                 if handler is not None:
@@ -280,11 +285,14 @@ class Options:
                         self.usage("invalid environment value for %s %r: %s"
                                    % (envvar, value, msg))
                 if name and value is not None:
-                    setattr(self, name, value)
+                    self._set(name, value, 1)
 
         if self.configfile is None:
             self.configfile = self.default_configfile()
 
+        self.process_config_file()
+
+    def process_config_file(self):
         # Process config file
         if not hasattr(self.configfile, 'read'):
             self.here = os.path.abspath(os.path.dirname(self.configfile))
@@ -297,7 +305,7 @@ class Options:
         # Copy config options to attributes of self.  This only fills
         # in options that aren't already set from the command line.
         for name, confname in self.names_list:
-            if confname and getattr(self, name) is None:
+            if confname:
                 parts = confname.split(".")
                 obj = self.configroot
                 for part in parts:
@@ -305,7 +313,7 @@ class Options:
                         break
                     # Here AttributeError is not a user error!
                     obj = getattr(obj, part)
-                setattr(self, name, obj)
+                self._set(name, obj, 0)
 
         # Process defaults
         for name, value in self.default_map.items():
@@ -396,6 +404,7 @@ class ServerOptions(Options):
         self.add("profile_options", "supervisord.profile_options",
                  "", "profile_options=", profile_options, default=None)
         self.pidhistory = {}
+        self.process_group_configs = []
         self.parse_warnings = []
 
     def getLogger(self, filename, level, fmt, rotating=False, maxbytes=0,
@@ -432,7 +441,6 @@ class ServerOptions(Options):
 
         self.pidfile = normalize_path(pidfile)
 
-        self.process_group_configs = section.process_group_configs
         self.rpcinterface_factories = section.rpcinterface_factories
 
         self.serverurl = None
@@ -462,6 +470,28 @@ class ServerOptions(Options):
         # configured in the config file
 
         self.identifier = section.identifier
+
+    def diff_process_groups(self, new):
+        cur = self.process_group_configs
+
+        curdict = dict(zip([cfg.name for cfg in cur], cur))
+        newdict = dict(zip([cfg.name for cfg in new], new))
+
+        added   = [cand for cand in new if cand.name not in curdict]
+        removed = [cand for cand in cur if cand.name not in newdict]
+
+        changed = [cand for cand in new
+                   if cand != curdict.get(cand.name, cand)]
+
+        return added, changed, removed
+
+    def process_config_file(self):
+        Options.process_config_file(self)
+
+        new = self.configroot.supervisord.process_group_configs
+        changes = self.diff_process_groups(new)
+        self.process_group_configs = new
+        return changes
 
     def read_config(self, fp):
         section = self.configroot.supervisord
@@ -1442,39 +1472,34 @@ class Config:
                                                  self.name)
     
 class ProcessConfig(Config):
-    def __init__(self, options, name, command, directory, umask,
-                 priority, autostart, autorestart, startsecs, startretries, uid,
-                 stdout_logfile, stdout_capture_maxbytes,
-                 stdout_logfile_backups, stdout_logfile_maxbytes,
-                 stderr_logfile, stderr_capture_maxbytes,
-                 stderr_logfile_backups, stderr_logfile_maxbytes,
-                 stopsignal, stopwaitsecs, exitcodes, redirect_stderr,
-                 environment=None, serverurl=None):
+    req_param_names = [
+        'name', 'uid', 'command', 'directory', 'umask', 'priority',
+        'autostart', 'autorestart', 'startsecs', 'startretries',
+        'stdout_logfile', 'stdout_capture_maxbytes',
+        'stdout_logfile_backups', 'stdout_logfile_maxbytes',
+        'stderr_logfile', 'stderr_capture_maxbytes',
+        'stderr_logfile_backups', 'stderr_logfile_maxbytes',
+        'stopsignal', 'stopwaitsecs', 'exitcodes', 'redirect_stderr' ]
+    optional_param_names = [ 'environment', 'serverurl' ]
+
+    def __init__(self, options, **params):
         self.options = options
-        self.name = name
-        self.command = command
-        self.directory = directory
-        self.umask = umask
-        self.priority = priority
-        self.autostart = autostart
-        self.autorestart = autorestart
-        self.startsecs = startsecs
-        self.startretries = startretries
-        self.uid = uid
-        self.stdout_logfile = stdout_logfile
-        self.stdout_capture_maxbytes = stdout_capture_maxbytes
-        self.stdout_logfile_backups = stdout_logfile_backups
-        self.stdout_logfile_maxbytes = stdout_logfile_maxbytes
-        self.stderr_logfile = stderr_logfile
-        self.stderr_capture_maxbytes = stderr_capture_maxbytes
-        self.stderr_logfile_backups = stderr_logfile_backups
-        self.stderr_logfile_maxbytes = stderr_logfile_maxbytes
-        self.stopsignal = stopsignal
-        self.stopwaitsecs = stopwaitsecs
-        self.exitcodes = exitcodes
-        self.redirect_stderr = redirect_stderr
-        self.environment = environment
-        self.serverurl = serverurl
+        for name in self.req_param_names:
+            setattr(self, name, params[name])
+        for name in self.optional_param_names:
+            setattr(self, name, params.get(name, None))
+
+    def __eq__(self, other):
+        if not isinstance(other, ProcessConfig):
+            return False
+
+        for name in self.req_param_names + self.optional_param_names:
+            if Automatic in [getattr(self, name), getattr(other, name)] :
+                continue
+            if getattr(self, name) != getattr(other, name):
+                return False
+
+        return True
 
     def create_autochildlogs(self):
         # temporary logfiles which are erased at start time
@@ -1555,6 +1580,22 @@ class ProcessGroupConfig(Config):
         self.name = name
         self.priority = priority
         self.process_configs = process_configs
+
+    def __eq__(self, other):
+        if not isinstance(other, ProcessGroupConfig):
+            return False
+
+        if self.name != other.name:
+            return False
+        if self.priority != other.priority:
+            return False
+        if self.process_configs != other.process_configs:
+            return False
+
+        return True
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def after_setuid(self):
         for config in self.process_configs:
