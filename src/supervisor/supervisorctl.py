@@ -713,24 +713,11 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 else:
                     raise
             else:
-                self.ctl.output("%s: dropped" % name)
+                self.ctl.output("%s: removed" % name)
 
     def help_remove(self):
-        self.ctl.output("remove <name> [...]\tRemoves process/group from active config")
-
-    def do_refresh(self, arg):
-        pass
-
-    def help_refresh(self):
-        self.ctl.output("refresh\t\t\tReload config and stop, drop, "
-                        "add and restart \n"
-                        "\t\t\tprocesses as necessary")
-
-    def do_avail(self, arg):
-        pass
-
-    def help_avail(self):
-        self.ctl.output("avail\t\t\tDisplay all configured processes")
+        self.ctl.output("remove <name> [...]\tRemoves process/group from "
+                        "active config")
 
     def _clearresult(self, result):
         name = result['name']
