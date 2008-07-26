@@ -659,19 +659,6 @@ class DefaultControllerPlugin(ControllerPluginBase):
         else:
             self.ctl.output("No config updates to proccesses")
 
-    def do_reread(self, arg):
-        supervisor = self.ctl.get_supervisor()
-        try:
-            result = supervisor.reloadConfig()
-        except xmlrpclib.Fault, e:
-            if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
-                self.ctl.output('ERROR: already shutting down')
-        else:
-            self._formatChanges(result[0])
-
-    def help_reread(self):
-        self.ctl.output("reread \t\t\tReload the daemon's configuration files")
-
     def do_add(self, arg):
         names = arg.strip().split()
 

@@ -466,14 +466,6 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin._formatChanges([['added'], ['changed'], ['dropped']])
         plugin._formatChanges([[], [], []])
 
-    def test_reread(self):
-        plugin = self._makeOne()
-        calls = []
-        plugin._formatChanges = lambda x: calls.append(x)
-        result = plugin.do_reread(None)
-        self.assertEqual(result, None)
-        self.assertEqual(calls[0], [['added'], ['changed'], ['dropped']])
-
     def test_add(self):
         plugin = self._makeOne()
         result = plugin.do_add('foo')
