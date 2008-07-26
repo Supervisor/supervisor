@@ -677,28 +677,46 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
         supervisor = self.ctl.get_supervisor()
         for name in names:
-            result = supervisor.addProcess(name)
-            if result:
-                self.ctl.output("%s: added process" % name)
+            try:
+                supervisor.addProcess(name)
+            except xmlrpclib.Fault, e:
+                if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
+                    self.ctl.output('ERROR: shutting down')
+                elif e.faultCode == xmlrpc.Faults.ALREADY_ADDED:
+                    self.ctl.output('ERROR: process group already active')
+                elif e.faultCode == xmlrpc.Faults.BAD_NAME:
+                    self.ctl.output(
+                        "ERROR: no such process/group: %s" % name)
+                else:
+                    raise
             else:
-                self.ctl.output("%s: ERROR (no such group or already active)" % name)
+                self.ctl.output("%s: added process group" % name)
 
     def help_add(self):
-        self.ctl.output("add <name> [...]\tActivates any updates in config for process/group")
+        self.ctl.output("add <name> [...]\tActivates any updates in config "
+                        "for process/group")
 
-    def do_drop(self, arg):
+    def do_remove(self, arg):
         names = arg.strip().split()
 
         supervisor = self.ctl.get_supervisor()
         for name in names:
-            result = supervisor.removeProcess(name)
-            if result:
-                self.ctl.output("%s: dropped" % name)
+            try:
+                result = supervisor.removeProcess(name)
+            except xmlrpclib.Fault, e:
+                if e.faultCode == xmlrpc.Faults.STILL_RUNNING:
+                    self.ctl.output('ERROR: process/group still running: %s'
+                                    % name)
+                elif e.faultCode == xmlrpc.Faults.BAD_NAME:
+                    self.ctl.output(
+                        "ERROR: no such process/group: %s" % name)
+                else:
+                    raise
             else:
-                self.ctl.output("%s: ERROR (no such group or already dropped)" % name)
+                self.ctl.output("%s: dropped" % name)
 
-    def help_drop(self):
-        self.ctl.output("drop <name> [...]\tRemoves process/group from active config")
+    def help_remove(self):
+        self.ctl.output("remove <name> [...]\tRemoves process/group from active config")
 
     def do_refresh(self, arg):
         pass

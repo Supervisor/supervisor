@@ -770,12 +770,24 @@ class DummySupervisorRPCNamespace:
         return [[['added'], ['changed'], ['dropped']]]
 
     def addProcess(self, name):
+        from xmlrpclib import Fault
+        from supervisor import xmlrpc
+        if name == 'ALREADY_ADDED':
+            raise Fault(xmlrpc.Faults.ALREADY_ADDED, '')
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, '')
         if hasattr(self, 'processes'):
             self.processes.append(name)
         else:
             self.processes = [name]
 
     def removeProcess(self, name):
+        from xmlrpclib import Fault
+        from supervisor import xmlrpc
+        if name == 'STILL_RUNNING':
+            raise Fault(xmlrpc.Faults.STILL_RUNNING, '')
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, '')
         self.processes.remove(name)
 
     def clearProcessStdoutLog(self, name):

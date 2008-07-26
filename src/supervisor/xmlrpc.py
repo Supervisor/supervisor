@@ -43,6 +43,8 @@ class Faults:
     ALREADY_STARTED = 60
     NOT_RUNNING = 70
     SUCCESS = 80
+    ALREADY_ADDED = 90
+    STILL_RUNNING = 91
 
 def getFaultDescription(code):
     for faultname in Faults.__dict__:

@@ -481,13 +481,47 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         supervisor = plugin.ctl.options._server.supervisor
         self.assertEqual(supervisor.processes, ['foo'])
 
-    def test_drop(self):
+    def test_add_already_added(self):
+        plugin = self._makeOne()
+        result = plugin.do_add('ALREADY_ADDED')
+        self.assertEqual(result, None)
+        supervisor = plugin.ctl.options._server.supervisor
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: process group already active\n')
+
+    def test_add_bad_name(self):
+        plugin = self._makeOne()
+        result = plugin.do_add('BAD_NAME')
+        self.assertEqual(result, None)
+        supervisor = plugin.ctl.options._server.supervisor
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: no such process/group: BAD_NAME\n')
+
+    def test_remove(self):
         plugin = self._makeOne()
         supervisor = plugin.ctl.options._server.supervisor
         supervisor.processes = ['foo']
-        result = plugin.do_drop('foo')
+        result = plugin.do_remove('foo')
         self.assertEqual(result, None)
         self.assertEqual(supervisor.processes, [])
+
+    def test_remove_bad_name(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.processes = ['foo']
+        result = plugin.do_remove('BAD_NAME')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: no such process/group: BAD_NAME\n')
+
+    def test_remove_still_running(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.processes = ['foo']
+        result = plugin.do_remove('STILL_RUNNING')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: process/group still running: STILL_RUNNING\n')
 
     def test_pid(self):
         plugin = self._makeOne()

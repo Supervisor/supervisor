@@ -186,9 +186,11 @@ class SupervisorNamespaceRPCInterface:
 
         for config in self.supervisord.options.process_group_configs:
             if config.name == name:
-                return self.supervisord.add_process_group(config)
-
-        return False
+                result = self.supervisord.add_process_group(config)
+                if not result:
+                    raise RPCError(Faults.ALREADY_ADDED, name)
+                return True
+        raise RPCError(Faults.BAD_NAME, name)
 
     def removeProcess(self, name):
         """ Remove a stopped process from the active configuration.
@@ -198,9 +200,12 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('removeProcess')
         if name not in self.supervisord.process_groups:
-            return False
+            raise RPCError(Faults.BAD_NAME, name)
 
-        return self.supervisord.remove_process_group(name)
+        result = self.supervisord.remove_process_group(name)
+        if not result:
+            raise RPCError(Faults.STILL_RUNNING)
+        return True
 
     def _getAllProcesses(self, lexical=False):
         # if lexical is true, return processes sorted in lexical order,
