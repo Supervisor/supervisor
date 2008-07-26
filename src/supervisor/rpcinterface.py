@@ -162,20 +162,6 @@ class SupervisorNamespaceRPCInterface:
         self.supervisord.options.mood = SupervisorStates.RESTARTING
         return True
 
-    def reloadConfig(self):
-        """
-        Reload configuration
-
-        @return boolean result  always return True unless error
-        """
-        self._update('reloadConfig')
-        added, changed, removed = self.supervisord.options.process_config_file()
-
-        added = [group.name for group in added]
-        changed = [group.name for group in changed]
-        removed = [group.name for group in removed]
-        return [[added, changed, removed]] # cannot return len > 1, apparently
-
     def addProcess(self, name):
         """ Update the config for a running process from config file.
 

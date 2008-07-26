@@ -218,21 +218,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(value, True)
         self.assertEqual(supervisord.options.mood, 0)
 
-    def test_reloadConfig(self):
-        options = DummyOptions()
-        supervisord = DummySupervisor(options)
-        interface = self._makeOne(supervisord)
-
-        changes = [ [DummyPGroupConfig(options, 'added')],
-                    [DummyPGroupConfig(options, 'changed')],
-                    [DummyPGroupConfig(options, 'dropped')] ]
-
-        supervisord.options.process_config_file = \
-            lambda : changes
-
-        value = interface.reloadConfig()
-        self.assertEqual(value, [[['added'], ['changed'], ['dropped']]])
-
     def test_addProcess(self):
         from supervisor.supervisord import Supervisor
         from supervisor import xmlrpc
