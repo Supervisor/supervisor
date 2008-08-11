@@ -165,7 +165,7 @@ class SupervisorNamespaceRPCInterface:
     def addProcessGroup(self, name):
         """ Update the config for a running process from config file.
 
-        @param string name         name of process to start
+        @param string name         name of process group to add
         @return boolean result     true if successful
         """
         self._update('addProcessGroup')
@@ -181,7 +181,7 @@ class SupervisorNamespaceRPCInterface:
     def removeProcessGroup(self, name):
         """ Remove a stopped process from the active configuration.
 
-        @param string name         name of process to remove
+        @param string name         name of process group to remove
         @return boolean result     Indicates wether the removal was successful
         """
         self._update('removeProcessGroup')
