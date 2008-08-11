@@ -769,7 +769,7 @@ class DummySupervisorRPCNamespace:
     def reloadConfig(self):
         return [[['added'], ['changed'], ['dropped']]]
 
-    def addProcess(self, name):
+    def addProcessGroup(self, name):
         from xmlrpclib import Fault
         from supervisor import xmlrpc
         if name == 'ALREADY_ADDED':
@@ -781,7 +781,7 @@ class DummySupervisorRPCNamespace:
         else:
             self.processes = [name]
 
-    def removeProcess(self, name):
+    def removeProcessGroup(self, name):
         from xmlrpclib import Fault
         from supervisor import xmlrpc
         if name == 'STILL_RUNNING':

@@ -218,7 +218,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(value, True)
         self.assertEqual(supervisord.options.mood, 0)
 
-    def test_addProcess(self):
+    def test_addProcessGroup(self):
         from supervisor.supervisord import Supervisor
         from supervisor import xmlrpc
         options = DummyOptions()
@@ -229,19 +229,19 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
         interface = self._makeOne(supervisord)
 
-        result = interface.addProcess('group1')
+        result = interface.addProcessGroup('group1')
         self.assertTrue(result)
         self.assertEqual(supervisord.process_groups.keys(), ['group1'])
 
         self._assertRPCError(xmlrpc.Faults.ALREADY_ADDED,
-                             interface.addProcess, 'group1')
+                             interface.addProcessGroup, 'group1')
         self.assertEqual(supervisord.process_groups.keys(), ['group1'])
 
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
-                             interface.addProcess, 'asdf')
+                             interface.addProcessGroup, 'asdf')
         self.assertEqual(supervisord.process_groups.keys(), ['group1'])
 
-    def test_removeProcess(self):
+    def test_removeProcessGroup(self):
         from supervisor.supervisord import Supervisor
         options = DummyOptions()
         supervisord = Supervisor(options)
@@ -251,12 +251,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
         interface = self._makeOne(supervisord)
 
-        interface.addProcess('group1')
-        result = interface.removeProcess('group1')
+        interface.addProcessGroup('group1')
+        result = interface.removeProcessGroup('group1')
         self.assertTrue(result)
         self.assertEqual(supervisord.process_groups.keys(), [])
 
-    def test_removeProcess_bad_name(self):
+    def test_removeProcessGroup_bad_name(self):
         from supervisor.supervisord import Supervisor
         from supervisor import xmlrpc
         options = DummyOptions()
@@ -268,9 +268,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
 
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
-                             interface.removeProcess, 'asdf')
+                             interface.removeProcessGroup, 'asdf')
 
-    def test_removeProcess_still_running(self):
+    def test_removeProcessGroup_still_running(self):
         from supervisor.supervisord import Supervisor
         from supervisor import xmlrpc
         options = DummyOptions()
@@ -283,7 +283,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.process_groups = {'group1':process}
         interface = self._makeOne(supervisord)
         self._assertRPCError(xmlrpc.Faults.STILL_RUNNING,
-                             interface.removeProcess, 'group1')
+                             interface.removeProcessGroup, 'group1')
 
 
     def test_startProcess_already_started(self):

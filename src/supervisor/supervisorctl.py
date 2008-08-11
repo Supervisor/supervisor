@@ -652,7 +652,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
         for name in names:
             try:
-                supervisor.addProcess(name)
+                supervisor.addProcessGroup(name)
             except xmlrpclib.Fault, e:
                 if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                     self.ctl.output('ERROR: shutting down')
@@ -676,7 +676,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
         for name in names:
             try:
-                result = supervisor.removeProcess(name)
+                result = supervisor.removeProcessGroup(name)
             except xmlrpclib.Fault, e:
                 if e.faultCode == xmlrpc.Faults.STILL_RUNNING:
                     self.ctl.output('ERROR: process/group still running: %s'

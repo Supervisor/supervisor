@@ -162,13 +162,13 @@ class SupervisorNamespaceRPCInterface:
         self.supervisord.options.mood = SupervisorStates.RESTARTING
         return True
 
-    def addProcess(self, name):
+    def addProcessGroup(self, name):
         """ Update the config for a running process from config file.
 
         @param string name         name of process to start
         @return boolean result     true if successful
         """
-        self._update('addProcess')
+        self._update('addProcessGroup')
 
         for config in self.supervisord.options.process_group_configs:
             if config.name == name:
@@ -178,13 +178,13 @@ class SupervisorNamespaceRPCInterface:
                 return True
         raise RPCError(Faults.BAD_NAME, name)
 
-    def removeProcess(self, name):
+    def removeProcessGroup(self, name):
         """ Remove a stopped process from the active configuration.
 
         @param string name         name of process to remove
         @return boolean result     Indicates wether the removal was successful
         """
-        self._update('removeProcess')
+        self._update('removeProcessGroup')
         if name not in self.supervisord.process_groups:
             raise RPCError(Faults.BAD_NAME, name)
 
