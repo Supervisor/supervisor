@@ -1,3 +1,19 @@
+- Finish process group reloading that was merged into trunk. We decided to
+  implement addProcessGroup() such that at the time it is called, it reads the
+  config from disk and then adds the group if found. It will have no other
+  side effects and will not require a sort of "refresh" command to be called
+  prior. We decided that a supervisorctl "avail" command will not be
+  implemented. We decided that we are not going to implement any kind of DWIM
+  or "smart" config reloading in the foreseeable future and will remove the
+  process group "diffing" functionality that attempts to compare the runtime
+  config to that on disk.
+
+- Add an option that allows numprocs for an existing process group to be
+  adjusted at runtime.  Requested by Roger Hoover.
+
+- Subprocess logging appears to stop when the subprocess moves to the "killing"
+  state.  Reported to the mailing list by Nicolas Grilly on 2008-04-13.
+
 - Supervisorctl tab completion and history.
 
 - Supervisorctl "debug" command (communicate with a process over its stdin).
