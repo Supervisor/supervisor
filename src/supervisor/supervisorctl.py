@@ -49,24 +49,24 @@ from supervisor.options import split_namespec
 from supervisor import xmlrpc
 
 class fgthread(threading.Thread):
-    
-    # A subclass of threading.Thread, with a kill() method.
-    # To be used for foreground output/error streaming.
-    # http://mail.python.org/pipermail/python-list/2004-May/260937.html
+    """ A subclass of threading.Thread, with a kill() method.
+    To be used for foreground output/error streaming.
+    http://mail.python.org/pipermail/python-list/2004-May/260937.html
+    """
   
     def __init__(self, program, ctl):
         threading.Thread.__init__(self)
         import http_client
         self.killed = False
-        self.program=program
-        self.ctl=ctl
-        self.listener=http_client.Listener()
-        self.output_handler=http_client.HTTPHandler(self.listener,
-                                                    self.ctl.options.username,
-                                                    self.ctl.options.password)
-        self.error_handler=http_client.HTTPHandler(self.listener,
-                                                   self.ctl.options.username,
-                                                   self.ctl.options.password)
+        self.program = program
+        self.ctl = ctl
+        self.listener = http_client.Listener()
+        self.output_handler = http_client.HTTPHandler(self.listener,
+                                                      self.ctl.options.username,
+                                                      self.ctl.options.password)
+        self.error_handler = http_client.HTTPHandler(self.listener,
+                                                     self.ctl.options.username,
+                                                     self.ctl.options.password)
 
     def start(self):
         # Start the thread
@@ -262,19 +262,19 @@ class Controller(cmd.Cmd):
             import readline
         except ImportError:
             return None
-        line=readline.get_line_buffer()
+        line = readline.get_line_buffer()
         if line == '':
             results = [i+' ' for i in self.vocab if i.startswith(text)]+[None]
             return results[state]
         else:
-            exp=line.split()[0]
+            exp = line.split()[0]
             if exp in ['start','stop','restart','clear','status','tail','fg']:
                 if not line.endswith(' ') and len(line.split()) == 1:
-                    return [text+' ',None][state]
+                    return [text + ' ', None][state]
                 if exp == 'fg':
                     if line.endswith(' ') and len(line.split()) > 1:
                         return None
-                results=self.completionmatches(text,line)+[None]
+                results = self.completionmatches(text,line)+[None]
                 return results[state]
             elif exp in ['maintail','pid','reload','shutdown','exit','open',
                          'quit','version','EOF']:
@@ -905,14 +905,14 @@ class DefaultControllerPlugin(ControllerPluginBase):
             self.ctl.output('Error: no process name supplied')
             self.help_fg()
             return
-        args=args.split()
-        if len(args)>1:
+        args = args.split()
+        if len(args) > 1:
             self.ctl.output('Error: too many process names supplied')
             return
-        program=args[0]
-        supervisor=self.ctl.get_supervisor()
+        program = args[0]
+        supervisor = self.ctl.get_supervisor()
         try:
-            info=supervisor.getProcessInfo(program)
+            info = supervisor.getProcessInfo(program)
         except xmlrpclib.Fault, msg:
             if msg.faultCode == xmlrpc.Faults.BAD_NAME:
                 self.ctl.output('Error: bad process name supplied')
@@ -925,7 +925,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             return
         # everything good; continue
         try:
-            a=fgthread(program,self.ctl)
+            a = fgthread(program,self.ctl)
             # this thread takes care of
             # the output/error messages
             a.start()
