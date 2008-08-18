@@ -1,3 +1,7 @@
+- The new fg command in supervisorctl has tests to verify its error handling
+  but not its operation.  We should add some additional tests to verify its
+  operation for completeness.
+
 - Finish process group reloading that was merged into trunk. We decided to
   implement addProcessGroup() such that at the time it is called, it reads the
   config from disk and then adds the group if found. It will have no other
