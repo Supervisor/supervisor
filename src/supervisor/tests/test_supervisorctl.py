@@ -74,6 +74,18 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(controller.cmdqueue, [' help'])
         self.assertEqual(plugin.helped, True)
 
+    def test_completionmatches(self):
+        options=DummyClientOptions()
+        controller=self._makeOne(options)
+        controller.stdout=StringIO()
+        plugin=DummyPlugin()
+        controller.options.plugin=(plugin,)
+        for i in ['add','remove']:
+            result=controller.completionmatches('',i+' ',1)
+            self.assertEqual(result,['foo ','bar ','baz '])
+        result=controller.completionmatches('','fg baz:')
+        self.assertEqual(result,['baz_01 '])
+
     def test_nohelp(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
@@ -460,6 +472,12 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(options._server.supervisor._shutdown, True)
 
+    def test__formatChanges(self):
+        plugin = self._makeOne()
+        # Don't explode, plz
+        plugin._formatChanges([['added'], ['changed'], ['dropped']])
+        plugin._formatChanges([[], [], []])
+
     def test_add(self):
         plugin = self._makeOne()
         result = plugin.do_add('foo')
@@ -577,6 +595,38 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         result = plugin.do_maintail('-100')
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'supervisord: ERROR (unknown error reading log)\n')
+
+    def test_fg_toofewargs(self):
+        plugin=self._makeOne()
+        result=plugin.do_fg('')
+        lines=plugin.ctl.stdout.getvalue().split('\n')
+        self.assertEqual(result,None)
+        self.assertEqual(lines[0],'Error: no process name supplied')
+
+    def test_fg_toomanyargs(self):
+        plugin=self._makeOne()
+        result=plugin.do_fg('foo bar')
+        line=plugin.ctl.stdout.getvalue()
+        self.assertEqual(result,None)
+        self.assertEqual(line,'Error: too many process names supplied\n')
+
+    def test_fg_badprocname(self):
+        plugin=self._makeOne()
+        result=plugin.do_fg('BAD_NAME')
+        line=plugin.ctl.stdout.getvalue()
+        self.assertEqual(result,None)
+        self.assertEqual(line,'Error: bad process name supplied\n')
+
+    def test_fg_procnotrunning(self):
+        plugin=self._makeOne()
+        result=plugin.do_fg('bar')
+        line=plugin.ctl.stdout.getvalue()
+        self.assertEqual(result,None)
+        self.assertEqual(line,'Error: process not running\n')
+        result=plugin.do_fg('baz_01')
+        lines=plugin.ctl.stdout.getvalue().split('\n')
+        self.assertEqual(result,None)
+        self.assertEqual(lines[-2],'Error: process not running')
 
 class DummyListener:
     def __init__(self):

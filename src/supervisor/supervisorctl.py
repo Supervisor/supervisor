@@ -42,10 +42,67 @@ import socket
 import asyncore
 import errno
 import urlparse
+import threading
 
 from supervisor.options import ClientOptions
 from supervisor.options import split_namespec
 from supervisor import xmlrpc
+
+class fgthread(threading.Thread):
+    
+    # A subclass of threading.Thread, with a kill() method.
+    # To be used for foreground output/error streaming.
+    # http://mail.python.org/pipermail/python-list/2004-May/260937.html
+  
+    def __init__(self, program, ctl):
+        threading.Thread.__init__(self)
+        import http_client
+        self.killed = False
+        self.program=program
+        self.ctl=ctl
+        self.listener=http_client.Listener()
+        self.output_handler=http_client.HTTPHandler(self.listener,
+                                                    self.ctl.options.username,
+                                                    self.ctl.options.password)
+        self.error_handler=http_client.HTTPHandler(self.listener,
+                                                   self.ctl.options.username,
+                                                   self.ctl.options.password)
+
+    def start(self):
+        # Start the thread
+        self.__run_backup = self.run
+        self.run = self.__run
+        threading.Thread.start(self)
+
+    def run(self):
+        self.output_handler.get(self.ctl.options.serverurl,
+                                '/logtail/%s/stdout'%self.program)
+        self.error_handler.get(self.ctl.options.serverurl,
+                               '/logtail/%s/stderr'%self.program)
+        asyncore.loop()
+
+    def __run(self):
+        # Hacked run function, which installs the trace
+        sys.settrace(self.globaltrace)
+        self.__run_backup()
+        self.run = self.__run_backup
+
+    def globaltrace(self, frame, why, arg):
+        if why == 'call':
+            return self.localtrace
+        else:
+            return None
+
+    def localtrace(self, frame, why, arg):
+        if self.killed:
+            if why == 'line':
+                raise SystemExit()
+        return self.localtrace
+
+    def kill(self):
+        self.output_handler.close()
+        self.error_handler.close()
+        self.killed = True
 
 class Controller(cmd.Cmd):
 
@@ -54,6 +111,11 @@ class Controller(cmd.Cmd):
         self.options = options
         self.prompt = self.options.prompt + '> '
         self.options.plugins = []
+        self.vocab = ['add','exit','maintail','pid','reload',
+                      'restart','start','stop','version','clear',
+                      'fg','open','quit','remove','shutdown','status',
+                      'tail','help']
+        self.info=self.get_supervisor().getAllProcessInfo()
         cmd.Cmd.__init__(self, completekey, stdin, stdout)
         for name, factory, kwargs in self.options.plugin_factories:
             plugin = factory(self, **kwargs)
@@ -159,6 +221,75 @@ class Controller(cmd.Cmd):
                 return False
             raise
         return True
+
+    def completionmatches(self,text,line,flag=0):
+        groups=[]
+        programs=[]
+        groupwiseprograms={}
+        for i in self.info:
+            programs.append(i['name'])
+            if i['group'] not in groups:
+                groups.append(i['group'])
+                groupwiseprograms[i['group']]=[]
+            groupwiseprograms[i['group']].append(i['name'])
+        total=[]
+        for i in groups:
+            if i in programs:
+                total.append(i+' ')
+            else:
+                for n in groupwiseprograms[i]:
+                    total.append(i+':'+n+' ')
+        if flag:
+            # add/remove require only the group name
+            return [i+' ' for i in groups if i.startswith(text)]
+        if len(line.split()) == 1:
+            return total
+        else:
+            current=line.split()[-1]
+            if line.endswith(' ') and len(line.split()) > 1:
+                results=[i for i in total if i.startswith(text)]
+                return results
+            if ':' in current:
+                g=current.split(':')[0]
+                results = [i+' ' for i in groupwiseprograms[g]
+                           if i.startswith(text)]
+                return results
+            results = [i for i in total if i.startswith(text)]
+            return results
+
+    def complete(self,text,state):
+        try:
+            import readline
+        except ImportError:
+            return None
+        line=readline.get_line_buffer()
+        if line == '':
+            results = [i+' ' for i in self.vocab if i.startswith(text)]+[None]
+            return results[state]
+        else:
+            exp=line.split()[0]
+            if exp in ['start','stop','restart','clear','status','tail','fg']:
+                if not line.endswith(' ') and len(line.split()) == 1:
+                    return [text+' ',None][state]
+                if exp == 'fg':
+                    if line.endswith(' ') and len(line.split()) > 1:
+                        return None
+                results=self.completionmatches(text,line)+[None]
+                return results[state]
+            elif exp in ['maintail','pid','reload','shutdown','exit','open',
+                         'quit','version','EOF']:
+                return None
+            elif exp == 'help':
+                if line.endswith(' ') and len(line.split()) > 1:
+                    return None
+                results=[i+' ' for i in self.vocab if i.startswith(text)]+[None]
+                return results[state]
+            elif exp in ['add','remove']:
+                results=self.completionmatches(text,line,flag=1)+[None]
+                return results[state]
+            else:
+                results=[i+' ' for i in self.vocab if i.startswith(text)]+[None]
+                return results[state]
 
     def do_help(self, arg):
         for plugin in self.options.plugins:
@@ -646,13 +777,26 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def help_reload(self):
         self.ctl.output("reload \t\tRestart the remote supervisord.")
 
+    def _formatChanges(self, (added, changed, dropped)):
+        changedict = {}
+        for n, t in [(added, 'available'),
+                     (changed, 'changed'),
+                     (dropped, 'disappeared')]:
+            changedict.update(dict(zip(n, [t] * len(n))))
+
+        if changedict:
+            for name in sorted(changedict):
+                self.ctl.output("%s: %s" % (name, changedict[name]))
+        else:
+            self.ctl.output("No config updates to proccesses")
+
     def do_add(self, arg):
         names = arg.strip().split()
 
         supervisor = self.ctl.get_supervisor()
         for name in names:
             try:
-                supervisor.addProcessGroup(name)
+                supervisor.addProcess(name)
             except xmlrpclib.Fault, e:
                 if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                     self.ctl.output('ERROR: shutting down')
@@ -676,7 +820,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
         for name in names:
             try:
-                result = supervisor.removeProcessGroup(name)
+                result = supervisor.removeProcess(name)
             except xmlrpclib.Fault, e:
                 if e.faultCode == xmlrpc.Faults.STILL_RUNNING:
                     self.ctl.output('ERROR: process/group still running: %s'
@@ -766,6 +910,64 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output(
             "version\t\t\tShow the version of the remote supervisord "
             "process")
+
+    def do_fg(self,args=None):
+        if not self.ctl.upcheck():
+            return
+        if not args:
+            self.ctl.output('Error: no process name supplied')
+            self.help_fg()
+            return
+        args=args.split()
+        if len(args)>1:
+            self.ctl.output('Error: too many process names supplied')
+            return
+        program=args[0]
+        supervisor=self.ctl.get_supervisor()
+        try:
+            info=supervisor.getProcessInfo(program)
+        except xmlrpclib.Fault, msg:
+            if msg.faultCode == xmlrpc.Faults.BAD_NAME:
+                self.ctl.output('Error: bad process name supplied')
+                return
+            # for any other fault
+            self.ctl.output(str(msg))
+            return
+        if not info['statename'] == 'RUNNING':
+            self.ctl.output('Error: process not running')
+            return
+        # everything good; continue
+        try:
+            a=fgthread(program,self.ctl)
+            # this thread takes care of
+            # the output/error messages
+            a.start()
+            while True:
+                # this takes care of the user input
+                inp = raw_input() + '\n'
+                try:
+                    supervisor.sendProcessStdin(program,inp)
+                except xmlrpclib.Fault, msg:
+                    if msg.faultCode == 70:
+                        self.ctl.output('Process got killed')
+                        self.ctl.output('Exiting foreground')
+                        a.kill()
+                        return
+                info = supervisor.getProcessInfo(program)
+                if not info['statename'] == 'RUNNING':
+                    self.ctl.output('Process got killed')
+                    self.ctl.output('Exiting foreground')
+                    a.kill()
+                    return
+                continue
+        except KeyboardInterrupt:
+            a.kill()
+            self.ctl.output('Exiting foreground')
+        return
+
+    def help_fg(self,args=None):
+        self.ctl.output('fg <process>\tConnect to a process in foreground mode')
+        self.ctl.output('Press Ctrl+C to exit foreground')
 
 def main(args=None, options=None):
     if options is None:

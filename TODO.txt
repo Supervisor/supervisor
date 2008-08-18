@@ -18,10 +18,6 @@
   bytes requested exceeds the number logged.  This is not certain and needs
   investigation.  Reported by Chris McDonough.
 
-- Supervisorctl tab completion and history.
-
-- Supervisorctl "debug" command (communicate with a process over its stdin).
-
 - Allow effective user to switch to a particular group instead of
   defaulting to the user's primary group:
   http://www.plope.com/software/collector/233.

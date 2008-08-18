@@ -1,5 +1,11 @@
 Next Release
 
+  - Tab completions in the supervisorctl shell, and a foreground mode
+    for Supervisor, implemented as a part of GSoC.
+    The supervisorctl program now has a 'fg' command, which makes it
+    possible to supply inputs to a process, and see its output/error
+    stream in real time.
+
   - Process config reloading implemented by Anders Quist.  The
     supervisorctl program now has the commands "add" and "drop".
     "add <programname>" adds the process group implied by <programname>

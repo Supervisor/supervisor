@@ -660,19 +660,19 @@ class DummySupervisorRPCNamespace:
         return self.all_process_info
 
     def getProcessInfo(self, name):
+        from supervisor import xmlrpc
+        import xmlrpclib
         from supervisor.process import ProcessStates
-        return {
-            'name':'foo',
-            'group':'foo',
-            'pid':11,
-            'state':ProcessStates.RUNNING,
-            'statename':'RUNNING',
-            'start':_NOW - 100,
-            'stop':0,
-            'spawnerr':'',
-            'now':_NOW,
-            'description':'foo description',
-             }
+        for i in self.all_process_info:
+            if i['name']==name:
+                info=i
+                return info
+        if name == 'BAD_NAME':
+            raise xmlrpclib.Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+        if name == 'FAILED':
+            raise xmlrpclib.Fault(xmlrpc.Faults.FAILED, 'FAILED')
+        if name == 'NO_FILE':
+            raise xmlrpclib.Fault(xmlrpc.Faults.NO_FILE, 'NO_FILE')
 
     def startProcess(self, name):
         from supervisor import xmlrpc
@@ -769,7 +769,7 @@ class DummySupervisorRPCNamespace:
     def reloadConfig(self):
         return [[['added'], ['changed'], ['dropped']]]
 
-    def addProcessGroup(self, name):
+    def addProcess(self, name):
         from xmlrpclib import Fault
         from supervisor import xmlrpc
         if name == 'ALREADY_ADDED':
@@ -781,7 +781,7 @@ class DummySupervisorRPCNamespace:
         else:
             self.processes = [name]
 
-    def removeProcessGroup(self, name):
+    def removeProcess(self, name):
         from xmlrpclib import Fault
         from supervisor import xmlrpc
         if name == 'STILL_RUNNING':
