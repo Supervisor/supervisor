@@ -777,19 +777,6 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def help_reload(self):
         self.ctl.output("reload \t\tRestart the remote supervisord.")
 
-    def _formatChanges(self, (added, changed, dropped)):
-        changedict = {}
-        for n, t in [(added, 'available'),
-                     (changed, 'changed'),
-                     (dropped, 'disappeared')]:
-            changedict.update(dict(zip(n, [t] * len(n))))
-
-        if changedict:
-            for name in sorted(changedict):
-                self.ctl.output("%s: %s" % (name, changedict[name]))
-        else:
-            self.ctl.output("No config updates to proccesses")
-
     def do_add(self, arg):
         names = arg.strip().split()
 

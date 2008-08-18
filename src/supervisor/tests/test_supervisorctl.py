@@ -472,12 +472,6 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(options._server.supervisor._shutdown, True)
 
-    def test__formatChanges(self):
-        plugin = self._makeOne()
-        # Don't explode, plz
-        plugin._formatChanges([['added'], ['changed'], ['dropped']])
-        plugin._formatChanges([[], [], []])
-
     def test_add(self):
         plugin = self._makeOne()
         result = plugin.do_add('foo')
