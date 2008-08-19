@@ -947,7 +947,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     a.kill()
                     return
                 continue
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, EOFError):
             a.kill()
             self.ctl.output('Exiting foreground')
         return
