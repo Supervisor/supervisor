@@ -1,5 +1,8 @@
 Next Release
 
+  - Fix bug with symptom "KeyError: 'process_name'" when using a logfile name 
+    including documented 'process_name' Python string expansions.
+
   - Tab completions in the supervisorctl shell, and a foreground mode
     for Supervisor, implemented as a part of GSoC.
     The supervisorctl program now has a 'fg' command, which makes it
