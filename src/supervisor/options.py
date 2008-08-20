@@ -737,17 +737,6 @@ class ServerOptions(Options):
                     '%(process_num) must be present within process_name when '
                     'numprocs > 1')
 
-        for n in ('stdout_logfile', 'stderr_logfile'):
-            # do warning
-            lf_name = logfile_name(get(section, n, Automatic))
-            mb_key = '%s_maxbytes' % n
-            maxbytes = byte_size(get(section, mb_key, '50MB'))
-            if not maxbytes and lf_name is Automatic:
-                self.parse_warnings.append(
-                    'For [%s], AUTO logging used for %s without '
-                    'rollover, set maxbytes > 0 to avoid filling up '
-                    'filesystem unintentionally' % (section, n))
-                
         for process_num in range(numprocs_start, numprocs + numprocs_start):
             expansions = {'here':self.here,
                           'process_num':process_num,
@@ -764,10 +753,10 @@ class ServerOptions(Options):
 
             for k in ('stdout', 'stderr'):
                 n = '%s_logfile' % k
-                val = logfile_name(get(section, n, Automatic))
-                if isinstance(val, basestring):
-                    val = expand(val, expansions, n)
-                logfiles[n] = val
+                lf_val = logfile_name(get(section, n, Automatic))
+                if isinstance(lf_val, basestring):
+                    lf_val = expand(lf_val, expansions, n)
+                logfiles[n] = lf_val
 
                 bu_key = '%s_logfile_backups' % k
                 backups = integer(get(section, bu_key, 10))
@@ -776,6 +765,12 @@ class ServerOptions(Options):
                 mb_key = '%s_logfile_maxbytes' % k
                 maxbytes = byte_size(get(section, mb_key, '50MB'))
                 logfiles[mb_key] = maxbytes
+
+                if lf_val is Automatic and not maxbytes:
+                    self.parse_warnings.append(
+                        'For [%s], AUTO logging used for %s without '
+                        'rollover, set maxbytes > 0 to avoid filling up '
+                        'filesystem unintentionally' % (section, n))
 
             pconfig = klass(
                 self,
