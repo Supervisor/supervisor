@@ -40,10 +40,6 @@ class DatatypesTest(unittest.TestCase):
         actual = datatypes.list_of_strings('foo,bar')
         self.assertEqual(actual, ['foo', 'bar'])
 
-    def test_list_of_strings_returns_list_of_strings_by_comma_split(self):
-        actual = datatypes.list_of_strings('foo,bar')
-        self.assertEqual(actual, ['foo', 'bar'])
-
     def test_list_of_strings_returns_strings_with_whitespace_stripped(self):
         actual = datatypes.list_of_strings(' foo , bar ')
         self.assertEqual(actual, ['foo', 'bar'])
