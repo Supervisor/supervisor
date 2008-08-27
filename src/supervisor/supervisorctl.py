@@ -47,6 +47,7 @@ import threading
 from supervisor.options import ClientOptions
 from supervisor.options import split_namespec
 from supervisor import xmlrpc
+from supervisor import states
 
 class fgthread(threading.Thread):
     """ A subclass of threading.Thread, with a kill() method.
@@ -920,7 +921,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             # for any other fault
             self.ctl.output(str(msg))
             return
-        if not info['statename'] == 'RUNNING':
+        if not info['state'] == states.ProcessStates.RUNNING:
             self.ctl.output('Error: process not running')
             return
         # everything good; continue
@@ -933,15 +934,15 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 # this takes care of the user input
                 inp = raw_input() + '\n'
                 try:
-                    supervisor.sendProcessStdin(program,inp)
+                    supervisor.sendProcessStdin(program, inp)
                 except xmlrpclib.Fault, msg:
-                    if msg.faultCode == 70:
+                    if msg.faultCode == xmlrpc.Faults.NOT_RUNNING:
                         self.ctl.output('Process got killed')
                         self.ctl.output('Exiting foreground')
                         a.kill()
                         return
                 info = supervisor.getProcessInfo(program)
-                if not info['statename'] == 'RUNNING':
+                if not info['state'] == states.ProcessStates.RUNNING:
                     self.ctl.output('Process got killed')
                     self.ctl.output('Exiting foreground')
                     a.kill()
