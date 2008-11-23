@@ -218,6 +218,30 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(value, True)
         self.assertEqual(supervisord.options.mood, 0)
 
+    def test_reloadConfig(self):
+        options = DummyOptions()
+        supervisord = DummySupervisor(options)
+        interface = self._makeOne(supervisord)
+
+        changes = [ [DummyPGroupConfig(options, 'added')],
+                    [DummyPGroupConfig(options, 'changed')],
+                    [DummyPGroupConfig(options, 'dropped')] ]
+
+        supervisord.diff_to_active = lambda : changes
+
+        value = interface.reloadConfig()
+        self.assertEqual(value, [[['added'], ['changed'], ['dropped']]])
+
+    def test_reloadConfig_process_config_file_raises_ValueError(self):
+        from supervisor import xmlrpc
+        options = DummyOptions()
+        def raise_exc(*arg, **kw):
+            raise ValueError('foo')
+        options.process_config_file = raise_exc
+        supervisord = DummySupervisor(options)
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.CANT_REREAD, interface.reloadConfig)
+
     def test_addProcessGroup(self):
         from supervisor.supervisord import Supervisor
         from supervisor import xmlrpc
@@ -820,6 +844,31 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(result[1]['group'], 'foo')
         self.assertEqual(result[1]['status'],  Faults.SUCCESS)
         self.assertEqual(result[1]['description'], 'OK')
+
+    def test_getAllConfigInfo(self):
+        options = DummyOptions()
+        supervisord = DummySupervisor(options, 'foo')
+
+        pconfig1 = DummyPConfig(options, 'process1', __file__)
+        pconfig2 = DummyPConfig(options, 'process2', __file__)
+        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig1, pconfig2])
+        supervisord.process_groups = {'group1': DummyProcessGroup(gconfig)}
+        supervisord.options.process_group_configs = [gconfig]
+
+        interface = self._makeOne(supervisord)
+        configs = interface.getAllConfigInfo()
+        self.assertEqual(configs, [{ 'group': 'group1',
+                                     'name': 'process1',
+                                     'inuse': True,
+                                     'autostart': True,
+                                     'process_prio': 999,
+                                     'group_prio': 999 },
+                                   { 'group': 'group1',
+                                     'name': 'process2',
+                                     'inuse': True,
+                                     'autostart': True,
+                                     'process_prio': 999,
+                                     'group_prio': 999 }])
 
     def test__interpretProcessInfo(self):
         supervisord = DummySupervisor()

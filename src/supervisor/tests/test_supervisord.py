@@ -173,6 +173,106 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(options.logger.data[0],
                          'received SIGUSR1 indicating nothing')
 
+    def test_diff_add_remove(self):
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+
+        pconfig = DummyPConfig(options, 'process1', 'process1')
+        group1 = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
+
+        pconfig = DummyPConfig(options, 'process2', 'process2')
+        group2 = DummyPGroupConfig(options, 'group2', pconfigs=[pconfig])
+
+        new = [group1, group2]
+
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, [])
+        self.assertEqual(changed, [])
+        self.assertEqual(removed, [])
+
+        added, changed, removed = supervisord.diff_to_active(new)
+        self.assertEqual(added, new)
+        self.assertEqual(changed, [])
+        self.assertEqual(removed, [])
+
+        supervisord.options.process_group_configs = new
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, new)
+
+        supervisord.add_process_group(group1)
+        supervisord.add_process_group(group2)
+
+        pconfig = DummyPConfig(options, 'process3', 'process3')
+        new_group1 = DummyPGroupConfig(options, pconfigs=[pconfig])
+
+        pconfig = DummyPConfig(options, 'process4', 'process4')
+        new_group2 = DummyPGroupConfig(options, pconfigs=[pconfig])
+
+        new = [group2, new_group1, new_group2]
+
+        added, changed, removed = supervisord.diff_to_active(new)
+        self.assertEqual(added, [new_group1, new_group2])
+        self.assertEqual(changed, [])
+        self.assertEqual(removed, [group1])
+
+    def test_diff_changed(self):
+        from supervisor.options import ProcessConfig, ProcessGroupConfig
+
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+
+        def make_pconfig(name, command, **params):
+            result = {
+                'name': name, 'command': command,
+                'directory': None, 'umask': None, 'priority': 999, 'autostart': True,
+                'autorestart': True, 'startsecs': 10, 'startretries': 999,
+                'uid': None, 'stdout_logfile': None, 'stdout_capture_maxbytes': 0,
+                'stdout_logfile_backups': 0, 'stdout_logfile_maxbytes': 0,
+                'stderr_logfile': None, 'stderr_capture_maxbytes': 0,
+                'stderr_logfile_backups': 0, 'stderr_logfile_maxbytes': 0,
+                'redirect_stderr': False,
+                'stopsignal': None, 'stopwaitsecs': 10,
+                'exitcodes': (0,2), 'environment': None, 'serverurl': None }
+            result.update(params)
+            return ProcessConfig(options, **result)
+
+        def make_gconfig(name, pconfigs):
+            return ProcessGroupConfig(options, name, 25, pconfigs)
+
+        pconfig = make_pconfig('process1', 'process1', uid='new')
+        group1 = make_gconfig('group1', [pconfig])
+
+        pconfig = make_pconfig('process2', 'process2')
+        group2 = make_gconfig('group2', [pconfig])
+        new = [group1, group2]
+
+        pconfig = make_pconfig('process1', 'process1', uid='old')
+        group3 = make_gconfig('group1', [pconfig])
+
+        pconfig = make_pconfig('process2', 'process2')
+        group4 = make_gconfig('group2', [pconfig])
+        supervisord.add_process_group(group3)
+        supervisord.add_process_group(group4)
+
+        added, changed, removed = supervisord.diff_to_active(new)
+
+        self.assertEqual([added, removed], [[], []])
+        self.assertEqual(changed, [group1])
+
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+
+        pconfig1 = make_pconfig('process1', 'process1')
+        pconfig2 = make_pconfig('process2', 'process2')
+        group1 = make_gconfig('group1', [pconfig1, pconfig2])
+        new = [group1]
+
+        supervisord.add_process_group(make_gconfig('group1', [pconfig1]))
+
+        added, changed, removed = supervisord.diff_to_active(new)
+        self.assertEqual([added, removed], [[], []])
+        self.assertEqual(changed, [group1])
+
     def test_add_process_group(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')

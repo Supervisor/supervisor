@@ -20,7 +20,7 @@ from supervisor.tests.base import lstrip
 
 class OptionTests(unittest.TestCase):
 
-    def _makeOptions(self):
+    def _makeOptions(self, read_error=False):
         from cStringIO import StringIO
         from supervisor.options import Options
         from supervisor.datatypes import integer
@@ -28,12 +28,15 @@ class OptionTests(unittest.TestCase):
         class MyOptions(Options):
             master = {
                 'other': 41 }
-            def __init__(self):
+            def __init__(self, read_error=read_error):
+                self.read_error = read_error
                 Options.__init__(self)
                 class Foo(object): pass
                 self.configroot = Foo()
 
             def read_config(self, fp):
+                if self.read_error:
+                    raise ValueError(self.read_error)
                 # Pretend we read it from file:
                 self.configroot.__dict__.update(self.default_map)
                 self.configroot.__dict__.update(self.master)
@@ -72,6 +75,24 @@ class OptionTests(unittest.TestCase):
         options.master['other'] = 42
         options.process_config_file()
         self.assertEquals(options.other, 42)
+
+    def test_config_reload_do_usage_false(self):
+        options = self._makeOptions(read_error='error')
+        self.assertRaises(ValueError, options.process_config_file,
+                          False)
+
+    def test_config_reload_do_usage_true(self):
+        options = self._makeOptions(read_error='error')
+        from StringIO import StringIO
+        L = []
+        def exit(num):
+            L.append(num)
+        options.stderr = options.stdout = StringIO()
+        options.exit = exit
+        options.configroot.anoption = 1
+        options.configroot.other = 1
+        options.process_config_file(True)
+        self.assertEqual(L, [2])
 
     def test__set(self):
         from supervisor.options import Options
@@ -404,94 +425,6 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc.command, '/bin/cat')
         self.assertTrue(section.process_group_configs is
                         instance.process_group_configs)
-
-    def test_diff_add_remove(self):
-        options = self._makeOne()
-
-        pconfig = DummyPConfig(options, 'process1', 'process1')
-        group1 = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
-
-        pconfig = DummyPConfig(options, 'process2', 'process2')
-        group2 = DummyPGroupConfig(options, 'group2', pconfigs=[pconfig])
-
-        new = [group1, group2]
-
-        added, changed, removed = options.diff_process_groups([])
-        self.assertEqual(added, options.process_group_configs)
-        self.assertEqual(removed, [])
-
-        options.process_group_configs = list(new)
-        added, changed, removed = options.diff_process_groups(new)
-        self.assertEqual(added, [])
-        self.assertEqual(changed, [])
-        self.assertEqual(removed, [])
-
-        pconfig = DummyPConfig(options, 'process3', 'process3')
-        new_group1 = DummyPGroupConfig(options, pconfigs=[pconfig])
-
-        pconfig = DummyPConfig(options, 'process4', 'process4')
-        new_group2 = DummyPGroupConfig(options, pconfigs=[pconfig])
-
-        new = [group2, new_group1, new_group2]
-
-        added, changed, removed = options.diff_process_groups(new)
-        self.assertEqual(added, [new_group1, new_group2])
-        self.assertEqual(changed, [])
-        self.assertEqual(removed, [group1])
-
-    def test_diff_changed(self):
-        from supervisor.options import ProcessConfig, ProcessGroupConfig
-
-        options = self._makeOne()
-
-        def make_pconfig(name, command, **params):
-            result = {
-                'name': name, 'command': command,
-                'directory': None, 'umask': None, 'priority': 999, 'autostart': True,
-                'autorestart': True, 'startsecs': 10, 'startretries': 999,
-                'uid': None, 'stdout_logfile': None, 'stdout_capture_maxbytes': 0,
-                'stdout_logfile_backups': 0, 'stdout_logfile_maxbytes': 0,
-                'stderr_logfile': None, 'stderr_capture_maxbytes': 0,
-                'stderr_logfile_backups': 0, 'stderr_logfile_maxbytes': 0,
-                'redirect_stderr': False,
-                'stopsignal': None, 'stopwaitsecs': 10,
-                'exitcodes': (0,2), 'environment': None, 'serverurl': None }
-            result.update(params)
-            return ProcessConfig(options, **result)
-
-        def make_gconfig(name, pconfigs):
-            return ProcessGroupConfig(options, name, 25, pconfigs)
-
-        pconfig = make_pconfig('process1', 'process1', uid='new')
-        group1 = make_gconfig('group1', [pconfig])
-
-        pconfig = make_pconfig('process2', 'process2')
-        group2 = make_gconfig('group2', [pconfig])
-        new = [group1, group2]
-
-        pconfig = make_pconfig('process1', 'process1', uid='old')
-        group3 = make_gconfig('group1', [pconfig])
-
-        pconfig = make_pconfig('process2', 'process2')
-        group4 = make_gconfig('group2', [pconfig])
-        options.process_group_configs = [group4, group3]
-
-        added, changed, removed = options.diff_process_groups(new)
-
-        self.assertEqual([added, removed], [[], []])
-        self.assertEqual(changed, [group1])
-
-        options = self._makeOne()
-        pconfig1 = make_pconfig('process1', 'process1')
-        pconfig2 = make_pconfig('process2', 'process2')
-        group1 = make_gconfig('group1', [pconfig1, pconfig2])
-        new = [group1]
-
-        options.process_group_configs = [make_gconfig('group1', [pconfig1])]
-
-        added, changed, removed = options.diff_process_groups(new)
-        self.assertEqual([added, removed], [[], []])
-        self.assertEqual(changed, [group1])
 
     def test_readFile_failed(self):
         from supervisor.options import readFile

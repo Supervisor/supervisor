@@ -79,6 +79,9 @@ class DummyOptions:
         self.realizeargs = args
         self.realizekw = kw
 
+    def process_config_file(self, do_usage=True):
+        pass
+
     def cleanup_fds(self):
         self.fds_cleaned_up = True
 
@@ -767,7 +770,7 @@ class DummySupervisorRPCNamespace:
         raise Fault(xmlrpc.Faults.SHUTDOWN_STATE, '')
 
     def reloadConfig(self):
-        return [[['added'], ['changed'], ['dropped']]]
+        return [[['added'], ['changed'], ['removed']]]
 
     def addProcessGroup(self, name):
         from xmlrpclib import Fault

@@ -108,6 +108,22 @@ class Supervisor:
         finally:
             self.options.cleanup()
 
+    def diff_to_active(self, new=None):
+        if not new:
+            new = self.options.process_group_configs
+        cur = [group.config for group in self.process_groups.values()]
+
+        curdict = dict(zip([cfg.name for cfg in cur], cur))
+        newdict = dict(zip([cfg.name for cfg in new], new))
+
+        added   = [cand for cand in new if cand.name not in curdict]
+        removed = [cand for cand in cur if cand.name not in newdict]
+
+        changed = [cand for cand in new
+                   if cand != curdict.get(cand.name, cand)]
+
+        return added, changed, removed
+
     def add_process_group(self, config):
         name = config.name
         if name not in self.process_groups:

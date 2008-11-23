@@ -45,6 +45,7 @@ class Faults:
     SUCCESS = 80
     ALREADY_ADDED = 90
     STILL_RUNNING = 91
+    CANT_REREAD = 92
 
 def getFaultDescription(code):
     for faultname in Faults.__dict__:

@@ -1,5 +1,69 @@
 Next Release
 
+  - Add ``reread``, ``update``, and ``avail`` commands based on Anders
+    Quist's ``online_config_reload.diff`` patch.  This patch extends
+    the "add" and "drop" commands with automagical behavior::
+
+      In supervisorctl:
+
+        supervisor> status
+        bar                              RUNNING    pid 14864, uptime 18:03:42
+        baz                              RUNNING    pid 23260, uptime 0:10:16
+        foo                              RUNNING    pid 14866, uptime 18:03:42
+        gazonk                           RUNNING    pid 23261, uptime 0:10:16
+        supervisor> avail
+        bar                              in use    auto      999:999
+        baz                              in use    auto      999:999
+        foo                              in use    auto      999:999
+        gazonk                           in use    auto      999:999
+        quux                             avail     auto      999:999
+
+      Now we add this to our conf:
+
+        [group:zegroup]
+        programs=baz,gazonk
+
+      Then we reread conf:
+
+        supervisor> reread
+        baz: disappeared
+        gazonk: disappeared
+        quux: available
+        zegroup: available
+        supervisor> avail
+        bar                              in use    auto      999:999
+        foo                              in use    auto      999:999
+        quux                             avail     auto      999:999
+        zegroup:baz                      avail     auto      999:999
+        zegroup:gazonk                   avail     auto      999:999
+        supervisor> status
+        bar                              RUNNING    pid 14864, uptime 18:04:18
+        baz                              RUNNING    pid 23260, uptime 0:10:52
+        foo                              RUNNING    pid 14866, uptime 18:04:18
+        gazonk                           RUNNING    pid 23261, uptime 0:10:52
+
+      The magic make-it-so command:
+
+        supervisor> update
+        baz: stopped
+        baz: removed process group
+        gazonk: stopped
+        gazonk: removed process group
+        zegroup: added process group
+        quux: added process group
+        supervisor> status
+        bar                              RUNNING    pid 14864, uptime 18:04:43
+        foo                              RUNNING    pid 14866, uptime 18:04:43
+        quux                             RUNNING    pid 23561, uptime 0:00:02
+        zegroup:baz                      RUNNING    pid 23559, uptime 0:00:02
+        zegroup:gazonk                   RUNNING    pid 23560, uptime 0:00:02
+        supervisor> avail
+        bar                              in use    auto      999:999
+        foo                              in use    auto      999:999
+        quux                             in use    auto      999:999
+        zegroup:baz                      in use    auto      999:999
+        zegroup:gazonk                   in use    auto      999:999
+
   - Fix bug with symptom "KeyError: 'process_name'" when using a logfile name 
     including documented 'process_name' Python string expansions.
 

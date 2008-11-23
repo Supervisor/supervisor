@@ -75,6 +75,9 @@ class Dummy:
     pass
 
 class Options:
+    stderr = sys.stderr
+    stdout = sys.stdout
+    exit = sys.exit
 
     uid = gid = None
 
@@ -124,13 +127,13 @@ class Options:
         if help.find("%s") > 0:
             help = help.replace("%s", self.progname)
         print help,
-        sys.exit(0)
+        self.exit(0)
 
     def usage(self, msg):
         """Print a brief error message to stderr and exit(2)."""
-        sys.stderr.write("Error: %s\n" % str(msg))
-        sys.stderr.write("For help, use %s -h\n" % self.progname)
-        sys.exit(2)
+        self.stderr.write("Error: %s\n" % str(msg))
+        self.stderr.write("For help, use %s -h\n" % self.progname)
+        self.exit(2)
 
     def add(self,
             name=None,                  # attribute name on self
@@ -292,7 +295,7 @@ class Options:
 
         self.process_config_file()
 
-    def process_config_file(self):
+    def process_config_file(self, do_usage=True):
         # Process config file
         if not hasattr(self.configfile, 'read'):
             self.here = os.path.abspath(os.path.dirname(self.configfile))
@@ -300,7 +303,12 @@ class Options:
         try:
             self.read_config(self.configfile)
         except ValueError, msg:
-            self.usage(str(msg))
+            if do_usage:
+                # if this is not called from an RPC method, run usage and exit.
+                self.usage(str(msg))
+            else:
+                # if this is called from an RPC method, raise an error
+                raise ValueError(msg)
 
         # Copy config options to attributes of self.  This only fills
         # in options that aren't already set from the command line.
@@ -471,27 +479,11 @@ class ServerOptions(Options):
 
         self.identifier = section.identifier
 
-    def diff_process_groups(self, new):
-        cur = self.process_group_configs
-
-        curdict = dict(zip([cfg.name for cfg in cur], cur))
-        newdict = dict(zip([cfg.name for cfg in new], new))
-
-        added   = [cand for cand in new if cand.name not in curdict]
-        removed = [cand for cand in cur if cand.name not in newdict]
-
-        changed = [cand for cand in new
-                   if cand != curdict.get(cand.name, cand)]
-
-        return added, changed, removed
-
-    def process_config_file(self):
-        Options.process_config_file(self)
+    def process_config_file(self, do_usage=True):
+        Options.process_config_file(self, do_usage=do_usage)
 
         new = self.configroot.supervisord.process_group_configs
-        changes = self.diff_process_groups(new)
         self.process_group_configs = new
-        return changes
 
     def read_config(self, fp):
         section = self.configroot.supervisord
@@ -501,7 +493,10 @@ class ServerOptions(Options):
             except (IOError, OSError):
                 raise ValueError("could not find config file %s" % fp)
         parser = UnhosedConfigParser()
-        parser.readfp(fp)
+        try:
+            parser.readfp(fp)
+        except ConfigParser.ParsingError, why:
+            raise ValueError(str(why))
 
         if parser.has_section('include'):
             if not parser.has_option('include', 'files'):
@@ -518,7 +513,10 @@ class ServerOptions(Options):
                 for filename in glob.glob(pattern):
                     self.parse_warnings.append(
                         'Included extra file "%s" during parsing' % filename)
-                    parser.read(filename)
+                    try:
+                        parser.read(filename)
+                    except ConfigParser.ParsingError, why:
+                        raise ValueError(str(why))
 
         sections = parser.sections()
         if not 'supervisord' in sections:
@@ -919,11 +917,11 @@ class ServerOptions(Options):
                 self.logger.info("set current directory: %r"
                                  % self.directory)
         os.close(0)
-        sys.stdin = sys.__stdin__ = open("/dev/null")
+        self.stdin = sys.stdin = sys.__stdin__ = open("/dev/null")
         os.close(1)
-        sys.stdout = sys.__stdout__ = open("/dev/null", "w")
+        self.stdout = sys.stdout = sys.__stdout__ = open("/dev/null", "w")
         os.close(2)
-        sys.stderr = sys.__stderr__ = open("/dev/null", "w")
+        self.stderr = sys.stderr = sys.__stderr__ = open("/dev/null", "w")
         os.setsid()
         os.umask(self.umask)
         # XXX Stevens, in his Advanced Unix book, section 13.3 (page

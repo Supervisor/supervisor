@@ -162,6 +162,25 @@ class SupervisorNamespaceRPCInterface:
         self.supervisord.options.mood = SupervisorStates.RESTARTING
         return True
 
+    def reloadConfig(self):
+        """
+        Reload configuration
+
+        @return boolean result  always return True unless error
+        """
+        self._update('reloadConfig')
+        try:
+            self.supervisord.options.process_config_file(do_usage=False)
+        except ValueError, msg:
+            raise RPCError(Faults.CANT_REREAD, msg)
+            
+        added, changed, removed = self.supervisord.diff_to_active()
+
+        added = [group.name for group in added]
+        changed = [group.name for group in changed]
+        removed = [group.name for group in removed]
+        return [[added, changed, removed]] # cannot return len > 1, apparently
+
     def addProcessGroup(self, name):
         """ Update the config for a running process from config file.
 
@@ -432,6 +451,29 @@ class SupervisorNamespaceRPCInterface:
         killall.delay = 0.05
         killall.rpcinterface = self
         return killall # deferred
+
+    def getAllConfigInfo(self):
+        """ Get info about all availible process configurations. Each record
+        represents a single process (i.e. groups get flattened).
+
+        @return array result  An array of process config info records
+        """
+        self._update('getAllConfigInfo')
+
+        configinfo = []
+        for gconfig in self.supervisord.options.process_group_configs:
+            inuse = gconfig.name in self.supervisord.process_groups
+            for pconfig in gconfig.process_configs:
+                configinfo.append(
+                    { 'name': pconfig.name,
+                      'group': gconfig.name,
+                      'inuse': inuse,
+                      'autostart': pconfig.autostart,
+                      'group_prio': gconfig.priority,
+                      'process_prio': pconfig.priority })
+
+        configinfo.sort()
+        return configinfo
 
     def _interpretProcessInfo(self, info):
         state = info['state']
