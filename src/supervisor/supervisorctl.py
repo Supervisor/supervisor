@@ -175,6 +175,8 @@ class Controller(cmd.Cmd):
                 (file, fun, line), t, v, tbinfo = asyncore.compact_traceback()
                 error = 'error: %s, %s: file: %s line: %s' % (t, v, file, line)
                 self.output(error)
+                if not self.options.interactive:
+                    sys.exit(2)
 
     def _get_do_func(self, cmd):
         func_name = 'do_' + cmd
