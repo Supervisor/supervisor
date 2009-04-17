@@ -1,5 +1,8 @@
 Next Release
 
+  - Patch for bug #268 (KeyError on 'here' expansion for stdout/stderr_logfile)
+    from David E. Kindred.
+
   - Add ``reread``, ``update``, and ``avail`` commands based on Anders
     Quist's ``online_config_reload.diff`` patch.  This patch extends
     the "add" and "drop" commands with automagical behavior::
