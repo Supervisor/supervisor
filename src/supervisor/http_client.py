@@ -53,7 +53,8 @@ class HTTPHandler(object, asynchat.async_chat):
         self.error_handled = False
 
     def get(self, serverurl, path):
-        assert(self.url==None, "Already doing a get") #@@
+        if self.url != None:
+            raise AssertionError('Already doing a get')
         self.url = serverurl + path
         scheme, host, path_ignored, params, query, fragment = urlparse(self.url)
         if not scheme in ("http", "unix"):
