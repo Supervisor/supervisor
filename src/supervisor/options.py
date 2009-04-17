@@ -751,9 +751,10 @@ class ServerOptions(Options):
 
             for k in ('stdout', 'stderr'):
                 n = '%s_logfile' % k
-                lf_val = logfile_name(get(section, n, Automatic))
+                lf_val = get(section, n, Automatic)
                 if isinstance(lf_val, basestring):
                     lf_val = expand(lf_val, expansions, n)
+                lf_val = logfile_name(lf_val)
                 logfiles[n] = lf_val
 
                 bu_key = '%s_logfile_backups' % k
