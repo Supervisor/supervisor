@@ -73,7 +73,7 @@ def list_of_exitcodes(arg):
         vals = list_of_ints(arg)
         for val in vals:
             if (val > 255) or (val < 0):
-                raise 'Invalid exit code "%s"' % val
+                raise ValueError('Invalid exit code "%s"' % val)
         return vals
     except:
         raise ValueError("not a valid list of exit codes: " + repr(arg))
