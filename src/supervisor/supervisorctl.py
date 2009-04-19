@@ -116,7 +116,7 @@ class Controller(cmd.Cmd):
                       'restart','start','stop','version','clear',
                       'fg','open','quit','remove','shutdown','status',
                       'tail','help']
-        self.info=self.get_supervisor().getAllProcessInfo()
+        self.info=self.get_server_proxy().getAllProcessInfo()
         cmd.Cmd.__init__(self, completekey, stdin, stdout)
         for name, factory, kwargs in self.options.plugin_factories:
             plugin = factory(self, **kwargs)
@@ -192,14 +192,14 @@ class Controller(cmd.Cmd):
         if stuff is not None:
             self.stdout.write(stuff + '\n')
 
-    def get_supervisor(self):
+    def get_server_proxy(self, namespace='supervisor'):
         proxy = self.options.getServerProxy()
-        namespace = getattr(proxy, 'supervisor')
-        return namespace
+        proxy_for_namespace = getattr(proxy, namespace)
+        return proxy_for_namespace
 
     def upcheck(self):
         try:
-            supervisor = self.get_supervisor()
+            supervisor = self.get_server_proxy()
             api = supervisor.getVersion() # deprecated
             from supervisor import rpcinterface
             if api != rpcinterface.API_VERSION:
@@ -451,7 +451,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     self.ctl.output('Error: bad argument %s' % modifier)
                     return
 
-        supervisor = self.ctl.get_supervisor()
+        supervisor = self.ctl.get_server_proxy()
 
         if bytes is None:
             return self._tailf('/logtail/%s/%s' % (name, channel))
@@ -518,7 +518,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         else:
             bytes = 1600
 
-        supervisor = self.ctl.get_supervisor()
+        supervisor = self.ctl.get_server_proxy()
 
         try:
             output = supervisor.readLog(-bytes, 0)
@@ -565,7 +565,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not self.ctl.upcheck():
             return
         
-        supervisor = self.ctl.get_supervisor()
+        supervisor = self.ctl.get_server_proxy()
 
         names = arg.strip().split()
 
@@ -592,7 +592,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                      "processes.")
 
     def do_pid(self, arg):
-        supervisor = self.ctl.get_supervisor()
+        supervisor = self.ctl.get_server_proxy()
         pid = supervisor.getPID()
         self.ctl.output(str(pid))
 
@@ -621,7 +621,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             return
 
         names = arg.strip().split()
-        supervisor = self.ctl.get_supervisor()
+        supervisor = self.ctl.get_server_proxy()
 
         if not names:
             self.ctl.output("Error: start requires a process name")
@@ -681,7 +681,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             return
 
         names = arg.strip().split()
-        supervisor = self.ctl.get_supervisor()
+        supervisor = self.ctl.get_server_proxy()
 
         if not names:
             self.ctl.output('Error: stop requires a process name')
@@ -748,7 +748,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         else:
             really = 1
         if really:
-            supervisor = self.ctl.get_supervisor()
+            supervisor = self.ctl.get_server_proxy()
             try:
                 supervisor.shutdown()
             except xmlrpclib.Fault, e:
@@ -768,7 +768,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         else:
             really = 1
         if really:
-            supervisor = self.ctl.get_supervisor()
+            supervisor = self.ctl.get_server_proxy()
             try:
                 supervisor.restart()
             except xmlrpclib.Fault, e:
@@ -814,7 +814,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         return template % formatted
 
     def do_avail(self, arg):
-        supervisor = self.ctl.get_supervisor()
+        supervisor = self.ctl.get_server_proxy()
         try:
             configinfo = supervisor.getAllConfigInfo()
         except xmlrpclib.Fault, e:
@@ -828,7 +828,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output("avail\t\t\tDisplay all configured processes")
 
     def do_reread(self, arg):
-        supervisor = self.ctl.get_supervisor()
+        supervisor = self.ctl.get_server_proxy()
         try:
             result = supervisor.reloadConfig()
         except xmlrpclib.Fault, e:
@@ -847,7 +847,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def do_add(self, arg):
         names = arg.strip().split()
 
-        supervisor = self.ctl.get_supervisor()
+        supervisor = self.ctl.get_server_proxy()
         for name in names:
             try:
                 supervisor.addProcessGroup(name)
@@ -871,7 +871,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def do_remove(self, arg):
         names = arg.strip().split()
 
-        supervisor = self.ctl.get_supervisor()
+        supervisor = self.ctl.get_server_proxy()
         for name in names:
             try:
                 result = supervisor.removeProcessGroup(name)
@@ -895,7 +895,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         def log(name, message):
             self.ctl.output("%s: %s" % (name, message))
 
-        supervisor = self.ctl.get_supervisor()
+        supervisor = self.ctl.get_server_proxy()
         try:
             result = supervisor.reloadConfig()
         except xmlrpclib.Fault, e:
@@ -957,7 +957,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             self.help_clear()
             return
 
-        supervisor = self.ctl.get_supervisor()
+        supervisor = self.ctl.get_server_proxy()
 
         if 'all' in names:
             results = supervisor.clearAllProcessLogs()
@@ -1000,7 +1000,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def do_version(self, arg):
         if not self.ctl.upcheck():
             return
-        supervisor = self.ctl.get_supervisor()
+        supervisor = self.ctl.get_server_proxy()
         self.ctl.output(supervisor.getSupervisorVersion())
 
     def help_version(self):
@@ -1020,7 +1020,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             self.ctl.output('Error: too many process names supplied')
             return
         program = args[0]
-        supervisor = self.ctl.get_supervisor()
+        supervisor = self.ctl.get_server_proxy()
         try:
             info = supervisor.getProcessInfo(program)
         except xmlrpclib.Fault, msg:

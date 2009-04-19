@@ -526,7 +526,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                           'inuse': False, 'autostart': False,
                           'process_prio': 999, 'group_prio': 999 }]
 
-        plugin.ctl.get_supervisor = lambda : FakeSupervisor()
+        plugin.ctl.get_server_proxy = lambda : FakeSupervisor()
         plugin.ctl.output = calls.append
         result = plugin.do_avail('')
         self.assertEqual(result, None)
@@ -752,7 +752,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_maintail_readlog_error_nofile(self):
         plugin = self._makeOne()
-        supervisor_rpc = plugin.ctl.get_supervisor()
+        supervisor_rpc = plugin.ctl.get_server_proxy()
         from supervisor import xmlrpc
         supervisor_rpc._readlog_error = xmlrpc.Faults.NO_FILE
         result = plugin.do_maintail('-100')
@@ -761,7 +761,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_maintail_readlog_error_failed(self):
         plugin = self._makeOne()
-        supervisor_rpc = plugin.ctl.get_supervisor()
+        supervisor_rpc = plugin.ctl.get_server_proxy()
         from supervisor import xmlrpc
         supervisor_rpc._readlog_error = xmlrpc.Faults.FAILED
         result = plugin.do_maintail('-100')
@@ -840,8 +840,10 @@ class DummyController:
     def upcheck(self):
         return True
 
-    def get_supervisor(self):
-        return self.options.getServerProxy().supervisor
+    def get_server_proxy(self, namespace="supervisor"):
+        proxy = self.options.getServerProxy()
+        proxy_for_namespace = getattr(proxy, namespace)
+        return proxy_for_namespace  
 
     def output(self, data):
         self.stdout.write(data + '\n')
