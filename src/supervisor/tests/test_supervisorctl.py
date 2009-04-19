@@ -100,6 +100,31 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(results, None)
         self.assertEqual(helpval, 'foo helped')
 
+    def test_get_supervisor_returns_serverproxy_supervisor_namespace(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+
+        proxy = controller.get_supervisor()
+        expected = options.getServerProxy().supervisor
+        self.assertEqual(proxy, expected)
+
+    def test_get_server_proxy_with_no_args_returns_serverproxy(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+
+        proxy = controller.get_server_proxy()
+        expected = options.getServerProxy()
+        self.assertEqual(proxy, expected)
+
+    def test_get_server_proxy_with_namespace_returns_that_namespace(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+
+        proxy = controller.get_server_proxy('system')
+        expected = options.getServerProxy().system
+        self.assertEqual(proxy, expected)
+
+
 class TestControllerPluginBase(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.supervisorctl import ControllerPluginBase
@@ -526,7 +551,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                           'inuse': False, 'autostart': False,
                           'process_prio': 999, 'group_prio': 999 }]
 
-        plugin.ctl.get_server_proxy = lambda : FakeSupervisor()
+        plugin.ctl.get_supervisor = lambda : FakeSupervisor()
         plugin.ctl.output = calls.append
         result = plugin.do_avail('')
         self.assertEqual(result, None)
@@ -752,7 +777,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_maintail_readlog_error_nofile(self):
         plugin = self._makeOne()
-        supervisor_rpc = plugin.ctl.get_server_proxy()
+        supervisor_rpc = plugin.ctl.get_supervisor()
         from supervisor import xmlrpc
         supervisor_rpc._readlog_error = xmlrpc.Faults.NO_FILE
         result = plugin.do_maintail('-100')
@@ -761,7 +786,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_maintail_readlog_error_failed(self):
         plugin = self._makeOne()
-        supervisor_rpc = plugin.ctl.get_server_proxy()
+        supervisor_rpc = plugin.ctl.get_supervisor()
         from supervisor import xmlrpc
         supervisor_rpc._readlog_error = xmlrpc.Faults.FAILED
         result = plugin.do_maintail('-100')
@@ -840,10 +865,15 @@ class DummyController:
     def upcheck(self):
         return True
 
-    def get_server_proxy(self, namespace="supervisor"):
+    def get_supervisor(self):
+        return self.get_server_proxy('supervisor')
+
+    def get_server_proxy(self, namespace=None):
         proxy = self.options.getServerProxy()
-        proxy_for_namespace = getattr(proxy, namespace)
-        return proxy_for_namespace  
+        if namespace is None:
+            return proxy
+        else:
+            return getattr(proxy, namespace)
 
     def output(self, data):
         self.stdout.write(data + '\n')
