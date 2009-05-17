@@ -1592,11 +1592,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         
         try:
             events.callbacks[:] = [(events.RemoteCommunicationEvent, callback)]
-            interface.sendRemoteCommEvent('foo', 'bar')
+            result = interface.sendRemoteCommEvent('foo', 'bar')
         finally:
             events.callbacks[:] = []
             events.clear()
 
+        self.assertTrue(result)
         self.assertEqual(len(L), 1)
         event = L[0]                                     
         self.assertEqual(event.type, 'foo')
@@ -1614,11 +1615,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         
         try:
             events.callbacks[:] = [(events.RemoteCommunicationEvent, callback)]
-            interface.sendRemoteCommEvent(u'fi\xed once', u'fi\xed twice')
+            result = interface.sendRemoteCommEvent(u'fi\xed once', u'fi\xed twice')
         finally:
             events.callbacks[:] = []
             events.clear()
 
+        self.assertTrue(result)
         self.assertEqual(len(L), 1)
         event = L[0]                                     
         self.assertEqual(event.type, 'fi\xc3\xad once')

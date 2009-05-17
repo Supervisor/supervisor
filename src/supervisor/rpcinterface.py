@@ -776,6 +776,7 @@ class SupervisorNamespaceRPCInterface:
             events.RemoteCommunicationEvent(type, data)
         )
         
+        return True
 
 def make_allfunc(processes, predicate, func, **extra_kwargs):
     """ Return a closure representing a function that calls a
