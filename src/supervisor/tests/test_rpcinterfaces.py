@@ -1580,6 +1580,51 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process1 = supervisord.process_groups['process1'].processes['process1']
         self.assertEqual(process1.stdin_buffer, 'fi\xc3\xad')
 
+    def test_sendRemoteCommEvent_notifies_subscribers(self):
+        options = DummyOptions()
+        supervisord = DummySupervisor(options)
+        interface = self._makeOne(supervisord)
+
+        from supervisor import events
+        L = []
+        def callback(event):
+            L.append(event)
+        
+        try:
+            events.callbacks[:] = [(events.RemoteCommunicationEvent, callback)]
+            interface.sendRemoteCommEvent('foo', 'bar')
+        finally:
+            events.callbacks[:] = []
+            events.clear()
+
+        self.assertEqual(len(L), 1)
+        event = L[0]                                     
+        self.assertEqual(event.type, 'foo')
+        self.assertEqual(event.data, 'bar')
+
+    def test_sendRemoteCommEvent_unicode_encoded_to_utf8(self):
+        options = DummyOptions()
+        supervisord = DummySupervisor(options)
+        interface = self._makeOne(supervisord)
+
+        from supervisor import events
+        L = []
+        def callback(event):
+            L.append(event)
+        
+        try:
+            events.callbacks[:] = [(events.RemoteCommunicationEvent, callback)]
+            interface.sendRemoteCommEvent(u'fi\xed once', u'fi\xed twice')
+        finally:
+            events.callbacks[:] = []
+            events.clear()
+
+        self.assertEqual(len(L), 1)
+        event = L[0]                                     
+        self.assertEqual(event.type, 'fi\xc3\xad once')
+        self.assertEqual(event.data, 'fi\xc3\xad twice')
+        
+
 class SystemNamespaceXMLRPCInterfaceTests(TestBase):
     def _getTargetClass(self):
         from supervisor import xmlrpc

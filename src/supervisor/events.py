@@ -58,6 +58,14 @@ class ProcessCommunicationStdoutEvent(ProcessCommunicationEvent):
 class ProcessCommunicationStderrEvent(ProcessCommunicationEvent):
     channel = 'stderr'
 
+class RemoteCommunicationEvent(Event):
+    def __init__(self, type, data):
+        self.type = type
+        self.data = data
+
+    def __str__(self):
+        return 'type:%s\n%s' % (self.type, self.data)
+
 class SupervisorStateChangeEvent(Event):
     """ Abstract class """
     def __str__(self):
@@ -167,6 +175,7 @@ class EventTypes:
     PROCESS_COMMUNICATION = ProcessCommunicationEvent # abstract
     PROCESS_COMMUNICATION_STDOUT = ProcessCommunicationStdoutEvent
     PROCESS_COMMUNICATION_STDERR = ProcessCommunicationStderrEvent
+    REMOTE_COMMUNICATION = RemoteCommunicationEvent
     SUPERVISOR_STATE_CHANGE = SupervisorStateChangeEvent # abstract
     SUPERVISOR_STATE_CHANGE_RUNNING = SupervisorRunningEvent
     SUPERVISOR_STATE_CHANGE_STOPPING = SupervisorStoppingEvent

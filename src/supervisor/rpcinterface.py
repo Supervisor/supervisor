@@ -758,6 +758,25 @@ class SupervisorNamespaceRPCInterface:
 
         return True
 
+    def sendRemoteCommEvent(self, type, data):
+        """ Send an event that will be received by event listener 
+        subprocesses subscribing to the RemoteCommunicationEvent.
+        
+        @param  string  type  String for the "type" key in the event header
+        @param  string  data  Data for the event body
+        @return boolean       Always return True unless error
+        """
+        if isinstance(type, unicode):
+            type = type.encode('utf-8')
+        if isinstance(data, unicode):
+            data = data.encode('utf-8')
+
+        import events
+        events.notify(
+            events.RemoteCommunicationEvent(type, data)
+        )
+        
+
 def make_allfunc(processes, predicate, func, **extra_kwargs):
     """ Return a closure representing a function that calls a
     function for every process, and returns a result """

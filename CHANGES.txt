@@ -1,5 +1,8 @@
 Next Release
 
+  - Added a new event type, REMOTE_COMMUNICATION, that is emitted by a new
+    RPC method, supervisor.sendRemoteCommEvent().
+
   - Patch for bug #268 (KeyError on 'here' expansion for stdout/stderr_logfile)
     from David E. Kindred.
 

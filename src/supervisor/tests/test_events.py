@@ -88,6 +88,12 @@ class TestEventTypes(unittest.TestCase):
         self.assertEqual(inst.data, 3)
         self.assertEqual(inst.channel, 'stderr')
 
+    def test_RemoteCommunicationEvent(self):
+        from supervisor.events import RemoteCommunicationEvent
+        inst = RemoteCommunicationEvent(1, 2)
+        self.assertEqual(inst.type, 1)
+        self.assertEqual(inst.data, 2)
+
     # nothing to test for SupervisorStateChangeEvent and subtypes
 
     def test_EventRejectedEvent(self):
@@ -184,6 +190,13 @@ class TestSerializations(unittest.TestCase):
         self.assertEqual(headers['groupname'], 'process1', headers)
         self.assertEqual(headers['pid'], '1', headers)
         self.assertEqual(payload, 'yo')
+
+    def test_remote_comm_event(self):
+        from supervisor.events import RemoteCommunicationEvent
+        event = RemoteCommunicationEvent('foo', 'bar')
+        headers, payload = self._deserialize(str(event))
+        self.assertEqual(headers['type'], 'foo', headers)
+        self.assertEqual(payload, 'bar')
 
     def test_process_state_events_without_extra_values(self):
         from supervisor.states import ProcessStates
