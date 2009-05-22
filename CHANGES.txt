@@ -1,8 +1,14 @@
 Next Release
 
-  - Added new event types that are emitted when a subprocess sends data to
-    stdout or stderr that would be logged (i.e., data received when not in 
-    the special capture mode used by the PROCESS_COMMUNICATION events).  
+  - New 'stdout_events_enabled' and 'stderr_events_enabled' config options
+    have been added to the '[program:x]', '[fcgi-program:x]', and 
+    '[eventlistener:x]' sections.  These enable the emitting of new 
+    PROCESS_LOG events for a program.  If unspecified, the default is False.
+
+    If enabled for a subprocess, and data is received from the stdout or
+    stderr of the subprocess while not in the special capture mode used by 
+    PROCESS_COMMUNICATION, an event will be emitted.
+
     Event listeners can subscribe to either PROCESS_LOG_STDOUT or 
     PROCESS_LOG_STDERR individually, or PROCESS_LOG for both.
 

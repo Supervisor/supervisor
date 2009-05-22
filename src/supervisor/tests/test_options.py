@@ -569,6 +569,7 @@ class ServerOptionsTests(unittest.TestCase):
         stdout_logfile = NONE
         stdout_logfile_backups = 1
         stdout_logfile_maxbytes = 100MB
+        stdout_events_enabled = true
         stopsignal = KILL
         stopwaitsecs = 100
         exitcodes = 1,4
@@ -593,6 +594,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(pconfig.stdout_logfile, None)
         self.assertEqual(pconfig.stdout_capture_maxbytes, 0)
         self.assertEqual(pconfig.stdout_logfile_maxbytes, 104857600)
+        self.assertEqual(pconfig.stdout_events_enabled, True)
         self.assertEqual(pconfig.stopsignal, signal.SIGKILL)
         self.assertEqual(pconfig.stopwaitsecs, 100)
         self.assertEqual(pconfig.exitcodes, [1,4])
@@ -1140,8 +1142,10 @@ class TestProcessConfig(unittest.TestCase):
                      'priority', 'autostart', 'autorestart',
                      'startsecs', 'startretries', 'uid',
                      'stdout_logfile', 'stdout_capture_maxbytes',
+                     'stdout_events_enabled',
                      'stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile', 'stderr_capture_maxbytes',
+                     'stderr_events_enabled',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
                      'stopsignal', 'stopwaitsecs', 'exitcodes',
                      'redirect_stderr', 'environment'):
@@ -1212,8 +1216,10 @@ class FastCGIProcessConfigTest(unittest.TestCase):
                      'priority', 'autostart', 'autorestart',
                      'startsecs', 'startretries', 'uid',
                      'stdout_logfile', 'stdout_capture_maxbytes',
+                     'stdout_events_enabled',
                      'stdout_logfile_backups', 'stdout_logfile_maxbytes',
-                     'stderr_logfile', 'stderr_capture_maxbytes',
+                     'stderr_logfile', 'stderr_capture_maxbytes',        
+                     'stderr_events_enabled',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
                      'stopsignal', 'stopwaitsecs', 'exitcodes',
                      'redirect_stderr', 'environment'):

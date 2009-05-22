@@ -712,7 +712,9 @@ class ServerOptions(Options):
         process_name = get(section, 'process_name', '%(program_name)s')
         environment_str = get(section, 'environment', '')
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
+        stdout_events = boolean(get(section, 'stdout_events_enabled','false'))
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
+        stderr_events = boolean(get(section, 'stderr_events_enabled','false'))
         directory = get(section, 'directory', None)
         serverurl = get(section, 'serverurl', None)
         if serverurl and serverurl.strip().upper() == 'AUTO':
@@ -785,10 +787,12 @@ class ServerOptions(Options):
                 uid=uid,
                 stdout_logfile=logfiles['stdout_logfile'],
                 stdout_capture_maxbytes = stdout_cmaxbytes,
+                stdout_events_enabled = stdout_events,
                 stdout_logfile_backups=logfiles['stdout_logfile_backups'],
                 stdout_logfile_maxbytes=logfiles['stdout_logfile_maxbytes'],
                 stderr_logfile=logfiles['stderr_logfile'],
                 stderr_capture_maxbytes = stderr_cmaxbytes,
+                stderr_events_enabled = stderr_events,
                 stderr_logfile_backups=logfiles['stderr_logfile_backups'],
                 stderr_logfile_maxbytes=logfiles['stderr_logfile_maxbytes'],
                 stopsignal=stopsignal,
@@ -1470,9 +1474,11 @@ class ProcessConfig(Config):
         'name', 'uid', 'command', 'directory', 'umask', 'priority',
         'autostart', 'autorestart', 'startsecs', 'startretries',
         'stdout_logfile', 'stdout_capture_maxbytes',
+        'stdout_events_enabled',
         'stdout_logfile_backups', 'stdout_logfile_maxbytes',
-        'stderr_logfile', 'stderr_capture_maxbytes',
+        'stderr_logfile', 'stderr_capture_maxbytes', 
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
+        'stderr_events_enabled',
         'stopsignal', 'stopwaitsecs', 'exitcodes', 'redirect_stderr' ]
     optional_param_names = [ 'environment', 'serverurl' ]
 

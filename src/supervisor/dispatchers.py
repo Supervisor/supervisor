@@ -125,8 +125,10 @@ class POutputDispatcher(PDispatcher):
         self.begintoken_data = (begintoken, len(begintoken))
         self.endtoken_data = (endtoken, len(endtoken))
         self.mainlog_level = loggers.LevelsByName.DEBG
-        options_loglevel = self.process.config.options.loglevel 
-        self.log_to_mainlog = options_loglevel <= self.mainlog_level
+        config = self.process.config
+        self.log_to_mainlog = config.options.loglevel <= self.mainlog_level
+        self.stdout_events_enabled = config.stdout_events_enabled
+        self.stderr_events_enabled = config.stderr_events_enabled
 
     def removelogs(self):
         for log in (self.mainlog, self.capturelog):
@@ -153,11 +155,18 @@ class POutputDispatcher(PDispatcher):
                 config.options.logger.log(
                     self.mainlog_level, msg, name=config.name,
                     channel=self.channel, data=data)
-            if self.channel == 'stderr':
-                event = ProcessLogStderrEvent
-            else:
-                event = ProcessLogStdoutEvent
-            notify(event(self.process, self.process.pid, data))
+            if self.channel == 'stdout':
+                if self.stdout_events_enabled:
+                    notify(
+                        ProcessLogStdoutEvent(self.process, 
+                            self.process.pid, data)
+                    )
+            else: # channel == stderr
+                if self.stderr_events_enabled:
+                    notify(
+                        ProcessLogStderrEvent(self.process, 
+                            self.process.pid, data)
+                    )
 
     def record_output(self):
         if self.capturelog is None:
