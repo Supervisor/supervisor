@@ -96,7 +96,6 @@ dist = setup(
          'supervisorctl = supervisor.supervisorctl:main',
          'echo_supervisord_conf = supervisor.confecho:main',
          'pidproxy = supervisor.pidproxy:main',
-         'memmon = supervisor.memmon:main',
          ],
       },
     )

@@ -1,4 +1,9 @@
 Next Release
+  
+  - The console script ``memmon``, introduced in Supervisor 3.0a4, has
+    been moved to Superlance (http://pypi.python.org/pypi/superlance).  
+    The Superlance package contains other useful monitoring tools designed
+    to run under Supervisor.    
 
   - Supervisorctl now correctly interprets all of the error codes that can
     be returned when starting a process.  Patch by Francesc Alted.
