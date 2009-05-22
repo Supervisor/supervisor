@@ -99,6 +99,20 @@ class DatatypesTest(unittest.TestCase):
         expected = {'foo': 'bar', 'baz': 'qux'}
         self.assertEqual(actual, expected)
 
+    def test_dict_of_key_value_pairs_handles_commas_inside_apostrophes(self):
+        actual = datatypes.dict_of_key_value_pairs("foo='bar,baz',baz='q,ux'")
+        expected = {'foo': 'bar,baz', 'baz': 'q,ux'}
+        self.assertEqual(actual, expected)
+
+    def test_dict_of_key_value_pairs_handles_commas_inside_quotes(self):
+        actual = datatypes.dict_of_key_value_pairs('foo="bar,baz",baz="q,ux"')
+        expected = {'foo': 'bar,baz', 'baz': 'q,ux'}
+        self.assertEqual(actual, expected)
+
+    def test_dict_of_key_value_pairs_raises_value_error_on_weird_input(self):
+        self.assertRaises(ValueError, 
+                          datatypes.dict_of_key_value_pairs, 'foo')
+
     def test_logfile_name_returns_none_for_none_values(self):
         for thing in datatypes.LOGFILE_NONES:
             actual = datatypes.logfile_name(thing)

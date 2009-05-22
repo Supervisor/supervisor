@@ -1,5 +1,9 @@
 Next Release
 
+  - Values for subprocess environment variables specified with environment=
+    in supervisord.conf can now be optionally quoted, allowing them to 
+    contain commas.  Patch by Tim Godfrey.
+
   - Added a new event type, REMOTE_COMMUNICATION, that is emitted by a new
     RPC method, supervisor.sendRemoteCommEvent().
 

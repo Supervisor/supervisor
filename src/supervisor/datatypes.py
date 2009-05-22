@@ -13,6 +13,7 @@
 ##############################################################################
 
 import os
+import re
 import sys
 import socket
 from supervisor.loggers import getLevelNumByDescription
@@ -78,19 +79,30 @@ def list_of_exitcodes(arg):
     except:
         raise ValueError("not a valid list of exit codes: " + repr(arg))
 
+# Regular expression to match key=value, key='value' or key="value" strings
+# Quoted values can allow commas, unquoted will not
+DICT_OF_KVP_REGEXP = re.compile(r"[ \t]*(?P<key>\w+)[ \t]*=[ \t]"
+                                r"*(?P<quote>['\"])?"
+                                r"(?P<value>.*?)(?(quote)['\"])[,$]")
+
 def dict_of_key_value_pairs(arg):
-    """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'} """
+    """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'}
+        Quotes can be used to allow commas in the value
+    """
     D = {}
-    try:
-        pairs = filter(None, arg.split(','))
-        for pair in pairs:
-            try:
-                k, v = pair.split('=', 1)
-            except ValueError:
-                raise ValueError('Unknown key/value pair %s' % pair)
-            D[k.strip()] = v.strip()
-    except:
-        raise ValueError("not a list of key/value pairs: " + repr(arg))        
+
+    if len(arg):
+        # Work-around non-greedy value match won't let the regexp parse
+        # the last key=value pair if value is not quoted
+        if arg[-1] != ',':
+            arg += ','
+
+        for key, quote, value in DICT_OF_KVP_REGEXP.findall(arg):
+            D[key] = value.strip()
+
+        if D == {}:
+            raise ValueError("not a list of key/value pairs: " + repr(arg))
+
     return D
 
 class Automatic:
