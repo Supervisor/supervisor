@@ -25,6 +25,9 @@ from supervisor.options import NoPermission
 from supervisor.options import make_namespec
 from supervisor.options import split_namespec
 
+from supervisor.events import notify
+from supervisor.events import RemoteCommunicationEvent
+
 from supervisor.http import NOT_DONE_YET
 from supervisor.xmlrpc import Faults
 from supervisor.xmlrpc import RPCError
@@ -771,11 +774,10 @@ class SupervisorNamespaceRPCInterface:
         if isinstance(data, unicode):
             data = data.encode('utf-8')
 
-        import events
-        events.notify(
-            events.RemoteCommunicationEvent(type, data)
+        notify(
+            RemoteCommunicationEvent(type, data)
         )
-        
+
         return True
 
 def make_allfunc(processes, predicate, func, **extra_kwargs):
