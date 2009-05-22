@@ -1,5 +1,8 @@
 Next Release
 
+  - Supervisorctl now correctly interprets all of the error codes that can
+    be returned when starting a process.  Patch by Francesc Alted.
+
   - New 'stdout_events_enabled' and 'stderr_events_enabled' config options
     have been added to the '[program:x]', '[fcgi-program:x]', and 
     '[eventlistener:x]' sections.  These enable the emitting of new 
