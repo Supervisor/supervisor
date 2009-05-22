@@ -65,22 +65,37 @@ class EventSubscriptionNotificationTests(unittest.TestCase):
         
 
 class TestEventTypes(unittest.TestCase):
-    def test_ProcessCommunicationEvent(self):
+    def test_ProcessCommunicationEvent_attributes(self):
         from supervisor.events import ProcessCommunicationEvent
         inst = ProcessCommunicationEvent(1, 2, 3)
         self.assertEqual(inst.process, 1)
         self.assertEqual(inst.pid, 2)
         self.assertEqual(inst.data, 3)
 
-    def test_ProcessCommunicationStdoutEvent(self):
+    def test_ProcessCommunicationEvent_inheritence(self):
+        from supervisor.events import ProcessCommunicationEvent
+        from supervisor.events import Event
+        self.assertTrue(
+            issubclass(ProcessCommunicationEvent, Event)
+        )
+
+    def test_ProcessCommunicationStdoutEvent_attributes(self):
         from supervisor.events import ProcessCommunicationStdoutEvent
         inst = ProcessCommunicationStdoutEvent(1, 2, 3)
         self.assertEqual(inst.process, 1)
         self.assertEqual(inst.pid, 2)
         self.assertEqual(inst.data, 3)
         self.assertEqual(inst.channel, 'stdout')
+
+    def test_ProcessCommunicationStdoutEvent_inheritence(self):
+        from supervisor.events import ProcessCommunicationStdoutEvent
+        from supervisor.events import ProcessCommunicationEvent
+        self.assertTrue(
+            issubclass(ProcessCommunicationStdoutEvent, 
+                       ProcessCommunicationEvent)
+        )
         
-    def test_ProcessCommunicationStderrEvent(self):
+    def test_ProcessCommunicationStderrEvent_attributes(self):
         from supervisor.events import ProcessCommunicationStderrEvent
         inst = ProcessCommunicationStderrEvent(1, 2, 3)
         self.assertEqual(inst.process, 1)
@@ -88,15 +103,28 @@ class TestEventTypes(unittest.TestCase):
         self.assertEqual(inst.data, 3)
         self.assertEqual(inst.channel, 'stderr')
 
-    def test_RemoteCommunicationEvent(self):
+    def test_ProcessCommunicationStderrEvent_inheritence(self):
+        from supervisor.events import ProcessCommunicationStderrEvent
+        from supervisor.events import ProcessCommunicationEvent
+        self.assertTrue(
+            issubclass(ProcessCommunicationStderrEvent, 
+                       ProcessCommunicationEvent)
+        )
+
+    def test_RemoteCommunicationEvent_attributes(self):
         from supervisor.events import RemoteCommunicationEvent
         inst = RemoteCommunicationEvent(1, 2)
         self.assertEqual(inst.type, 1)
         self.assertEqual(inst.data, 2)
 
-    # nothing to test for SupervisorStateChangeEvent and subtypes
+    def test_RemoteCommunicationEvent_inheritence(self):
+        from supervisor.events import RemoteCommunicationEvent
+        from supervisor.events import Event
+        self.assertTrue(
+            issubclass(RemoteCommunicationEvent, Event)
+        )
 
-    def test_EventRejectedEvent(self):
+    def test_EventRejectedEvent_attributes(self):
         from supervisor.events import EventRejectedEvent
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
@@ -106,17 +134,27 @@ class TestEventTypes(unittest.TestCase):
         self.assertEqual(event.process, process)
         self.assertEqual(event.event, rejected_event)
 
-    def _test_ProcessStateEvent(self, klass):
-        from supervisor.states import ProcessStates
-        options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
-        process = DummyProcess(pconfig1)
-        inst = klass(process, ProcessStates.STARTING)
-        self.assertEqual(inst.process, process)
-        self.assertEqual(inst.from_state, ProcessStates.STARTING)
-        self.assertEqual(inst.expected, True)
+    def test_EventRejectedEvent_does_not_inherit_from_event(self):
+        from supervisor.events import EventRejectedEvent
+        from supervisor.events import Event
+        self.assertFalse(
+            issubclass(EventRejectedEvent, Event)
+        )
 
-    def test_ProcessStateEvents(self):
+    def test_all_SupervisorStateChangeEvents(self):
+        from supervisor import events
+        for klass in (
+            events.SupervisorStateChangeEvent,
+            events.SupervisorRunningEvent,
+            events.SupervisorStoppingEvent        
+            ):
+            self._test_one_SupervisorStateChangeEvent(klass)
+
+    def _test_one_SupervisorStateChangeEvent(self, klass):
+        from supervisor.events import SupervisorStateChangeEvent
+        self.assertTrue(issubclass(klass, SupervisorStateChangeEvent))
+
+    def test_all_ProcessStateEvents(self):
         from supervisor import events
         for klass in (
             events.ProcessStateEvent,
@@ -129,20 +167,37 @@ class TestEventTypes(unittest.TestCase):
             events.ProcessStateStoppingEvent,
             events.ProcessStateStartingEvent,
             ):
-            self._test_ProcessStateEvent(klass)
+            self._test_one_ProcessStateEvent(klass)
 
-    def test_TickEvents(self):
+    def _test_one_ProcessStateEvent(self, klass):
+        from supervisor.states import ProcessStates
+        from supervisor.events import ProcessStateEvent
+        self.assertTrue(issubclass(klass, ProcessStateEvent))
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process = DummyProcess(pconfig1)
+        inst = klass(process, ProcessStates.STARTING)
+        self.assertEqual(inst.process, process)
+        self.assertEqual(inst.from_state, ProcessStates.STARTING)
+        self.assertEqual(inst.expected, True)
+
+    def test_all_TickEvents(self):
         from supervisor import events
         for klass in (
-            events.TickEvent,
-            events.Tick5Event,
-            events.Tick60Event,
-            events.Tick3600Event,
-            ):
-            
-            event = klass(1, 2)
-            self.assertEqual(event.when, 1)
-            self.assertEqual(event.supervisord, 2)
+           events.TickEvent,
+           events.Tick5Event,
+           events.Tick60Event,
+           events.Tick3600Event
+           ):
+           self._test_one_TickEvent(klass)
+
+    def _test_one_TickEvent(self, klass):
+        from supervisor.events import TickEvent
+        self.assertTrue(issubclass(klass, TickEvent))
+        
+        inst = klass(1, 2)
+        self.assertEqual(inst.when, 1)
+        self.assertEqual(inst.supervisord, 2)
         
 class TestSerializations(unittest.TestCase):
     def _deserialize(self, serialization):

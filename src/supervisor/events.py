@@ -77,7 +77,7 @@ class SupervisorRunningEvent(SupervisorStateChangeEvent):
 class SupervisorStoppingEvent(SupervisorStateChangeEvent):
     pass
 
-class EventRejectedEvent:
+class EventRejectedEvent: # purposely does not subclass Event
     def __init__(self, process, event):
         self.process = process
         self.event = event
