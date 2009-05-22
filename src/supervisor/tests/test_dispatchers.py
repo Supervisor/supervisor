@@ -21,10 +21,12 @@ class POutputDispatcherTests(unittest.TestCase):
         from supervisor.dispatchers import POutputDispatcher
         return POutputDispatcher
 
-    def _makeOne(self, process):
-        from supervisor.events import ProcessCommunicationStdoutEvent
-        return self._getTargetClass()(process,
-                                      ProcessCommunicationStdoutEvent, 0)
+    def _makeOne(self, process, channel='stdout'):
+        from supervisor import events
+        events = {'stdout': events.ProcessCommunicationStdoutEvent,
+                  'stderr': events.ProcessCommunicationStderrEvent}
+        # dispatcher derives its channel from event class
+        return self._getTargetClass()(process, events[channel], 0)
 
     def test_writable(self):
         options = DummyOptions()
@@ -124,7 +126,7 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.childlog.handlers[0].reopened, True)
         self.assertEqual(dispatcher.mainlog.handlers[0].reopened, True)
 
-    def test_record_output_non_capturemode(self):
+    def test_record_output_log_non_capturemode(self):
         # stdout/stderr goes to the process log and the main log,
         # in non-capturemode, the data length doesn't matter
         options = DummyOptions()
@@ -140,6 +142,44 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(options.logger.data[0],
              "'process1' stdout output:\na")
         self.assertEqual(dispatcher.output_buffer, '')
+
+    def test_record_output_emits_stdout_event(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process, 'stdout')
+        dispatcher.output_buffer = 'hello from stdout'
+
+        L = []
+        def doit(event):
+            L.append(event)
+        from supervisor import events
+        events.subscribe(events.EventTypes.PROCESS_LOG_STDOUT, doit)
+        dispatcher.record_output()
+
+        self.assertEqual(len(L), 1)
+        event = L[0]
+        self.assertEqual(event.process, process)
+        self.assertEqual(event.data, 'hello from stdout') 
+
+    def test_record_output_emits_stderr_event(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process, 'stderr')
+        dispatcher.output_buffer = 'hello from stderr'
+
+        L = []
+        def doit(event):
+            L.append(event)
+        from supervisor import events
+        events.subscribe(events.EventTypes.PROCESS_LOG_STDERR, doit)
+        dispatcher.record_output()
+
+        self.assertEqual(len(L), 1)
+        event = L[0]
+        self.assertEqual(event.process, process)
+        self.assertEqual(event.data, 'hello from stderr') 
 
     def test_record_output_capturemode_string_longer_than_token(self):
         # stdout/stderr goes to the process log and the main log,

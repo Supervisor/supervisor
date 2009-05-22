@@ -31,6 +31,30 @@ class Event:
     """ Abstract event type """
     pass
 
+class ProcessLogEvent(Event):
+    """ Abstract """
+    def __init__(self, process, pid, data):
+        self.process = process
+        self.pid = pid
+        self.data = data
+
+    def __str__(self):
+        groupname = ''
+        if self.process.group is not None:
+            groupname = self.process.group.config.name
+        return 'processname:%s groupname:%s pid:%s channel:%s\n%s' % (
+            self.process.config.name,
+            groupname,
+            self.pid,
+            self.channel,
+            self.data)
+
+class ProcessLogStdoutEvent(ProcessLogEvent):
+    channel = 'stdout'
+
+class ProcessLogStderrEvent(ProcessLogEvent):
+    channel = 'stderr'
+
 class ProcessCommunicationEvent(Event):
     """ Abstract """
     # event mode tokens
@@ -77,7 +101,7 @@ class SupervisorRunningEvent(SupervisorStateChangeEvent):
 class SupervisorStoppingEvent(SupervisorStateChangeEvent):
     pass
 
-class EventRejectedEvent: # purposely does not subclass Event
+class EventRejectedEvent: # purposely does not subclass Event 
     def __init__(self, process, event):
         self.process = process
         self.event = event
@@ -175,6 +199,9 @@ class EventTypes:
     PROCESS_COMMUNICATION = ProcessCommunicationEvent # abstract
     PROCESS_COMMUNICATION_STDOUT = ProcessCommunicationStdoutEvent
     PROCESS_COMMUNICATION_STDERR = ProcessCommunicationStderrEvent
+    PROCESS_LOG = ProcessLogEvent
+    PROCESS_LOG_STDOUT = ProcessLogStdoutEvent
+    PROCESS_LOG_STDERR = ProcessLogStderrEvent     
     REMOTE_COMMUNICATION = RemoteCommunicationEvent
     SUPERVISOR_STATE_CHANGE = SupervisorStateChangeEvent # abstract
     SUPERVISOR_STATE_CHANGE_RUNNING = SupervisorRunningEvent

@@ -17,6 +17,8 @@ from asyncore import compact_traceback
 
 from supervisor.events import notify
 from supervisor.events import EventRejectedEvent
+from supervisor.events import ProcessLogStderrEvent
+from supervisor.events import ProcessLogStdoutEvent 
 from supervisor.states import EventListenerStates
 from supervisor import loggers
 
@@ -151,6 +153,11 @@ class POutputDispatcher(PDispatcher):
                 config.options.logger.log(
                     self.mainlog_level, msg, name=config.name,
                     channel=self.channel, data=data)
+            if self.channel == 'stderr':
+                event = ProcessLogStderrEvent
+            else:
+                event = ProcessLogStdoutEvent
+            notify(event(self.process, self.process.pid, data))
 
     def record_output(self):
         if self.capturelog is None:

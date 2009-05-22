@@ -1,5 +1,11 @@
 Next Release
 
+  - Added new event types that are emitted when a subprocess sends data to
+    stdout or stderr that would be logged (i.e., data received when not in 
+    the special capture mode used by the PROCESS_COMMUNICATION events).  
+    Event listeners can subscribe to either PROCESS_LOG_STDOUT or 
+    PROCESS_LOG_STDERR individually, or PROCESS_LOG for both.
+
   - Values for subprocess environment variables specified with environment=
     in supervisord.conf can now be optionally quoted, allowing them to 
     contain commas.  Patch by Tim Godfrey.

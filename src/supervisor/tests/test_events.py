@@ -65,6 +65,50 @@ class EventSubscriptionNotificationTests(unittest.TestCase):
         
 
 class TestEventTypes(unittest.TestCase):
+    def test_ProcessLogEvent_attributes(self):
+        from supervisor.events import ProcessLogEvent
+        inst = ProcessLogEvent(1, 2, 3)
+        self.assertEqual(inst.process, 1)
+        self.assertEqual(inst.pid, 2)
+        self.assertEqual(inst.data, 3)
+
+    def test_ProcessLogEvent_inheritence(self):
+        from supervisor.events import ProcessLogEvent
+        from supervisor.events import Event
+        self.assertTrue(
+            issubclass(ProcessLogEvent, Event)
+        )
+
+    def test_ProcessLogStdoutEvent_attributes(self):
+        from supervisor.events import ProcessLogStdoutEvent
+        inst = ProcessLogStdoutEvent(1, 2, 3)
+        self.assertEqual(inst.process, 1)
+        self.assertEqual(inst.pid, 2)
+        self.assertEqual(inst.data, 3)
+        self.assertEqual(inst.channel, 'stdout')
+
+    def test_ProcessLogStdoutEvent_inheritence(self):
+        from supervisor.events import ProcessLogStdoutEvent
+        from supervisor.events import ProcessLogEvent
+        self.assertTrue(
+            issubclass(ProcessLogStdoutEvent, ProcessLogEvent)
+        )
+
+    def test_ProcessLogStderrEvent_attributes(self):
+        from supervisor.events import ProcessLogStderrEvent
+        inst = ProcessLogStderrEvent(1, 2, 3)
+        self.assertEqual(inst.process, 1)
+        self.assertEqual(inst.pid, 2)
+        self.assertEqual(inst.data, 3)
+        self.assertEqual(inst.channel, 'stderr')
+
+    def test_ProcessLogStderrEvent_inheritence(self):
+        from supervisor.events import ProcessLogStderrEvent
+        from supervisor.events import ProcessLogEvent
+        self.assertTrue(
+            issubclass(ProcessLogStderrEvent, ProcessLogEvent)
+        )
+
     def test_ProcessCommunicationEvent_attributes(self):
         from supervisor.events import ProcessCommunicationEvent
         inst = ProcessCommunicationEvent(1, 2, 3)
@@ -215,7 +259,52 @@ class TestSerializations(unittest.TestCase):
                 raise AssertionError('headerdata %r could not be deserialized' %
                                      headerdata)
         return headers, payload
-    
+
+    def test_plog_stdout_event(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1)
+        from supervisor.events import ProcessLogStdoutEvent
+        class DummyGroup:
+            config = pconfig1
+        process1.group = DummyGroup
+        event = ProcessLogStdoutEvent(process1, 1, 'yo')
+        headers, payload = self._deserialize(str(event))
+        self.assertEqual(headers['processname'], 'process1', headers)
+        self.assertEqual(headers['groupname'], 'process1', headers)
+        self.assertEqual(headers['pid'], '1', headers)
+        self.assertEqual(payload, 'yo')
+
+    def test_plog_stderr_event(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1)
+        from supervisor.events import ProcessLogStderrEvent
+        class DummyGroup:
+            config = pconfig1
+        process1.group = DummyGroup
+        event = ProcessLogStderrEvent(process1, 1, 'yo')
+        headers, payload = self._deserialize(str(event))
+        self.assertEqual(headers['processname'], 'process1', headers)
+        self.assertEqual(headers['groupname'], 'process1', headers)
+        self.assertEqual(headers['pid'], '1', headers)
+        self.assertEqual(payload, 'yo')
+            
+    def test_pcomm_stdout_event(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1)
+        from supervisor.events import ProcessCommunicationStdoutEvent
+        class DummyGroup:
+            config = pconfig1
+        process1.group = DummyGroup
+        event = ProcessCommunicationStdoutEvent(process1, 1, 'yo')
+        headers, payload = self._deserialize(str(event))
+        self.assertEqual(headers['processname'], 'process1', headers)
+        self.assertEqual(headers['groupname'], 'process1', headers)
+        self.assertEqual(headers['pid'], '1', headers)
+        self.assertEqual(payload, 'yo')
+            
     def test_pcomm_stdout_event(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
