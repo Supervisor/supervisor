@@ -688,6 +688,10 @@ class DummySupervisorRPCNamespace:
             raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME:BAD_NAME')
         if name == 'BAD_NAME':
             raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+        if name == 'NO_FILE':
+            raise Fault(xmlrpc.Faults.NO_FILE, 'NO_FILE')
+        if name == 'NOT_EXECUTABLE':
+            raise Fault(xmlrpc.Faults.NOT_EXECUTABLE, 'NOT_EXECUTABLE')
         if name == 'ALREADY_STARTED':
             raise Fault(xmlrpc.Faults.ALREADY_STARTED, 'ALREADY_STARTED')
         if name == 'SPAWN_ERROR':

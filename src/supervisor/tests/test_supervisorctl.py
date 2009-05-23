@@ -283,6 +283,20 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'BAD_NAME: ERROR (no such process)\n')
 
+    def test_start_no_file(self):
+        plugin = self._makeOne()
+        result = plugin.do_start('NO_FILE')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'NO_FILE: ERROR (no such file)\n')
+
+    def test_start_not_executable(self):
+        plugin = self._makeOne()
+        result = plugin.do_start('NOT_EXECUTABLE')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'NOT_EXECUTABLE: ERROR (file is not executable)\n')
+
     def test_start_alreadystarted(self):
         plugin = self._makeOne()
         result = plugin.do_start('ALREADY_STARTED')
