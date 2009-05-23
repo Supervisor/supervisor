@@ -1,0 +1,26 @@
+#! /bin/sh 
+# prerm script for medusa
+
+set -e
+
+PACKAGE=python2.3-medusa
+VERSION=2.3
+LIB="/usr/lib/python$VERSION"
+DIRLIST="$LIB/site-packages/medusa"
+
+case "$1" in
+    remove|upgrade|failed-upgrade)
+        for i in $DIRLIST ; do
+            find $i -name '*.py[co]' -exec rm \{\} \;
+        done
+    ;;
+
+    *)
+        echo "prerm called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+
+
+exit 0

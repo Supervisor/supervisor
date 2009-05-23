@@ -1,0 +1,83 @@
+
+<h1>Data Flow in Medusa</h1>
+
+<img src="data_flow.gif">
+
+<p>Data flow, both input and output, is asynchronous.  This is
+signified by the <i>request</i> and <i>reply</i> queues in the above
+diagram.  This means that both requests and replies can get 'backed
+up', and are still handled correctly.  For instance, HTTP/1.1 supports
+the concept of <i>pipelined requests</i>, where a series of requests
+are sent immediately to a server, and the replies are sent as they are
+processed.  With a <i>synchronous</i> request, the client would have
+to wait for a reply to each request before sending the next.</p>
+
+<p>The input data is partitioned into requests by looking for a
+<i>terminator</i>.  A terminator is simply a protocol-specific
+delimiter - often simply CRLF (carriage-return line-feed), though it
+can be longer (for example, MIME multi-part boundaries can be
+specified as terminators).  The protocol handler is notified whenever
+a complete request has been received.</p>
+
+<p>The protocol handler then generates a reply, which is enqueued for
+output back to the client.  Sometimes, instead of queuing the actual
+data, an object that will generate this data is used, called a
+<i>producer</i>.</p>
+
+<img src="producers.gif">
+
+<p>The use of <code>producers</code> gives the programmer
+extraordinary control over how output is generated and inserted into
+the output queue.  Though they are simple objects (requiring only a
+single method, <i>more()</i>, to be defined), they can be
+<i>composed</i> - simple producers can be wrapped around each other to
+create arbitrarily complex behaviors.  [now would be a good time to
+browse through some of the producer classes in
+<code>producers.py</code>.]</p>
+
+<p>The HTTP/1.1 producers make an excellent example.  HTTP allows
+replies to be encoded in various ways - for example a reply consisting
+of dynamically-generated output might use the 'chunked' transfer
+encoding to send data that is compressed on-the-fly.</p>
+
+<img src="composing_producers.gif">
+
+<p>In the diagram, green producers actually generate output, and grey
+ones transform it in some manner.  This producer might generate output
+looking like this:
+
+<pre>
+                            HTTP/1.1 200 OK
+                            Content-Encoding: gzip
+                            Transfer-Encoding: chunked
+              Header ==>    Date: Mon, 04 Aug 1997 21:31:44 GMT
+                            Content-Type: text/html
+                            Server: Medusa/3.0
+                            
+             Chunking ==>   0x200
+            Compression ==> <512 bytes of compressed html>
+                            0x200
+                            <512 bytes of compressed html>
+                            ...
+                            0
+                            
+</pre>
+
+<p>Still more can be done with this output stream: For the purpose of
+efficiency, it makes sense to send output in large, fixed-size chunks:
+This transformation can be applied by wrapping a 'globbing' producer
+around the whole thing.</p>
+
+<p>An important feature of Medusa's producers is that they are
+actually rather small objects that do not expand into actual output
+data until the moment they are needed: The <code>async_chat</code>
+class will only call on a producer for output when the outgoing socket
+has indicated that it is ready for data.  Thus Medusa is extremely
+efficient when faced with network delays, 'hiccups', and low bandwidth
+clients.
+
+<p>One final note: The mechanisms described above are completely
+general - although the examples given demonstrate application to the
+<code>http</code> protocol, Medusa's asynchronous core has been
+applied to many different protocols, including <code>smtp</code>,
+<code>pop3</code>, <code>ftp</code>, and even <code>dns</code>.

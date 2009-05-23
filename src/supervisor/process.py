@@ -12,7 +12,6 @@
 #
 ##############################################################################
 
-import asyncore
 import os
 import sys
 import time
@@ -21,6 +20,8 @@ import shlex
 import StringIO
 import traceback
 import signal
+
+from medusa import asyncore_25 as asyncore
 
 from supervisor.states import ProcessStates
 from supervisor.states import SupervisorStates

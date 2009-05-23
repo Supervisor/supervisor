@@ -271,14 +271,20 @@ class EncryptedDictionaryAuthorizedTests(unittest.TestCase):
         self.assertEqual(authorizer.authorize(('foo', 'password')), True)
     
     def test_authorize_gooduser_badpassword_sha(self):
-        import sha
-        password = '{SHA}' + sha.new('password').hexdigest()
+        try:
+            from hashlib import sha1
+        except ImportError:
+            from sha import new as sha1
+        password = '{SHA}' + sha1('password').hexdigest()
         authorizer = self._makeOne({'foo':password})
         self.assertEqual(authorizer.authorize(('foo', 'bar')), False)
 
     def test_authorize_gooduser_goodpassword_sha(self):
-        import sha
-        password = '{SHA}' + sha.new('password').hexdigest()
+        try:
+            from hashlib import sha1
+        except ImportError:
+            from sha import new as sha1
+        password = '{SHA}' + sha1('password').hexdigest()
         authorizer = self._makeOne({'foo':password})
         self.assertEqual(authorizer.authorize(('foo', 'password')), True)
 

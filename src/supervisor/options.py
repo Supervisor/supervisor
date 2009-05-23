@@ -13,7 +13,6 @@
 ##############################################################################
 
 import ConfigParser
-import asyncore
 import socket
 import getopt
 import os
@@ -33,6 +32,8 @@ import glob
 
 from fcntl import fcntl
 from fcntl import F_SETFL, F_GETFL
+
+from medusa import asyncore_25 as asyncore
 
 from supervisor.datatypes import boolean
 from supervisor.datatypes import integer

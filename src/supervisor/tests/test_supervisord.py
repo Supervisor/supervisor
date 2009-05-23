@@ -390,7 +390,7 @@ class SupervisordTests(unittest.TestCase):
         process = DummyProcess(pconfig)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
         pgroup = DummyProcessGroup(gconfig)
-        import asyncore
+        from medusa import asyncore_25 as asyncore
         exitnow = DummyDispatcher(readable=True, error=asyncore.ExitNow)
         pgroup.dispatchers = {6:exitnow}
         supervisord.process_groups = {'foo': pgroup}
@@ -410,7 +410,7 @@ class SupervisordTests(unittest.TestCase):
             L.append(event)
         from supervisor import events
         events.subscribe(events.SupervisorStateChangeEvent, callback)
-        import asyncore
+        from medusa import asyncore_25 as asyncore
         options.test = True
         self.assertRaises(asyncore.ExitNow, supervisord.runforever)
         self.assertTrue(pgroup.all_stopped)
@@ -432,7 +432,7 @@ class SupervisordTests(unittest.TestCase):
         supervisord.process_groups = {'foo': pgroup}
         supervisord.options.mood = 0
         supervisord.options.test = True
-        import asyncore
+        from medusa import asyncore_25 as asyncore
         self.assertRaises(asyncore.ExitNow, supervisord.runforever)
         self.assertEqual(pgroup.all_stopped, True)
 

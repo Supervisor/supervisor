@@ -12,7 +12,6 @@
 #
 ##############################################################################
 
-import asyncore
 import os
 import stat
 import time
@@ -22,6 +21,7 @@ import errno
 import pwd
 import urllib
 
+from medusa import asyncore_25 as asyncore
 from medusa import http_date
 from medusa import http_server
 from medusa import producers

@@ -1,0 +1,57 @@
+# -*- Mode: Text; tab-width: 4 -*-
+
+[note, a better solution is now available, see the various modules in
+ the 'thread' directory (SMR 990105)]
+
+		  A Workable Approach to Mixing Threads and Medusa.
+---------------------------------------------------------------------------
+
+When Medusa receives a request that needs to be handled by a separate
+thread, have the thread remove the socket from Medusa's control, by
+calling the 'del_channel()' method, and put the socket into
+blocking-mode:
+
+    request.channel.del_channel()
+    request.channel.socket.setblocking (0)
+
+Now your thread is responsible for managing the rest of the HTTP
+'session'.  In particular, you need to send the HTTP response, followed
+by any headers, followed by the response body.
+
+Since the most common need for mixing threads and Medusa is to support
+CGI, there's one final hurdle that should be pointed out: CGI scripts
+sometimes make use of a 'Status:' hack (oops, I meant to say 'header')
+in order to tell the server to return a reply other than '200 OK'.  To
+support this it is necessary to scan the output _before_ it is sent.
+Here is a sample 'write' method for a file-like object that performs
+this scan:
+
+HEADER_LINE = regex.compile ('\([A-Za-z0-9-]+\): \(.*\)')
+
+	def write (self, data):
+		if self.got_header:
+			self._write (data)
+		else:
+			# CGI scripts may optionally provide extra headers.
+			# 
+			# If they do not, then the output is assumed to be
+			# text/html, with an HTTP reply code of '200 OK'.
+			# 
+			# If they do, we need to scan those headers for one in
+			# particular: the 'Status:' header, which will tell us
+			# to use a different HTTP reply code [like '302 Moved']
+			#
+			self.buffer = self.buffer + data
+			lines = string.split (self.buffer, '\n')
+			# look for something un-header-like
+			for i in range(len(lines)):
+				if i == (len(lines)-1):
+					if lines[i] == '':
+						break
+				elif HEADER_LINE.match (lines[i]) == -1:
+					# this is not a header line.
+					self.got_header = 1
+					self.buffer = self.build_header (lines[:i])
+					# rejoin the rest of the data
+					self._write (string.join (lines[i:], '\n'))
+					break

@@ -1,0 +1,36 @@
+
+# we can build 'promises' to produce external data.  Each producer
+# contains a 'promise' to fetch external data (or an error
+# message). writable() for that channel will only return true if the
+# top-most producer is ready.  This state can be flagged by the dns
+# client making a callback.
+
+# So, say 5 proxy requests come in, we can send out DNS queries for
+# them immediately.  If the replies to these come back before the
+# promises get to the front of the queue, so much the better: no
+# resolve delay. 8^)
+#
+# ok, there's still another complication:
+# how to maintain replies in order?
+# say three requests come in, (to different hosts?  can this happen?)
+# yet the connections happen third, second, and first.  We can't buffer
+# the entire request!  We need to be able to specify how much to buffer.
+#
+# ===========================================================================
+#
+# the current setup is a 'pull' model:  whenever the channel fires FD_WRITE,
+# we 'pull' data from the producer fifo.  what we need is a 'push' option/mode,
+# where
+# 1) we only check for FD_WRITE when data is in the buffer
+# 2) whoever is 'pushing' is responsible for calling 'refill_buffer()'
+#
+# what is necessary to support this 'mode'?
+# 1) writable() only fires when data is in the buffer
+# 2) refill_buffer() is only called by the 'pusher'.
+# 
+# how would such a mode affect things?  with this mode could we support
+# a true http/1.1 proxy?  [i.e, support <n> pipelined proxy requests, possibly
+# to different hosts, possibly even mixed in with non-proxy requests?]  For
+# example, it would be nice if we could have the proxy automatically apply the
+# 1.1 chunking for 1.0 close-on-eof replies when feeding it to the client. This
+# would let us keep our persistent connection.

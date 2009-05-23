@@ -39,10 +39,11 @@ import sys
 import getpass
 import xmlrpclib
 import socket
-import asyncore
 import errno
 import urlparse
 import threading
+
+from medusa import asyncore_25 as asyncore
 
 from supervisor.options import ClientOptions
 from supervisor.options import split_namespec

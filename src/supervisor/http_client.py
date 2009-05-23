@@ -2,10 +2,11 @@
 
 import sys
 import socket
-import asyncore
-import asynchat
 import base64
 from urlparse import urlparse
+
+from medusa import asyncore_25 as aysncore
+from medusa import asynchat_25 as asynchat
 
 CR="\x0d"
 LF="\x0a"

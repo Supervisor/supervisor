@@ -1,0 +1,207 @@
+<html>
+<body>
+
+<h1> What is Medusa? </h1>
+<hr>
+
+<p>
+Medusa is an architecture for very-high-performance TCP/IP servers
+(like HTTP, FTP, and NNTP).  Medusa is different from most other
+servers because it runs as a single process, multiplexing I/O with its
+various client and server connections within a single process/thread.
+
+<p>
+It is capable of smoother and higher performance than most other
+servers, while placing a dramatically reduced load on the server
+machine.  The single-process, single-thread model simplifies design
+and enables some new persistence capabilities that are otherwise
+difficult or impossible to implement.
+
+<p>
+Medusa is supported on any platform that can run Python and includes a
+functional implementation of the &lt;socket&gt; and &lt;select&gt;
+modules.  This includes the majority of Unix implementations.
+
+<p>
+During development, it is constantly tested on Linux and Win32
+[Win95/WinNT], but the core asynchronous capability has been shown to
+work on several other platforms, including the Macintosh.  It might
+even work on VMS.
+
+
+<h2>The Power of Python</h2>
+
+<p>
+A distinguishing feature of Medusa is that it is written entirely in
+Python.  Python (<a href="http://www.python.org/">http://www.python.org/</a>) is a
+'very-high-level' object-oriented language developed by Guido van
+Rossum (currently at CNRI).  It is easy to learn, and includes many
+modern programming features such as storage management, dynamic
+typing, and an extremely flexible object system.  It also provides
+convenient interfaces to C and C++.
+
+<p>
+The rapid prototyping and delivery capabilities are hard to exaggerate;
+for example
+<ul>
+
+  <li>It took me longer to read the documentation for persistent HTTP
+  connections (the 'Keep-Alive' connection token) than to add the
+  feature to Medusa.
+
+  <li>A simple IRC-like chat server system was written in about 90 minutes.
+
+</ul>
+
+<p> I've heard similar stories from alpha test sites, and other users of
+the core async library.
+
+<h2>Server Notes</h2>
+
+<p>Both the FTP and HTTP servers use an abstracted 'filesystem object' to
+gain access to a given directory tree.  One possible server extension
+technique would be to build behavior into this filesystem object,
+rather than directly into the server: Then the extension could be
+shared with both the FTP and HTTP servers.
+
+<h3>HTTP</h3>
+
+<p>The core HTTP server itself is quite simple - all functionality is
+provided through 'extensions'.  Extensions can be plugged in
+dynamically. [i.e., you could log in to the server via the monitor
+service and add or remove an extension on the fly].  The basic
+file-delivery service is provided by a 'default' extension, which
+matches all URI's.  You can build more complex behavior by replacing
+or extending this class.
+
+
+<p>The default extension includes support for the 'Connection: Keep-Alive'
+token, and will re-use a client channel when requested by the client.
+
+<h3>FTP</h3>
+
+<p>On Unix, the ftp server includes support for 'real' users, so that it
+may be used as a drop-in replacement for the normal ftp server.  Since
+most ftp servers on Unix use the 'forking' model, each child process
+changes its user/group persona after a successful login.  This is a
+appears to be a secure design.
+
+
+<p>Medusa takes a different approach - whenever Medusa performs an
+operation for a particular user [listing a directory, opening a file],
+it temporarily switches to that user's persona _only_ for the duration
+of the operation.  [and each such operation is protected by a
+try/finally exception handler].
+
+
+<p>To do this  Medusa MUST run  with super-user privileges.  This is a
+HIGHLY experimental   approach, and although   it has  been thoroughly
+tested    on Linux, security problems  may    still exist.  If you are
+concerned  about the security of your   server machine, AND YOU SHOULD
+BE,  I suggest running  Medusa's ftp  server  in anonymous-only  mode,
+under an account with limited privileges ('nobody' is usually used for
+this purpose).
+
+
+<p>I am   very  interested  in any feedback    on  this feature,  most
+especially   information  on how     the server behaves  on  different
+implementations of Unix, and of course  any security problems that are
+found.
+
+<hr>
+
+<h3>Monitor</h3>
+
+<p>The monitor server gives you remote, 'back-door' access to your server
+while it is running.  It implements a remote python interpreter.  Once
+connected to the monitor, you can do just about anything you can do from
+the normal python interpreter.  You can examine data structures, servers,
+connection objects.  You can enable or disable extensions, restart the server,
+reload modules, etc...
+
+<p>The monitor server   is protected with an MD5-based  authentication
+similar to that proposed in RFC1725 for the POP3 protocol.  The server
+sends the  client a  timestamp,  which  is then  appended to  a secret
+password.  The resulting md5 digest is  sent back to the server, which
+then compares this to the  expected result.  Failed login attempts are
+logged and immediately disconnected.  The  password itself is not sent
+over the network (unless you  have  foolishly transmitted it  yourself
+through an insecure telnet or X11 session. 8^)
+
+<p>For this  reason telnet  cannot be used  to connect  to the monitor
+server when it is in a secure mode (the default).  A client program is
+provided for this  purpose.  You will  be prompted for a password when
+starting up the server, and by the monitor client.
+
+<p>For  extra added   security  on   Unix,  the monitor   server  will
+eventually be able to use a Unix-domain socket, which can be protected
+behind a 'firewall' directory (similar to the InterNet News server).
+
+<hr>
+<h2>Performance Notes</h2>
+
+<h3>The <code>select()</code> function</h3>
+
+<p>At  the  heart of  Medusa  is  a single <code>select()</code> loop.
+This loop   handles all  open  socket connections,  both   servers and
+clients.  It  is  in effect  constantly  asking the  system: 'which of
+these sockets has activity?'.   Performance  of this system  call  can
+vary widely between operating systems.
+
+<p>There  are also often builtin limitations  to the number of sockets
+('file descriptors')  that a single  process,  or a whole system,  can
+manipulate at the same time.  Early versions of Linux placed draconian
+limits (256) that  have since been raised.  Windows  95 has a limit of
+64, while OSF/1 seems to allow up to 4096.
+
+<p>These limits don't affect only Medusa, you will find them described
+in the documentation for other web and ftp servers, too.
+
+<p>The documentation for the Apache web server has some excellent
+notes on tweaking performance for various Unix implementations.  See
+<a href="http://www.apache.org/docs/misc/perf.html">
+http://www.apache.org/docs/misc/perf.html</a>
+for more information.
+
+<h3>Buffer sizes</h3>
+
+<p>
+The default buffer sizes  used by Medusa  are  set with a  bias toward
+Internet-based servers: They are  relatively small, so that the buffer
+overhead for each connection is  low.   The assumption is that  Medusa
+will be talking to a large number of low-bandwidth connections, rather
+than a smaller number of high bandwidth.
+
+<p>This choice  trades run-time memory use for   efficiency - the down
+side of this is that high-speed local connections  (i.e., over a local
+ethernet) will transfer data at a slower rate than necessary.
+
+<p>This parameter can easily be tweaked by  the site designer, and can
+in fact  be adjusted on  a per-server  or  even per-client basis.  For
+example, you could  have the  FTP server  use larger  buffer sizes for
+connections from certain domains.
+
+<p>If there's enough interest, I have some rough ideas for how to make
+these  buffer sizes automatically adjust  to an optimal setting.  Send
+email if you'd like to see this feature.
+
+<hr>
+
+<p>See <a href="medusa.html">./medusa.html</a> for a brief overview of
+some of the ideas behind Medusa's design, and for a description of
+current and upcoming features.
+
+<p><h3>Enjoy!</h3>
+
+<hr>
+<br>-Sam Rushing
+<br><a href="mailto:rushing@nightmare.com">rushing@nightmare.com</a>
+
+<!--
+  Local Variables:
+  indent-use-tabs: nil
+  end:
+-->
+
+</body>
+</html>

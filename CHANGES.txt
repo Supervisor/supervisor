@@ -1,4 +1,9 @@
 Next Release
+ 
+  - We now bundle our own patched version of Medusa contributed by Jason
+    Kirtland to allow Supervisor to run on Python 2.6.  This was done 
+    because Python 2.6 introduced backwards incompatible changes to 
+    asyncore and asynchat in the stdlib.
   
   - The console script ``memmon``, introduced in Supervisor 3.0a4, has
     been moved to Superlance (http://pypi.python.org/pypi/superlance).  

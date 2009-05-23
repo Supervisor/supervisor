@@ -81,10 +81,9 @@ dist = setup(
         'COPYRIGHT.txt'
         ]
     )],
-    install_requires = ['medusa >= 0.5.4', 'meld3 >= 0.6.4',
-                        'elementtree >= 1.2.6,<1.2.7'],
+    install_requires = ['meld3 >= 0.6.4', 'elementtree >= 1.2.6,<1.2.7'],
     extras_require = {'iterparse':['cElementTree >= 1.0.2']},
-    tests_require = ['meld3 >= 0.6.3', 'medusa >= 0.5.4'],
+    tests_require = ['meld3 >= 0.6.3'],
     include_package_data = True,
     zip_safe = False,
     namespace_packages = ['supervisor'],
