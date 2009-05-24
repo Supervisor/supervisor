@@ -1,12 +1,12 @@
 # -*- Mode: Python -*-
 
 import re, sys
-from medusa import asyncore_25 as asyncore
-from medusa import http_server
-from medusa import default_handler
-from medusa import logger
-from medusa import script_handler
-from medusa import filesys
+from supervisor.medusa import asyncore_25 as asyncore
+from supervisor.medusa import http_server
+from supervisor.medusa import default_handler
+from supervisor.medusa import logger
+from supervisor.medusa import script_handler
+from supervisor.medusa import filesys
 
 PUBLISHING_ROOT='/home/medusa'
 CONTENT_LENGTH = re.compile ('Content-Length: ([0-9]+)', re.IGNORECASE)

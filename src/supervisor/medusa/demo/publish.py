@@ -12,12 +12,12 @@
 # base64-encodes the username and password).  The 'Digest' scheme is
 # much more secure, but not widely supported yet. <sigh>
 
-from medusa import asyncore_25 as asyncore
-from medusa import default_handler
-from medusa import http_server
-from medusa import put_handler
-from medusa import auth_handler
-from medusa import filesys
+from supervisor.medusa import asyncore_25 as asyncore
+from supervisor.medusa import default_handler
+from supervisor.medusa import http_server
+from supervisor.medusa import put_handler
+from supervisor.medusa import auth_handler
+from supervisor.medusa import filesys
 
 # For this demo, we'll just use a dictionary of usernames/passwords.
 # You can of course use anything that supports the mapping interface,

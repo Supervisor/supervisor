@@ -21,14 +21,14 @@ import errno
 import pwd
 import urllib
 
-from medusa import asyncore_25 as asyncore
-from medusa import http_date
-from medusa import http_server
-from medusa import producers
-from medusa import filesys
-from medusa import default_handler
+from supervisor.medusa import asyncore_25 as asyncore
+from supervisor.medusa import http_date
+from supervisor.medusa import http_server
+from supervisor.medusa import producers
+from supervisor.medusa import filesys
+from supervisor.medusa import default_handler
 
-from medusa.auth_handler import auth_handler
+from supervisor.medusa.auth_handler import auth_handler
 
 class NOT_DONE_YET:
     pass
@@ -483,7 +483,7 @@ class supervisor_http_server(http_server.http_server):
     def prebind(self, sock, logger_object):
         """ Override __init__ to do logger setup earlier so it can
         go to our logger object instead of stdout """
-        from medusa import logger
+        from supervisor.medusa import logger
 
         if not logger_object:
             logger_object = logger.file_logger(sys.stdout)
@@ -500,8 +500,8 @@ class supervisor_http_server(http_server.http_server):
         self.set_reuse_addr()
         
     def postbind(self):
-        from medusa.counter import counter
-        from medusa.http_server import VERSION_STRING
+        from supervisor.medusa.counter import counter
+        from supervisor.medusa.http_server import VERSION_STRING
 
         self.listen(1024)
 

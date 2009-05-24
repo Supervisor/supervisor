@@ -14,16 +14,16 @@
 import os
 import sys
 
-from medusa import asyncore_25 as asyncore
-from medusa import http_server
-from medusa import ftp_server
-from medusa import chat_server
-from medusa import monitor
-from medusa import filesys
-from medusa import default_handler
-from medusa import status_handler
-from medusa import resolver
-from medusa import logger
+from supervisor.medusa import asyncore_25 as asyncore
+from supervisor.medusa import http_server
+from supervisor.medusa import ftp_server
+from supervisor.medusa import chat_server
+from supervisor.medusa import monitor
+from supervisor.medusa import filesys
+from supervisor.medusa import default_handler
+from supervisor.medusa import status_handler
+from supervisor.medusa import resolver
+from supervisor.medusa import logger
 
 if len(sys.argv) > 1:
     # process a few convenient arguments
@@ -111,7 +111,7 @@ hs.install_handler (dh)
 # Unix user `public_html' directory support
 # ===========================================================================
 if os.name == 'posix':
-    from medusa import unix_user_handler
+    from supervisor.medusa import unix_user_handler
     uh = unix_user_handler.unix_user_handler ('public_html')
     hs.install_handler (uh)
 

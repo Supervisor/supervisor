@@ -10,10 +10,10 @@ import sys
 import time
 
 import select_trigger
-from medusa import counter
-from medusa import producers
+from supervisor.medusa import counter
+from supervisor.medusa import producers
 
-from medusa.default_handler import unquote, get_header
+from supervisor.medusa.default_handler import unquote, get_header
 
 import threading
 
@@ -332,7 +332,7 @@ if __name__ == '__main__':
         nthreads = string.atoi (sys.argv[1])
 
         import asyncore_25 as asyncore
-        from medusa import http_server
+        from supervisor.medusa import http_server
         # create a generic web server
         hs = http_server.http_server ('', 7080)
 

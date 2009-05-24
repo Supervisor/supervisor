@@ -9,10 +9,10 @@ __revision__ = "$Id: test_producers.py,v 1.2 2002/09/18 20:16:40 akuchling Exp $
 import StringIO, zlib
 from sancho.unittest import TestScenario, parse_args, run_scenarios
 
-tested_modules = ["medusa.producers"]
+tested_modules = ["supervisor.medusa.producers"]
 
 
-from medusa import producers
+from supervisor.medusa import producers
 
 test_string = ''
 for i in range(16385):

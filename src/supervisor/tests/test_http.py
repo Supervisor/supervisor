@@ -64,7 +64,7 @@ class LogtailHandlerTests(HandlerTests, unittest.TestCase):
         request = DummyRequest('/logtail/foo', None, None, None)
         handler.handle_request(request)
         self.assertEqual(request._error, None)
-        from medusa import http_date
+        from supervisor.medusa import http_date
         self.assertEqual(request.headers['Last-Modified'],
                          http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
         self.assertEqual(request.headers['Content-Type'], 'text/plain')
@@ -103,7 +103,7 @@ class MainLogTailHandlerTests(HandlerTests, unittest.TestCase):
         request = DummyRequest('/mainlogtail', None, None, None)
         handler.handle_request(request)
         self.assertEqual(request._error, None)
-        from medusa import http_date
+        from supervisor.medusa import http_date
         self.assertEqual(request.headers['Last-Modified'],
                          http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
         self.assertEqual(request.headers['Content-Type'], 'text/plain')

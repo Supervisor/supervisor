@@ -1,7 +1,7 @@
 # -*- Mode: Python -*-
 
-from medusa import asyncore_25 as asyncore
-from medusa import ftp_server
+from supervisor.medusa import asyncore_25 as asyncore
+from supervisor.medusa import ftp_server
 
 # create a 'dummy' authorizer (one that lets everyone in) that returns
 # a read-only filesystem rooted at '/home/ftp'

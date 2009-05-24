@@ -5,8 +5,8 @@ import socket
 import base64
 from urlparse import urlparse
 
-from medusa import asyncore_25 as aysncore
-from medusa import asynchat_25 as asynchat
+from supervisor.medusa import asyncore_25 as aysncore
+from supervisor.medusa import asynchat_25 as asynchat
 
 CR="\x0d"
 LF="\x0a"

@@ -47,7 +47,7 @@ you - by calling your self.found_terminator() method.
 """
 
 import socket
-from medusa import asyncore_25 as asyncore
+from supervisor.medusa import asyncore_25 as asyncore
 from collections import deque
 
 class async_chat (asyncore.dispatcher):

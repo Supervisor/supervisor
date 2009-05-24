@@ -3,7 +3,7 @@
 import socket
 import string
 import time
-from medusa import http_date
+from supervisor.medusa import http_date
 
 now = http_date.build_http_date (time.time())
 

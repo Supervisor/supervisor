@@ -29,7 +29,7 @@ import string
 import sys
 import time
 
-from medusa.producers import file_producer
+from supervisor.medusa.producers import file_producer
 
 # TODO: implement a directory listing cache.  On very-high-load
 # servers this could save a lot of disk abuse, and possibly the

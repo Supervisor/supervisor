@@ -2,8 +2,8 @@
 
 import socket
 import string
-from medusa import asyncore_25 as asyncore
-from medusa import asynchat_25 as asynchat
+from supervisor.medusa import asyncore_25 as asyncore
+from supervisor.medusa import asynchat_25 as asynchat
 
 # get some performance figures for an HTTP/1.1 server.
 # use pipelining.

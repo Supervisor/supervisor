@@ -2,6 +2,7 @@ PATCHES MADE ONLY TO THIS MEDUSA PACKAGE BUNDLED WITH SUPERVISOR
 * Re-added asyncore.py as asyncore_25.py and asynchat.py as asynchat_25.py
   and updated Medusa throughout to use these.  The Python 2.6 stdlib version
   of these modules introduced backward-incompatible changes.
+* Changed imports throughout from "medusa" to "supervisor.medusa".
 
 Version 0.5.5:
 

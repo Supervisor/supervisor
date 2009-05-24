@@ -11,8 +11,8 @@
 
 import win32security, win32con, win32api, win32net
 import ntsecuritycon, pywintypes
-from medusa import asyncore_25 as asyncore
-from medusa import ftp_server, filesys
+from supervisor.medusa import asyncore_25 as asyncore
+from supervisor.medusa import ftp_server, filesys
 
 class Win32Authorizer:
 

@@ -47,7 +47,7 @@ import errno
 import select
 import signal
 
-from medusa import asyncore_25 as asyncore
+from supervisor.medusa import asyncore_25 as asyncore
 
 from supervisor.options import ServerOptions
 from supervisor.options import signame

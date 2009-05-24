@@ -21,10 +21,10 @@ import urllib
 import datetime
 import StringIO
 
-from medusa import producers
-from medusa.http_server import http_date
-from medusa.http_server import get_header
-from medusa.xmlrpc_handler import collector
+from supervisor.medusa import producers
+from supervisor.medusa.http_server import http_date
+from supervisor.medusa.http_server import get_header
+from supervisor.medusa.xmlrpc_handler import collector
 
 import meld3
 

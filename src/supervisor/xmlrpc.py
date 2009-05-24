@@ -22,9 +22,9 @@ from cStringIO import StringIO
 import traceback
 import sys
 
-from medusa.http_server import get_header
-from medusa.xmlrpc_handler import xmlrpc_handler
-from medusa import producers
+from supervisor.medusa.http_server import get_header
+from supervisor.medusa.xmlrpc_handler import xmlrpc_handler
+from supervisor.medusa import producers
 
 from supervisor.http import NOT_DONE_YET
 
