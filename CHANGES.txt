@@ -1,4 +1,4 @@
-Next Release
+3.0a7
  
   - We now bundle our own patched version of Medusa contributed by Jason
     Kirtland to allow Supervisor to run on Python 2.6.  This was done 
