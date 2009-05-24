@@ -81,7 +81,8 @@ dist = setup(
         'COPYRIGHT.txt'
         ]
     )],
-    install_requires = ['meld3 >= 0.6.4', 'elementtree >= 1.2.6,<1.2.7'],
+    install_requires = ['meld3 >= 0.6.4',
+                        'elementtree'],
     extras_require = {'iterparse':['cElementTree >= 1.0.2']},
     tests_require = ['meld3 >= 0.6.3'],
     include_package_data = True,
