@@ -26,15 +26,18 @@ use_setuptools()
 
 import os
 import sys
-import string
 
-version, extra = string.split(sys.version, ' ', 1)
-maj, minor = string.split(version, '.', 1)
+if sys.version < (2, 3):
 
-if not maj[0] >= '2' and minor[0] >= '3':
     msg = ("supervisor requires Python 2.3 or better, you are attempting to "
            "install it using version %s.  Please install with a "
-           "supported version" % version)
+           "supported version" % sys.version)
+
+requires = ['meld3 >= 0.6.5']
+
+if sys.version < (2, 5):
+    # for meld3 (its a distutils package)
+    requires.append('elementtree')
 
 from setuptools import setup, find_packages
 here = os.path.abspath(os.path.normpath(os.path.dirname(__file__)))
@@ -81,10 +84,9 @@ dist = setup(
         'COPYRIGHT.txt'
         ]
     )],
-    install_requires = ['meld3 >= 0.6.4',
-                        'elementtree'],
+    install_requires = requires,
     extras_require = {'iterparse':['cElementTree >= 1.0.2']},
-    tests_require = ['meld3 >= 0.6.3'],
+    tests_require = requires,
     include_package_data = True,
     zip_safe = False,
     namespace_packages = ['supervisor'],
