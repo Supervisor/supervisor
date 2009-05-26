@@ -18,6 +18,8 @@ TrackRefs code Copyright (c) 2007 Zope Corporation and Contributors
   WARRANTIES OF TITLE, MERCHANTABILITY, AGAINST INFRINGEMENT, AND FITNESS 
   FOR A PARTICULAR PURPOSE. 
 
+medusa was (is?) Copyright (c) Sam Rushing.
+
 http_client.py code Copyright (c) by Daniel Krech, http://eikeon.com/.
 
   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
