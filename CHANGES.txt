@@ -1,3 +1,8 @@
+Next Release
+
+  - Fixed a bug introduced in 3.0a7 where setup.py would not detect the
+    Python version correctly.  Patch by Daniele Paolella.
+
 3.0a7
  
   - We now bundle our own patched version of Medusa contributed by Jason

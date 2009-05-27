@@ -27,15 +27,14 @@ use_setuptools()
 import os
 import sys
 
-if sys.version < (2, 3):
-
+if sys.version_info < (2, 3):
     msg = ("supervisor requires Python 2.3 or better, you are attempting to "
            "install it using version %s.  Please install with a "
            "supported version" % sys.version)
 
 requires = ['meld3 >= 0.6.5']
 
-if sys.version < (2, 5):
+if sys.version_info < (2, 5):
     # for meld3 (its a distutils package)
     requires.append('elementtree')
 
