@@ -12,7 +12,7 @@
 #
 ##############################################################################
 
-# This modules must not depend on any other non-stdlib module to prevent
+# This module must not depend on any other non-stdlib module to prevent
 # circular import problems.
 
 class ProcessStates:
