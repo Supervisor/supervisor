@@ -6,7 +6,27 @@ Next Release
   - Removed the test suite for the ``memmon`` console script, which was 
     moved to the Superlance package in 3.0a7.
 
-3.0a7
+  - Added release dates to CHANGES.txt.
+
+  - The configuration rereading functionality introduced in 3.0a7 has been
+    moved into its own RPC interface and supervisorctl plugin.  These will
+    continue to be bundled with the main Supervisor package.  
+    
+    Users who upgraded to 3.0a7 and wish to continue using the reread
+    functionality must add these lines to their existing supervisord.conf:
+
+    [rpcinterface:supervisor_reread]
+    supervisor.rpcinterface_factory = supervisor.rpcinterface:make_reread_rpcinterface
+    [ctlplugin:supervisor_reread]
+    supervisor.ctl_factory = supervisor.supervisorctl:make_reread_controllerplugin
+
+    The lines above are now included in the sample configuration file 
+    output by the ``echo_supervisord_conf`` console script.  
+
+    Please note that due to this change, supervisorctl from 3.0a7 cannot
+    control the reread functions of 3.0a8 (and later).
+
+3.0a7 (2009-05-24)
  
   - We now bundle our own patched version of Medusa contributed by Jason
     Kirtland to allow Supervisor to run on Python 2.6.  This was done 
@@ -166,14 +186,14 @@ Next Release
     supervisor.getPID() on the XML-RPC interface or a new
     "pid" command on supervisorctl.
 
-3.0a6
+3.0a6 (2008-04-07)
 
   - The RotatingFileLogger had a race condition in its doRollover
     method whereby a file might not actually exist despite a call to
     os.path.exists on the line above a place where we try to remove
     it.  We catch the exception now and ignore the missing file.
 
-3.0a5
+3.0a5 (2008-03-13)
 
   - Supervisorctl now supports persistent readline history.  To
     enable, add "history_file = <pathname>" to the '[supervisorctl']
@@ -184,7 +204,7 @@ Next Release
     single semicolon; they will be executed in order as you would
     expect.
 
-3.0a4
+3.0a4 (2008-01-30)
 
   - 3.0a3 broke Python 2.3 backwards compatibility.
 
@@ -377,7 +397,7 @@ Next Release
    stopAllProcesses() now take an optional "wait" argument that defaults
    to True for parity with the start methods.  
 
-3.0a3
+3.0a3 (2007-10-02)
 
   - Supervisorctl now reports a better error message when the main
     supervisor XML-RPC namespace is not registered.  Thanks to
@@ -620,7 +640,7 @@ Next Release
 
   - Updated ez_setup.py to one that knows about setuptools 0.6c7.
 
-3.0a2
+3.0a2 (2007-08-24)
 
   - Fixed the README.txt example for defining the supervisor RPC
     interface in the configuration file.  Thanks to Drew Perttula.
@@ -685,7 +705,7 @@ Next Release
     leakage.  We now require a version of meld3 that does not appear
     to leak memory from its C extensions (0.6.3).
 
-3.0a1
+3.0a1 (2007-08-16)
 
   - Default config file comment documented 10 secs as default for
     'startsecs' value in process config, in reality it was 1 sec.
@@ -803,7 +823,7 @@ Next Release
     Agendless Consulting to add the event notification features and
     extensible XML-RPC namespaces feature to supervisor.
 
-2.2b1
+2.2b1 (2007-03-31)
 
   - Individual program configuration sections can now specify an
     environment.
@@ -812,7 +832,7 @@ Next Release
     version of the supervisor2 package which the remote supervisord
     process is using.
 
-2.1
+2.1 (2007-03-17)
 
   - When supervisord was invoked more than once, and its configuration
     was set up to use a UNIX domain socket as the HTTP server, the
@@ -856,13 +876,7 @@ Next Release
     readProcessLog() to read chunks and tailProcessLog() to tail.
     (thanks to Mike Naberezny).
 
-2.1b2
-
-  - Added new tailProcessLog() command to the XML-RPC API that
-    is more efficient for just tailing than the existing
-    readProcessLog() command (Mike Naberezny).
-
-2.1b1
+2.1b1 (2006-08-30)
 
   - "supervisord -h" and "supervisorctl -h" did not work (traceback
     instead of showing help view (thanks to Damjan from Macedonia for
@@ -894,7 +908,7 @@ Next Release
     RUNNING -> EXITED -> STARTING.  This has no real negative effect,
     but should be fixed for correctness.
 
-2.0
+2.0 (2006-08-30)
 
   - pidfile written in daemon mode had incorrect pid.
 
@@ -909,7 +923,7 @@ Next Release
   - New "environment" config file option allows you to add environment
     variable values to supervisord environment from config file.
 
-2.0b1
+2.0b1 (2006-07-12)
 
   - fundamental rewrite based on 1.0.6, use distutils (only) for
     installation, use ConfigParser rather than ZConfig, use HTTP for

@@ -588,17 +588,19 @@ class DummyRPCInterfaceFactory:
 class DummyRPCServer:
     def __init__(self):
         self.supervisor = DummySupervisorRPCNamespace()
+        self.supervisor_reread = DummyRereadRPCNamespace()
         self.system = DummySystemRPCNamespace()
 
 class DummySystemRPCNamespace:
     pass
 
 class DummySupervisorRPCNamespace:
+    processes = []
+
     _restartable = True
     _restarted = False
     _shutdown = False
     _readlog_error = False
-
 
     from supervisor.process import ProcessStates
     all_process_info = [
@@ -837,6 +839,43 @@ class DummySupervisorRPCNamespace:
             from xmlrpclib import Fault
             raise Fault(self._readlog_error, '')
         return 'mainlogdata'
+
+class DummyRereadRPCNamespace:
+    def __init__(self):
+        self.added_process_groups   = []
+        self.removed_process_groups = [] 
+        self.processes = [] # xxx hack
+
+    def addProcessGroup(self, name):
+        from xmlrpclib import Fault
+        from supervisor import xmlrpc
+        if name == 'SHUTDOWN_STATE':
+            raise Fault(xmlrpc.Faults.SHUTDOWN_STATE, '') 
+        elif name == 'ALREADY_ADDED':
+            raise Fault(xmlrpc.Faults.ALREADY_ADDED, '')
+        elif name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, '')
+        else:
+            self.processes.append(name) # xxx hack
+            self.added_process_groups.append(name)
+            return True
+
+    def removeProcessGroup(self, name):
+        from xmlrpclib import Fault
+        from supervisor import xmlrpc
+        if name == 'SHUTDOWN_STATE':
+            raise Fault(xmlrpc.Faults.SHUTDOWN_STATE, '')  
+        elif name == 'STILL_RUNNING':
+            raise Fault(xmlrpc.Faults.STILL_RUNNING, '')
+        elif name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, '')
+        else:
+            self.removed_process_groups.append(name)
+            return True
+
+    def reloadConfig(self):
+        return [[['added'], ['changed'], ['removed']]]
+
 
 class DummyPGroupConfig:
     def __init__(self, options, name='whatever', priority=999, pconfigs=None):
