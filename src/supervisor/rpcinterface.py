@@ -165,6 +165,56 @@ class SupervisorNamespaceRPCInterface:
         self.supervisord.options.mood = SupervisorStates.RESTARTING
         return True
 
+    def reloadConfig(self):
+        """
+        Reload configuration
+
+        @return boolean result  always return True unless error
+        """
+        self._update('reloadConfig')
+        try:
+            self.supervisord.options.process_config_file(do_usage=False)
+        except ValueError, msg:
+            raise RPCError(Faults.CANT_REREAD, msg)
+            
+        added, changed, removed = self.supervisord.diff_to_active()
+
+        added = [group.name for group in added]
+        changed = [group.name for group in changed]
+        removed = [group.name for group in removed]
+        return [[added, changed, removed]] # cannot return len > 1, apparently
+
+    def addProcessGroup(self, name):
+        """ Update the config for a running process from config file.
+
+        @param string name         name of process group to add
+        @return boolean result     true if successful
+        """
+        self._update('addProcessGroup')
+
+        for config in self.supervisord.options.process_group_configs:
+            if config.name == name:
+                result = self.supervisord.add_process_group(config)
+                if not result:
+                    raise RPCError(Faults.ALREADY_ADDED, name)
+                return True
+        raise RPCError(Faults.BAD_NAME, name)
+
+    def removeProcessGroup(self, name):
+        """ Remove a stopped process from the active configuration.
+
+        @param string name         name of process group to remove
+        @return boolean result     Indicates wether the removal was successful
+        """
+        self._update('removeProcessGroup')
+        if name not in self.supervisord.process_groups:
+            raise RPCError(Faults.BAD_NAME, name)
+
+        result = self.supervisord.remove_process_group(name)
+        if not result:
+            raise RPCError(Faults.STILL_RUNNING)
+        return True
+
     def _getAllProcesses(self, lexical=False):
         # if lexical is true, return processes sorted in lexical order,
         # otherwise, sort in priority order
@@ -404,6 +454,29 @@ class SupervisorNamespaceRPCInterface:
         killall.delay = 0.05
         killall.rpcinterface = self
         return killall # deferred
+
+    def getAllConfigInfo(self):
+        """ Get info about all availible process configurations. Each record
+        represents a single process (i.e. groups get flattened).
+
+        @return array result  An array of process config info records
+        """
+        self._update('getAllConfigInfo')
+
+        configinfo = []
+        for gconfig in self.supervisord.options.process_group_configs:
+            inuse = gconfig.name in self.supervisord.process_groups
+            for pconfig in gconfig.process_configs:
+                configinfo.append(
+                    { 'name': pconfig.name,
+                      'group': gconfig.name,
+                      'inuse': inuse,
+                      'autostart': pconfig.autostart,
+                      'group_prio': gconfig.priority,
+                      'process_prio': pconfig.priority })
+
+        configinfo.sort()
+        return configinfo
 
     def _interpretProcessInfo(self, info):
         state = info['state']
@@ -790,94 +863,7 @@ def isRunning(process):
 def isNotRunning(process):
     return not isRunning(process)
 
-
-class RereadNamespaceRPCInterface:
-    def __init__(self, supervisord):
-        self.supervisord = supervisord
-
-    def _update(self, text):
-        self.update_text = text # for unit tests, mainly
-        if self.supervisord.options.mood < SupervisorStates.RUNNING:
-            raise RPCError(Faults.SHUTDOWN_STATE)
-
-    def getAllConfigInfo(self):
-        """ Get info about all availible process configurations. Each record
-        represents a single process (i.e. groups get flattened).
-
-        @return array result  An array of process config info records
-        """
-        self._update('getAllConfigInfo')
-
-        configinfo = []
-        for gconfig in self.supervisord.options.process_group_configs:
-            inuse = gconfig.name in self.supervisord.process_groups
-            for pconfig in gconfig.process_configs:
-                configinfo.append(
-                    { 'name': pconfig.name,
-                      'group': gconfig.name,
-                      'inuse': inuse,
-                      'autostart': pconfig.autostart,
-                      'group_prio': gconfig.priority,
-                      'process_prio': pconfig.priority })
-
-        configinfo.sort()
-        return configinfo
-
-    def reloadConfig(self):
-        """
-        Reload configuration
-
-        @return boolean result  always return True unless error
-        """
-        self._update('reloadConfig')
-        try:
-            self.supervisord.options.process_config_file(do_usage=False)
-        except ValueError, msg:
-            raise RPCError(Faults.CANT_REREAD, msg)
-            
-        added, changed, removed = self.supervisord.diff_to_active()
-
-        added = [group.name for group in added]
-        changed = [group.name for group in changed]
-        removed = [group.name for group in removed]
-        return [[added, changed, removed]] # cannot return len > 1, apparently
-
-    def addProcessGroup(self, name):
-        """ Update the config for a running process from config file.
-
-        @param string name         name of process group to add
-        @return boolean result     true if successful
-        """
-        self._update('addProcessGroup')
-
-        for config in self.supervisord.options.process_group_configs:
-            if config.name == name:
-                result = self.supervisord.add_process_group(config)
-                if not result:
-                    raise RPCError(Faults.ALREADY_ADDED, name)
-                return True
-        raise RPCError(Faults.BAD_NAME, name)
-
-    def removeProcessGroup(self, name):
-        """ Remove a stopped process from the active configuration.
-
-        @param string name         name of process group to remove
-        @return boolean result     Indicates wether the removal was successful
-        """
-        self._update('removeProcessGroup')
-        if name not in self.supervisord.process_groups:
-            raise RPCError(Faults.BAD_NAME, name)
-
-        result = self.supervisord.remove_process_group(name)
-        if not result:
-            raise RPCError(Faults.STILL_RUNNING)
-        return True
-
-
 # this is not used in code but referenced via an entry point in the conf file
 def make_main_rpcinterface(supervisord):
     return SupervisorNamespaceRPCInterface(supervisord)
 
-# this is not used in code but referenced via an entry point in the conf file
-def make_reread_rpcinterface(supervisord):
-    return RereadNamespaceRPCInterface(supervisord)

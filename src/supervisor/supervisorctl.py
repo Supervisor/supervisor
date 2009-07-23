@@ -790,6 +790,160 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def help_reload(self):
         self.ctl.output("reload \t\tRestart the remote supervisord.")
 
+    def _formatChanges(self, (added, changed, dropped)):
+        changedict = {}
+        for n, t in [(added, 'available'),
+                     (changed, 'changed'),
+                     (dropped, 'disappeared')]:
+            changedict.update(dict(zip(n, [t] * len(n))))
+
+        if changedict:
+            for name in sorted(changedict):
+                self.ctl.output("%s: %s" % (name, changedict[name]))
+        else:
+            self.ctl.output("No config updates to processes")
+
+    def _formatConfigInfo(self, configinfo):
+        if configinfo['group'] == configinfo['name']:
+            name = configinfo['group']
+        else:
+            name = "%s:%s" % (configinfo['group'], configinfo['name'])
+        formatted = { 'name': name }
+        if configinfo['inuse']:
+            formatted['inuse'] = 'in use'
+        else:
+            formatted['inuse'] = 'avail'
+        if configinfo['autostart']:
+            formatted['autostart'] = 'auto'
+        else:
+            formatted['autostart'] = 'manual'
+        formatted['priority'] = "%s:%s" % (configinfo['group_prio'],
+                                           configinfo['process_prio'])
+
+        template = '%(name)-32s %(inuse)-9s %(autostart)-9s %(priority)s'
+        return template % formatted
+
+    def do_avail(self, arg):
+        supervisor = self.ctl.get_supervisor()
+        try:
+            configinfo = supervisor.getAllConfigInfo()
+        except xmlrpclib.Fault, e:
+            if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
+                self.ctl.output('ERROR: supervisor shutting down')
+        else:
+            for pinfo in configinfo:
+                self.ctl.output(self._formatConfigInfo(pinfo))
+
+    def help_avail(self):
+        self.ctl.output("avail\t\t\tDisplay all configured processes")
+
+    def do_reread(self, arg):
+        supervisor = self.ctl.get_supervisor()
+        try:
+            result = supervisor.reloadConfig()
+        except xmlrpclib.Fault, e:
+            if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
+                self.ctl.output('ERROR: supervisor shutting down')
+            elif e.faultCode == xmlrpc.Faults.CANT_REREAD:
+                self.ctl.output('ERROR: %s' % e.faultString)
+            else:
+                raise
+        else:
+            self._formatChanges(result[0])
+
+    def help_reread(self):
+        self.ctl.output("reread \t\t\tReload the daemon's configuration files")
+
+    def do_add(self, arg):
+        names = arg.strip().split()
+
+        supervisor = self.ctl.get_supervisor()
+        for name in names:
+            try:
+                supervisor.addProcessGroup(name)
+            except xmlrpclib.Fault, e:
+                if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
+                    self.ctl.output('ERROR: shutting down')
+                elif e.faultCode == xmlrpc.Faults.ALREADY_ADDED:
+                    self.ctl.output('ERROR: process group already active')
+                elif e.faultCode == xmlrpc.Faults.BAD_NAME:
+                    self.ctl.output(
+                        "ERROR: no such process/group: %s" % name)
+                else:
+                    raise
+            else:
+                self.ctl.output("%s: added process group" % name)
+
+    def help_add(self):
+        self.ctl.output("add <name> [...]\tActivates any updates in config "
+                        "for process/group")
+
+    def do_remove(self, arg):
+        names = arg.strip().split()
+
+        supervisor = self.ctl.get_supervisor()
+        for name in names:
+            try:
+                result = supervisor.removeProcessGroup(name)
+            except xmlrpclib.Fault, e:
+                if e.faultCode == xmlrpc.Faults.STILL_RUNNING:
+                    self.ctl.output('ERROR: process/group still running: %s'
+                                    % name)
+                elif e.faultCode == xmlrpc.Faults.BAD_NAME:
+                    self.ctl.output(
+                        "ERROR: no such process/group: %s" % name)
+                else:
+                    raise
+            else:
+                self.ctl.output("%s: removed process group" % name)
+
+    def help_remove(self):
+        self.ctl.output("remove <name> [...]\tRemoves process/group from "
+                        "active config")
+
+    def do_update(self, arg):
+        def log(name, message):
+            self.ctl.output("%s: %s" % (name, message))
+
+        supervisor = self.ctl.get_supervisor()
+        try:
+            result = supervisor.reloadConfig()
+        except xmlrpclib.Fault, e:
+            if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
+                self.ctl.output('ERROR: already shutting down')
+                return
+            else:
+                raise e
+
+        added, changed, removed = result[0]
+
+        for gname in removed:
+            results = supervisor.stopProcessGroup(gname)
+            log(gname, "stopped")
+
+            fails = [res for res in results
+                     if res['status'] == xmlrpc.Faults.FAILED]
+            if fails:
+                log(gname, "has problems; not removing")
+                continue
+            supervisor.removeProcessGroup(gname)
+            log(gname, "removed process group")
+
+        for gname in changed:
+            results = supervisor.stopProcessGroup(gname)
+            log(gname, "stopped")
+
+            supervisor.removeProcessGroup(gname)
+            supervisor.addProcessGroup(gname)
+            log(gname, "updated process group")
+
+        for gname in added:
+            supervisor.addProcessGroup(gname)
+            log(gname, "added process group")
+
+    def help_update(self):
+        self.ctl.output("update\t\tReload config and add/remove as necessary")
+
     def _clearresult(self, result):
         name = result['name']
         code = result['status']
@@ -921,182 +1075,6 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def help_fg(self,args=None):
         self.ctl.output('fg <process>\tConnect to a process in foreground mode')
         self.ctl.output('Press Ctrl+C to exit foreground')
-
-class RereadControllerPlugin(ControllerPluginBase):
-    name = 'reread'
-    listener = None # for unit tests
-
-    def _formatChanges(self, (added, changed, dropped)):
-        changedict = {}
-        for n, t in [(added, 'available'),
-                     (changed, 'changed'),
-                     (dropped, 'disappeared')]:
-            changedict.update(dict(zip(n, [t] * len(n))))
-
-        if changedict:
-            for name in sorted(changedict):
-                self.ctl.output("%s: %s" % (name, changedict[name]))
-        else:
-            self.ctl.output("No config updates to processes")
-
-    def _formatConfigInfo(self, configinfo):
-        if configinfo['group'] == configinfo['name']:
-            name = configinfo['group']
-        else:
-            name = "%s:%s" % (configinfo['group'], configinfo['name'])
-        formatted = { 'name': name }
-        if configinfo['inuse']:
-            formatted['inuse'] = 'in use'
-        else:
-            formatted['inuse'] = 'avail'
-        if configinfo['autostart']:
-            formatted['autostart'] = 'auto'
-        else:
-            formatted['autostart'] = 'manual'
-        formatted['priority'] = "%s:%s" % (configinfo['group_prio'],
-                                           configinfo['process_prio'])
-
-        template = '%(name)-32s %(inuse)-9s %(autostart)-9s %(priority)s'
-        return template % formatted
-
-    def do_avail(self, arg):
-        supervisor_reread = self.ctl.get_server_proxy('supervisor_reread')
-        try:
-            configinfo = supervisor_reread.getAllConfigInfo()
-        except xmlrpclib.Fault, e:
-            if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
-                self.ctl.output('ERROR: supervisor shutting down')
-        else:
-            for pinfo in configinfo:
-                self.ctl.output(self._formatConfigInfo(pinfo))
-
-    def help_avail(self):
-        self.ctl.output("avail\t\t\tDisplay all configured processes")
-
-    def do_reread(self, arg):
-        supervisor_reread = self.ctl.get_server_proxy('supervisor_reread')
-        try:
-            result = supervisor_reread.reloadConfig()
-        except xmlrpclib.Fault, e:
-            if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
-                self.ctl.output('ERROR: supervisor shutting down')
-            elif e.faultCode == xmlrpc.Faults.CANT_REREAD:
-                self.ctl.output('ERROR: %s' % e.faultString)
-            else:
-                raise
-        else:
-            self._formatChanges(result[0])
-
-    def help_reread(self):
-        self.ctl.output("reread \t\t\tReload the daemon's configuration files")
-
-    def do_add(self, arg):
-        names = arg.strip().split()
-
-        if not names:
-            self.ctl.output("ERROR: add requires a process group name")
-            self.help_add()
-            return
-
-        supervisor_reread = self.ctl.get_server_proxy('supervisor_reread')
-        for name in names:
-            try:
-                supervisor_reread.addProcessGroup(name)
-            except xmlrpclib.Fault, e:
-                if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
-                    self.ctl.output('ERROR: shutting down')
-                elif e.faultCode == xmlrpc.Faults.ALREADY_ADDED:
-                    self.ctl.output('ERROR: process group already active')
-                elif e.faultCode == xmlrpc.Faults.BAD_NAME:
-                    self.ctl.output(
-                        "ERROR: no such process/group: %s" % name)
-                else:
-                    raise
-            else:
-                self.ctl.output("%s: added process group" % name)
-
-    def help_add(self):
-        self.ctl.output("add <name> [...]\tActivates any updates in config "
-                        "for process/group")
-
-    def do_remove(self, arg):
-        names = arg.strip().split()
-
-        if not names:
-            self.ctl.output("ERROR: remove requires a process group name")
-            self.help_add()
-            return
-
-        supervisor_reread = self.ctl.get_server_proxy('supervisor_reread')
-        for name in names:
-            try:
-                result = supervisor_reread.removeProcessGroup(name)
-            except xmlrpclib.Fault, e:
-                if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
-                    self.ctl.output('ERROR: shutting down')
-                elif e.faultCode == xmlrpc.Faults.STILL_RUNNING:
-                    self.ctl.output('ERROR: process/group still running: %s'
-                                    % name)
-                elif e.faultCode == xmlrpc.Faults.BAD_NAME:
-                    self.ctl.output(
-                        "ERROR: no such process/group: %s" % name)
-                else:
-                    raise
-            else:
-                self.ctl.output("%s: removed process group" % name)
-
-    def help_remove(self):
-        self.ctl.output("remove <name> [...]\tRemoves process/group from "
-                        "active config")
-
-    def do_update(self, arg):
-        def log(name, message):
-            self.ctl.output("%s: %s" % (name, message))
-
-        supervisor = self.ctl.get_supervisor()
-        supervisor_reread = self.ctl.get_server_proxy('supervisor_reread')
-
-        try:
-            result = supervisor_reread.reloadConfig()
-        except xmlrpclib.Fault, e:
-            if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
-                self.ctl.output('ERROR: shutting down')
-                return
-            else:
-                raise e
-
-        added, changed, removed = result[0]
-
-        for gname in removed:
-            results = supervisor.stopProcessGroup(gname)
-            log(gname, "stopped")
-
-            fails = [res for res in results
-                     if res['status'] == xmlrpc.Faults.FAILED]
-            if fails:
-                log(gname, "has problems; not removing")
-                continue
-            supervisor.removeProcessGroup(gname)
-            log(gname, "removed process group")
-
-        for gname in changed:
-            results = supervisor.stopProcessGroup(gname)
-            log(gname, "stopped")
-
-            supervisor_reread.removeProcessGroup(gname)
-            supervisor_reread.addProcessGroup(gname)
-            log(gname, "updated process group")
-
-        for gname in added:
-            supervisor_reread.addProcessGroup(gname)
-            log(gname, "added process group")
-
-    def help_update(self):
-        self.ctl.output("update\t\tReload config and add/remove as necessary")
-
-def make_reread_controllerplugin(controller, **config):
-    return RereadControllerPlugin(controller)
-
 
 def main(args=None, options=None):
     if options is None:

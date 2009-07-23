@@ -30,24 +30,8 @@ class TestBase(unittest.TestCase):
         else:
             raise AssertionError("Didnt raise")
 
-class TopLevelFunctionTests(TestBase):
-    def test_factory_for_main_rpc_interface(self):
-        from supervisor import rpcinterface
-        supervisor = DummySupervisor()
-        interface = rpcinterface.make_main_rpcinterface(supervisor)                                   
-
-        expected = rpcinterface.SupervisorNamespaceRPCInterface
-        self.assertTrue(isinstance(interface, expected))
-        
-    def test_factory_for_reread_rpc_interface(self):
-        from supervisor import rpcinterface
-        supervisor = DummySupervisor()
-        interface = rpcinterface.make_reread_rpcinterface(supervisor)
-        
-        expected = rpcinterface.RereadNamespaceRPCInterface
-        self.assertTrue(isinstance(interface, expected))
-
 class MainXMLRPCInterfaceTests(TestBase):
+
     def _getTargetClass(self):
         from supervisor import xmlrpc
         return xmlrpc.RootRPCInterface
@@ -233,6 +217,99 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         value = interface.restart()
         self.assertEqual(value, True)
         self.assertEqual(supervisord.options.mood, 0)
+
+    def test_reloadConfig(self):
+        options = DummyOptions()
+        supervisord = DummySupervisor(options)
+        interface = self._makeOne(supervisord)
+
+        changes = [ [DummyPGroupConfig(options, 'added')],
+                    [DummyPGroupConfig(options, 'changed')],
+                    [DummyPGroupConfig(options, 'dropped')] ]
+
+        supervisord.diff_to_active = lambda : changes
+
+        value = interface.reloadConfig()
+        self.assertEqual(value, [[['added'], ['changed'], ['dropped']]])
+
+    def test_reloadConfig_process_config_file_raises_ValueError(self):
+        from supervisor import xmlrpc
+        options = DummyOptions()
+        def raise_exc(*arg, **kw):
+            raise ValueError('foo')
+        options.process_config_file = raise_exc
+        supervisord = DummySupervisor(options)
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.CANT_REREAD, interface.reloadConfig)
+
+    def test_addProcessGroup(self):
+        from supervisor.supervisord import Supervisor
+        from supervisor import xmlrpc
+        options = DummyOptions()
+        supervisord = Supervisor(options)
+        pconfig = DummyPConfig(options, 'foo', __file__, autostart=False)
+        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
+        supervisord.options.process_group_configs = [gconfig]
+
+        interface = self._makeOne(supervisord)
+
+        result = interface.addProcessGroup('group1')
+        self.assertTrue(result)
+        self.assertEqual(supervisord.process_groups.keys(), ['group1'])
+
+        self._assertRPCError(xmlrpc.Faults.ALREADY_ADDED,
+                             interface.addProcessGroup, 'group1')
+        self.assertEqual(supervisord.process_groups.keys(), ['group1'])
+
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
+                             interface.addProcessGroup, 'asdf')
+        self.assertEqual(supervisord.process_groups.keys(), ['group1'])
+
+    def test_removeProcessGroup(self):
+        from supervisor.supervisord import Supervisor
+        options = DummyOptions()
+        supervisord = Supervisor(options)
+        pconfig = DummyPConfig(options, 'foo', __file__, autostart=False)
+        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
+        supervisord.options.process_group_configs = [gconfig]
+
+        interface = self._makeOne(supervisord)
+
+        interface.addProcessGroup('group1')
+        result = interface.removeProcessGroup('group1')
+        self.assertTrue(result)
+        self.assertEqual(supervisord.process_groups.keys(), [])
+
+    def test_removeProcessGroup_bad_name(self):
+        from supervisor.supervisord import Supervisor
+        from supervisor import xmlrpc
+        options = DummyOptions()
+        supervisord = Supervisor(options)
+        pconfig = DummyPConfig(options, 'foo', __file__, autostart=False)
+        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
+        supervisord.options.process_group_configs = [gconfig]
+
+        interface = self._makeOne(supervisord)
+
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
+                             interface.removeProcessGroup, 'asdf')
+
+    def test_removeProcessGroup_still_running(self):
+        from supervisor.supervisord import Supervisor
+        from supervisor import xmlrpc
+        options = DummyOptions()
+        supervisord = Supervisor(options)
+        pconfig = DummyPConfig(options, 'foo', __file__, autostart=False)
+        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
+        supervisord.options.process_group_configs = [gconfig]
+        process = DummyProcessGroup(gconfig)
+        process.unstopped_processes = [123]
+        supervisord.process_groups = {'group1':process}
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.STILL_RUNNING,
+                             interface.removeProcessGroup, 'group1')
+
+
     def test_startProcess_already_started(self):
         from supervisor import xmlrpc
         options = DummyOptions()
@@ -767,6 +844,31 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(result[1]['group'], 'foo')
         self.assertEqual(result[1]['status'],  Faults.SUCCESS)
         self.assertEqual(result[1]['description'], 'OK')
+
+    def test_getAllConfigInfo(self):
+        options = DummyOptions()
+        supervisord = DummySupervisor(options, 'foo')
+
+        pconfig1 = DummyPConfig(options, 'process1', __file__)
+        pconfig2 = DummyPConfig(options, 'process2', __file__)
+        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig1, pconfig2])
+        supervisord.process_groups = {'group1': DummyProcessGroup(gconfig)}
+        supervisord.options.process_group_configs = [gconfig]
+
+        interface = self._makeOne(supervisord)
+        configs = interface.getAllConfigInfo()
+        self.assertEqual(configs, [{ 'group': 'group1',
+                                     'name': 'process1',
+                                     'inuse': True,
+                                     'autostart': True,
+                                     'process_prio': 999,
+                                     'group_prio': 999 },
+                                   { 'group': 'group1',
+                                     'name': 'process2',
+                                     'inuse': True,
+                                     'autostart': True,
+                                     'process_prio': 999,
+                                     'group_prio': 999 }])
 
     def test__interpretProcessInfo(self):
         supervisord = DummySupervisor()
@@ -1487,10 +1589,13 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         L = []
         def callback(event):
             L.append(event)
-
-        events.subscribe(events.RemoteCommunicationEvent, callback)         
-        result = interface.sendRemoteCommEvent('foo', 'bar')
-        events.clear()
+        
+        try:
+            events.callbacks[:] = [(events.RemoteCommunicationEvent, callback)]
+            result = interface.sendRemoteCommEvent('foo', 'bar')
+        finally:
+            events.callbacks[:] = []
+            events.clear()
 
         self.assertTrue(result)
         self.assertEqual(len(L), 1)
@@ -1507,142 +1612,20 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         L = []
         def callback(event):
             L.append(event)
-
-        events.subscribe(events.RemoteCommunicationEvent, callback)
-        result = interface.sendRemoteCommEvent(u'fi\xed 1', u'fi\xed 2')
-        events.clear()
+        
+        try:
+            events.callbacks[:] = [(events.RemoteCommunicationEvent, callback)]
+            result = interface.sendRemoteCommEvent(u'fi\xed once', u'fi\xed twice')
+        finally:
+            events.callbacks[:] = []
+            events.clear()
 
         self.assertTrue(result)
         self.assertEqual(len(L), 1)
         event = L[0]                                     
-        self.assertEqual(event.type, 'fi\xc3\xad 1')
-        self.assertEqual(event.data, 'fi\xc3\xad 2')
-
+        self.assertEqual(event.type, 'fi\xc3\xad once')
+        self.assertEqual(event.data, 'fi\xc3\xad twice')
         
-class RereadNamespaceXMLRPCInterfaceTests(TestBase):  
-    def _getTargetClass(self):
-        from supervisor import rpcinterface
-        return rpcinterface.RereadNamespaceRPCInterface
-
-    def _makeOne(self, *args, **kw):
-        return self._getTargetClass()(*args, **kw)
-
-    def test_getAllConfigInfo(self):
-        options = DummyOptions()
-        supervisord = DummySupervisor(options, 'foo')
-
-        pconfig1 = DummyPConfig(options, 'process1', __file__)
-        pconfig2 = DummyPConfig(options, 'process2', __file__)
-        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig1, pconfig2])
-        supervisord.process_groups = {'group1': DummyProcessGroup(gconfig)}
-        supervisord.options.process_group_configs = [gconfig]
-
-        interface = self._makeOne(supervisord)
-        configs = interface.getAllConfigInfo()
-        self.assertEqual(configs, [{ 'group': 'group1',
-                                     'name': 'process1',
-                                     'inuse': True,
-                                     'autostart': True,
-                                     'process_prio': 999,
-                                     'group_prio': 999 },
-                                   { 'group': 'group1',
-                                     'name': 'process2',
-                                     'inuse': True,
-                                     'autostart': True,
-                                     'process_prio': 999,
-                                     'group_prio': 999 }])
-
-    def test_reloadConfig(self):
-        options = DummyOptions()
-        supervisord = DummySupervisor(options)
-        interface = self._makeOne(supervisord)
-
-        changes = [ [DummyPGroupConfig(options, 'added')],
-                    [DummyPGroupConfig(options, 'changed')],
-                    [DummyPGroupConfig(options, 'dropped')] ]
-
-        supervisord.diff_to_active = lambda : changes
-
-        value = interface.reloadConfig()
-        self.assertEqual(value, [[['added'], ['changed'], ['dropped']]])
-
-    def test_reloadConfig_process_config_file_raises_ValueError(self):
-        from supervisor import xmlrpc
-        options = DummyOptions()
-        def raise_exc(*arg, **kw):
-            raise ValueError('foo')
-        options.process_config_file = raise_exc
-        supervisord = DummySupervisor(options)
-        interface = self._makeOne(supervisord)
-        self._assertRPCError(xmlrpc.Faults.CANT_REREAD, interface.reloadConfig)
-
-    def test_addProcessGroup(self):
-        from supervisor.supervisord import Supervisor
-        from supervisor import xmlrpc
-        options = DummyOptions()
-        supervisord = Supervisor(options)
-        pconfig = DummyPConfig(options, 'foo', __file__, autostart=False)
-        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
-        supervisord.options.process_group_configs = [gconfig]
-
-        interface = self._makeOne(supervisord)
-
-        result = interface.addProcessGroup('group1')
-        self.assertTrue(result)
-        self.assertEqual(supervisord.process_groups.keys(), ['group1'])
-
-        self._assertRPCError(xmlrpc.Faults.ALREADY_ADDED,
-                             interface.addProcessGroup, 'group1')
-        self.assertEqual(supervisord.process_groups.keys(), ['group1'])
-
-        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
-                             interface.addProcessGroup, 'asdf')
-        self.assertEqual(supervisord.process_groups.keys(), ['group1'])
-
-    def test_removeProcessGroup(self):
-        from supervisor.supervisord import Supervisor
-        options = DummyOptions()
-        supervisord = Supervisor(options)
-        pconfig = DummyPConfig(options, 'foo', __file__, autostart=False)
-        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
-        supervisord.options.process_group_configs = [gconfig]
-
-        interface = self._makeOne(supervisord)
-
-        interface.addProcessGroup('group1')
-        result = interface.removeProcessGroup('group1')
-        self.assertTrue(result)
-        self.assertEqual(supervisord.process_groups.keys(), [])
-
-    def test_removeProcessGroup_bad_name(self):
-        from supervisor.supervisord import Supervisor
-        from supervisor import xmlrpc
-        options = DummyOptions()
-        supervisord = Supervisor(options)
-        pconfig = DummyPConfig(options, 'foo', __file__, autostart=False)
-        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
-        supervisord.options.process_group_configs = [gconfig]
-
-        interface = self._makeOne(supervisord)
-
-        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
-                             interface.removeProcessGroup, 'asdf')
-
-    def test_removeProcessGroup_still_running(self):
-        from supervisor.supervisord import Supervisor
-        from supervisor import xmlrpc
-        options = DummyOptions()
-        supervisord = Supervisor(options)
-        pconfig = DummyPConfig(options, 'foo', __file__, autostart=False)
-        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
-        supervisord.options.process_group_configs = [gconfig]
-        process = DummyProcessGroup(gconfig)
-        process.unstopped_processes = [123]
-        supervisord.process_groups = {'group1':process}
-        interface = self._makeOne(supervisord)
-        self._assertRPCError(xmlrpc.Faults.STILL_RUNNING,
-                             interface.removeProcessGroup, 'group1')
-    
 
 class SystemNamespaceXMLRPCInterfaceTests(TestBase):
     def _getTargetClass(self):

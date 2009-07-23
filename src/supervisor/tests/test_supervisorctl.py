@@ -511,6 +511,233 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(options._server.supervisor._shutdown, True)
 
+    def test__formatChanges(self):
+        plugin = self._makeOne()
+        # Don't explode, plz
+        plugin._formatChanges([['added'], ['changed'], ['removed']])
+        plugin._formatChanges([[], [], []])
+
+    def test_reread(self):
+        plugin = self._makeOne()
+        calls = []
+        plugin._formatChanges = lambda x: calls.append(x)
+        result = plugin.do_reread(None)
+        self.assertEqual(result, None)
+        self.assertEqual(calls[0], [['added'], ['changed'], ['removed']])
+
+    def test_reread_Fault(self):
+        plugin = self._makeOne()
+        from supervisor import xmlrpc
+        import xmlrpclib
+        def raise_fault(*arg, **kw):
+            raise xmlrpclib.Fault(xmlrpc.Faults.CANT_REREAD, 'cant')
+        plugin.ctl.options._server.supervisor.reloadConfig = raise_fault
+        plugin.do_reread(None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: cant\n')
+
+    def test__formatConfigInfo(self):
+        info = { 'group': 'group1',
+                 'name': 'process1',
+                 'inuse': True,
+                 'autostart': True,
+                 'process_prio': 999,
+                 'group_prio': 999 }
+        plugin = self._makeOne()
+        result = plugin._formatConfigInfo(info)
+        self.assertTrue('in use' in result)
+        info = { 'group': 'group1',
+                 'name': 'process1',
+                 'inuse': False,
+                 'autostart': False,
+                 'process_prio': 999,
+                 'group_prio': 999 }
+        result = plugin._formatConfigInfo(info)
+        self.assertTrue('avail' in result)
+
+    def test_avail(self):
+        calls = []
+        plugin = self._makeOne()
+
+        class FakeSupervisor(object):
+            def getAllConfigInfo(self):
+                return [{ 'group': 'group1', 'name': 'process1',
+                          'inuse': False, 'autostart': False,
+                          'process_prio': 999, 'group_prio': 999 }]
+
+        plugin.ctl.get_supervisor = lambda : FakeSupervisor()
+        plugin.ctl.output = calls.append
+        result = plugin.do_avail('')
+        self.assertEqual(result, None)
+
+    def test_add(self):
+        plugin = self._makeOne()
+        result = plugin.do_add('foo')
+        self.assertEqual(result, None)
+        supervisor = plugin.ctl.options._server.supervisor
+        self.assertEqual(supervisor.processes, ['foo'])
+
+    def test_add_already_added(self):
+        plugin = self._makeOne()
+        result = plugin.do_add('ALREADY_ADDED')
+        self.assertEqual(result, None)
+        supervisor = plugin.ctl.options._server.supervisor
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: process group already active\n')
+
+    def test_add_bad_name(self):
+        plugin = self._makeOne()
+        result = plugin.do_add('BAD_NAME')
+        self.assertEqual(result, None)
+        supervisor = plugin.ctl.options._server.supervisor
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: no such process/group: BAD_NAME\n')
+
+    def test_remove(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.processes = ['foo']
+        result = plugin.do_remove('foo')
+        self.assertEqual(result, None)
+        self.assertEqual(supervisor.processes, [])
+
+    def test_remove_bad_name(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.processes = ['foo']
+        result = plugin.do_remove('BAD_NAME')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: no such process/group: BAD_NAME\n')
+
+    def test_remove_still_running(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.processes = ['foo']
+        result = plugin.do_remove('STILL_RUNNING')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: process/group still running: STILL_RUNNING\n')
+
+    def test_update_not_on_shutdown(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+        def reloadConfig():
+            from supervisor import xmlrpc
+            import xmlrpclib
+            raise xmlrpclib.Fault(xmlrpc.Faults.SHUTDOWN_STATE, 'blah')
+        supervisor.reloadConfig = reloadConfig
+        supervisor.processes = ['removed']
+        plugin.do_update('')
+        self.assertEqual(supervisor.processes, ['removed'])
+
+    def test_update_added_procs(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+
+        calls = []
+        def reloadConfig():
+            return [[['new_proc'], [], []]]
+        supervisor.reloadConfig = reloadConfig
+
+        plugin.do_update('')
+        self.assertEqual(supervisor.processes, ['new_proc'])
+
+    def test_update_changed_procs(self):
+        from supervisor import xmlrpc
+        import xmlrpclib
+
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+
+        calls = []
+        def reloadConfig():
+            return [[[], ['changed_group'], []]]
+        supervisor.reloadConfig = reloadConfig
+        supervisor.startProcess = lambda x: calls.append(('start', x))
+
+        supervisor.addProcessGroup('changed_group') # fake existence
+        results = [{'name':        'changed_process',
+                    'group':       'changed_group',
+                    'status':      xmlrpc.Faults.SUCCESS,
+                    'description': 'blah'}]
+        def stopProcessGroup(name):
+            calls.append(('stop', name))
+            return results
+        supervisor.stopProcessGroup = stopProcessGroup
+
+        plugin.do_update('')
+        self.assertEqual(calls, [('stop', 'changed_group')])
+
+        supervisor.addProcessGroup('changed_group') # fake existence
+        calls[:] = []
+        results[:] = [{'name':        'changed_process1',
+                       'group':       'changed_group',
+                       'status':      xmlrpc.Faults.NOT_RUNNING,
+                       'description': 'blah'},
+                      {'name':        'changed_process2',
+                       'group':       'changed_group',
+                       'status':      xmlrpc.Faults.FAILED,
+                       'description': 'blah'}]
+
+        plugin.do_update('')
+        self.assertEqual(calls, [('stop', 'changed_group')])
+
+        supervisor.addProcessGroup('changed_group') # fake existence
+        calls[:] = []
+        results[:] = [{'name':        'changed_process1',
+                       'group':       'changed_group',
+                       'status':      xmlrpc.Faults.FAILED,
+                       'description': 'blah'},
+                      {'name':        'changed_process2',
+                       'group':       'changed_group',
+                       'status':      xmlrpc.Faults.SUCCESS,
+                       'description': 'blah'}]
+
+        plugin.do_update('')
+        self.assertEqual(calls, [('stop', 'changed_group')])
+
+    def test_update_removed_procs(self):
+        from supervisor import xmlrpc
+
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+
+        def reloadConfig():
+            return [[[], [], ['removed_group']]]
+        supervisor.reloadConfig = reloadConfig
+
+        results = [{'name':        'removed_process',
+                    'group':       'removed_group',
+                    'status':      xmlrpc.Faults.SUCCESS,
+                    'description': 'blah'}]
+        supervisor.processes = ['removed_group']
+
+        def stopProcessGroup(name):
+            return results
+        supervisor.stopProcessGroup = stopProcessGroup
+
+        plugin.do_update('')
+        self.assertEqual(supervisor.processes, [])
+
+        results[:] = [{'name':        'removed_process',
+                       'group':       'removed_group',
+                       'status':      xmlrpc.Faults.NOT_RUNNING,
+                       'description': 'blah'}]
+        supervisor.processes = ['removed_group']
+
+        plugin.do_update('')
+        self.assertEqual(supervisor.processes, [])
+
+        results[:] = [{'name':        'removed_process',
+                       'group':       'removed_group',
+                       'status':      xmlrpc.Faults.FAILED,
+                       'description': 'blah'}]
+        supervisor.processes = ['removed_group']
+
+        plugin.do_update('')
+        self.assertEqual(supervisor.processes, ['removed_group'])
+
     def test_pid(self):
         plugin = self._makeOne()
         result = plugin.do_pid('')
@@ -611,353 +838,6 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(result, None)
         self.assertEqual(lines[-2], 'Error: process not running')
-
-class TestRereadControllerPlugin(unittest.TestCase):
-    def _getTargetClass(self):
-        from supervisor.supervisorctl import RereadControllerPlugin
-        return RereadControllerPlugin
-
-    def _makeOne(self, *arg, **kw):
-        klass = self._getTargetClass()
-        options = DummyClientOptions()
-        ctl = DummyController(options)
-        plugin = klass(ctl, *arg, **kw)
-        return plugin
-
-    def test_avail_handles_shutdown_state_fault(self):
-        plugin = self._makeOne()
-        
-        class DummyRereadInterface:
-            def getAllConfigInfo(self):
-                import xmlrpclib
-                from supervisor.xmlrpc import Faults
-                raise xmlrpclib.Fault(Faults.SHUTDOWN_STATE, 'bye')
-
-        server = plugin.ctl.options._server
-        server.supervisor_reread = DummyRereadInterface()
-
-        result = plugin.do_avail('')               
-        self.assertEqual(result, None)
-
-        self.assertEqual(plugin.ctl.stdout.getvalue(),
-                         'ERROR: supervisor shutting down\n')
-
-    def test_avail_displays_formatted_config_info(self):
-        plugin = self._makeOne()
-        
-        class DummyRereadInterface:  
-            def __init__(self):
-                first  = {'group': 'group1', 'name': 'process1',
-                          'inuse': False, 'autostart': False,
-                          'process_prio': 999, 'group_prio': 999}
-                second = {'group': 'group2', 'name': 'process2',
-                          'inuse': False, 'autostart': False,
-                          'process_prio': 999, 'group_prio': 999}
-                self.info = [first, second]
-            
-            def getAllConfigInfo(self):
-                return self.info
-
-        server = plugin.ctl.options._server
-        interface = DummyRereadInterface()
-        server.supervisor_reread = interface 
-
-        result = plugin.do_avail('')
-        self.assertEqual(result, None)
-
-        expected = plugin._formatConfigInfo(interface.info[0])  + "\n" + \
-                   plugin._formatConfigInfo(interface.info[1]) + "\n"
-        self.assertEqual(plugin.ctl.stdout.getvalue(), expected)
-
-    def test_add_displays_error_and_help_when_given_no_args(self):
-        plugin = self._makeOne()
-        
-        result = plugin.do_add('  ') # extra whitespace intentional
-        self.assertEqual(result, None)
-
-        output = plugin.ctl.stdout.getvalue()
-        self.assertTrue('ERROR: add requires a process group name' in output)
-        self.assertTrue('add <name>' in output)
-
-    def test_add_will_add_a_single_process_group(self):
-        plugin = self._makeOne()
-        
-        result = plugin.do_add('  foo') # extra whitespace intentional
-        self.assertEqual(result, None)
-
-        expected = 'foo: added process group\n' 
-        self.assertEqual(plugin.ctl.stdout.getvalue(), expected)
-
-        interface = plugin.ctl.options._server.supervisor_reread
-        self.assertEqual(interface.added_process_groups, ['foo'])                        
-        
-    def test_add_will_adds_multiple_process_groups(self):
-        plugin = self._makeOne()
-        
-        result = plugin.do_add(' foo  bar ')  # extra whitespace intentional
-        self.assertEqual(result, None)
-
-        expected = "foo: added process group\n" \
-                   "bar: added process group\n"
-        self.assertEqual(plugin.ctl.stdout.getvalue(), expected)
-
-        interface = plugin.ctl.options._server.supervisor_reread
-        self.assertEqual(interface.added_process_groups, ['foo', 'bar'])                        
-
-    def test_add_handles_shutdown_state_fault(self):
-        plugin = self._makeOne()
-        
-        result = plugin.do_add('SHUTDOWN_STATE')
-        self.assertEqual(result, None)
-
-        expected = "ERROR: shutting down\n"
-        self.assertEqual(plugin.ctl.stdout.getvalue(), expected)
-                                                                                   
-    def test_add_handles_already_added_fault(self):
-        plugin = self._makeOne()
-        
-        result = plugin.do_add('ALREADY_ADDED')
-        self.assertEqual(result, None)
-
-        expected = "ERROR: process group already active\n"
-        self.assertEqual(plugin.ctl.stdout.getvalue(), expected)
-
-    def test_add_handles_bad_name_fault(self):
-        plugin = self._makeOne()
-        
-        result = plugin.do_add('BAD_NAME')
-        self.assertEqual(result, None)
-
-        expected = "ERROR: no such process/group: BAD_NAME\n"
-        self.assertEqual(plugin.ctl.stdout.getvalue(), expected)
-
-    def test_remove_will_remove_a_single_process_group(self):
-        plugin = self._makeOne()
-
-        result = plugin.do_remove('  foo')  # extra whitespace intentional
-        self.assertEqual(result, None)
-
-        expected = "foo: removed process group\n"
-        self.assertEqual(plugin.ctl.stdout.getvalue(), expected)  
-
-        interface = plugin.ctl.options._server.supervisor_reread
-        self.assertEqual(interface.removed_process_groups, ['foo'])                        
-
-    def test_remove_will_remove_multiple_process_groups(self):
-        plugin = self._makeOne()
-
-        result = plugin.do_remove(' foo  bar ') # extra whitespace intentional
-        self.assertEqual(result, None)
-
-        expected = "foo: removed process group\n" \
-                   "bar: removed process group\n"
-        self.assertEqual(plugin.ctl.stdout.getvalue(), expected)  
-
-        interface = plugin.ctl.options._server.supervisor_reread
-        self.assertEqual(interface.removed_process_groups, ['foo', 'bar'])                        
-
-    def test_remove_handles_shutdown_state_fault(self):
-        plugin = self._makeOne()
-
-        result = plugin.do_remove('SHUTDOWN_STATE')
-        self.assertEqual(result, None)
-
-        self.assertEqual(plugin.ctl.stdout.getvalue(),
-                         'ERROR: shutting down\n')
-
-    def test_remove_handles_still_running_fault(self):
-        plugin = self._makeOne()
-
-        result = plugin.do_remove('STILL_RUNNING')
-        self.assertEqual(result, None)
-
-        self.assertEqual(plugin.ctl.stdout.getvalue(),
-                         'ERROR: process/group still running: STILL_RUNNING\n')
-
-    def test_remove_handles_bad_name_fault(self):
-        plugin = self._makeOne()
-
-        result = plugin.do_remove('BAD_NAME')
-        self.assertEqual(result, None)
-
-        self.assertEqual(plugin.ctl.stdout.getvalue(),
-                         'ERROR: no such process/group: BAD_NAME\n')
-
-    def test_update_handles_shutdown_state_fault(self):
-        plugin = self._makeOne()
-
-        class DummyRereadInterface: 
-            def reloadConfig(self):
-                from supervisor import xmlrpc
-                import xmlrpclib
-                raise xmlrpclib.Fault(xmlrpc.Faults.SHUTDOWN_STATE, 'bye')
-
-        server = plugin.ctl.options._server
-        interface = DummyRereadInterface()
-        server.supervisor_reread = interface 
-
-        result = plugin.do_update('')
-        self.assertEqual(result, None)
-                                              
-        self.assertEquals(plugin.ctl.stdout.getvalue(),
-                         'ERROR: shutting down\n') 
-
-    def test_update_added_procs(self):
-        plugin = self._makeOne()
-        supervisor_reread = plugin.ctl.options._server.supervisor_reread
-        supervisor = plugin.ctl.options._server.supervisor
-        supervisor_reread.processes = supervisor.processes
-
-        calls = []
-        def reloadConfig():
-            return [[['new_proc'], [], []]]
-        supervisor_reread.reloadConfig = reloadConfig
-
-        plugin.do_update('')
-        self.assertEqual(supervisor_reread.processes, ['new_proc'])
-
-    def test_update_changed_procs(self):
-        from supervisor import xmlrpc
-        import xmlrpclib
-
-        plugin = self._makeOne()
-        supervisor = plugin.ctl.options._server.supervisor
-        supervisor_reread = plugin.ctl.options._server.supervisor_reread
-        supervisor.processes = supervisor_reread.processes = []
-
-        calls = []
-        def reloadConfig():
-            return [[[], ['changed_group'], []]]
-        supervisor_reread.reloadConfig = reloadConfig
-        supervisor.startProcess = lambda x: calls.append(('start', x))
-
-        supervisor_reread.addProcessGroup('changed_group') # fake existence
-        results = [{'name':        'changed_process',
-                    'group':       'changed_group',
-                    'status':      xmlrpc.Faults.SUCCESS,
-                    'description': 'blah'}]
-        def stopProcessGroup(name):
-            calls.append(('stop', name))
-            return results
-        supervisor.stopProcessGroup = stopProcessGroup
-
-        plugin.do_update('')
-        self.assertEqual(calls, [('stop', 'changed_group')])
-
-        supervisor_reread.addProcessGroup('changed_group') # fake existence
-        calls[:] = []
-        results[:] = [{'name':        'changed_process1',
-                       'group':       'changed_group',
-                       'status':      xmlrpc.Faults.NOT_RUNNING,
-                       'description': 'blah'},
-                      {'name':        'changed_process2',
-                       'group':       'changed_group',
-                       'status':      xmlrpc.Faults.FAILED,
-                       'description': 'blah'}]
-
-        plugin.do_update('')
-        self.assertEqual(calls, [('stop', 'changed_group')])
-
-        supervisor_reread.addProcessGroup('changed_group') # fake existence
-        calls[:] = []
-        results[:] = [{'name':        'changed_process1',
-                       'group':       'changed_group',
-                       'status':      xmlrpc.Faults.FAILED,
-                       'description': 'blah'},
-                      {'name':        'changed_process2',
-                       'group':       'changed_group',
-                       'status':      xmlrpc.Faults.SUCCESS,
-                       'description': 'blah'}]
-
-        plugin.do_update('')
-        self.assertEqual(calls, [('stop', 'changed_group')])
-
-    def test_update_removed_procs(self):
-        from supervisor import xmlrpc
-
-        plugin = self._makeOne()
-        supervisor = plugin.ctl.options._server.supervisor
-        supervisor_reread = plugin.ctl.options._server.supervisor_reread
-
-        def reloadConfig():
-            return [[[], [], ['removed_group']]]
-        supervisor_reread.reloadConfig = reloadConfig
-
-        results = [{'name':        'removed_process',
-                    'group':       'removed_group',
-                    'status':      xmlrpc.Faults.SUCCESS,
-                    'description': 'blah'}]
-        supervisor.processes = supervisor_reread.processes = ['removed_group']
-
-        def stopProcessGroup(name):
-            return results
-        supervisor.stopProcessGroup = stopProcessGroup
-
-        plugin.do_update('')
-        self.assertEqual(supervisor.processes, [])
-
-        results[:] = [{'name':        'removed_process',
-                       'group':       'removed_group',
-                       'status':      xmlrpc.Faults.NOT_RUNNING,
-                       'description': 'blah'}]
-        supervisor.processes = supervisor_reread.processes = ['removed_group']
-
-        plugin.do_update('')
-        self.assertEqual(supervisor.processes, [])
-
-        results[:] = [{'name':        'removed_process',
-                       'group':       'removed_group',
-                       'status':      xmlrpc.Faults.FAILED,
-                       'description': 'blah'}]
-        supervisor.processes = supervisor_reread.processes = ['removed_group']
-
-        plugin.do_update('')
-        self.assertEqual(supervisor.processes, ['removed_group'])
-
-    def test__formatChanges(self):
-        plugin = self._makeOne()
-        # Don't explode, plz
-        plugin._formatChanges([['added'], ['changed'], ['removed']])
-        plugin._formatChanges([[], [], []])
-
-    def test_reread(self):
-        plugin = self._makeOne()
-        calls = []
-        plugin._formatChanges = lambda x: calls.append(x)
-        result = plugin.do_reread(None)
-        self.assertEqual(result, None)
-        self.assertEqual(calls[0], [['added'], ['changed'], ['removed']])
-
-    def test_reread_Fault(self):
-        plugin = self._makeOne()
-        from supervisor import xmlrpc
-        import xmlrpclib
-        def raise_fault(*arg, **kw):
-            raise xmlrpclib.Fault(xmlrpc.Faults.CANT_REREAD, 'cant')
-        plugin.ctl.options._server.supervisor_reread.reloadConfig = raise_fault
-        plugin.do_reread(None)
-        self.assertEqual(plugin.ctl.stdout.getvalue(),
-                         'ERROR: cant\n')
-
-    def test__formatConfigInfo(self):
-        info = { 'group': 'group1',
-                 'name': 'process1',
-                 'inuse': True,
-                 'autostart': True,
-                 'process_prio': 999,
-                 'group_prio': 999 }
-        plugin = self._makeOne()
-        result = plugin._formatConfigInfo(info)
-        self.assertTrue('in use' in result)
-        info = { 'group': 'group1',
-                 'name': 'process1',
-                 'inuse': False,
-                 'autostart': False,
-                 'process_prio': 999,
-                 'group_prio': 999 }
-        result = plugin._formatConfigInfo(info)
-        self.assertTrue('avail' in result)
-
 
 class DummyListener:
     def __init__(self):

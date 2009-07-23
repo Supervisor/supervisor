@@ -8,24 +8,6 @@ Next Release
 
   - Added release dates to CHANGES.txt.
 
-  - The configuration rereading functionality introduced in 3.0a7 has been
-    moved into its own RPC interface and supervisorctl plugin.  These will
-    continue to be bundled with the main Supervisor package.  
-    
-    Users who upgraded to 3.0a7 and wish to continue using the reread
-    functionality must add these lines to their existing supervisord.conf:
-
-    [rpcinterface:supervisor_reread]
-    supervisor.rpcinterface_factory = supervisor.rpcinterface:make_reread_rpcinterface
-    [ctlplugin:supervisor_reread]
-    supervisor.ctl_factory = supervisor.supervisorctl:make_reread_controllerplugin
-
-    The lines above are now included in the sample configuration file 
-    output by the ``echo_supervisord_conf`` console script.  
-
-    Please note that due to this change, supervisorctl from 3.0a7 cannot
-    control the reread functions of 3.0a8 (and later).
-
 3.0a7 (2009-05-24)
  
   - We now bundle our own patched version of Medusa contributed by Jason
