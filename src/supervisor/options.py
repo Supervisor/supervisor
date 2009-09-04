@@ -59,8 +59,6 @@ from supervisor.datatypes import auto_restart
 from supervisor.datatypes import profile_options
 from supervisor.datatypes import set_here
 
-from supervisor.socket_manager import SocketManager
-
 from supervisor import loggers
 from supervisor import states
 from supervisor import xmlrpc
@@ -664,7 +662,7 @@ class ServerOptions(Options):
                                                   FastCGIProcessConfig)
             groups.append(
                 FastCGIGroupConfig(self, program_name, priority, processes,
-                                   SocketManager(socket_config))
+                                   socket_config)
                 )
         
 
@@ -681,8 +679,7 @@ class ServerOptions(Options):
             path = normalize_path(path)
             return UnixStreamSocketConfig(path)
         
-        tcp_re = re.compile(r'^tcp://([^\s:]+):(\d+)$')
-        m = tcp_re.match(sock)
+        m = re.match(r'tcp://([^\s:]+):(\d+)$', sock)
         if m:
             host = m.group(1)
             port = int(m.group(2))
@@ -1557,6 +1554,7 @@ class EventListenerConfig(ProcessConfig):
         return dispatchers, p
 
 class FastCGIProcessConfig(ProcessConfig):
+    
     def make_process(self, group=None):
         if group is None:
             raise NotImplementedError('FastCGI programs require a group')
@@ -1627,16 +1625,25 @@ class EventListenerPoolConfig(Config):
 
 class FastCGIGroupConfig(ProcessGroupConfig):        
     def __init__(self, options, name, priority, process_configs,
-                 socket_manager):
+                 socket_config):
         self.options = options
         self.name = name
         self.priority = priority
         self.process_configs = process_configs
-        self.socket_manager = socket_manager
+        self.socket_config = socket_config
 
-    def after_setuid(self):
-        ProcessGroupConfig.after_setuid(self)
-        self.socket_manager.prepare_socket()
+    def __eq__(self, other):
+        if not isinstance(other, FastCGIGroupConfig):
+            return False
+        
+        if self.socket_config != other.socket_config:
+            return False
+            
+        return ProcessGroupConfig.__eq__(self, other)
+        
+    def make_group(self):
+        from supervisor.process import FastCGIProcessGroup
+        return FastCGIProcessGroup(self)        
     
 def readFile(filename, offset, length):
     """ Read length bytes from the file named by filename starting at

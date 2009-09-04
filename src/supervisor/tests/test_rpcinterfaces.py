@@ -732,6 +732,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(process1.stop_called, True)
         process2 = supervisord.process_groups['foo'].processes['process2']
         self.assertEqual(process2.stop_called, True)
+        self.assertTrue(supervisord.process_groups['foo'].stop_was_requested)
 
     def test_stopProcessGroup_nowait(self):
         options = DummyOptions()

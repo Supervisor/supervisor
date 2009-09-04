@@ -184,6 +184,21 @@ class SocketConfig:
         return '<%s at %s for %s>' % (self.__class__,
                                       id(self),
                                       self.url)
+                                      
+    def __str__(self):
+        return str(self.url)
+        
+    def __eq__(self, other):
+        if not isinstance(other, SocketConfig):
+            return False
+
+        if self.url != other.url:
+            return False
+
+        return True
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def addr(self):
         raise NotImplementedError

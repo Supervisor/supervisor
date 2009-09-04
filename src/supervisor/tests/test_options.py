@@ -15,7 +15,7 @@ from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyPGroupConfig
 from supervisor.tests.base import DummyProcess
-from supervisor.tests.base import DummySocketManager
+from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import lstrip
 
 class OptionTests(unittest.TestCase):
@@ -806,7 +806,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(gconfig0.__class__, FastCGIGroupConfig)
         self.assertEqual(gconfig0.name, 'foo')
         self.assertEqual(gconfig0.priority, 1)
-        self.assertEqual(gconfig0.socket_manager.config().url,
+        self.assertEqual(gconfig0.socket_config.url,
                          'unix:///tmp/foo.sock')
         self.assertEqual(len(gconfig0.process_configs), 2)
         self.assertEqual(gconfig0.process_configs[0].__class__,
@@ -817,7 +817,7 @@ class ServerOptionsTests(unittest.TestCase):
         gconfig1 = gconfigs[1]
         self.assertEqual(gconfig1.name, 'bar')
         self.assertEqual(gconfig1.priority, 999)
-        self.assertEqual(gconfig1.socket_manager.config().url,
+        self.assertEqual(gconfig1.socket_config.url,
                          'tcp://localhost:6000')
         self.assertEqual(len(gconfig1.process_configs), 3)
 
@@ -1300,22 +1300,35 @@ class FastCGIGroupConfigTests(unittest.TestCase):
 
     def test_ctor(self):
         options = DummyOptions()
-        sock_manager = DummySocketManager(6)
-        instance = self._makeOne(options, 'whatever', 999, [], sock_manager)
+        sock_config = DummySocketConfig(6)
+        instance = self._makeOne(options, 'whatever', 999, [], sock_config)
         self.assertEqual(instance.options, options)
         self.assertEqual(instance.name, 'whatever')
         self.assertEqual(instance.priority, 999)
         self.assertEqual(instance.process_configs, [])
-        self.assertEqual(instance.socket_manager, sock_manager)
+        self.assertEqual(instance.socket_config, sock_config)
     
-    def test_after_setuid(self):
+    def test_same_sockets_are_equal(self):
         options = DummyOptions()
-        sock_manager = DummySocketManager(6)
-        pconfigs = [DummyPConfig(options, 'process1', '/bin/process1')]
-        instance = self._makeOne(options, 'whatever', 999, pconfigs, sock_manager)
-        instance.after_setuid()
-        self.assertTrue(pconfigs[0].autochildlogs_created)
-        self.assertTrue(instance.socket_manager.prepare_socket_called)
+        sock_config1 = DummySocketConfig(6)
+        instance1 = self._makeOne(options, 'whatever', 999, [], sock_config1)
+
+        sock_config2 = DummySocketConfig(6)
+        instance2 = self._makeOne(options, 'whatever', 999, [], sock_config2)
+
+        self.assertTrue(instance1 == instance2)
+        self.assertFalse(instance1 != instance2)
+
+    def test_diff_sockets_are_not_equal(self):
+        options = DummyOptions()
+        sock_config1 = DummySocketConfig(6)
+        instance1 = self._makeOne(options, 'whatever', 999, [], sock_config1)
+
+        sock_config2 = DummySocketConfig(7)
+        instance2 = self._makeOne(options, 'whatever', 999, [], sock_config2)
+
+        self.assertTrue(instance1 != instance2)
+        self.assertFalse(instance1 == instance2)
 
 class UtilFunctionsTests(unittest.TestCase):
     def test_make_namespec(self):

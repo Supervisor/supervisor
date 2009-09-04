@@ -293,6 +293,63 @@ class DummySupervisor:
     def get_state(self):
         return self.options.mood
 
+class DummySocket:
+    bind_called = False
+    bind_addr = None
+    listen_called = False
+    listen_backlog = None
+    close_called = False
+
+    def __init__(self, fd):
+        self.fd = fd
+
+    def fileno(self):
+        return self.fd
+
+    def bind(self, addr):
+        self.bind_called = True
+        self.bind_addr = addr
+
+    def listen(self, backlog):
+        self.listen_called = True
+        self.listen_backlog = backlog
+
+    def close(self):
+        self.close_called = True
+
+    def __str__(self):
+        return 'dummy socket'
+
+class DummySocketConfig:
+    def __init__(self, fd):
+        self.fd = fd
+
+    def addr(self):
+        return 'dummy addr'
+
+    def __eq__(self, other):
+        return self.fd == other.fd
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def create(self):
+        return DummySocket(self.fd)
+
+class DummySocketManager:
+    def __init__(self, config, **kwargs):
+        self._config = config
+        self.request_close_called = False
+
+    def config(self):
+        return self._config
+
+    def get_socket(self):
+        return DummySocket(self._config.fd)
+        
+    def request_close(self):
+        self.request_close_called = True
+
 class DummyProcess:
     # Initial state; overridden by instance variables
     pid = 0 # Subprocess pid; 0 when not running
@@ -861,9 +918,9 @@ class DummyPGroupConfig:
                                                  self.name)
 
 class DummyFCGIGroupConfig(DummyPGroupConfig):
-    def __init__(self, options, name, priority, pconfigs, socket_manager):
+    def __init__(self, options, name='whatever', priority=999, pconfigs=None, socket_config=DummySocketConfig(1)):
         DummyPGroupConfig.__init__(self, options, name, priority, pconfigs)
-        self.socket_manager = socket_manager
+        self.socket_config = socket_config
 
 class DummyProcessGroup:
     def __init__(self, config):
@@ -872,18 +929,28 @@ class DummyProcessGroup:
         self.all_stopped = False
         self.dispatchers = {}
         self.unstopped_processes = []
+        self.stop_was_requested = False
 
     def transition(self):
         self.transitioned = True
 
     def stop_all(self):
         self.all_stopped = True
+        
+    def stop_requested(self):
+        self.stop_was_requested = True
 
     def get_unstopped_processes(self):
         return self.unstopped_processes
 
     def get_dispatchers(self):
         return self.dispatchers
+        
+class DummyFCGIProcessGroup(DummyProcessGroup):
+    
+    def __init__(self, config):
+        DummyProcessGroup.__init__(self, config)
+        self.socket_manager = DummySocketManager(config.socket_config)
 
 class PopulatedDummySupervisor(DummySupervisor):
     def __init__(self, options, group_name, *pconfigs):
@@ -977,54 +1044,6 @@ class DummyEvent:
 
     def __str__(self):
         return 'dummy event'
-
-class DummySocket:
-    bind_called = False
-    bind_addr = None
-    listen_called = False
-    listen_backlog = None
-    close_called = False
-    
-    def __init__(self, fd):
-        self.fd = fd
-        
-    def fileno(self):
-        return self.fd
-
-    def bind(self, addr):
-        self.bind_called = True
-        self.bind_addr = addr
-        
-    def listen(self, backlog):
-        self.listen_called = True
-        self.listen_backlog = backlog
-        
-    def close(self):
-        self.close_called = True
-
-    def __str__(self):
-        return 'dummy socket'
-
-class DummySocketConfig:
-    def __init__(self, fd):
-        self.fd = fd
-    
-    def addr(self):
-        return 'dummy addr'
-        
-    def create(self):
-        return DummySocket(self.fd)
-
-class DummySocketManager:
-    def __init__(self, sock_fd):
-        self.sock_fd = sock_fd
-        self.prepare_socket_called = False
-    
-    def prepare_socket(self):
-        self.prepare_socket_called = True
-        
-    def get_socket(self):
-        return DummySocket(self.sock_fd)
         
 def dummy_handler(event, result):
     pass

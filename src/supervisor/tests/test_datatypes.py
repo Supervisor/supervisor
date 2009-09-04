@@ -183,6 +183,25 @@ class InetStreamSocketConfigTests(unittest.TestCase):
         self.assertTrue(reuse)
         sock.close
         
+    def test_same_urls_are_equal(self):
+        conf1 = self._makeOne('localhost', '5001')
+        conf2 = self._makeOne('localhost', '5001')
+        self.assertTrue(conf1 == conf2)
+        self.assertFalse(conf1 != conf2)
+
+    def test_diff_urls_are_not_equal(self):
+        conf1 = self._makeOne('localhost', '5001')
+        conf2 = self._makeOne('localhost', '5002')
+        self.assertTrue(conf1 != conf2)
+        self.assertFalse(conf1 == conf2)
+
+    def test_diff_objs_are_not_equal(self):
+        conf1 = self._makeOne('localhost', '5001')
+        conf2 = 'blah'
+        self.assertTrue(conf1 != conf2)
+        self.assertFalse(conf1 == conf2)    
+        
+        
 class UnixStreamSocketConfigTests(unittest.TestCase):
     def _getTargetClass(self):
         return datatypes.UnixStreamSocketConfig
@@ -213,6 +232,24 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
         sock = conf.create()
         self.assertFalse(os.path.exists(tf_name))
         sock.close
+        
+    def test_same_paths_are_equal(self):
+        conf1 = self._makeOne('/tmp/foo.sock')
+        conf2 = self._makeOne('/tmp/foo.sock')
+        self.assertTrue(conf1 == conf2)
+        self.assertFalse(conf1 != conf2)
+        
+    def test_diff_paths_are_not_equal(self):
+        conf1 = self._makeOne('/tmp/foo.sock')
+        conf2 = self._makeOne('/tmp/bar.sock')
+        self.assertTrue(conf1 != conf2)
+        self.assertFalse(conf1 == conf2)
+        
+    def test_diff_objs_are_not_equal(self):
+        conf1 = self._makeOne('/tmp/foo.sock')
+        conf2 = 'blah'
+        self.assertTrue(conf1 != conf2)
+        self.assertFalse(conf1 == conf2)    
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

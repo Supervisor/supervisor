@@ -8,6 +8,18 @@ Next Release
 
   - Added release dates to CHANGES.txt.
 
+  - Reloading the config for an fcgi process group did not close the fcgi
+    socket - now, the socket is closed whenever the group is stopped as a unit
+    (including during config update). However, if you stop all the processes
+    in a group individually, the socket will remain open to allow for graceful
+    restarts of FCGI daemons.  (Roger Hoover)
+
+  - Rereading the config did not pick up changes to the socket parameter in a
+    fcgi-program section.  (Roger Hoover)
+
+  - Made a more friendly exception message when a FCGI socket cannot be
+    created.  (Roger Hoover)
+
 3.0a7 (2009-05-24)
  
   - We now bundle our own patched version of Medusa contributed by Jason

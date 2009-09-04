@@ -12,8 +12,10 @@ from supervisor.tests.base import DummyPGroupConfig
 from supervisor.tests.base import DummyDispatcher
 from supervisor.tests.base import DummyEvent
 from supervisor.tests.base import DummyFCGIGroupConfig
-from supervisor.tests.base import DummySocketManager
+from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import DummyProcessGroup
+from supervisor.tests.base import DummyFCGIProcessGroup
+from supervisor.tests.base import DummySocketManager
 
 class SubprocessTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -1185,10 +1187,10 @@ class FastCGISubprocessTests(unittest.TestCase):
         options.forkpid = 0
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
         instance = self._makeOne(config)
-        sock_manager = DummySocketManager(7)
+        sock_config = DummySocketConfig(7)
         gconfig = DummyFCGIGroupConfig(options, 'whatever', 999, None, 
-                                       sock_manager)
-        instance.group = DummyProcessGroup(gconfig)
+                                       sock_config)
+        instance.group = DummyFCGIProcessGroup(gconfig)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(len(options.duped), 3)
@@ -1203,15 +1205,35 @@ class FastCGISubprocessTests(unittest.TestCase):
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
         config.redirect_stderr = True
         instance = self._makeOne(config)
-        sock_manager = DummySocketManager(13)
+        sock_config = DummySocketConfig(13)
         gconfig = DummyFCGIGroupConfig(options, 'whatever', 999, None, 
-                                       sock_manager)
-        instance.group = DummyProcessGroup(gconfig)
+                                       sock_config)
+        instance.group = DummyFCGIProcessGroup(gconfig)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(len(options.duped), 2)
         self.assertEqual(options.duped[13], 0)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
+        
+    def test_before_spawn_gets_socket_ref(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'good', '/good/filename', uid=1)
+        instance = self._makeOne(config)
+        sock_config = DummySocketConfig(7)
+        gconfig = DummyFCGIGroupConfig(options, 'whatever', 999, None, 
+                                       sock_config)
+        instance.group = DummyFCGIProcessGroup(gconfig)
+        self.assertTrue(instance.fcgi_sock is None)
+        instance.before_spawn()
+        self.assertFalse(instance.fcgi_sock is None)
+        
+    def test_after_finish_removes_socket_ref(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'good', '/good/filename', uid=1)
+        instance = self._makeOne(config)
+        instance.fcgi_sock = 'hello'
+        instance.after_finish()
+        self.assertTrue(instance.fcgi_sock is None)
 
 class ProcessGroupBaseTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -1339,6 +1361,21 @@ class ProcessGroupTests(ProcessGroupBaseTests):
         group.processes = {'process1': process1}
         group.transition()
         self.assertEqual(process1.transitioned, True)
+        
+class FastCGIProcessGroupTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.process import FastCGIProcessGroup
+        return FastCGIProcessGroup
+        
+    def _makeOne(self, *args, **kw):
+        return self._getTargetClass()(*args, **kw)
+        
+    def test_stop_requested_signals_socket_close(self):
+        options = DummyOptions()
+        gconfig = DummyFCGIGroupConfig(options)
+        group = self._makeOne(gconfig, socketManager=DummySocketManager)
+        group.stop_requested()
+        self.assertTrue(group.socket_manager.request_close_called)
         
 class EventListenerPoolTests(ProcessGroupBaseTests):
     def setUp(self):
