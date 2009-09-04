@@ -1,3 +1,7 @@
+- Consider adding a friendlier error message to supervisorctl when it can't
+  connect to supervisord.  Currently, it dumps a Python backtrace.  Requested
+  by Benjamin Smith.
+
 - Both the "tail" and "fg" commands in supervisorctl have tests to verify
   their error handling but not actual operation.  We should add some additional 
   tests to verify their operation for completeness.
