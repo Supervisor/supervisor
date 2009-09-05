@@ -38,6 +38,11 @@ class ChildUtilsTests(unittest.TestCase):
         self.assertEqual(headers, {'a':'1', 'b':'2'})
         self.assertEqual(data, 'thedata\n')
 
+    def test_get_asctime(self):
+        from supervisor.childutils import get_asctime
+        result = get_asctime(2147483647)
+        self.assertEqual(result, '2038-01-18 22:14:07,000')
+
 class TestProcessCommunicationsProtocol(unittest.TestCase):
     def test_send(self):
         from supervisor.childutils import pcomm
