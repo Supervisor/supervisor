@@ -146,8 +146,13 @@ class DatatypesTest(unittest.TestCase):
             self.assertEqual(actual, path)
         finally:
             datatypes.existing_dirpath = func
-    
 
+    def test_integer(self):
+        from supervisor.datatypes import integer
+        self.assertRaises(ValueError, integer, 'abc')
+        self.assertEqual(integer('1'), 1)
+        self.assertEqual(integer(str(sys.maxint+1)), sys.maxint+1)
+ 
 class InetStreamSocketConfigTests(unittest.TestCase):
     def _getTargetClass(self):
         return datatypes.InetStreamSocketConfig
@@ -251,8 +256,161 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
         self.assertTrue(conf1 != conf2)
         self.assertFalse(conf1 == conf2)    
 
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
+class RangeCheckedConversionTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.datatypes import RangeCheckedConversion
+        return RangeCheckedConversion
 
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
+    def _makeOne(self, conversion, min=None, max=None):
+        return self._getTargetClass()(conversion, min, max)
+
+    def test_below_lower_bound(self):
+        conversion = self._makeOne(lambda *arg: -1, 0)
+        self.assertRaises(ValueError, conversion, None)
+        
+    def test_above_upper_lower_bound(self):
+        conversion = self._makeOne(lambda *arg: 1, 0, 0)
+        self.assertRaises(ValueError, conversion, None)
+    
+    def test_passes(self):
+        conversion = self._makeOne(lambda *arg: 0, 0, 0)
+        self.assertEqual(conversion(0), 0)
+
+class InetAddressTests(unittest.TestCase):
+    def _callFUT(self, s):
+        from supervisor.datatypes import inet_address
+        return inet_address(s)
+
+    def test_no_port_number(self):
+        self.assertRaises(ValueError, self._callFUT, 'a:')
+
+    def test_bad_port_number(self):
+        self.assertRaises(ValueError, self._callFUT, 'a')
+
+    def test_default_host(self):
+        host, port = self._callFUT('*:8080')
+        self.assertEqual(host, '')
+        self.assertEqual(port, 8080)
+        
+    def test_boring(self):
+        host, port = self._callFUT('localhost:80')
+        self.assertEqual(host, 'localhost')
+        self.assertEqual(port, 80)
+
+class TestSocketAddress(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.datatypes import SocketAddress
+        return SocketAddress
+
+    def _makeOne(self, s):
+        return self._getTargetClass()(s)
+
+    def test_unix_socket(self):
+        import socket
+        addr = self._makeOne('/foo/bar')
+        self.assertEqual(addr.family, socket.AF_UNIX)
+        self.assertEqual(addr.address, '/foo/bar')
+        
+    def test_inet_socket(self):
+        import socket
+        addr = self._makeOne('localhost:8080')
+        self.assertEqual(addr.family, socket.AF_INET)
+        self.assertEqual(addr.address, ('localhost', 8080))
+        
+class TestInetStreamSocketConfig(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.datatypes import InetStreamSocketConfig
+        return InetStreamSocketConfig
+        
+    def _makeOne(self, host, port):
+        return self._getTargetClass()(host, port)
+
+    def test_addr(self):
+        cfg = self._makeOne('localhost', 8080)
+        self.assertEqual(cfg.addr(), ('localhost', 8080))
+        
+    def test_create(self):
+        cfg = self._makeOne('localhost', 65531)
+        sock = cfg.create()
+        sock.close()
+
+    def test___str__(self):
+        cfg = self._makeOne('localhost', 65531)
+        self.assertEqual(str(cfg), 'tcp://localhost:65531')
+
+    def test__eq__(self):
+        cfg = self._makeOne('localhost', 65531)
+        cfg2 = self._makeOne('localhost', 65531)
+        self.failUnless(cfg == cfg2)
+        
+    def test__ne__(self):
+        cfg = self._makeOne('localhost', 65531)
+        cfg2 = self._makeOne('localhost', 65532)
+        self.failUnless(cfg != cfg2)
+        
+class TestUnixStreamSocketConfig(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.datatypes import UnixStreamSocketConfig
+        return UnixStreamSocketConfig
+        
+    def _makeOne(self, path):
+        return self._getTargetClass()(path)
+
+    def test_addr(self):
+        cfg = self._makeOne('/foo/bar')
+        self.assertEqual(cfg.addr(), '/foo/bar')
+        
+    def test_create(self):
+        import tempfile
+        fn = tempfile.mktemp()
+        cfg = self._makeOne(fn)
+        sock = cfg.create()
+        sock.close()
+        if os.path.exists(fn):
+            os.unlink(fn)
+
+    def test___str__(self):
+        cfg = self._makeOne('foo/bar')
+        self.assertEqual(str(cfg), 'unix://foo/bar')
+
+    def test__eq__(self):
+        cfg = self._makeOne('/foo/bar')
+        cfg2 = self._makeOne('/foo/bar')
+        self.failUnless(cfg == cfg2)
+        
+    def test__ne__(self):
+        cfg = self._makeOne('/foo/bar')
+        cfg2 = self._makeOne('/foo/bar2')
+        self.failUnless(cfg != cfg2)
+        
+class TestColonSeparatedUserGroup(unittest.TestCase):
+    def _callFUT(self, arg):
+        from supervisor.datatypes import colon_separated_user_group
+        return colon_separated_user_group(arg)
+
+    def test_ok_username(self):
+        self.assertEqual(self._callFUT('root')[0], 0)
+
+    def test_missinguser_username(self):
+        self.assertRaises(ValueError,
+                          self._callFUT, 'godihopethisuserdoesntexist')
+        
+    def test_missinguser_username_and_groupname(self):
+        self.assertRaises(ValueError,
+                          self._callFUT, 'godihopethisuserdoesntexist:foo')
+        
+class TestOctalType(unittest.TestCase):
+    def _callFUT(self, arg):
+        from supervisor.datatypes import octal_type
+        return octal_type(arg)
+
+    def test_it_success(self):
+        self.assertEqual(self._callFUT('10'), 8)
+
+    def test_test_it_failure(self):
+        self.assertRaises(ValueError, self._callFUT, 'noo')
+        
+        
+        
+    
+        

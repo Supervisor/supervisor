@@ -20,8 +20,8 @@ from supervisor.loggers import getLevelNumByDescription
 
 # I dont know why we bother, this doesn't run on Windows, but just
 # in case it ever does, avoid this bug magnet by leaving it.
-if sys.platform[:3] == "win":
-    DEFAULT_HOST = "localhost"
+if sys.platform[:3] == "win": # pragma: no cover
+    DEFAULT_HOST = "localhost" 
 else:
     DEFAULT_HOST = ""
 
@@ -35,8 +35,8 @@ def integer(value):
     try:
         return int(value)
     except ValueError:
-        return long(value)
-    except OverflowError:
+        return long(value) # why does this help? (CM)
+    except OverflowError: # pragma: no cover (python 2.3)
         return long(value)
 
 TRUTHY_STRINGS = ('yes', 'true', 'on', '1')
@@ -166,7 +166,6 @@ def inet_address(s):
 class SocketAddress:
     def __init__(self, s):
         # returns (family, address) tuple
-        import socket
         if "/" in s or s.find(os.sep) >= 0 or ":" not in s:
             self.family = getattr(socket, "AF_UNIX", None)
             self.address = s
@@ -200,10 +199,10 @@ class SocketConfig:
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def addr(self):
+    def addr(self): # pragma: no cover
         raise NotImplementedError
         
-    def create(self):
+    def create(self): # pragma: no cover
         raise NotImplementedError
 
 class InetStreamSocketConfig(SocketConfig):
