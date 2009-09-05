@@ -10,7 +10,7 @@ from supervisor.tests.base import DummySocketConfig
 from supervisor.datatypes import UnixStreamSocketConfig
 from supervisor.datatypes import InetStreamSocketConfig
 
-class TestObject():
+class TestObject:
     
     def __init__(self):
         self.value = 5

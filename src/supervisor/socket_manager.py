@@ -14,7 +14,7 @@
 
 import socket
 
-class Proxy():
+class Proxy:
     """ Class for wrapping a shared resource object and getting
         notified when it's deleted
     """
@@ -33,7 +33,7 @@ class Proxy():
     def _get(self):
         return self.object
         
-class ReferenceCounter():
+class ReferenceCounter:
     """ Class for tracking references to a shared resource
     """
     
