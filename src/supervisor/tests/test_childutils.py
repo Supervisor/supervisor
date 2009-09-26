@@ -1,4 +1,5 @@
 import sys
+import time
 import unittest
 from StringIO import StringIO
 
@@ -40,8 +41,9 @@ class ChildUtilsTests(unittest.TestCase):
 
     def test_get_asctime(self):
         from supervisor.childutils import get_asctime
-        result = get_asctime(2147483647)
-        self.assertEqual(result, '2038-01-18 22:14:07,000')
+        timestamp = time.mktime((2009, 1, 18, 22, 14, 7, 0, 0, 0))
+        result = get_asctime(timestamp)
+        self.assertEqual(result, '2009-01-18 22:14:07,000')
 
 class TestProcessCommunicationsProtocol(unittest.TestCase):
     def test_send(self):
