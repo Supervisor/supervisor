@@ -141,7 +141,14 @@ class ClientOptionsTests(unittest.TestCase):
         self.assertEqual(options.username, 'chris')
         self.assertEqual(options.password, '123')
         self.assertEqual(options.history_file, history_file)
-                   
+
+    def test_options_unixsocket_cli(self):
+        from StringIO import StringIO
+        fp = StringIO('[supervisorctl]')
+        instance = self._makeOne()
+        instance.configfile = fp
+        instance.realize(args=['--serverurl', 'unix:///dev/null'])
+        self.assertEqual(instance.serverurl, 'unix:///dev/null')
 
 class ServerOptionsTests(unittest.TestCase):
     def _getTargetClass(self):

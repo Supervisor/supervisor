@@ -20,6 +20,9 @@ Next Release
   - Made a more friendly exception message when a FCGI socket cannot be
     created.  (Roger Hoover)
 
+  - Fixed a bug where the --serverurl option of supervisorctl would not
+    accept a URL with a "unix" scheme.  (Jason Kirtland)
+
 3.0a7 (2009-05-24)
  
   - We now bundle our own patched version of Medusa contributed by Jason

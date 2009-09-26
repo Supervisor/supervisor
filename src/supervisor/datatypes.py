@@ -371,6 +371,8 @@ def url(value):
     import urlparse
     scheme, netloc, path, params, query, fragment = urlparse.urlparse(value)
     if scheme and netloc:
+        return value     
+    if scheme == 'unix' and path.startswith('//') and len(path) > 2:
         return value
     raise ValueError("value %s is not a URL" % value)
 

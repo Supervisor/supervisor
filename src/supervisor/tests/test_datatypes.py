@@ -152,6 +152,30 @@ class DatatypesTest(unittest.TestCase):
         self.assertRaises(ValueError, integer, 'abc')
         self.assertEqual(integer('1'), 1)
         self.assertEqual(integer(str(sys.maxint+1)), sys.maxint+1)
+
+    def test_url_accepts_urlparse_recognized_scheme_with_netloc(self):
+        good_url = 'http://localhost:9001'
+        self.assertEqual(datatypes.url(good_url), good_url)
+
+    def test_url_rejects_urlparse_recognized_scheme_but_no_netloc(self):
+        bad_url = 'http://'
+        self.assertRaises(ValueError, datatypes.url, bad_url)
+
+    def test_url_accepts_unix_scheme_with_path(self):
+        good_url = "unix://somepath"
+        self.assertEqual(good_url, datatypes.url(good_url))
+
+    def test_url_rejects_unix_scheme_with_no_slashes_or_path(self):
+        bad_url = "unix:"
+        self.assertRaises(ValueError, datatypes.url, bad_url)   
+
+    def test_url_rejects_unix_scheme_with_slashes_but_no_path(self):
+        bad_url = "unix://"
+        self.assertRaises(ValueError, datatypes.url, bad_url)   
+    
+    def test_url_rejects_urlparse_unrecognized_scheme_with_path(self):
+        bad_url = "bad://path"
+        self.assertRaises(ValueError, datatypes.url, bad_url)
  
 class InetStreamSocketConfigTests(unittest.TestCase):
     def _getTargetClass(self):
