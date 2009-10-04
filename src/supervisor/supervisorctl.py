@@ -117,7 +117,6 @@ class Controller(cmd.Cmd):
                       'restart','start','stop','version','clear',
                       'fg','open','quit','remove','shutdown','status',
                       'tail','help']
-        self.info=self.get_supervisor().getAllProcessInfo()
         cmd.Cmd.__init__(self, completekey, stdin, stdout)
         for name, factory, kwargs in self.options.plugin_factories:
             plugin = factory(self, **kwargs)
@@ -235,7 +234,8 @@ class Controller(cmd.Cmd):
         groups=[]
         programs=[]
         groupwiseprograms={}
-        for i in self.info:
+        info = self.get_supervisor().getAllProcessInfo()
+        for i in info:
             programs.append(i['name'])
             if i['group'] not in groups:
                 groups.append(i['group'])

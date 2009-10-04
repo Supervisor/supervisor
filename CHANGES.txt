@@ -1,5 +1,11 @@
 Next Release
 
+  - Fixed a bug introduced in 3.0a7 where supervisorctl wouldn't ask
+    for a username/password combination properly from a
+    password-protected supervisord if it wasn't filled in within the
+    "[supervisorctl]" section username/password values.  It now
+    properly asks for a username and password.
+
   - Fixed a bug introduced in 3.0a7 where setup.py would not detect the
     Python version correctly.  Patch by Daniele Paolella.
 
