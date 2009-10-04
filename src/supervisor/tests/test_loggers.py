@@ -294,8 +294,3 @@ class DummyHandler:
     def close(self):
         self.closed = True
 
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
