@@ -21,6 +21,11 @@ import errno
 import pwd
 import urllib
 
+try:
+    from hashlib import sha1
+except ImportError:
+    from sha import new as sha1
+
 from supervisor.medusa import asyncore_25 as asyncore
 from supervisor.medusa import http_date
 from supervisor.medusa import http_server
@@ -850,8 +855,7 @@ class encrypted_dictionary_authorizer:
         if self.dict.has_key(username):
             stored_password = self.dict[username]
             if stored_password.startswith('{SHA}'):
-                import sha
-                password_hash = sha.new(password).hexdigest()
+                password_hash = sha1(password).hexdigest()
                 return stored_password[5:] == password_hash
             else:
                 return stored_password == password

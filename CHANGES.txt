@@ -39,6 +39,8 @@ Next Release
   - Fixed a bug where the FCGI socket reference count was not getting 
     decremented on spawn error.  (Roger Hoover)
 
+  - Fixed a Python 2.6 deprecation warning on use of the "sha" module.
+
 3.0a7 (2009-05-24)
  
   - We now bundle our own patched version of Medusa contributed by Jason
