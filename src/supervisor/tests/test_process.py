@@ -4,6 +4,7 @@ import time
 import unittest
 import sys
 import errno
+from mock import Mock, patch_object, sentinel
 
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
@@ -16,6 +17,8 @@ from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import DummyProcessGroup
 from supervisor.tests.base import DummyFCGIProcessGroup
 from supervisor.tests.base import DummySocketManager
+
+from supervisor.process import Subprocess
 
 class SubprocessTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -1234,6 +1237,60 @@ class FastCGISubprocessTests(unittest.TestCase):
         instance.fcgi_sock = 'hello'
         instance.after_finish()
         self.assertTrue(instance.fcgi_sock is None)
+    
+    #Patch Subprocess.finish() method for this test to verify override
+    @patch_object(Subprocess, 'finish', Mock(return_value=sentinel.finish_result))
+    def test_finish_override(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'good', '/good/filename', uid=1)
+        instance = self._makeOne(config)
+        instance.after_finish = Mock()
+        result = instance.finish(sentinel.pid, sentinel.sts)
+        self.assertEqual(sentinel.finish_result, result,
+                        'FastCGISubprocess.finish() did not pass thru result')
+        self.assertEqual(1, instance.after_finish.call_count,
+                            'FastCGISubprocess.after_finish() not called once')
+        finish_mock = Subprocess.finish
+        self.assertEqual(1, finish_mock.call_count,
+                            'Subprocess.finish() not called once')
+        pid_arg = finish_mock.call_args[0][1]
+        sts_arg = finish_mock.call_args[0][2]
+        self.assertEqual(sentinel.pid, pid_arg,
+                            'Subprocess.finish() pid arg was not passed')
+        self.assertEqual(sentinel.sts, sts_arg,
+                            'Subprocess.finish() sts arg was not passed')
+                            
+    #Patch Subprocess.spawn() method for this test to verify override
+    @patch_object(Subprocess, 'spawn', Mock(return_value=sentinel.ppid))
+    def test_spawn_override_success(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'good', '/good/filename', uid=1)
+        instance = self._makeOne(config)
+        instance.before_spawn = Mock()
+        result = instance.spawn()
+        self.assertEqual(sentinel.ppid, result,
+                        'FastCGISubprocess.spawn() did not pass thru result')
+        self.assertEqual(1, instance.before_spawn.call_count,
+                            'FastCGISubprocess.before_spawn() not called once')
+        spawn_mock = Subprocess.spawn
+        self.assertEqual(1, spawn_mock.call_count,
+                            'Subprocess.spawn() not called once')
+
+    #Patch Subprocess.spawn() method for this test to verify error handling
+    @patch_object(Subprocess, 'spawn', Mock(return_value=None))
+    def test_spawn_error(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'good', '/good/filename', uid=1)
+        instance = self._makeOne(config)
+        instance.before_spawn = Mock()
+        instance.fcgi_sock = 'nuke me on error'
+        result = instance.spawn()
+        self.assertEqual(None, result,
+                        'FastCGISubprocess.spawn() did return None on error')
+        self.assertEqual(1, instance.before_spawn.call_count,
+                            'FastCGISubprocess.before_spawn() not called once')
+        self.assertEqual(None, instance.fcgi_sock,
+                'FastCGISubprocess.spawn() did not remove sock ref on error')    
 
 class ProcessGroupBaseTests(unittest.TestCase):
     def _getTargetClass(self):

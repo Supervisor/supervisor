@@ -333,7 +333,7 @@ class DummySocketConfig:
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def create(self):
+    def create_and_bind(self):
         return DummySocket(self.fd)
 
 class DummySocketManager:

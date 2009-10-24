@@ -8,6 +8,7 @@ import unittest
 import signal
 import shutil
 import errno
+from mock import Mock, patch, sentinel
 
 from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import DummyLogger
@@ -784,49 +785,93 @@ class ServerOptionsTests(unittest.TestCase):
         config.read_string(text)
         instance = self._makeOne()
         self.assertRaises(ValueError,instance.process_groups_from_parser,config)
-
+    
     def test_fcgi_programs_from_parser(self):
         from supervisor.options import FastCGIGroupConfig
         from supervisor.options import FastCGIProcessConfig
         text = lstrip("""\
         [fcgi-program:foo]
-        socket=unix:///tmp/%(program_name)s.sock
+        socket = unix:///tmp/%(program_name)s.sock
+        socket_owner = testuser:testgroup
+        socket_mode = 0666
         process_name = %(program_name)s_%(process_num)s
         command = /bin/foo
         numprocs = 2
         priority = 1
 
         [fcgi-program:bar]
-        socket=tcp://localhost:6000
+        socket = unix:///tmp/%(program_name)s.sock
         process_name = %(program_name)s_%(process_num)s
         command = /bin/bar
+        user = testuser
         numprocs = 3
+        
+        [fcgi-program:flub]
+        socket = unix:///tmp/%(program_name)s.sock
+        command = /bin/flub
+        
+        [fcgi-program:cub]
+        socket = tcp://localhost:6000
+        command = /bin/cub
         """)
         from supervisor.options import UnhosedConfigParser
         config = UnhosedConfigParser()
         config.read_string(text)
         instance = self._makeOne()
-        gconfigs = instance.process_groups_from_parser(config)
-        self.assertEqual(len(gconfigs), 2)
-
-        gconfig0 = gconfigs[0]
-        self.assertEqual(gconfig0.__class__, FastCGIGroupConfig)
-        self.assertEqual(gconfig0.name, 'foo')
-        self.assertEqual(gconfig0.priority, 1)
-        self.assertEqual(gconfig0.socket_config.url,
-                         'unix:///tmp/foo.sock')
-        self.assertEqual(len(gconfig0.process_configs), 2)
-        self.assertEqual(gconfig0.process_configs[0].__class__,
-                         FastCGIProcessConfig)
-        self.assertEqual(gconfig0.process_configs[1].__class__,
-                         FastCGIProcessConfig)
         
-        gconfig1 = gconfigs[1]
-        self.assertEqual(gconfig1.name, 'bar')
-        self.assertEqual(gconfig1.priority, 999)
-        self.assertEqual(gconfig1.socket_config.url,
+        #Patch pwd and grp module functions to give us sentinel
+        #uid/gid values so that the test does not depend on
+        #any specific system users
+        pwd_mock = Mock()
+        pwd_mock.return_value = (None, None, sentinel.uid, sentinel.gid)
+        grp_mock = Mock()
+        grp_mock.return_value = (None, None, sentinel.gid)
+        @patch('pwd.getpwuid', pwd_mock)
+        @patch('pwd.getpwnam', pwd_mock)
+        @patch('grp.getgrnam', grp_mock)
+        def get_process_groups(instance, config):
+            return instance.process_groups_from_parser(config)
+
+        gconfigs = get_process_groups(instance, config)
+        exp_owner = (sentinel.uid, sentinel.gid)
+
+        self.assertEqual(len(gconfigs), 4)
+
+        gconf_foo = gconfigs[0]
+        self.assertEqual(gconf_foo.__class__, FastCGIGroupConfig)
+        self.assertEqual(gconf_foo.name, 'foo')
+        self.assertEqual(gconf_foo.priority, 1)
+        self.assertEqual(gconf_foo.socket_config.url,
+                                'unix:///tmp/foo.sock')
+        self.assertEqual(exp_owner, gconf_foo.socket_config.get_owner())
+        self.assertEqual(0666, gconf_foo.socket_config.get_mode())
+        self.assertEqual(len(gconf_foo.process_configs), 2)
+        pconfig_foo = gconf_foo.process_configs[0]
+        self.assertEqual(pconfig_foo.__class__, FastCGIProcessConfig)
+        
+        gconf_bar = gconfigs[2]
+        self.assertEqual(gconf_bar.name, 'bar')
+        self.assertEqual(gconf_bar.priority, 999)
+        self.assertEqual(gconf_bar.socket_config.url,
+                         'unix:///tmp/bar.sock')
+        self.assertEqual(exp_owner, gconf_bar.socket_config.get_owner())
+        self.assertEqual(0700, gconf_bar.socket_config.get_mode())
+        self.assertEqual(len(gconf_bar.process_configs), 3)
+        
+        gconf_flub = gconfigs[1]
+        self.assertEqual(gconf_flub.name, 'flub')
+        self.assertEqual(gconf_flub.socket_config.url,
+                         'unix:///tmp/flub.sock')
+        self.assertEqual(None, gconf_flub.socket_config.get_owner())
+        self.assertEqual(0700, gconf_flub.socket_config.get_mode())
+        self.assertEqual(len(gconf_flub.process_configs), 1)
+        
+        gconf_cub = gconfigs[3]
+        self.assertEqual(gconf_cub.name, 'cub')
+        self.assertEqual(gconf_cub.socket_config.url,
                          'tcp://localhost:6000')
-        self.assertEqual(len(gconfig1.process_configs), 3)
+        self.assertEqual(len(gconf_cub.process_configs), 1)
+        
 
     def test_fcgi_program_no_socket(self):
         text = lstrip("""\
@@ -895,6 +940,58 @@ class ServerOptionsTests(unittest.TestCase):
         command = /bin/foo
         numprocs = 2
         priority = 1
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError,instance.process_groups_from_parser,config)
+
+    def test_fcgi_program_socket_owner_set_for_tcp(self):
+        text = lstrip("""\
+        [fcgi-program:foo]
+        socket=tcp://localhost:8000
+        socket_owner=nobody:nobody
+        command = /bin/foo
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError,instance.process_groups_from_parser,config)
+
+    def test_fcgi_program_socket_mode_set_for_tcp(self):
+        text = lstrip("""\
+        [fcgi-program:foo]
+        socket = tcp://localhost:8000
+        socket_mode = 0777
+        command = /bin/foo
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError,instance.process_groups_from_parser,config)
+
+    def test_fcgi_program_bad_socket_owner(self):
+        text = lstrip("""\
+        [fcgi-program:foo]
+        socket = unix:///tmp/foo.sock
+        socket_owner = sometotaljunkuserthatshouldnobethere
+        command = /bin/foo
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError,instance.process_groups_from_parser,config)
+
+    def test_fcgi_program_bad_socket_mode(self):
+        text = lstrip("""\
+        [fcgi-program:foo]
+        socket = unix:///tmp/foo.sock
+        socket_mode = junk
+        command = /bin/foo
         """)
         from supervisor.options import UnhosedConfigParser
         config = UnhosedConfigParser()

@@ -645,6 +645,25 @@ class ServerOptions(Options):
                 continue
             program_name = section.split(':', 1)[1]
             priority = integer(get(section, 'priority', 999))
+            
+            proc_uid = name_to_uid(get(section, 'user', None))
+            
+            socket_owner = get(section, 'socket_owner', None)
+            if socket_owner is not None:
+                try:
+                    socket_owner = colon_separated_user_group(socket_owner)
+                except ValueError:
+                    raise ValueError('Invalid socket_owner value %s'
+                                                                % socket_owner)                
+                
+            socket_mode = get(section, 'socket_mode', None)
+            if socket_mode is not None:
+                try:
+                    socket_mode = octal_type(socket_mode)
+                except (TypeError, ValueError):
+                    raise ValueError('Invalid socket_mode value %s'
+                                                                % socket_mode)
+            
             socket = get(section, 'socket', None)
             if not socket:
                 raise ValueError('[%s] section requires a "socket" line' %
@@ -654,7 +673,8 @@ class ServerOptions(Options):
                           'program_name':program_name}
             socket = expand(socket, expansions, 'socket')
             try:
-                socket_config = self.parse_fcgi_socket(socket)
+                socket_config = self.parse_fcgi_socket(socket, proc_uid,
+                                                    socket_owner, socket_mode)
             except ValueError, e:
                 raise ValueError('%s in [%s] socket' % (str(e), section))
             
@@ -669,7 +689,7 @@ class ServerOptions(Options):
         groups.sort()
         return groups
 
-    def parse_fcgi_socket(self, sock):
+    def parse_fcgi_socket(self, sock, proc_uid, socket_owner, socket_mode):
         if sock.startswith('unix://'):
             path = sock[7:]
             #Check it's an absolute path
@@ -677,7 +697,21 @@ class ServerOptions(Options):
                 raise ValueError("Unix socket path %s is not an absolute path",
                                  path)
             path = normalize_path(path)
-            return UnixStreamSocketConfig(path)
+            
+            if socket_owner is None:
+                uid = os.getuid()
+                if proc_uid is not None and proc_uid != uid:
+                    socket_owner = (proc_uid, self.get_gid_for_uid(proc_uid))
+                    
+            if socket_mode is None:
+                socket_mode = 0700
+            
+            return UnixStreamSocketConfig(path, owner=socket_owner,
+                                                mode=socket_mode)
+        
+        if socket_owner is not None or socket_mode is not None:
+            raise ValueError("socket_owner and socket_mode params should"
+                    + " only be used with a Unix domain socket")
         
         m = re.match(r'tcp://([^\s:]+):(\d+)$', sock)
         if m:
@@ -686,6 +720,11 @@ class ServerOptions(Options):
             return InetStreamSocketConfig(host, port)
         
         raise ValueError("Bad socket format %s", sock)
+        
+    def get_gid_for_uid(self, uid):
+        import pwd
+        pwrec = pwd.getpwuid(uid)
+        return pwrec[3]
 
     def processes_from_section(self, parser, section, group_name,
                                klass=None):

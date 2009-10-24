@@ -87,7 +87,7 @@ dist = setup(
     )],
     install_requires = requires,
     extras_require = {'iterparse':['cElementTree >= 1.0.2']},
-    tests_require = requires,
+    tests_require = requires + ['mock >= 0.5.0'],
     include_package_data = True,
     zip_safe = False,
     namespace_packages = ['supervisor'],

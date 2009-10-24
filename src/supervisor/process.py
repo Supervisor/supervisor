@@ -579,7 +579,11 @@ class FastCGISubprocess(Subprocess):
         Overrides Subprocess.spawn() so we can hook in before it happens
         """
         self.before_spawn()
-        Subprocess.spawn(self)
+        pid = Subprocess.spawn(self)
+        if pid is None:
+            #Remove object reference to decrement the reference count on error
+            self.fcgi_sock = None
+        return pid
         
     def after_finish(self):
         """
@@ -592,8 +596,9 @@ class FastCGISubprocess(Subprocess):
         """
         Overrides Subprocess.finish() so we can hook in after it happens
         """
-        Subprocess.finish(self, pid, sts)
+        retval = Subprocess.finish(self, pid, sts)
         self.after_finish()
+        return retval
 
     def _prepare_child_fds(self):
         """

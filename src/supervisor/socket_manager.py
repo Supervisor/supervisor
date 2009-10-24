@@ -107,8 +107,7 @@ class SocketManager:
         if not self.prepared:
             if self.logger:
                 self.logger.info('Creating socket %s' % self.socket_config)
-            self.socket = self.socket_config.create()
-            self.socket.bind(self.socket_config.addr())
+            self.socket = self.socket_config.create_and_bind()
             self.socket.listen(socket.SOMAXCONN)
             self.prepared = True
     

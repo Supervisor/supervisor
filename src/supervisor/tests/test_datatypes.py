@@ -5,6 +5,7 @@ import os
 import unittest
 import socket
 import tempfile
+from mock import Mock, patch, sentinel
 from supervisor import datatypes
 
 class DatatypesTest(unittest.TestCase):
@@ -176,7 +177,7 @@ class DatatypesTest(unittest.TestCase):
     def test_url_rejects_urlparse_unrecognized_scheme_with_path(self):
         bad_url = "bad://path"
         self.assertRaises(ValueError, datatypes.url, bad_url)
- 
+
 class InetStreamSocketConfigTests(unittest.TestCase):
     def _getTargetClass(self):
         return datatypes.InetStreamSocketConfig
@@ -187,6 +188,10 @@ class InetStreamSocketConfigTests(unittest.TestCase):
     def test_url(self):
         conf = self._makeOne('127.0.0.1', 8675)
         self.assertEqual(conf.url, 'tcp://127.0.0.1:8675')
+
+    def test___str__(self):
+        cfg = self._makeOne('localhost', 65531)
+        self.assertEqual(str(cfg), 'tcp://localhost:65531')
                 
     def test_repr(self):
         conf = self._makeOne('127.0.0.1', 8675)
@@ -205,32 +210,32 @@ class InetStreamSocketConfigTests(unittest.TestCase):
         addr = conf.addr()
         self.assertEqual(addr, ('localhost', 5001))
         
-    def test_create(self):
+    def test_create_and_bind(self):
         conf = self._makeOne('127.0.0.1', 8675)
-        sock = conf.create()
+        sock = conf.create_and_bind()
         reuse = sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
         self.assertTrue(reuse)
-        sock.close
+        self.assertEquals(conf.addr(), sock.getsockname()) #verifies that bind was called
+        sock.close()
         
     def test_same_urls_are_equal(self):
-        conf1 = self._makeOne('localhost', '5001')
-        conf2 = self._makeOne('localhost', '5001')
+        conf1 = self._makeOne('localhost', 5001)
+        conf2 = self._makeOne('localhost', 5001)
         self.assertTrue(conf1 == conf2)
         self.assertFalse(conf1 != conf2)
 
     def test_diff_urls_are_not_equal(self):
-        conf1 = self._makeOne('localhost', '5001')
-        conf2 = self._makeOne('localhost', '5002')
+        conf1 = self._makeOne('localhost', 5001)
+        conf2 = self._makeOne('localhost', 5002)
         self.assertTrue(conf1 != conf2)
         self.assertFalse(conf1 == conf2)
 
     def test_diff_objs_are_not_equal(self):
-        conf1 = self._makeOne('localhost', '5001')
+        conf1 = self._makeOne('localhost', 5001)
         conf2 = 'blah'
         self.assertTrue(conf1 != conf2)
-        self.assertFalse(conf1 == conf2)    
-        
-        
+        self.assertFalse(conf1 == conf2) 
+              
 class UnixStreamSocketConfigTests(unittest.TestCase):
     def _getTargetClass(self):
         return datatypes.UnixStreamSocketConfig
@@ -241,6 +246,10 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
     def test_url(self):
         conf = self._makeOne('/tmp/foo.sock')
         self.assertEqual(conf.url, 'unix:///tmp/foo.sock')
+        
+    def test___str__(self):
+        cfg = self._makeOne('foo/bar')
+        self.assertEqual(str(cfg), 'unix://foo/bar')
             
     def test_repr(self):
         conf = self._makeOne('/tmp/foo.sock')
@@ -254,13 +263,42 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
         addr = conf.addr()
         self.assertEqual(addr, '/tmp/foo.sock')
         
-    def test_create(self):
+    def test_create_and_bind(self):
         (tf_fd, tf_name) = tempfile.mkstemp()
-        conf = self._makeOne(tf_name)
-        os.close(tf_fd)
-        sock = conf.create()
-        self.assertFalse(os.path.exists(tf_name))
-        sock.close
+        owner = (sentinel.uid, sentinel.gid)
+        mode = sentinel.mode
+        conf = self._makeOne(tf_name, owner=owner, mode=mode)
+        
+        #Patch os.chmod and os.chown functions with mocks
+        #objects so that the test does not depend on
+        #any specific system users or permissions
+        chown_mock = Mock()
+        chmod_mock = Mock()
+        @patch('os.chown', chown_mock)
+        @patch('os.chmod', chmod_mock)
+        def call_create_and_bind(conf):
+            return conf.create_and_bind()
+        
+        sock = call_create_and_bind(conf)
+        self.assertTrue(os.path.exists(tf_name))
+        self.assertEquals(conf.addr(), sock.getsockname()) #verifies that bind was called
+        sock.close()
+        self.assertTrue(os.path.exists(tf_name))
+        os.unlink(tf_name)
+        #Verify that os.chown was called with correct args
+        self.assertEquals(1, chown_mock.call_count)
+        path_arg = chown_mock.call_args[0][0]
+        uid_arg = chown_mock.call_args[0][1]
+        gid_arg = chown_mock.call_args[0][2]
+        self.assertEquals(tf_name, path_arg)
+        self.assertEquals(owner[0], uid_arg)
+        self.assertEquals(owner[1], gid_arg)
+        #Verify that os.chmod was called with correct args
+        self.assertEquals(1, chmod_mock.call_count)
+        path_arg = chmod_mock.call_args[0][0]
+        mode_arg = chmod_mock.call_args[0][1]
+        self.assertEquals(tf_name, path_arg)
+        self.assertEquals(mode, mode_arg)
         
     def test_same_paths_are_equal(self):
         conf1 = self._makeOne('/tmp/foo.sock')
@@ -278,8 +316,8 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
         conf1 = self._makeOne('/tmp/foo.sock')
         conf2 = 'blah'
         self.assertTrue(conf1 != conf2)
-        self.assertFalse(conf1 == conf2)    
-
+        self.assertFalse(conf1 == conf2) 
+        
 class RangeCheckedConversionTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.datatypes import RangeCheckedConversion
@@ -340,72 +378,6 @@ class TestSocketAddress(unittest.TestCase):
         addr = self._makeOne('localhost:8080')
         self.assertEqual(addr.family, socket.AF_INET)
         self.assertEqual(addr.address, ('localhost', 8080))
-        
-class TestInetStreamSocketConfig(unittest.TestCase):
-    def _getTargetClass(self):
-        from supervisor.datatypes import InetStreamSocketConfig
-        return InetStreamSocketConfig
-        
-    def _makeOne(self, host, port):
-        return self._getTargetClass()(host, port)
-
-    def test_addr(self):
-        cfg = self._makeOne('localhost', 8080)
-        self.assertEqual(cfg.addr(), ('localhost', 8080))
-        
-    def test_create(self):
-        cfg = self._makeOne('localhost', 65531)
-        sock = cfg.create()
-        sock.close()
-
-    def test___str__(self):
-        cfg = self._makeOne('localhost', 65531)
-        self.assertEqual(str(cfg), 'tcp://localhost:65531')
-
-    def test__eq__(self):
-        cfg = self._makeOne('localhost', 65531)
-        cfg2 = self._makeOne('localhost', 65531)
-        self.failUnless(cfg == cfg2)
-        
-    def test__ne__(self):
-        cfg = self._makeOne('localhost', 65531)
-        cfg2 = self._makeOne('localhost', 65532)
-        self.failUnless(cfg != cfg2)
-        
-class TestUnixStreamSocketConfig(unittest.TestCase):
-    def _getTargetClass(self):
-        from supervisor.datatypes import UnixStreamSocketConfig
-        return UnixStreamSocketConfig
-        
-    def _makeOne(self, path):
-        return self._getTargetClass()(path)
-
-    def test_addr(self):
-        cfg = self._makeOne('/foo/bar')
-        self.assertEqual(cfg.addr(), '/foo/bar')
-        
-    def test_create(self):
-        import tempfile
-        fn = tempfile.mktemp()
-        cfg = self._makeOne(fn)
-        sock = cfg.create()
-        sock.close()
-        if os.path.exists(fn):
-            os.unlink(fn)
-
-    def test___str__(self):
-        cfg = self._makeOne('foo/bar')
-        self.assertEqual(str(cfg), 'unix://foo/bar')
-
-    def test__eq__(self):
-        cfg = self._makeOne('/foo/bar')
-        cfg2 = self._makeOne('/foo/bar')
-        self.failUnless(cfg == cfg2)
-        
-    def test__ne__(self):
-        cfg = self._makeOne('/foo/bar')
-        cfg2 = self._makeOne('/foo/bar2')
-        self.failUnless(cfg != cfg2)
         
 class TestColonSeparatedUserGroup(unittest.TestCase):
     def _callFUT(self, arg):

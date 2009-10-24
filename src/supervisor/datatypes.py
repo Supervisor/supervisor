@@ -202,7 +202,7 @@ class SocketConfig:
     def addr(self): # pragma: no cover
         raise NotImplementedError
         
-    def create(self): # pragma: no cover
+    def create_and_bind(self): # pragma: no cover
         raise NotImplementedError
 
 class InetStreamSocketConfig(SocketConfig):
@@ -219,28 +219,65 @@ class InetStreamSocketConfig(SocketConfig):
     def addr(self):
         return (self.host, self.port)
         
-    def create(self):
+    def create_and_bind(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(self.addr())
         return sock
         
 class UnixStreamSocketConfig(SocketConfig):
     """ Unix domain socket config helper """
 
     path = None # Unix domain socket path
+    mode = None # Unix permission mode bits for socket
+    owner = None # Tuple (uid, gid) for Unix ownership of socket
+    sock = None # socket object
     
-    def __init__(self, path):
+    def __init__(self, path, **kwargs):
         self.path = path
         self.url = 'unix://%s' % (path)
+        self.mode = kwargs.get('mode', None)
+        self.owner = kwargs.get('owner', None)
         
     def addr(self):
         return self.path
         
-    def create(self):
+    def create_and_bind(self):
         if os.path.exists(self.path):
             os.unlink(self.path)
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.bind(self.addr())
+        try:
+            self._chown()
+            self._chmod()
+        except:
+            sock.close()
+            os.unlink(self.path)
+            raise
         return sock
+        
+    def get_mode(self):
+        return self.mode
+        
+    def get_owner(self):
+        return self.owner
+        
+    def _chmod(self):
+        if self.mode is not None:
+            try:
+                os.chmod(self.path, self.mode)
+            except Exception, e:
+                raise ValueError("Could not change permissions of socket "
+                                    + "file: %s" % (e))
+        
+    def _chown(self):
+        if self.owner is not None:
+            try:
+                os.chown(self.path, self.owner[0], self.owner[1])
+            except Exception, e:
+                raise ValueError("Could not change ownership of socket file: "
+                                    + "%s" % (e))
+                
 
 def colon_separated_user_group(arg):
     try:

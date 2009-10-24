@@ -29,6 +29,16 @@ Next Release
   - Fixed a bug where the --serverurl option of supervisorctl would not
     accept a URL with a "unix" scheme.  (Jason Kirtland)
 
+  - Running the tests now requires the "mock" package.  This dependency has 
+    been added to "tests_require" in setup.py.  (Roger Hoover)
+
+  - Added support for setting the ownership and permissions for an FCGI socket.
+    This is done using new "socket_owner" and "socket_mode" options in an
+    [fcgi-program:x] section.  See the manual for details.  (Roger Hoover)
+    
+  - Fixed a bug where the FCGI socket reference count was not getting 
+    decremented on spawn error.  (Roger Hoover)
+
 3.0a7 (2009-05-24)
  
   - We now bundle our own patched version of Medusa contributed by Jason
