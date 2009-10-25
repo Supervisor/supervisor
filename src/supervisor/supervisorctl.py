@@ -807,7 +807,9 @@ class DefaultControllerPlugin(ControllerPluginBase):
             changedict.update(dict(zip(n, [t] * len(n))))
 
         if changedict:
-            for name in sorted(changedict):
+            names = changedict.keys()
+            names.sort()
+            for name in names:
                 self.ctl.output("%s: %s" % (name, changedict[name]))
         else:
             self.ctl.output("No config updates to processes")
