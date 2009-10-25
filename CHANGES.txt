@@ -47,6 +47,10 @@ Next Release
 
   - Updated ez_setup.py to one that knows about setuptools 0.6c11.
 
+  - Running "supervisorctl shutdown" no longer dumps a Python backtrace
+    when it can't connect to supervisord on the expected socket.  Thanks
+    to Benjamin Smith for reporting this.
+
 3.0a7 (2009-05-24)
  
   - We now bundle our own patched version of Medusa contributed by Jason

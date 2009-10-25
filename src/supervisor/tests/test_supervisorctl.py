@@ -495,14 +495,6 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         result = plugin.do_reload('')
         self.assertEqual(result, None)
         self.assertEqual(options._server.supervisor._restarted, True)
-        
-    def test_shutdown_fail(self):
-        plugin = self._makeOne()
-        options = plugin.ctl.options
-        options._server.supervisor._restartable = False
-        result = plugin.do_shutdown('')
-        self.assertEqual(result, None)
-        self.assertEqual(options._server.supervisor._shutdown, False)
 
     def test_shutdown(self):
         plugin = self._makeOne()
@@ -510,6 +502,59 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         result = plugin.do_shutdown('')
         self.assertEqual(result, None)
         self.assertEqual(options._server.supervisor._shutdown, True)
+        
+    def test_shutdown_catches_xmlrpc_fault_shutdown_state(self):
+        plugin = self._makeOne()
+        from supervisor import xmlrpc
+        import xmlrpclib
+        
+        def raise_fault(*arg, **kw):     
+            raise xmlrpclib.Fault(xmlrpc.Faults.SHUTDOWN_STATE, 'bye')
+        plugin.ctl.options._server.supervisor.shutdown = raise_fault
+
+        result = plugin.do_shutdown('')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 
+                         'ERROR: already shutting down\n')
+
+    def test_shutdown_reraises_other_xmlrpc_faults(self):
+        plugin = self._makeOne()
+        from supervisor import xmlrpc
+        import xmlrpclib
+        
+        def raise_fault(*arg, **kw):     
+            raise xmlrpclib.Fault(xmlrpc.Faults.CANT_REREAD, 'ouch')
+        plugin.ctl.options._server.supervisor.shutdown = raise_fault
+
+        self.assertRaises(xmlrpclib.Fault, 
+                          plugin.do_shutdown, '')
+
+    def test_shutdown_catches_socket_error_ECONNREFUSED(self):
+        plugin = self._makeOne()
+        import socket
+        import errno
+        
+        def raise_fault(*arg, **kw):     
+            raise socket.error(errno.ECONNREFUSED, 'nobody home')
+        plugin.ctl.options._server.supervisor.shutdown = raise_fault
+
+        result = plugin.do_shutdown('')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 
+                         'ERROR: http://localhost:92491 refused'
+                         ' connection (already shut down?)\n')
+
+    def test_shutdown_reraises_other_socket_errors(self):
+        plugin = self._makeOne()
+        import socket
+        import errno
+
+        def raise_fault(*arg, **kw):     
+            raise socket.error(errno.EPERM, 'denied')
+        plugin.ctl.options._server.supervisor.shutdown = raise_fault
+
+        self.assertRaises(socket.error, 
+                          plugin.do_shutdown, '')
 
     def test__formatChanges(self):
         plugin = self._makeOne()

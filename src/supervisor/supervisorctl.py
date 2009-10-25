@@ -757,6 +757,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             really = yesno.lower().startswith('y')
         else:
             really = 1
+
         if really:
             supervisor = self.ctl.get_supervisor()
             try:
@@ -764,6 +765,14 @@ class DefaultControllerPlugin(ControllerPluginBase):
             except xmlrpclib.Fault, e:
                 if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                     self.ctl.output('ERROR: already shutting down')
+                else:
+                    raise
+            except socket.error, e:
+                if e[0] == errno.ECONNREFUSED:
+                    msg = 'ERROR: %s refused connection (already shut down?)'
+                    self.ctl.output(msg % self.ctl.options.serverurl)
+                else:
+                    raise
             else:
                 self.ctl.output('Shut down')
 
