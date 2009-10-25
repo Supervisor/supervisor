@@ -228,8 +228,7 @@ class Controller(cmd.Cmd):
                 self.output('%s refused connection' % self.options.serverurl)
                 return False
             elif why[0] == errno.ENOENT:
-                msg = 'ERROR: %s no such file (already shut down?)'
-                self.output(msg % self.options.serverurl)
+                self.output('%s no such file' % self.options.serverurl)
                 return False
             raise
         return True

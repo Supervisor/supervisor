@@ -53,6 +53,40 @@ class ControllerTests(unittest.TestCase):
         '[rpcinterface:supervisor] section is enabled in the '
         'configuration file (see sample.conf).\n')
 
+    def test__upcheck_catches_socket_error_ECONNREFUSED(self):
+        options = DummyClientOptions()
+        import socket
+        import errno
+        def raise_fault(*arg, **kw):     
+            raise socket.error(errno.ECONNREFUSED, 'nobody home')
+        options._server.supervisor.getVersion = raise_fault
+
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+
+        result = controller.upcheck()
+        self.assertEqual(result, False)
+
+        output = controller.stdout.getvalue() 
+        self.assertTrue('refused connection' in output)
+
+    def test__upcheck_catches_socket_error_ENOENT(self):
+        options = DummyClientOptions()
+        import socket
+        import errno
+        def raise_fault(*arg, **kw):     
+            raise socket.error(errno.ENOENT, 'nobody home')
+        options._server.supervisor.getVersion = raise_fault
+
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+
+        result = controller.upcheck()
+        self.assertEqual(result, False)
+
+        output = controller.stdout.getvalue() 
+        self.assertTrue('no such file' in output)
+
     def test_onecmd(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
