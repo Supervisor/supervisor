@@ -821,7 +821,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'http://localhost:92491/mainlogtail')
         self.assertEqual(error[0],
                          'http://localhost:92491/mainlogtail')
-        for msg in ('Cannot connect', 'socket.error', '32', 'Broken pipe'):
+        for msg in ('Cannot connect', 'socket.error'):
             self.assertTrue(msg in error[1])
 
     def test_maintail_nobytes(self):
