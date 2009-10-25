@@ -100,6 +100,11 @@ class DatatypesTest(unittest.TestCase):
         expected = {'foo': 'bar', 'baz': 'qux'}
         self.assertEqual(actual, expected)
 
+    def test_dict_of_key_value_pairs_returns_dict_even_if_newlines(self):
+        actual = datatypes.dict_of_key_value_pairs('foo\n=\nbar\n,\nbaz\n=\nqux')
+        expected = {'foo': 'bar', 'baz': 'qux'}
+        self.assertEqual(actual, expected)
+
     def test_dict_of_key_value_pairs_handles_commas_inside_apostrophes(self):
         actual = datatypes.dict_of_key_value_pairs("foo='bar,baz',baz='q,ux'")
         expected = {'foo': 'bar,baz', 'baz': 'q,ux'}
@@ -110,9 +115,20 @@ class DatatypesTest(unittest.TestCase):
         expected = {'foo': 'bar,baz', 'baz': 'q,ux'}
         self.assertEqual(actual, expected)
 
-    def test_dict_of_key_value_pairs_raises_value_error_on_weird_input(self):
+    def test_dict_of_key_value_pairs_allows_trailing_comma(self):
+        actual = datatypes.dict_of_key_value_pairs('foo=bar,')
+        expected = {'foo': 'bar'}
+        self.assertEqual(actual, expected)
+
+    def test_dict_of_key_value_pairs_raises_value_error_on_too_short(self):
         self.assertRaises(ValueError, 
                           datatypes.dict_of_key_value_pairs, 'foo')
+        self.assertRaises(ValueError, 
+                          datatypes.dict_of_key_value_pairs, 'foo=')
+        self.assertRaises(ValueError, 
+                          datatypes.dict_of_key_value_pairs, 'foo=bar,baz')
+        self.assertRaises(ValueError, 
+                          datatypes.dict_of_key_value_pairs, 'foo=bar,baz=')
 
     def test_logfile_name_returns_none_for_none_values(self):
         for thing in datatypes.LOGFILE_NONES:

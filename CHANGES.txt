@@ -9,6 +9,10 @@ Next Release
   - Fixed a bug introduced in 3.0a7 where setup.py would not detect the
     Python version correctly.  Patch by Daniele Paolella.
 
+  - Fixed a bug introduced in 3.0a7 where parsing a string of key/value
+    pairs failed on Python 2.3 due to use of regular expression syntax
+    introduced in Python 2.4.
+
   - Removed the test suite for the ``memmon`` console script, which was 
     moved to the Superlance package in 3.0a7.
 

@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import socket
+import shlex
 from supervisor.loggers import getLevelNumByDescription
 
 # I dont know why we bother, this doesn't run on Windows, but just
@@ -79,30 +80,21 @@ def list_of_exitcodes(arg):
     except:
         raise ValueError("not a valid list of exit codes: " + repr(arg))
 
-# Regular expression to match key=value, key='value' or key="value" strings
-# Quoted values can allow commas, unquoted will not
-DICT_OF_KVP_REGEXP = re.compile(r"[ \t]*(?P<key>\w+)[ \t]*=[ \t]"
-                                r"*(?P<quote>['\"])?"
-                                r"(?P<value>.*?)(?(quote)['\"])[,$]")
-
 def dict_of_key_value_pairs(arg):
     """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'}
         Quotes can be used to allow commas in the value
     """
+    tokens = list(shlex.shlex(arg))
+    tokens_len = len(tokens)
+
     D = {}
-
-    if len(arg):
-        # Work-around non-greedy value match won't let the regexp parse
-        # the last key=value pair if value is not quoted
-        if arg[-1] != ',':
-            arg += ','
-
-        for key, quote, value in DICT_OF_KVP_REGEXP.findall(arg):
-            D[key] = value.strip()
-
-        if D == {}:
-            raise ValueError("not a list of key/value pairs: " + repr(arg))
-
+    i = 0
+    while i in range(0, tokens_len):   
+        k_eq_v = tokens[i:i+3]
+        if len(k_eq_v) != 3:
+            raise ValueError, "Unexpected end of key/value pairs"
+        D[k_eq_v[0]] = k_eq_v[2].strip('\'"')
+        i += 4
     return D
 
 class Automatic:
