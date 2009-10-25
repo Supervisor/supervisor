@@ -540,9 +540,24 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
         result = plugin.do_shutdown('')
         self.assertEqual(result, None)
-        self.assertEqual(plugin.ctl.stdout.getvalue(), 
-                         'ERROR: http://localhost:92491 refused'
-                         ' connection (already shut down?)\n')
+
+        output = plugin.ctl.stdout.getvalue()
+        self.assertTrue('refused connection (already shut down?)' in output)
+
+    def test_shutdown_catches_socket_error_ENOENT(self):
+        plugin = self._makeOne()
+        import socket
+        import errno
+        
+        def raise_fault(*arg, **kw):     
+            raise socket.error(errno.ENOENT, 'no file')
+        plugin.ctl.options._server.supervisor.shutdown = raise_fault
+
+        result = plugin.do_shutdown('')
+        self.assertEqual(result, None)
+        
+        output = plugin.ctl.stdout.getvalue() 
+        self.assertTrue('no such file (already shut down?)' in output)        
 
     def test_shutdown_reraises_other_socket_errors(self):
         plugin = self._makeOne()
