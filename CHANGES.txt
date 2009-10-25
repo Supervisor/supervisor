@@ -45,6 +45,8 @@ Next Release
 
   - Fixed a Python 2.6 deprecation warning on use of the "sha" module.
 
+  - Updated ez_setup.py to one that knows about setuptools 0.6c11.
+
 3.0a7 (2009-05-24)
  
   - We now bundle our own patched version of Medusa contributed by Jason
