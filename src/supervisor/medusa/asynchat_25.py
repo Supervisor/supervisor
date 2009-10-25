@@ -48,7 +48,6 @@ you - by calling your self.found_terminator() method.
 
 import socket
 from supervisor.medusa import asyncore_25 as asyncore
-from collections import deque
 
 class async_chat (asyncore.dispatcher):
     """This is an abstract class.  You must derive from this class, and add
@@ -251,15 +250,15 @@ class simple_producer:
 class fifo:
     def __init__ (self, list=None):
         if not list:
-            self.list = deque()
+            self.list = []
         else:
-            self.list = deque(list)
+            self.list = list
 
     def __len__ (self):
         return len(self.list)
 
     def is_empty (self):
-        return not self.list
+        return self.list == []
 
     def first (self):
         return self.list[0]
@@ -269,7 +268,7 @@ class fifo:
 
     def pop (self):
         if self.list:
-            return (1, self.list.popleft())
+            return (1, self.list.pop(0))
         else:
             return (0, None)
 

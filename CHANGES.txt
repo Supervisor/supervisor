@@ -51,6 +51,9 @@ Next Release
     when it can't connect to supervisord on the expected socket.  Thanks
     to Benjamin Smith for reporting this.
 
+  - Removed use of collections.deque in our bundled version of asynchat
+    because it broke compatibility with Python 2.3.
+
 3.0a7 (2009-05-24)
  
   - We now bundle our own patched version of Medusa contributed by Jason
