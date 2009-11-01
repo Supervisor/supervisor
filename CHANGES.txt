@@ -666,7 +666,7 @@ Next Release
     typically) were evident at supervisord "reload" time (when using
     the "reload" command from supervisorctl).
 
-  - Updated ez_setup.py to one that knows about setuptools 0.6c7.
+  - We no longer bundle ez_setup to bootstrap setuptools installation.
 
 3.0a2 (2007-08-24)
 

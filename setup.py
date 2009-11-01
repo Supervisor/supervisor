@@ -21,9 +21,6 @@ if not hasattr(urllib2, 'splituser'):
     # in there in Python 2.3.3, so we just alias it.
     urllib2.splituser = urllib.splituser
 
-from ez_setup import use_setuptools
-use_setuptools()
-
 import os
 import sys
 
@@ -37,7 +34,7 @@ if sys.version_info[:2] < (2, 3):
 requires = ['meld3 >= 0.6.5']
 
 if sys.version_info[:2] < (2, 5):
-    # for meld3 (its a distutils package)
+    # for meld3 (it's a distutils package)
     requires.append('elementtree')
 
 from setuptools import setup, find_packages
