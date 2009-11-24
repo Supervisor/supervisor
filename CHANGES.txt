@@ -54,6 +54,10 @@ Next Release
   - Removed use of collections.deque in our bundled version of asynchat
     because it broke compatibility with Python 2.3.
 
+  - The sample configuration output by "echo_supervisord_conf" now correctly
+    shows the default for "autorestart" as "unexpected".  Thanks to
+    William Dode for noticing it showed the wrong value.
+
 3.0a7 (2009-05-24)
  
   - We now bundle our own patched version of Medusa contributed by Jason
