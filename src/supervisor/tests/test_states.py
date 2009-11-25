@@ -1,5 +1,6 @@
 """Test suite for supervisor.states"""
 
+import sys
 import unittest
 from StringIO import StringIO
 from supervisor import states
