@@ -1,5 +1,7 @@
 Next Release
 
+  - Allow umask to be 000 (patch contributed by Rowan Nairn).
+
   - Fixed a bug introduced in 3.0a7 where supervisorctl wouldn't ask
     for a username/password combination properly from a
     password-protected supervisord if it wasn't filled in within the

@@ -324,7 +324,7 @@ class Subprocess:
                 options.write(2, msg)
             else:
                 try:
-                    if self.config.umask:
+                    if self.config.umask is not None:
                         options.setumask(self.config.umask)
                     options.execve(filename, argv, env)
                 except OSError, why:
