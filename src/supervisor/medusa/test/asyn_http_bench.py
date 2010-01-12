@@ -1,4 +1,3 @@
-#! /usr/local/bin/python1.4
 # -*- Mode: Python -*-
 
 import asyncore

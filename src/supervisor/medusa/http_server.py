@@ -1,4 +1,3 @@
-#! /usr/local/bin/python
 # -*- Mode: Python -*-
 #
 #       Author: Sam Rushing <rushing@nightmare.com>

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 #
 # Test script for producers.py
 #
