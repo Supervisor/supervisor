@@ -1,5 +1,8 @@
 Next Release
 
+  - Got rid of Medusa hashbang headers in various files to ease RPM
+    packaging.
+
   - Allow umask to be 000 (patch contributed by Rowan Nairn).
 
   - Fixed a bug introduced in 3.0a7 where supervisorctl wouldn't ask
