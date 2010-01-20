@@ -1,10 +1,10 @@
-Next Release
+3.0a8 (2010-01-20)
 
   - Don't cleanup file descriptors on first supervisord invocation:
     this is a lame workaround for Snow Leopard systems that use
     libdispatch and are receiving "Illegal instruction" messages at
-    supervisord startup time.  Restarting supervisor may still cause a
-    crash on these systems.
+    supervisord startup time.  Restarting supervisord via
+    "supervisorctl restart" may still cause a crash on these systems.
 
   - Got rid of Medusa hashbang headers in various files to ease RPM
     packaging.
