@@ -67,7 +67,10 @@ class Supervisor:
         self.ticks = {}
 
     def main(self):
-        self.options.cleanup_fds()
+        if not self.options.first:
+            # prevent crash on libdispatch-based systems, at least for the
+            # first request
+            self.options.cleanup_fds()
         info_messages = []
         critical_messages = []
         warn_messages = []

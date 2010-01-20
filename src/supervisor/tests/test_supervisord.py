@@ -70,7 +70,7 @@ class SupervisordTests(unittest.TestCase):
     def _makeOne(self, options):
         return self._getTargetClass()(options)
 
-    def test_main(self):
+    def test_main_first(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
         gconfigs = [DummyPGroupConfig(options,'foo', pconfigs=[pconfig])]
@@ -80,7 +80,7 @@ class SupervisordTests(unittest.TestCase):
         supervisord = self._makeOne(options)
         supervisord.main()
         self.assertEqual(options.environment_processed, True)
-        self.assertEqual(options.fds_cleaned_up, True)
+        self.assertEqual(options.fds_cleaned_up, False)
         self.assertEqual(options.rlimits_set, True)
         self.assertEqual(options.make_logger_messages,
                          (['setuid_called'], [], ['rlimits_set']))
@@ -92,6 +92,31 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(options.httpservers_opened, True)
         self.assertEqual(options.signals_set, True)
         self.assertEqual(options.daemonized, True)
+        self.assertEqual(options.pidfile_written, True)
+        self.assertEqual(options.cleaned_up, True)
+
+    def test_main_notfirst(self):
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
+        gconfigs = [DummyPGroupConfig(options,'foo', pconfigs=[pconfig])]
+        options.process_group_configs = gconfigs
+        options.test = True
+        options.first = False
+        supervisord = self._makeOne(options)
+        supervisord.main()
+        self.assertEqual(options.environment_processed, True)
+        self.assertEqual(options.fds_cleaned_up, True)
+        self.failIf(hasattr(options, 'rlimits_set'))
+        self.assertEqual(options.make_logger_messages,
+                         (['setuid_called'], [], []))
+        self.assertEqual(options.autochildlogdir_cleared, True)
+        self.assertEqual(len(supervisord.process_groups), 1)
+        self.assertEqual(supervisord.process_groups['foo'].config.options,
+                         options)
+        self.assertEqual(options.environment_processed, True)
+        self.assertEqual(options.httpservers_opened, True)
+        self.assertEqual(options.signals_set, True)
+        self.assertEqual(options.daemonized, False)
         self.assertEqual(options.pidfile_written, True)
         self.assertEqual(options.cleaned_up, True)
 
