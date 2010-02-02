@@ -1,6 +1,11 @@
 Next release
 
-  - ...
+  - Supervisor will now look for its config file in locations relative to the
+    executable path, allowing it to be used more easily in virtual 
+    environments.  If sys.argv[0] is '/path/to/venv/bin/supervisorctl', 
+    supervisor will now look for it's config file in 
+    '/path/to/venv/etc/supervisord.conf' and '/path/to/venv/supervisord.conf'
+    in addition to the other standard locations.
 
 3.0a8 (2010-01-20)
 

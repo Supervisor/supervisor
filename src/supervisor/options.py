@@ -104,7 +104,10 @@ class Options:
 
     def default_configfile(self):
         """Return the name of the found config file or raise. """
-        paths = ['supervisord.conf', 'etc/supervisord.conf',
+        here = os.path.dirname(os.path.dirname(sys.argv[0]))
+        paths = [os.path.join(here, 'etc', 'supervisord.conf'),
+                 os.path.join(here, 'supervisord.conf'),
+                 'supervisord.conf', 'etc/supervisord.conf',
                  '/etc/supervisord.conf']
         config = None
         for path in paths:
