@@ -1,0 +1,22 @@
+@import url('default.css');
+body {
+    background-color: #006339;
+}
+ 
+div.document {
+    background-color: #dad3bd;
+}
+
+div.sphinxsidebar h3, h4, h5, a {
+    color: #127c56 !important;
+}
+
+div.related {
+    color: #dad3bd !important;
+    background-color: #00744a;
+}
+ 
+div.related a {
+    color: #dad3bd !important;
+}
+
