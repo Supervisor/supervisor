@@ -67,6 +67,7 @@ Narrative Documentation
    :maxdepth: 2
 
    introduction.rst
+   installing.rst
 
 API Documentation
 -----------------
