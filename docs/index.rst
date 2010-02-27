@@ -68,6 +68,7 @@ Narrative Documentation
 
    introduction.rst
    installing.rst
+   running.rst
 
 API Documentation
 -----------------
