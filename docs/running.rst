@@ -58,13 +58,13 @@ value in the configuration file.
 :command:`supervisord` Command-Line Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--c FILE, --configuration=FILE 
+-c FILE, --configuration=FILE
 
    The path to a :program:`supervisord` configuration file.
 
 -n, --nodaemon
 
-   Run in the foreground.
+   Run :program:`supervisord` in the foreground.
 
 -h, --help
 
@@ -121,7 +121,7 @@ value in the configuration file.
    A path to a directory (it must already exist) where supervisor will
    write its ``AUTO`` -mode child process logs.
 
--k, --nocleanup 
+-k, --nocleanup
 
    Prevent :program:`supervisord` from performing cleanup (removal of
    old ``AUTO`` process log files) at startup.
@@ -133,12 +133,7 @@ value in the configuration file.
 
 -t, --strip_ansi
 
-   Strip ANSI escape sequences from all child log process
-
---minprocs=NUM
-
-   The minimum number of OS process slots that must be available to
-   the supervisord process before it will start successfully.
+   Strip ANSI escape sequences from all child log process.
 
 --profile_options=LIST
 
@@ -147,6 +142,11 @@ value in the configuration file.
    based on the options, which is a comma-separated list of the
    following: ``cumulative``, ``calls``, ``callers``.
    E.g. ``cumulative,callers``.
+
+--minprocs=NUM 
+
+   The minimum number of OS process slots that must be available to
+   the supervisord process before it will start successfully.
 
 Running :program:`supervisorctl`
 --------------------------------
