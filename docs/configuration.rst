@@ -415,117 +415,89 @@ follows.
    strip_ansi = false
    environment = KEY1=value1,KEY2=value2
 
-XXX unfinished conversion below
+``[supervisorctl]`` Section Settings
+------------------------------------
 
-  <sect2 id="supervisorctl">
-    <title><code>[supervisorctl]</code> Section Settings</title>
+  The configuration file may contain settings for the
+  :program:`supervisorctl` interactive shell program.  These options
+  are listed below.
 
-    <para>
-      The configuration file may contain settings for the supervisorctl
-      interactive shell program.  These options are listed below.
-    </para>
+``[supervisorctl]`` Section Values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    <table>
-      <title><code>[supervisorctl]</code> Section Values</title>
-      <tgroup cols="5">
-        <thead>
-          <row>
-            <entry>Key</entry>
-            <entry>Description</entry>
-            <entry>Default Value</entry>
-            <entry>Required</entry>
-            <entry>Introduced</entry>
-          </row>
-        </thead>
-        <tbody>
-          <row>
-            <entry>serverurl</entry>
-            <entry>
-              The URL that should be used to access the supervisord
-              server, e.g. <code>http://localhost:9001</code>.  For
-              UNIX domain sockets, use
-              <code>unix:///absolute/path/to/file.sock</code>.
-            </entry>
-            <entry><code>http://localhost:9001</code></entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>username</entry>
-            <entry>
-              The username to pass to the supervisord server for use
-              in authentication.  This should be same as
-              <code>username</code> from the supervisord server
-              configuration for the port or UNIX domain socket you're
-              attempting to access.
-            </entry>
-            <entry>No username</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>password</entry>
-            <entry>
-              The password to pass to the supervisord server for use
-              in authentication. This should be the cleartext version
-              of <code>password</code> from the supervisord server
-              configuration for the port or UNIX domain socket you're
-              attempting to access.  This value cannot be passed as a
-              SHA hash.  Unlike other passwords specified in this
-              file, it must be provided in cleartext.
-            </entry>
-            <entry>No password</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>prompt</entry>
-            <entry>
-              String used as supervisorctl prompt.
-            </entry>
-            <entry>supervisor</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>history_file</entry>
-            <entry>
-              A path to use as the <application>readline</application>
-              persistent history file.  If you enable this feature by
-              choosing a path, your supervisorctl commands will be
-              kept in the file, and you can use readline (e.g. arrow
-              up) to invoke commands you performed in your last
-              supervisorctl session.
-            </entry>
-            <entry>No file</entry>
-            <entry>No</entry>
-            <entry>post-3.0a4 (not including 3.0a4)</entry>
-          </row>
-          <row>
-            <entry>prompt</entry>
-            <entry>
-              String used as supervisorctl prompt.
-            </entry>
-            <entry>supervisor</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
+``serverurl``
 
-        </tbody>
-      </tgroup>
-    </table>
-          
-    <example>
-      <title><code>[supervisorctl]</code>Section Example</title>
-      <programlisting>
-[supervisorctl]
-serverurl = unix:///tmp/supervisor.sock
-username = chris
-password = 123
-prompt = mysupervisor
-      </programlisting>
-    </example>
-  </sect2>
+  The URL that should be used to access the supervisord server,
+  e.g. ``http://localhost:9001``.  For UNIX domain sockets, use
+  ``unix:///absolute/path/to/file.sock``.
+
+  *Default*: ``http://localhost:9001``
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``username``
+
+  The username to pass to the supervisord server for use in
+  authentication.  This should be same as ``username`` from the
+  supervisord server configuration for the port or UNIX domain socket
+  you're attempting to access.
+
+  *Default*: No username
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``password``
+
+  The password to pass to the supervisord server for use in
+  authentication. This should be the cleartext version of ``password``
+  from the supervisord server configuration for the port or UNIX
+  domain socket you're attempting to access.  This value cannot be
+  passed as a SHA hash.  Unlike other passwords specified in this
+  file, it must be provided in cleartext.
+
+  *Default*: No password
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``prompt``
+
+  String used as supervisorctl prompt.
+
+  *Default*: ``supervisor``
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``history_file``
+
+  A path to use as the ``readline`` persistent history file.  If you
+  enable this feature by choosing a path, your supervisorctl commands
+  will be kept in the file, and you can use readline (e.g. arrow-up)
+  to invoke commands you performed in your last supervisorctl session.
+
+  *Default*: No file
+
+  *Required*:  No.
+
+  *Introduced*: post-3.0a4 (not including 3.0a4)
+
+``[supervisorctl]`` Section Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: ini
+
+   [supervisorctl]
+   serverurl = unix:///tmp/supervisor.sock
+   username = chris
+   password = 123
+   prompt = mysupervisor
 
   <sect2 id="programx">
     <title><code>[program:x]</code> Section Settings</title>
