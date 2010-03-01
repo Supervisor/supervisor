@@ -499,515 +499,469 @@ follows.
    password = 123
    prompt = mysupervisor
 
-  <sect2 id="programx">
-    <title><code>[program:x]</code> Section Settings</title>
+``[program:x]`` Section Settings
+--------------------------------
 
-    <para>
-      The configuration file must contain one or more
-      <code>program</code> sections in order for supervisord to know
-      which programs it should start and control.  The header value is
-      composite value.  It is the word "program", followed directly by
-      a colon, then the program name.  A header value of
-      <code>[program:foo]</code> describes a program with the name of
-      "foo".  The name is used within client applications that control
-      the processes that are created as a result of this
-      configuration.  It is an error to create a <code>program</code>
-      section that does not have a name.  The name must not include a
-      colon character or a bracket character.  The value of the name
-      is used as the value for The <code>%(program_name)s</code>
-      string expression expansion within other values where specified.
-    </para>
+The configuration file must contain one or more ``program`` sections
+in order for supervisord to know which programs it should start and
+control.  The header value is composite value.  It is the word
+"program", followed directly by a colon, then the program name.  A
+header value of ``[program:foo]`` describes a program with the name of
+"foo".  The name is used within client applications that control the
+processes that are created as a result of this configuration.  It is
+an error to create a ``program`` section that does not have a name.
+The name must not include a colon character or a bracket character.
+The value of the name is used as the value for the
+``%(program_name)s`` string expression expansion within other values
+where specified.
 
-    <note>
-      <para>
-        A <code>[program:x]</code> section actually represents
-        a "homogeneous process group" to supervisor (as of 3.0).  The
-        members of the group are defined by the combination of the
-        <code>numprocs</code> and <code>process_name</code> parameters
-        in the configuration.  By default, if numprocs and process_name
-        are left unchanged from their defaults, the group represented by
-        <code>[program:x]</code> will be named <code>x</code> and will
-        have a single process named <code>x</code> in it.  This provides
-        a modicum of backwards compatibility with older supervisor
-        releases, which did not treat program sections as homogeneous
-        process group defnitions.
-      </para>
-    </note>
+.. note::
 
-    <para>
+   A ``[program:x]`` section actually represents a "homogeneous
+   process group" to supervisor (as of 3.0).  The members of the group
+   are defined by the combination of the ``numprocs`` and
+   ``process_name`` parameters in the configuration.  By default, if
+   numprocs and process_name are left unchanged from their defaults,
+   the group represented by ``[program:x]`` will be named ``x`` and
+   will have a single process named ``x`` in it.  This provides a
+   modicum of backwards compatibility with older supervisor releases,
+   which did not treat program sections as homogeneous process group
+   defnitions.
 
-      But for instance, if you have a <code>[program:foo]</code>
-      section with a <code>numprocs</code> of 3 and a
-      <code>process_name</code> expression of
-      <code>%(program_name)s_%(process_num)02d</code>, the "foo" group
-      will contain three processes, named <code>foo_00</code>,
-      <code>foo_01</code>, and <code>foo_02</code>.  This makes it
-      possible to start a number of very similar processes using a
-      single <code>[program:x]</code> section.  All logfile names, all
-      environment strings, and the command of programs can also
-      contain similar Python string expressions, to pass slightly
-      different parameters to each process.
+   But for instance, if you have a ``[program:foo]`` section with a
+   ``numprocs`` of 3 and a ``process_name`` expression of
+   ``%(program_name)s_%(process_num)02d``, the "foo" group will
+   contain three processes, named ``foo_00``, ``foo_01``, and
+   ``foo_02``.  This makes it possible to start a number of very
+   similar processes using a single ``[program:x]`` section.  All
+   logfile names, all environment strings, and the command of programs
+   can also contain similar Python string expressions, to pass
+   slightly different parameters to each process.
  
-   </para>
+``[program:x]`` Section Values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+``command``
 
-    <table>
-      <title><code>[program:x]</code> Section Values</title>
-      <tgroup cols="5">
-        <thead>
-          <row>
-            <entry>Key</entry>
-            <entry>Description</entry>
-            <entry>Default Value</entry>
-            <entry>Required</entry>
-            <entry>Introduced</entry>
-          </row>
-        </thead>
-        <tbody>
-          <row>
-            <entry>command</entry>
-            <entry>
-              The command that will be run when this program is
-              started.  The command can be either absolute,
-              e.g. <code>/path/to/programname'</code> or relative
-              (<code>programname</code>).  If it is relative, the
-              supervisord's environment $PATH will be searched for the
-              executable.  Programs can accept arguments,
-              e.g. <code>/path/to/program foo bar</code>.  The command
-              line can used double quotes to group arguments with
-              spaces in them to pass to the program,
-              e.g. <code>/path/to/program/name -p "foo bar"</code>.
-              Note that the value of 'command' may include Python
-              string expressions, e.g. <code>/path/to/programname
-              --port=80%(process_num)02d</code> might expand to
-              <code>/path/to/programname --port=8000</code> at
-              runtime.  String expressions are evaluated against a
-              dictionary containing the keys "group_name",
-              "process_num", "program_name" and "here" (the directory
-              of the supervisord config file).  NOTE: Controlled
-              programs should themselves not be daemons, as
-              supervisord assumes it is responsible for daemonizing
-              its subprocesses (see "Nondaemonizing of Subprocesses"
-              elsewhere in this document).
-            </entry>
-            <entry>No default (required)</entry>
-            <entry>True</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>process_name</entry>
-            <entry>
-              A Python string expression that is used to compose the
-              supervisor process name for this process.  You usually
-              don't need to worry about setting this unless you change
-              <code>numprocs</code>.  The string expression is
-              evaluated against a dictionary that includes
-              "group_name", "process_num", "program_name" and "here"
-              (the directory of the supervisord config file).
-            </entry>
-            <entry><code>%(program_name)s</code></entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>numprocs</entry>
-            <entry>
-              Supervisor will start as many instances of this program
-              as named by numprocs.  Note that if numprocs > 1, the
-              <code>process_name</code> expression must include
-              <code>%(process_num)s</code> (or any other valid Python
-              string expression that includes 'process_num') within
-              it.
-            </entry>
-            <entry>1</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>numprocs_start</entry>
-            <entry>
-               An integer offset that is used to compute the number at
-               which numprocs starts.
-            </entry>
-            <entry>0</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>priority</entry>
-            <entry>
-              The relative priority of the program in the start and
-              shutdown ordering.  Lower priorities indicate programs
-              that start first and shut down last at startup and when
-              aggregate commands are used in various clients
-              (e.g. "start all"/"stop all").  Higher priorities
-              indicate programs that start last and shut down first.
-            </entry>
-            <entry>999</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>autostart</entry>
-            <entry>
-              If true, this program will start automatically when
-              supervisord is started
-            </entry>
-            <entry>true</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>autorestart</entry>
-            <entry>
-              May be one of <code>false</code>,
-              <code>unexpected</code>, or <code>true</code>.  If
-              <code>false</code>, the process will never be
-              autorestarted.  If <code>unexpected</code>, the process
-              will be restart when the program exits with an exit code
-              that is not one of the exit codes associated with this
-              process' configuration (see <code>exitcodes</code>).  If
-              <code>true</code>, the process will be unconditionally
-              restarted when it exits, without regard to its exit
-              code.
-            </entry>
-            <entry>unexpected</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>startsecs</entry>
-            <entry>
-              The total number of seconds which the program needs to
-              stay running after a startup to consider the start
-              successful.  If the program does not stay up for this
-              many seconds after it is started, even if it exits with
-              an "expected" exit code (see <code>exitcodes</code>),
-              the startup will be considered a failure.  Set to 0 to
-              indicate that the program needn't stay running for any
-              particular amount of time.
-            </entry>
-            <entry>1</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>startretries</entry>
-            <entry>
-              The number of serial failure attempts that
-              <application>supervisord</application> will allow when
-              attempting to start the program before giving up and
-              puting the process into an <code>ERROR</code> state.
-              See the process state map elsewhere in this document for
-              explanation of the <code>ERROR</code> state.
-            </entry>
-            <entry>3</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>exitcodes</entry>
-            <entry>
-              The list of "expected" exit codes for this program.  If
-              the <code>autorestart</code> parameter is set to
-              <code>unexpected</code>, and the process exits in any
-              other way than as a result of a supervisor stop request,
-              <application>supervisord</application> will restart the
-              process if it exits with an exit code that is not
-              defined in this list.
-            </entry>
-            <entry>0,2</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>stopsignal</entry>
-            <entry>
-              The signal used to kill the program when a stop is
-              requested.  This can be any of TERM, HUP, INT, QUIT,
-              KILL, USR1, or USR2.
-            </entry>
-            <entry>TERM</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>stopwaitsecs</entry>
-            <entry>
-              The number of seconds to wait for the OS to return a
-              SIGCHILD to <application>supervisord</application> after
-              the program has been sent a stopsignal.  If this number
-              of seconds elapses before
-              <application>supervisord</application> receives a
-              SIGCHILD from the process,
-              <application>supervisord</application> will attempt to
-              kill it with a final SIGKILL.
-            </entry>
-            <entry>10</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>user</entry>
-            <entry>
-              If <application>supervisord</application> runs as root,
-              this UNIX user account will be used as the account which
-              runs the program.  If
-              <application>supervisord</application> is not running as
-              root, this option has no effect.
-            </entry>
-            <entry>Do not switch users</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>redirect_stderr</entry>
-            <entry>
-              If true, cause the process' stderr output to be sent
-              back to <application>supervisord</application> on it's
-              stdout file descriptor (in UNIX shell terms, this is the
-              equivalent of executing <code>/the/program
-              2>&amp;1</code>.
-            </entry>
-            <entry>false</entry>
-            <entry>No</entry>
-            <entry>
-              3.0, replaces 2.0's <code>log_stdout</code> and
-              <code>log_stderr</code>
-            </entry>
-          </row>
-          <row>
-            <entry>stdout_logfile</entry>
-            <entry>
-              Put process stdout output in this file (and if
-              redirect_stderr is true, also place stderr output in
-              this file).  If <code>stdout_logfile</code> is unset or
-              set to <code>AUTO</code>, supervisor will automatically
-              choose a file location.  If this is set to
-              <code>NONE</code>, supervisord will create no log file.
-              <code>AUTO</code> log files and their backups will be
-              deleted when <application>supervisord</application>
-              restarts.  The <code>stdout_logfile</code> value can
-              contain Python string expressions that will evaluated
-              against a dictionary that contains the keys
-              "process_num", "program_name", "group_name", and "here"
-              (the directory of the supervisord config file).
-            </entry>
-            <entry>AUTO</entry>
-            <entry>No</entry>
-            <entry>3.0, replaces 2.0's <code>logfile</code></entry>
-          </row>
-          <row>
-            <entry>stdout_logfile_maxbytes</entry>
-            <entry>
-              The maximum number of bytes that may be consumed by
-              <code>stdout_logfile</code> before it is rotated (suffix
-              multipliers like "KB", "MB", and "GB" can be used in the
-              value).  Set this value to 0 to indicate an unlimited
-              log size.
-            </entry>
-            <entry>50MB</entry>
-            <entry>No</entry>
-            <entry>3.0, replaces 2.0's
-            <code>logfile_maxbytes</code></entry>
-          </row>
-          <row>
-            <entry>stdout_logfile_backups</entry>
-            <entry>
-              The number of <code>stdout_logfile</code> backups to
-              keep around resulting from process stdout log file
-              rotation.  Set this to 0 to indicate an unlimited number
-              of backups.
-            </entry>
-            <entry>10</entry>
-            <entry>No</entry>
-            <entry>3.0, replace's 2.0's
-            <code>logfile_backups</code></entry>
-          </row>
-          <row>
-            <entry>stdout_capture_maxbytes</entry>
-            <entry>
-              max number of bytes written to capture FIFO when process
-              is in "stdout capture mode" (see "Capture Mode and
-              Process Communication Events" elsewhere in this
-              document).  Should be an integer (suffix multipliers
-              like "KB", "MB" and "GB" can used in the value).  If
-              this value is 0, process capture mode will be off.
-            </entry>
-            <entry>0</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>stdout_events_enabled</entry>
-            <entry>
-              If true, PROCESS_LOG_STDOUT events will be emitted when
-              the process writes to its stdout file descriptor.  The 
-              events will only be emitted if the file descriptor is 
-              not in capture mode at the time the data is received 
-              (see "Capture Mode and Process Communication Events" 
-              elsewhere in this document). 
-            </entry>
-            <entry>false</entry>
-            <entry>No</entry>
-            <entry>3.0a7</entry>
-          </row>
-          <row>
-            <entry>stderr_logfile</entry>
-            <entry>
-              Put process stderr output in this file unless
-              redirect_stderr is true.  Accepts the same value types
-              as <code>stdout_logfile</code> and may contain the same
-              Python string expressions.
-            </entry>
-            <entry>AUTO</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>stderr_logfile_maxbytes</entry>
-            <entry>
-              The maximum number of bytes before logfile rotation for
-              <code>stderr_logfile</code>.  Accepts the same value
-              types as <code>stdout_logfile_maxbytes</code>.
-            </entry>
-            <entry>50MB</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>stderr_logfile_backups</entry>
-            <entry>
-                The number of backups to keep around resulting from
-                process stderr log file rotation.  Set this to 0 to
-                indicate an unlimited number of backups.
-            </entry>
-            <entry>10</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>stderr_capture_maxbytes</entry>
-            <entry>
-              Max number of bytes written to capture FIFO when process
-              is in "stderr capture mode" (see "Capture Mode and
-              Process Communication Events" elsewhere in this
-              document).  Should be an integer (suffix multipliers
-              like "KB", "MB" and "GB" can used in the value).  If
-              this value is 0, process capture mode will be off.
-            </entry>
-            <entry>0</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>stderr_events_enabled</entry>
-            <entry>
-              If true, PROCESS_LOG_STDERR events will be emitted when
-              the process writes to its stderr file descriptor.  The 
-              events will only be emitted if the file descriptor is 
-              not in capture mode at the time the data is received 
-              (see "Capture Mode and Process Communication Events" 
-              elsewhere in this document).
-            </entry>
-            <entry>false</entry>
-            <entry>No</entry>
-            <entry>3.0a7</entry>
-          </row>
-          <row>
-            <entry>environment</entry>
-            <entry>
-              A list of key/value pairs in the form
-              <code>KEY=val,KEY2=val2</code> that will be placed in
-              the child process' environment.  The environment string
-              may contain Python string expressions that will be
-              evaluated against a dictionary containing "process_num",
-              "program_name", "group_name" and "here" (the directory
-              of the supervisord config file).  **Note** that the
-              subprocess will inherit the environment variables of the
-              shell used to start "supervisord" except for the ones
-              overridden here.  See "Subprocess Environment"
-              elsewhere.
-            </entry>
-            <entry>No extra environment</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>directory</entry>
-            <entry>
-              A file path representing a directory to which
-              <application>supervisord</application> should
-              temporarily chdir before exec'ing the child.
-            </entry>
-            <entry>No chdir (inherit supervisor's)</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>umask</entry>
-            <entry>
-              An octal number (e.g. 002, 022) representing the umask
-              of the process.
-            </entry>
-            <entry>No special umask (inherit supervisor's)</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>serverurl</entry>
-            <entry>
-              The URL passed in the environment to the subprocess
-              process as <code>SUPERVISOR_SERVER_URL</code> (see
-              <code>supervisor.childutils</code>) to allow the
-              subprocess to easily communicate with the internal HTTP
-              server.  If provided, it should have the same syntax and
-              structure as the <code>[supervisorctl]</code> section
-              option of the same name.  If this is set to AUTO, or is
-              unset, supervisor will automatically construct a server
-              URL, giving preference to a server that listens on UNIX
-              domain sockets over one that listens on an internet
-              socket.
-            </entry>
-            <entry>AUTO</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-        </tbody>
-      </tgroup>
-    </table>
+  The command that will be run when this program is started.  The
+  command can be either absolute (e.g. ``/path/to/programname``) or
+  relative (e.g. ``programname``).  If it is relative, the
+  supervisord's environment ``$PATH`` will be searched for the
+  executable.  Programs can accept arguments, e.g. ``/path/to/program
+  foo bar``.  The command line can use double quotes to group
+  arguments with spaces in them to pass to the program,
+  e.g. ``/path/to/program/name -p "foo bar"``.  Note that the value of
+  ``command`` may include Python string expressions,
+  e.g. ``/path/to/programname --port=80%(process_num)02d`` might
+  expand to ``/path/to/programname --port=8000`` at runtime.  String
+  expressions are evaluated against a dictionary containing the keys
+  ``group_name``, ``process_num``, ``program_name`` and ``here`` (the
+  directory of the supervisord config file).  Controlled programs
+  should themselves not be daemons, as supervisord assumes it is
+  responsible for daemonizing its subprocesses (see
+  :ref:`nondaemonizing_of_subprocesses`).
 
-    <example>
-      <title><code>[program:x]</code> Section Example</title>
-      <programlisting>
-[program:cat]
-command=/bin/cat
-process_name=%(program_name)s
-numprocs=1
-directory=/tmp
-umask=022
-priority=999
-autostart=true
-autorestart=true
-startsecs=10
-startretries=3
-exitcodes=0,2
-stopsignal=TERM
-stopwaitsecs=10
-user=chrism
-redirect_stderr=false
-stdout_logfile=/a/path
-stdout_logfile_maxbytes=1MB
-stdout_logfile_backups=10
-stdout_capture_maxbytes=1MB
-stderr_logfile=/a/path
-stderr_logfile_maxbytes=1MB
-stderr_logfile_backups=10
-stderr_capture_maxbytes=1MB
-environment=A=1,B=2
-serverurl=AUTO
-      </programlisting>
-    </example>
+  *Default*: No default.
+
+  *Required*:  Yes.
+
+  *Introduced*: 3.0
+
+``process_name``
+
+  A Python string expression that is used to compose the supervisor
+  process name for this process.  You usually don't need to worry
+  about setting this unless you change ``numprocs``.  The string
+  expression is evaluated against a dictionary that includes
+  ``group_name``, ``process_num``, ``program_name`` and ``here`` (the
+  directory of the supervisord config file).
+
+  *Default*: ``%(program_name)s``
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``numprocs``
+
+  Supervisor will start as many instances of this program as named by
+  numprocs.  Note that if numprocs > 1, the ``process_name``
+  expression must include ``%(process_num)s`` (or any other
+  valid Python string expression that includes ``process_num``) within
+  it.
+
+  *Default*: 1
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``numprocs_start``
+
+  An integer offset that is used to compute the number at which
+  ``numprocs`` starts.
+
+  *Default*: 0
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``priority``
+
+  The relative priority of the program in the start and shutdown
+  ordering.  Lower priorities indicate programs that start first and
+  shut down last at startup and when aggregate commands are used in
+  various clients (e.g. "start all"/"stop all").  Higher priorities
+  indicate programs that start last and shut down first.
+
+  *Default*: 999
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``autostart``
+
+  If true, this program will start automatically when supervisord is
+  started.
+
+  *Default*: true
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``autorestart``
+
+  May be one of ``false``, ``unexpected``, or ``true``.  If ``false``,
+  the process will never be autorestarted.  If ``unexpected``, the
+  process will be restart when the program exits with an exit code
+  that is not one of the exit codes associated with this process'
+  configuration (see ``exitcodes``).  If ``true``, the process will be
+  unconditionally restarted when it exits, without regard to its exit
+  code.
+
+  *Default*: unexpected
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``startsecs``
+
+  The total number of seconds which the program needs to stay running
+  after a startup to consider the start successful.  If the program
+  does not stay up for this many seconds after it has started, even if
+  it exits with an "expected" exit code (see ``exitcodes``), the
+  startup will be considered a failure.  Set to ``0`` to indicate that
+  the program needn't stay running for any particular amount of time.
+
+  *Default*: 1
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``startretries``
+
+  The number of serial failure attempts that :program:`supervisord`
+  will allow when attempting to start the program before giving up and
+  puting the process into an ``ERROR`` state.  See the process state
+  map elsewhere in this document for explanation of the ``ERROR``
+  state.
+
+  *Default*: 3
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``exitcodes``
+
+  The list of "expected" exit codes for this program.  If the
+  ``autorestart`` parameter is set to ``unexpected``, and the process
+  exits in any other way than as a result of a supervisor stop
+  request, :program:`supervisord` will restart the process if it exits
+  with an exit code that is not defined in this list.
+
+  *Default*: 0,2
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``stopsignal``
+
+  The signal used to kill the program when a stop is requested.  This
+  can be any of TERM, HUP, INT, QUIT, KILL, USR1, or USR2.
+
+  *Default*: TERM
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``stopwaitsecs``
+
+  The number of seconds to wait for the OS to return a SIGCHILD to
+  :program:`supervisord` after the program has been sent a stopsignal.
+  If this number of seconds elapses before :program:`supervisord`
+  receives a SIGCHILD from the process, :program:`supervisord` will
+  attempt to kill it with a final SIGKILL.
+
+  *Default*: 10
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``user``
+
+  If :program:`supervisord` runs as root, this UNIX user account will
+  be used as the account which runs the program.  If
+  :program:`supervisord` is not running as root, this option has no
+  effect.
+
+  *Default*: Do not switch users
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``redirect_stderr``
+
+  If true, cause the process' stderr output to be sent back to
+  :program:`supervisord` on it's stdout file descriptor (in UNIX shell
+  terms, this is the equivalent of executing ``/the/program 2>&1``).
+
+  *Default*: false
+
+  *Required*:  No.
+
+  *Introduced*: 3.0, replaces 2.0's ``log_stdout`` and ``log_stderr``
+
+``stdout_logfile``
+
+  Put process stdout output in this file (and if redirect_stderr is
+  true, also place stderr output in this file).  If ``stdout_logfile``
+  is unset or set to ``AUTO``, supervisor will automatically choose a
+  file location.  If this is set to ``NONE``, supervisord will create
+  no log file.  ``AUTO`` log files and their backups will be deleted
+  when :program:`supervisord` restarts.  The ``stdout_logfile`` value
+  can contain Python string expressions that will evaluated against a
+  dictionary that contains the keys "process_num", "program_name",
+  "group_name", and "here" (the directory of the supervisord config
+  file).
+
+  *Default*: ``AUTO``
+
+  *Required*:  No.
+
+  *Introduced*: 3.0, replaces 2.0's ``logfile``
+
+``stdout_logfile_maxbytes``
+
+  The maximum number of bytes that may be consumed by
+  ``stdout_logfile`` before it is rotated (suffix multipliers like
+  "KB", "MB", and "GB" can be used in the value).  Set this value to 0
+  to indicate an unlimited log size.
+
+  *Default*: 50MB
+
+  *Required*:  No.
+
+  *Introduced*: 3.0, replaces 2.0's ``logfile_maxbytes``
+
+``stdout_logfile_backups``
+
+  The number of ``stdout_logfile`` backups to keep around resulting
+  from process stdout log file rotation.  Set this to 0 to indicate an
+  unlimited number of backups.
+
+  *Default*: 10
+
+  *Required*:  No.
+
+  *Introduced*: 3.0, replaces 2.0's ``logfile_backups``
+
+``stdout_capture_maxbytes``
+
+  Max number of bytes written to capture FIFO when process is in
+  "stdout capture mode" (see :ref:`capture_mode`).  Should be an
+  integer (suffix multipliers like "KB", "MB" and "GB" can used in the
+  value).  If this value is 0, process capture mode will be off.
+
+  *Default*: 0
+
+  *Required*:  No.
+
+  *Introduced*: 3.0, replaces 2.0's ``logfile_backups``
+
+``stdout_events_enabled``
+
+  If true, PROCESS_LOG_STDOUT events will be emitted when the process
+  writes to its stdout file descriptor.  The events will only be
+  emitted if the file descriptor is not in capture mode at the time
+  the data is received (see :ref:`capture_mode`).
+
+  *Default*: 0
+
+  *Required*:  No.
+
+  *Introduced*: 3.0a7
+
+``stderr_logfile``
+
+  Put process stderr output in this file unless ``redirect_stderr`` is
+  true.  Accepts the same value types as ``stdout_logfile`` and may
+  contain the same Python string expressions.
+
+  *Default*: ``AUTO``
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``stderr_logfile_maxbytes``
+
+  The maximum number of bytes before logfile rotation for
+  ``stderr_logfile``.  Accepts the same value types as
+  ``stdout_logfile_maxbytes``.
+
+  *Default*: 50MB
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``stderr_logfile_backups``
+
+  The number of backups to keep around resulting from process stderr
+  log file rotation.  Set this to 0 to indicate an unlimited number of
+  backups.
+
+  *Default*: 10
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``stderr_capture_maxbytes``
+
+  Max number of bytes written to capture FIFO when process is in
+  "stderr capture mode" (see :ref:`capture_mode`).  Should be an
+  integer (suffix multipliers like "KB", "MB" and "GB" can used in the
+  value).  If this value is 0, process capture mode will be off.
+
+  *Default*: 0
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``stderr_events_enabled``
+
+  If true, PROCESS_LOG_STDERR events will be emitted when the process
+  writes to its stderr file descriptor.  The events will only be
+  emitted if the file descriptor is not in capture mode at the time
+  the data is received (see :ref:`capture_mode`).
+
+  *Default*: false
+
+  *Required*:  No.
+
+  *Introduced*: 3.0a7
+
+``environment``
+
+  A list of key/value pairs in the form ``KEY=val,KEY2=val2`` that
+  will be placed in the child process' environment.  The environment
+  string may contain Python string expressions that will be evaluated
+  against a dictionary containing "process_num", "program_name",
+  "group_name" and "here" (the directory of the supervisord config
+  file).  Values containing non-alphanumeric characters should be
+  placed in quotes (e.g. ``KEY="val:123",KEY2="val,456"``) **Note**
+  that the subprocess will inherit the environment variables of the
+  shell used to start "supervisord" except for the ones overridden
+  here.  See :ref:`subprocess_environment`.
+
+  *Default*: No extra environment
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``directory``
+
+  A file path representing a directory to which :program:`supervisord`
+  should temporarily chdir before exec'ing the child.
+
+  *Default*: No chdir (inherit supervisor's)
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``umask``
+
+  An octal number (e.g. 002, 022) representing the umask of the
+  process.
+
+  *Default*: No special umask (inherit supervisor's)
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``serverurl``
+
+  The URL passed in the environment to the subprocess process as
+  ``SUPERVISOR_SERVER_URL`` (see :mod:`supervisor.childutils`) to
+  allow the subprocess to easily communicate with the internal HTTP
+  server.  If provided, it should have the same syntax and structure
+  as the ``[supervisorctl]`` section option of the same name.  If this
+  is set to AUTO, or is unset, supervisor will automatically construct
+  a server URL, giving preference to a server that listens on UNIX
+  domain sockets over one that listens on an internet socket.
+
+  *Default*: AUTO
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``[program:x]`` Section Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: ini
+
+   [program:cat]
+   command=/bin/cat
+   process_name=%(program_name)s
+   numprocs=1
+   directory=/tmp
+   umask=022
+   priority=999
+   autostart=true
+   autorestart=true
+   startsecs=10
+   startretries=3
+   exitcodes=0,2
+   stopsignal=TERM
+   stopwaitsecs=10
+   user=chrism
+   redirect_stderr=false
+   stdout_logfile=/a/path
+   stdout_logfile_maxbytes=1MB
+   stdout_logfile_backups=10
+   stdout_capture_maxbytes=1MB
+   stderr_logfile=/a/path
+   stderr_logfile_maxbytes=1MB
+   stderr_logfile_backups=10
+   stderr_capture_maxbytes=1MB
+   environment=A=1,B=2
+   serverurl=AUTO
 
   </sect2>
 
