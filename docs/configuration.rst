@@ -31,15 +31,6 @@ If the configuration file has no ``[unix_http_server]``
 section, a UNIX domain socket HTTP server will not be started.  The
 allowable configuration values are as follows.
 
-.. comment:
-
-            <entry>Key</entry>
-            <entry>Description</entry>
-            <entry>Default Value</entry>
-            <entry>Required</entry>
-            <entry>Introduced</entry>
-
-
 ``[unix_http_server]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
