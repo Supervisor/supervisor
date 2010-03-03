@@ -963,473 +963,346 @@ where specified.
    environment=A=1,B=2
    serverurl=AUTO
 
-  </sect2>
+``[include]`` Section Settings
+------------------------------
 
-  <sect2 id="include">
-    <title><code>[include]</code> Section Settings</title>
+The :file:`supervisord.conf` file may contain a section named
+``[include]``.  If the configuration file contains an ``[include]``
+section, it must contain a single key named "files".  The values in
+this key specify other configuration files to be included within the
+configuration.
 
-    <para>
-      The <filename>supervisord.conf</filename> file may contain a
-      section named <code>[include]</code>.  If the configuration file
-      contains an <code>[include]</code>, the include section must
-      contain a single key named "files".  The values in this key specify
-      other configuration files to be included within the configuration.
-    </para>
+``[include]`` Section Values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    <table>
-      <title><code>[include]</code> Section Values</title>
-      <tgroup cols="5">
-        <thead>
-          <row>
-            <entry>Key</entry>
-            <entry>Description</entry>
-            <entry>Default Value</entry>
-            <entry>Required</entry>
-            <entry>Introduced</entry>
-          </row>
-        </thead>
-        <tbody>
-          <row>
-            <entry>files</entry>
-            <entry>
-              A space-separated sequence of file globs.  Each file
-              glob may be absolute or relative.  If the file glob is
-              relative, it is considered relative to the location of
-              the configuration file which includes it.  A "glob" is a
-              file pattern which matches a specified pattern according
-              to the rules used by the Unix shell. No tilde expansion
-              is done, but <code>*</code>, <code>?</code>, and
-              character ranges expressed with <code>[]</code> will be
-              correctly matched.  Recursive includes from included
-              files are not supported.
-            </entry>
-            <entry>No default (required)</entry>
-            <entry>Yes</entry>
-            <entry>3.0</entry>
-          </row>
-        </tbody>
-      </tgroup>
-    </table>
+``files``
 
-    <example>
-      <title><code>[include]</code> Section Example</title>
-      <programlisting>
-[include]
-file = /an/absolute/filename.conf /an/absolute/*.conf foo.conf config??.conf
-      </programlisting>
-    </example>
+  A space-separated sequence of file globs.  Each file glob may be
+  absolute or relative.  If the file glob is relative, it is
+  considered relative to the location of the configuration file which
+  includes it.  A "glob" is a file pattern which matches a specified
+  pattern according to the rules used by the Unix shell. No tilde
+  expansion is done, but ``*``, ``?``, and character ranges expressed
+  with ``[]`` will be correctly matched.  Recursive includes from
+  included files are not supported.
 
-  </sect2>
-  <sect2 id="groupx">
-    <title><code>[group:x]</code> Section Settings</title>
+  *Default*: No default (required)
 
-    <para>
-      It is often useful to group "homogeneous" processes groups (aka
-      "programs") together into a "heterogeneous" process group so they
-      can be controlled as a unit from Supervisor's various controller
-      interfaces.
-    </para>
+  *Required*:  Yes.
 
-    <para>
-      To place programs into a group so you can treat them as a unit,
-      define a <code>[group:x]</code> section in your configuration
-      file.  The group header value is a composite.  It is the word
-      "group", followed directly by a colon, then the group name.  A
-      header value of <code>[group:foo]</code> describes a group with
-      the name of "foo".  The name is used within client applications
-      that control the processes that are created as a result of this
-      configuration.  It is an error to create a <code>group</code>
-      section that does not have a name.  The name must not include a
-      colon character or a bracket character.
-    </para>
+  *Introduced*: 3.0
 
-    <para>
-      For a <code>[group:x]</code>, there must be one or more
-      <code>[program:x]</code> sections elsewhere in your
-      configuration file, and the group must refer to them by name in
-      the <code>programs</code> value.
-    </para>
+``[include]`` Section Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-      <para>
-        If "homogeneous" program groups" (represented by program
-        sections) are placed into a "heterogeneous" group via
-        <code>[group:x]</code> section's <code>programs</code> line,
-        the homogeneous groups that are implied by the program section
-        will not exist at runtime in supervisor.  Instead, all
-        processes belonging to each of the homogeneous groups will be
-        placed into the heterogeneous group.  For example, given the
-        following group configuration:
+.. code-block:: ini
 
-        <programlisting>
-[group:foo]
-programs=bar,baz
-priority=999
-        </programlisting>
+   [include]
+   file = /an/absolute/filename.conf /an/absolute/*.conf foo.conf config??.conf
 
-        ... at supervisord startup, the <code>bar</code> and
-        <code>baz</code> homogeneous groups will not exist, and the
-        processes that would have been under them will now be moved
-        into the <code>foo</code> group.
-    </para>
+``[group:x]`` Section Settings
+------------------------------
 
-    <table>
-      <title><code>[group:x]</code> Section Values</title>
-      <tgroup cols="5">
-        <thead>
-          <row>
-            <entry>Key</entry>
-            <entry>Description</entry>
-            <entry>Default Value</entry>
-            <entry>Required</entry>
-            <entry>Introduced</entry>
-          </row>
-        </thead>
-        <tbody>
-          <row>
-            <entry>programs</entry>
-            <entry>
-              A comma-separated list of program names.  The
-              programs which are listed become members of the group.
-            </entry>
-            <entry>N/A (required)</entry>
-            <entry>Yes</entry>
-            <entry>3.0</entry>
-          </row>
-          <row>
-            <entry>priority</entry>
-            <entry>
-              A priority number analogous to a
-              <code>[program:x]</code> priority value assigned to the
-              group.
-            </entry>
-            <entry>999</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-        </tbody>
-      </tgroup>
-    </table>
-          
-    <example>
-      <title><code>[group:x]</code> Section Example</title>
-      <programlisting>
-[group:foo]
-programs=bar,baz
-priority=999
-      </programlisting>
-    </example>
+It is often useful to group "homogeneous" processes groups (aka
+"programs") together into a "heterogeneous" process group so they can
+be controlled as a unit from Supervisor's various controller
+interfaces.
 
-  </sect2>
+To place programs into a group so you can treat them as a unit, define
+a ``[group:x]`` section in your configuration file.  The group header
+value is a composite.  It is the word "group", followed directly by a
+colon, then the group name.  A header value of ``[group:foo]``
+describes a group with the name of "foo".  The name is used within
+client applications that control the processes that are created as a
+result of this configuration.  It is an error to create a ``group``
+section that does not have a name.  The name must not include a colon
+character or a bracket character.
 
-  <sect2 id="fcgi-programx">
-    <title><code>[fcgi-program:x]</code> Section Settings</title>
+For a ``[group:x]``, there must be one or more ``[program:x]``
+sections elsewhere in your configuration file, and the group must
+refer to them by name in the ``programs`` value.
 
-    <para>
-      Supervisor can manage groups of
-      <ulink url="http://www.fastcgi.com">FastCGI</ulink> processes that all
-      listen on the same socket.  Until now, deployment flexibility
-      for FastCGI was limited.  To get full process management,
-      you could use mod_fastcgi under Apache but then you were stuck
-      with Apache's inefficient concurrency model of one process
-      or thread per connection.  In addition to requiring more CPU
-      and memory resources, the process/thread per connection model
-      can be quickly saturated by a slow resource, preventing other
-      resources from being served.  In order to take advantage of
-      newer event-driven web servers such as lighttpd or nginx which
-      don't include a built-in process manager, you had to use scripts
-      like cgi-fcgi or spawn-fcgi.  These can be used in conjunction
-      with a process manager such as supervisord or daemontools but
-      require each FastCGI child process to bind to it's own socket.
-      The disadvantages of this are: unnecessarily complicated web
-      server configuration, ungraceful restarts, and reduced fault
-      tolerance.  With less sockets to configure, web server configurations
-      are much smaller if groups of FastCGI processes can share sockets.
-      Shared sockets allow for graceful restarts because the socket remains
-      bound by the parent process while any of the child processes are being
-      restarted.  Finally, shared sockets are more fault tolerant because
-      if a given process fails, other processes can continue to serve
-      inbound connections.
-    </para>
+If "homogeneous" program groups" (represented by program sections) are
+placed into a "heterogeneous" group via ``[group:x]`` section's
+``programs`` line, the homogeneous groups that are implied by the
+program section will not exist at runtime in supervisor.  Instead, all
+processes belonging to each of the homogeneous groups will be placed
+into the heterogeneous group.  For example, given the following group
+configuration:
+
+.. code-block:: ini
+
+   [group:foo]
+   programs=bar,baz
+   priority=999
+
+Given the above, at supervisord startup, the ``bar`` and ``baz``
+homogeneous groups will not exist, and the processes that would have
+been under them will now be moved into the ``foo`` group.
+
+``[group:x]`` Section Values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``programs``
+
+  A comma-separated list of program names.  The programs which are
+  listed become members of the group.
+
+  *Default*: No default (required)
+
+  *Required*:  Yes.
+
+  *Introduced*: 3.0
+
+``priority``
+
+  A priority number analogous to a ``[program:x]`` priority value
+  assigned to the group.
+
+  *Default*: 999
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
+``[group:x]`` Section Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: ini
+
+   [group:foo]
+   programs=bar,baz
+   priority=999
+
+
+``[fcgi-program:x]`` Section Settings
+-------------------------------------
+
+Supervisor can manage groups of `FastCGI <http://www.fastcgi.com>`_
+processes that all listen on the same socket.  Until now, deployment
+flexibility for FastCGI was limited.  To get full process management,
+you could use mod_fastcgi under Apache but then you were stuck with
+Apache's inefficient concurrency model of one process or thread per
+connection.  In addition to requiring more CPU and memory resources,
+the process/thread per connection model can be quickly saturated by a
+slow resource, preventing other resources from being served.  In order
+to take advantage of newer event-driven web servers such as lighttpd
+or nginx which don't include a built-in process manager, you had to
+use scripts like cgi-fcgi or spawn-fcgi.  These can be used in
+conjunction with a process manager such as supervisord or daemontools
+but require each FastCGI child process to bind to it's own socket.
+The disadvantages of this are: unnecessarily complicated web server
+configuration, ungraceful restarts, and reduced fault tolerance.  With
+less sockets to configure, web server configurations are much smaller
+if groups of FastCGI processes can share sockets.  Shared sockets
+allow for graceful restarts because the socket remains bound by the
+parent process while any of the child processes are being restarted.
+Finally, shared sockets are more fault tolerant because if a given
+process fails, other processes can continue to serve inbound
+connections.
 		
-    <para>
-      With integrated FastCGI spawning support, Supervisor gives you the
-      best of both worlds.  You get full-featured process management with
-      groups of FastCGI processes sharing sockets without being tied to a
-      particular web server.  It's a clean separation of concerns, allowing
-      the web server and the process manager to each do what they do best.
-    </para>
+With integrated FastCGI spawning support, Supervisor gives you the
+best of both worlds.  You get full-featured process management with
+groups of FastCGI processes sharing sockets without being tied to a
+particular web server.  It's a clean separation of concerns, allowing
+the web server and the process manager to each do what they do best.
 
-    <para>
-      Note that all the options available to <code>[program:x]</code>
-      sections are also respected by fcgi-program sections.
-    </para>
+Note that all the options available to ``[program:x]`` sections are
+also respected by fcgi-program sections.
+
+``[fcgi-program:x]`` Section Values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``[fcgi-program:x]`` sections have a single key which ``[program:x]``
+sections do not have.
+
+``socket``
+
+  The FastCGI socket for this program, either TCP or UNIX domain
+  socket. For TCP sockets, use this format: ``tcp://localhost:9002``.
+  For UNIX domain sockets, use ``unix:///absolute/path/to/file.sock``.
+  String expressions are evaluated against a dictionary containing the
+  keys "program_name" and "here" (the directory of the supervisord
+  config file).
+
+Consult :ref:`programx_section` for other allowable keys, delta the
+above constraints and additions.
+
+``[fcgi-program:x]`` Section Example
+------------------------------------
+
+.. code-block:: ini
+
+   [fcgi-program:fcgiprogramname]
+   command=/usr/bin/example.fcgi
+   socket=unix:///var/run/supervisor/%(program_name)s.sock
+   process_name=%(program_name)s_%(process_num)02d
+   numprocs=5
+   priority=999
+   autostart=true
+   autorestart=unexpected
+   startsecs=1
+   startretries=3
+   exitcodes=0,2
+   stopsignal=QUIT
+   stopwaitsecs=10
+   user=chrism
+   redirect_stderr=true
+   stdout_logfile=/a/path
+   stdout_logfile_maxbytes=1MB
+   stdout_logfile_backups=10
+   stderr_logfile=/a/path
+   stderr_logfile_maxbytes=1MB
+   stderr_logfile_backups
+   environment=A=1,B=2
+
+``[eventlistener:x]`` Section Settings
+--------------------------------------
+
+Supervisor allows specialized homogeneous process groups ("event
+listener pools") to be defined within the configuration file.  These
+pools contain processes that are meant to receive and respond to event
+notifications from supervisor's event system.  See
+:ref:`supervisor_events` for an explanation of how events work and how
+to implement programs that can be declared as event listeners.
+
+Note that all the options available to ``[program:x]`` sections are
+respected by eventlistener sections *except* for
+``stdout_capture_maxbytes`` and ``stderr_capture_maxbytes`` (event
+listeners cannot emit process communication events, see
+:ref:`capture_mode`).
       
-    <para>
-      <code>[fcgi-program:x]</code> sections have a single key which
-      <code>[program:x]</code> sections do not have.
-    </para>
+``[eventlistener:x]`` Section Values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    <variablelist>
-      <varlistentry>
-        <term>socket</term>
-        <listitem>
-          <para>
-            The FastCGI socket for this program, either TCP or UNIX domain
-            socket. For TCP sockets, use this format: 
-            <code>tcp://localhost:9002</code>.  For UNIX domain sockets, use
-            <code>unix:///absolute/path/to/file.sock</code>.  String
-            expressions are evaluated against a dictionary containing the keys
-            "program_name" and "here" (the directory of the supervisord config
-            file).
-          </para>
-        </listitem>
-      </varlistentry>
-    </variablelist>
+``[eventlistener:x]`` sections have a few keys which ``[program:x]``
+sections do not have.
 
-    <para>
-      Consult <code>[program:x]</code> Section Values for allowable
-      keys, delta the above constraints and additions.
-    </para>
+``buffer_size``
 
-    <example>
-      <title><code>[fcgi-program:x]</code> Section Example</title>
-      <programlisting>
-[fcgi-program:fcgiprogramname]
-command=/usr/bin/example.fcgi
-socket=unix:///var/run/supervisor/%(program_name)s.sock
-process_name=%(program_name)s_%(process_num)02d
-numprocs=5
-priority=999
-autostart=true
-autorestart=unexpected
-startsecs=1
-startretries=3
-exitcodes=0,2
-stopsignal=QUIT
-stopwaitsecs=10
-user=chrism
-redirect_stderr=true
-stdout_logfile=/a/path
-stdout_logfile_maxbytes=1MB
-stdout_logfile_backups=10
-stderr_logfile=/a/path
-stderr_logfile_maxbytes=1MB
-stderr_logfile_backups
-environment=A=1,B=2
-      </programlisting>
-    </example>
+  The event listener pool's event queue buffer size.  When a listener
+  pool's event buffer is overflowed (as can happen when an event
+  listener pool cannot keep up with all of the events sent to it), the
+  oldest event in the buffer is discarded.
 
-  </sect2>
+``events``
 
-  <sect2 id="eventlistenerx">
-    <title><code>[eventlistener:x]</code> Section Settings</title>
+  A comma-separated list of event type names that this listener is
+  "interested" in receiving notifications for (see
+  :ref:`supervisor_events` for a list of valid event type names).
 
-    <para>
-      Supervisor allows specialized homogeneous process groups ("event
-      listener pools") to be defined within the configuration file.
-      These pools contain processes that are meant to receive and
-      respond to event notifications from supervisor's event system.
-      See "Supervisor Events" elsewhere in this document for an
-      explanation of how events work and how to implement programs
-      that can be declared as event listeners.
-    </para>
+``result_handler``
 
-    <para>
-      Note that all the options available to <code>[program:x]</code>
-      sections are respected by eventlistener sections except for
-      <code>stdout_capture_maxbytes</code> and
-      <code>stderr_capture_maxbytes</code> (event listeners cannot
-      emit process communication events, see "Capture Mode and Process
-      Communication Events" elsewhere in this document).
-    </para>
+  A `pkg_resources entry point string
+  <http://peak.telecommunity.com/DevCenter/PkgResources>`_ that
+  resolves to a Python callable.  The default value is
+  ``supervisor.dispatchers:default_handler``.  Specifying an alternate
+  result handler is a very uncommon thing to need to do, and as a
+  result, how to create one is not documented.
+
+Consult :ref:`programx_section` for other allowable keys, delta the
+above constraints and additions.
+
+``[eventlistener:x]`` Section Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: ini
+
+   [eventlistener:theeventlistenername]
+   command=/bin/eventlistener
+   process_name=%(program_name)s_%(process_num)02d
+   numprocs=5
+   events=PROCESS_STATE_CHANGE
+   buffer_size=10
+   priority=-1
+   autostart=true
+   autorestart=unexpected
+   startsecs=1
+   startretries=3
+   exitcodes=0,2
+   stopsignal=QUIT
+   stopwaitsecs=10
+   user=chrism
+   redirect_stderr=true
+   stdout_logfile=/a/path
+   stdout_logfile_maxbytes=1MB
+   stdout_logfile_backups=10
+   stderr_logfile=/a/path
+   stderr_logfile_maxbytes=1MB
+   stderr_logfile_backups
+   environment=A=1,B=2
+
+``[rpcinterface:x]`` Section Settings
+-------------------------------------
+
+Adding ``rpcinterface:x`` settings in the configuration file is only
+useful for people who wish to extend supervisor with additional custom
+behavior.
+
+In the sample config file, there is a section which is named
+``[rpcinterface:supervisor]``.  By default it looks like the
+following.
+
+.. code-block:: ini
+
+   [rpcinterface:supervisor]
+   supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+The ``[rpcinterface:supervisor]`` section *must* remain in the
+configuration for the standard setup of supervisor to work properly.
+If you don't want supervisor to do anything it doesn't already do out
+of the box, this is all you need to know about this type of section.
       
-    <para>
-      <code>[eventlistener:x]</code> sections have a few keys which
-      <code>[program:x]</code> sections do not have.
-    </para>
+However, if you wish to add rpc interface namespaces in order to
+customize supervisor, you may add additional ``[rpcinterface:foo]``
+sections, where "foo" represents the namespace of the interface (from
+the web root), and the value named by
+``supervisor.rpcinterface_factory`` is a factory callable which should
+have a function signature that accepts a single positional argument
+``supervisord`` and as many keyword arguments as required to perform
+configuration.  Any extra key/value pairs defined within the
+``[rpcinterface:x]`` section will be passed as keyword arguments to
+the factory.
 
-    <variablelist>
-      <varlistentry>
-        <term>buffer_size</term>
-        <listitem>
-          <para>
-            The event listener pool's event queue buffer size.  When a
-            listener pool's event buffer is overflowed (as can happen
-            when an event listener pool cannot keep up with all of the
-            events sent to it), the oldest event in the buffer is
-            discarded.
-          </para>
-        </listitem>
-      </varlistentry>
-      <varlistentry>
-        <term>events</term>
-        <listitem>
-          <para>
-            A comma-separated list of event type
-            names that this listener is "interested" in receiving
-            notifications for (see "Supervisor Events" elsewhere in this
-          document for a list of valid event type names).
-          </para>
-        </listitem>
-      </varlistentry>
-      <varlistentry>
-        <term>result_handler</term>
-        <listitem>
-          <para>
-            A <ulink
-            url="http://peak.telecommunity.com/DevCenter/PkgResources"
-            >pkg_resources</ulink> "entry point" string that resolves
-            to a Python callable.  The default value is
-            <code>supervisor.dispatchers:default_handler</code>
-            Specifying an alternate result handler is a very uncommon
-            thing to need to do, and as a result, how to create one is
-            not documented.
-          </para>
-        </listitem>
-      </varlistentry>
-    </variablelist>
+Here's an example of a factory function, created in the
+``__init__.py`` file of the Python package ``my.package``.
 
-    <para>
-      Consult <code>[program:x]</code> Section Values for allowable
-      keys, delta the above constraints and additions.
-    </para>
+.. code-block:: python
 
-    <example>
-      <title><code>[eventlistener:x]</code> Section Example</title>
-      <programlisting>
-[eventlistener:theeventlistenername]
-command=/bin/eventlistener
-process_name=%(program_name)s_%(process_num)02d
-numprocs=5
-events=PROCESS_STATE_CHANGE
-buffer_size=10
-priority=-1
-autostart=true
-autorestart=unexpected
-startsecs=1
-startretries=3
-exitcodes=0,2
-stopsignal=QUIT
-stopwaitsecs=10
-user=chrism
-redirect_stderr=true
-stdout_logfile=/a/path
-stdout_logfile_maxbytes=1MB
-stdout_logfile_backups=10
-stderr_logfile=/a/path
-stderr_logfile_maxbytes=1MB
-stderr_logfile_backups
-environment=A=1,B=2
-      </programlisting>
-    </example>
+   from my.package.rpcinterface import AnotherRPCInterface
 
-  </sect2>
+   def make_another_rpcinterface(supervisord, **config):
+       retries = int(config.get('retries', 0))
+       another_rpc_interface = AnotherRPCInterface(supervisord, retries)
+       return another_rpc_interface
 
-  <sect2 id="rpcinterfacex">
-    <title><code>[rpcinterface:x]</code> Section Settings</title>
+And a section in the config file meant to configure it.
 
-    <para>
-      Adding "rpcinterface:x" settings in the configuration file is
-      only useful for people who wish to extend supervisor with
-      additional custom behavior.
-    </para>
+.. code-block:: ini
 
-    <para>
-      In the sample config file, there is a section which is named
-      <code>[rpcinterface:supervisor]</code>.  By default it looks
-      like the following.
-    </para>
+   [rpcinterface:another]
+   supervisor.rpcinterface_factory = my.package:make_another_rpcinterface
+   retries = 1
 
-    <programlisting>
-[rpcinterface:supervisor]
-supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
-    </programlisting>
+``[rpcinterface:x]`` Section Values
+-----------------------------------
 
-    <para>
-      The <code>[rpcinterface:supervisor]</code> section *must* remain
-      in the configuration for the standard setup of supervisor to
-      work properly.  If you don't want supervisor to do anything it
-      doesn't already do out of the box, this is all you need to know
-      about this type of section.
-    </para>
-      
-    <para>
-      However, if you wish to add rpc interface namespaces in order to
-      customize Supervisor, you may add additional [rpcinterface:foo]
-      sections, where "foo" represents the namespace of the interface
-      (from the web root), and the value named by
-      <code>supervisor.rpcinterface_factory</code> is a factory
-      callable which should have a function signature that accepts a
-      single positional argument <code>supervisord</code> and as many
-      keyword arguments as required to perform configuration.  Any
-      extra key/value pairs defined within the
-      <code>[rpcinterface:x]</code> section will be passed as keyword
-      arguments to the factory.
-    </para>
-    
-    <para>
-      Here's an example of a factory function, created in the
-      <code>__init__.py</code> file of the Python package
-      "my.package".
-    </para>
+``supervisor.rpcinterface_factory``
 
-    <programlisting>
-      
-from my.package.rpcinterface import AnotherRPCInterface
+  ``pkg_resources`` "entry point" dotted name to your RPC interface's
+  factory function.
 
-def make_another_rpcinterface(supervisord, **config):
-    retries = int(config.get('retries', 0))
-    another_rpc_interface = AnotherRPCInterface(supervisord, retries)
-    return another_rpc_interface
+  *Default*: N/A
 
-    </programlisting>
+  *Required*:  No.
 
-    <para>And a section in the config file meant to configure it.</para>
-    <programlisting>
+  *Introduced*: 3.0
 
-[rpcinterface:another]
-supervisor.rpcinterface_factory = my.package:make_another_rpcinterface
-retries = 1
-    </programlisting>
+``[rpcinterface:x]`` Section Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    <table>
-      <title><code>[rpcinterface:x]</code> Section Values</title>
-      <tgroup cols="5">
-        <thead>
-          <row>
-            <entry>Key</entry>
-            <entry>Description</entry>
-            <entry>Default Value</entry>
-            <entry>Required</entry>
-            <entry>Introduced</entry>
-          </row>
-        </thead>
-        <tbody>
-          <row>
-            <entry>supervisor.rpcinterface_factory</entry>
-            <entry>"Entry point" dotted name to your RPC interface's
-            factory function</entry>
-            <entry>N/A</entry>
-            <entry>No</entry>
-            <entry>3.0</entry>
-          </row>
-        </tbody>
-      </tgroup>
-    </table>
-          
-    <example>
-      <title><code>[rpcinterface:x]</code> Section Example</title>
-      <programlisting>
-[rpcinterface:another]
-supervisor.rpcinterface_factory = my.package:make_another_rpcinterface
-retries = 1
-      </programlisting>
-    </example>
+.. code-block:: ini
 
-  </sect2>
-
-</sect1>
-
-<!--
-vim:se ts=4 sw=4 et:
--->
+   [rpcinterface:another]
+   supervisor.rpcinterface_factory = my.package:make_another_rpcinterface
+   retries = 1
