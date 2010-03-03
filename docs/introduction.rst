@@ -4,9 +4,9 @@ Introduction
 Overview
 --------
 
-``supervisor`` is a client/server system that allows its users to
-control a number of processes on UNIX-like operating systems.  It was
-inspired by the following:
+Supervisor is a client/server system that allows its users to control
+a number of processes on UNIX-like operating systems.  It was inspired
+by the following:
 
 Convenience
 
@@ -62,8 +62,52 @@ Process Groups
   client like "start all", and "restart all", which starts them in the
   preassigned priority order.  Additionally, processes can be grouped
   into "process groups" and a set of logically related processes can
-  be stopped and started as a unit.  </para> </listitem>
-  </itemizedlist>
+  be stopped and started as a unit.
+
+Features
+--------
+
+Simple
+
+  Supervisor is configured through a simple INI-style config file
+  that’s easy to learn. It provides many per-process options that make
+  your life easier like restarting failed processes and automatic log
+  rotation.
+
+Centralized
+
+  Supervisor provides you with one place to start, stop, and monitor
+  your processes. Processes can be controlled individually or in
+  groups. You can configure Supervisor to provide a local or remote
+  command line and web interface.
+
+Efficient
+
+  Supervisor starts its subprocesses via fork/exec and subprocesses
+  don’t daemonize. The operating system signals Supervisor immediately
+  when a process terminates, unlike some solutions that rely on
+  troublesome PID files and periodic polling to restart failed
+  processes.
+
+Extensible
+
+  Supervisor has a simple event notification protocol that programs
+  written in any language can use to monitor it, and an XML-RPC
+  interface for control. It is also built with extension points that
+  can be leveraged by Python developers.
+
+Compatible
+
+  Supervisor works on just about everything except for Windows. It is
+  tested and supported on Linux, Mac OS X, Solaris, and FreeBSD. It is
+  written entirely in Python, so installation does not require a C
+  compiler.
+
+Proven
+
+  While Supervisor is very actively developed today, it is not new
+  software. Supervisor has been around for years and is already in use
+  on many servers.
 
 Supervisor Components
 ---------------------

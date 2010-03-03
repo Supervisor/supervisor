@@ -1120,7 +1120,7 @@ Consult :ref:`programx_section` for other allowable keys, delta the
 above constraints and additions.
 
 ``[fcgi-program:x]`` Section Example
-------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: ini
 
@@ -1276,7 +1276,7 @@ And a section in the config file meant to configure it.
    retries = 1
 
 ``[rpcinterface:x]`` Section Values
------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``supervisor.rpcinterface_factory``
 
