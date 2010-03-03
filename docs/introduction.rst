@@ -201,11 +201,11 @@ XML-RPC Interface
 Platform Requirements
 ---------------------
 
-Supervisor has been tested and is known to run on Linux (Ubuntu
-Dapper/Feisy/Gutsy), Mac OS X (10.4/10.5), and Solaris (10 for Intel)
-and FreeBSD 6.1.  It will likely work fine on most UNIX systems.
+Supervisor has been tested and is known to run on Linux (Ubuntu 9.10),
+Mac OS X (10.4/10.5/10.6), and Solaris (10 for Intel) and FreeBSD 6.1.
+It will likely work fine on most UNIX systems.
       
-Supervisor will not run at all under any version of Windows.
+Supervisor will *not* run at all under any version of Windows.
 
 Supervisor is known to work with Python 2.3.3 or better, and it may
 work with Python 2.3.0, Python 2.3.1 and Python 2.3.2 (although these
