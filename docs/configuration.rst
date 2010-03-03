@@ -27,9 +27,9 @@ are described below.
 The :file:`supervisord.conf` file contains a section named
 ``[unix_http_server]`` under which configuration parameters for an
 HTTP server that listens on a UNIX domain socket should be inserted.
-If the configuration file has no ``[unix_http_server]``
-section, a UNIX domain socket HTTP server will not be started.  The
-allowable configuration values are as follows.
+If the configuration file has no ``[unix_http_server]`` section, a
+UNIX domain socket HTTP server will not be started.  The allowable
+configuration values are as follows.
 
 ``[unix_http_server]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

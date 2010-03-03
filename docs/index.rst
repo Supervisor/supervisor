@@ -69,6 +69,8 @@ Narrative Documentation
    introduction.rst
    installing.rst
    running.rst
+   configuration.rst
+   subprocess.rst
 
 API Documentation
 -----------------
