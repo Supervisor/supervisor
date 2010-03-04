@@ -26,6 +26,7 @@ Narrative Documentation
    running.rst
    configuration.rst
    subprocess.rst
+   logging.rst
 
 API Documentation
 -----------------
