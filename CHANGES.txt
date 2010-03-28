@@ -1,11 +1,26 @@
 Next release
 
+  - When parsing "environment=" in the config file, changes introduced in
+    3.0a8 prevented Supervisor from parsing some characters commonly
+    found in paths unless quoting was used as in this example:
+    
+      environment=HOME='/home/auser'
+    
+    Supervisor once again allows the above line to be written as:
+    
+      environment=HOME=/home/auser
+
+    Alphanumeric characters, "_", "/", ".", "+", "-", "(", and ")" can all be
+    used as a value without quoting. If any other characters are neeed in the
+    value, please quote it as in the first example above.  Thanks to Paul 
+    Heideman for reporting this issue.
+
   - Supervisor will now look for its config file in locations relative to the
     executable path, allowing it to be used more easily in virtual 
     environments.  If sys.argv[0] is '/path/to/venv/bin/supervisorctl', 
     supervisor will now look for it's config file in 
     '/path/to/venv/etc/supervisord.conf' and '/path/to/venv/supervisord.conf'
-    in addition to the other standard locations.
+    in addition to the other standard locations.  Patch by Chris Rossi.
 
 3.0a8 (2010-01-20)
 

@@ -84,7 +84,10 @@ def dict_of_key_value_pairs(arg):
     """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'}
         Quotes can be used to allow commas in the value
     """
-    tokens = list(shlex.shlex(arg))
+    lexer = shlex.shlex(arg)
+    lexer.wordchars += '/.+-()'
+    
+    tokens = list(lexer)
     tokens_len = len(tokens)
 
     D = {}

@@ -115,6 +115,12 @@ class DatatypesTest(unittest.TestCase):
         expected = {'foo': 'bar,baz', 'baz': 'q,ux'}
         self.assertEqual(actual, expected)
 
+    def test_dict_of_key_value_pairs_handles_unquoted_non_alphanum(self):
+        actual = datatypes.dict_of_key_value_pairs(
+            'HOME=/home/auser,FOO=/.foo+(1.2)-_/')
+        expected = {'HOME': '/home/auser', 'FOO': '/.foo+(1.2)-_/'}
+        self.assertEqual(actual, expected)
+
     def test_dict_of_key_value_pairs_allows_trailing_comma(self):
         actual = datatypes.dict_of_key_value_pairs('foo=bar,')
         expected = {'foo': 'bar'}
