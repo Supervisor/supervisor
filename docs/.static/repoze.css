@@ -20,3 +20,14 @@ div.related a {
     color: #dad3bd !important;
 }
 
+/* override the justify text align of the default */
+
+div.body p {
+    text-align: left !important;
+}
+
+/* fix google chrome <pre> tag renderings */
+
+pre {
+   line-height: normal !important;
+}
