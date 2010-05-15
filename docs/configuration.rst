@@ -1,7 +1,7 @@
 Configuration File Syntax and Semantics
 =======================================
 
-The supervisor configuration file is conventionally named
+The Supervisor configuration file is conventionally named
 :file:`supervisord.conf`.  It is used by both :program:`supervisord`
 and :program:`supervisorctl`.  If either application is started
 without the ``-c`` option (the option which is used to tell the
