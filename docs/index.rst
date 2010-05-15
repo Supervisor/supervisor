@@ -29,6 +29,8 @@ Narrative Documentation
    events.rst
    xmlrpc.rst
    upgrading.rst
+   faq.rst
+   development.rst
 
 API Documentation
 -----------------
