@@ -1,10 +1,10 @@
 XML-RPC API Documentation
 =========================
 
+.. automodule:: supervisor.rpcinterface
+
 Status and Control
 ------------------
-
-.. automodule:: supervisor.rpcinterface
 
   .. autoclass:: SupervisorNamespaceRPCInterface
 
@@ -28,8 +28,6 @@ Status and Control
   
 Process Control
 ---------------
-
-.. automodule:: supervisor.rpcinterface
 
   .. autoclass:: SupervisorNamespaceRPCInterface
 
@@ -56,8 +54,6 @@ Process Control
 Process Logging
 ---------------
 
-.. automodule:: supervisor.rpcinterface
-
   .. autoclass:: SupervisorNamespaceRPCInterface
 
     .. automethod:: readProcessStdoutLog
@@ -73,10 +69,10 @@ Process Logging
     .. automethod:: clearAllProcessLogs
 
 
+.. automodule:: supervisor.xmlrpc
+
 System Methods
 --------------
-
-.. automodule:: supervisor.xmlrpc
 
   .. autoclass:: SystemNamespaceRPCInterface
 
