@@ -28,6 +28,7 @@ Narrative Documentation
    upgrading.rst
    faq.rst
    development.rst
+   glossary.rst
 
 API Documentation
 -----------------
