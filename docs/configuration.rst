@@ -1,5 +1,5 @@
-Configuration File Syntax and Semantics
-=======================================
+Configuration File
+==================
 
 The Supervisor configuration file is conventionally named
 :file:`supervisord.conf`.  It is used by both :program:`supervisord`
