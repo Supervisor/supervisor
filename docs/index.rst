@@ -27,6 +27,8 @@ Narrative Documentation
    subprocess.rst
    logging.rst
    events.rst
+   xmlrpc.rst
+   upgrading.rst
 
 API Documentation
 -----------------
