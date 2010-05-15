@@ -451,6 +451,9 @@ started as far as Supervisor is concerned.
 
 *Subtype Of*: ``PROCESS_STATE``
 
+Body Description
+++++++++++++++++
+
 This body is a token set.  It has the default set of key/value pairs
 plus an additional ``pid`` key.  <code>pid</code> represents the UNIX
 process id of the process that was started.  For example:
