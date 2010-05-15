@@ -9,6 +9,8 @@ You needn't understand it unless you wish to use an existing
 third-party RPC interface plugin or if you wish to write your own RPC
 interface plugin.
 
+.. _rpcinterface_factories:
+
 Configuring XML-RPC Interface Factories
 ---------------------------------------
 

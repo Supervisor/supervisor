@@ -1,3 +1,5 @@
+.. _running:
+
 Running Supervisor
 ==================
 
@@ -33,7 +35,7 @@ This stanza may be cut and pasted into the :file:`supervisord.conf`
 file.  This is the simplest possible program configuration, because it
 only names a command.  Program configuration sections have many other
 configuration options which aren't shown here.  See
-:ref:`program_configuration` for more information.
+:ref:`programx_section` for more information.
 
 Running :program:`supervisord`
 ------------------------------

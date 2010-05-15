@@ -1,3 +1,5 @@
+.. _events:
+
 Events
 ======
 
@@ -179,8 +181,8 @@ pooolserial An integer assigned to each event by the        30
             :program:`supervisord` process will have the
             same ``poolserial`` number.  This value can 
             be used to detect event ordering anomalies.
-eventname   The specific event type name (see "Supervisor   TICK_5
-            Events" elsewhere in this document)
+eventname   The specific event type name (see               TICK_5
+            :ref:`event_types`)
 len         An integer indicating the number of bytes in    22
             the event payload, aka the ``PAYLOAD_LENGTH``
 =========== =============================================   ===================
@@ -193,8 +195,8 @@ An example of a complete header line is as follows.
 
 Directly following the linefeed character in the header is the event
 payload.  It consists of ``PAYLOAD_LENGTH`` bytes representing a
-serialization of the event data.  See "Supervisor Event Types"
-elsewhere for the specific event data serialization definitions.
+serialization of the event data.  See :ref:`event_types` for the
+specific event data serialization definitions.
 
 An example payload for a ``PROCESS_COMMUNICATION_STDOUT`` event
 notification is as follows.
@@ -347,6 +349,8 @@ generate ``PROCESS_COMMUNICATION`` events every so often with memory
 information in them, and an event listener to perform an action based
 on processing the data it receives from these events.
 
+.. _event_types:
+
 Event Types
 -----------
 
@@ -393,12 +397,11 @@ to receive all event notifications emitted by Supervisor.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This process type indicates a process has moved from one state to
-another.  See the process state map in "Subprocesses" elsewhere in
-this document for a description of the states that a process moves
-through during its lifetime.  This event type is abstract, it will
-never be sent directly.  Subscribing to this event type will cause a
-subscriber to receive event notifications of all the event types that
-are subtypes of ``PROCESS_STATE``.
+another.  See :ref:`process_states` for a description of the states
+that a process moves through during its lifetime.  This event type is
+abstract, it will never be sent directly.  Subscribing to this event
+type will cause a subscriber to receive event notifications of all the
+event types that are subtypes of ``PROCESS_STATE``.
 
 *Name*: ``PROCESS_STATE``
 

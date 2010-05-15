@@ -27,7 +27,7 @@ Q
 
 A
   This may be due to your process' dependence on environment variable
-  settings.  See "Subprocess Environment" elsewhere in this document.
+  settings.  See :ref:`subprocess_environment`.
 
 Q
   How can I make Supervisor restart a process that's using "too much"

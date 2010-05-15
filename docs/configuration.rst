@@ -225,7 +225,7 @@ follows.
   ``debug``, the supervisord log file will record the stderr/stdout
   output of its child processes and extended info info about process
   state changes, which is useful for debugging a process which isn't
-  starting properly.  See also: :ref:`supervisor_log_levels`.
+  starting properly.  See also: :ref:`activity_log_levels`.
 
   *Default*:  info
 
@@ -490,6 +490,8 @@ follows.
    password = 123
    prompt = mysupervisor
 
+.. _programx_section:
+
 ``[program:x]`` Section Settings
 --------------------------------
 
@@ -658,9 +660,8 @@ where specified.
 
   The number of serial failure attempts that :program:`supervisord`
   will allow when attempting to start the program before giving up and
-  puting the process into an ``ERROR`` state.  See the process state
-  map elsewhere in this document for explanation of the ``ERROR``
-  state.
+  puting the process into an ``ERROR`` state.  See
+  :ref:`process_states` for explanation of the ``ERROR`` state.
 
   *Default*: 3
 
@@ -1153,9 +1154,9 @@ above constraints and additions.
 Supervisor allows specialized homogeneous process groups ("event
 listener pools") to be defined within the configuration file.  These
 pools contain processes that are meant to receive and respond to event
-notifications from supervisor's event system.  See
-:ref:`supervisor_events` for an explanation of how events work and how
-to implement programs that can be declared as event listeners.
+notifications from supervisor's event system.  See :ref:`events` for
+an explanation of how events work and how to implement programs that
+can be declared as event listeners.
 
 Note that all the options available to ``[program:x]`` sections are
 respected by eventlistener sections *except* for
@@ -1180,7 +1181,7 @@ sections do not have.
 
   A comma-separated list of event type names that this listener is
   "interested" in receiving notifications for (see
-  :ref:`supervisor_events` for a list of valid event type names).
+  :ref:`event_types` for a list of valid event type names).
 
 ``result_handler``
 

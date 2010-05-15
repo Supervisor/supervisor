@@ -105,8 +105,8 @@ For example, ``supervisord -c supervisord.conf``.  Using the ``-c``
 flag actually is redundant in this case, because
 :program:`supervisord` searches the current directory for a
 :file:`supervisord.conf` before it searches any other locations for
-the file, but it will work.  See :ref:`running_chapter` for more
-information about the ``-c`` flag.
+the file, but it will work.  See :ref:`running` for more information
+about the ``-c`` flag.
 
 Once you have a configuration file on your filesystem, you can
 begin modifying it to your liking.

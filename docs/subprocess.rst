@@ -9,6 +9,8 @@ managed for the entirety of its lifetime by supervisord
 creates).  When a child dies, supervisor is notified of its death via
 the ``SIGCHLD`` signal, and it performs the appropriate operation.
 
+.. _nondaemonizing_of_subprocesses:
+
 Nondaemonizing of Subprocesses
 ------------------------------
 
@@ -126,6 +128,8 @@ entry for a pidproxy-enabled program is provided below.
 The :program:`pidproxy` program is put into your configuration's
 ``$BINDIR`` when supervisor is installed (it is a "console script").
 
+.. _subprocess_environment:
+
 Subprocess Environment
 ----------------------
 
@@ -188,6 +192,8 @@ example of setting these enviroment variables is as below.
    command=/home/chrism/bin/httpd -c "ErrorLog /dev/stdout" -DFOREGROUND
    user=chrism
    environment=HOME=/home/chrism,USER=chrism
+
+.. _process_states:
 
 Process States
 --------------

@@ -196,7 +196,7 @@ XML-RPC Interface
           
   You can extend :program:`supervisord` functionality with new XML-RPC
   API methods by adding new top-level RPC interfaces as necessary.
-  See :ref:`rpcinterface_settings`.
+  See :ref:`rpcinterface_factories`.
 
 Platform Requirements
 ---------------------

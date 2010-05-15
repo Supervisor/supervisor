@@ -50,6 +50,8 @@ example, if ``loglevel`` is ``error``, messages of ``error`` and
 ``warn``, messages of ``warn``, ``error``, and ``critical`` will be
 logged.
 
+.. _activity_log_levels:
+
 Activity Log Levels
 ~~~~~~~~~~~~~~~~~~~
 
@@ -144,6 +146,8 @@ The configuration keys tht influence child process logging in the
 ``[supervisord]`` config file section are these:
 ``childlogdir``, and ``nocleanup``.
 
+.. _capture_mode:
+
 Capture Mode
 ~~~~~~~~~~~~
 
@@ -156,7 +160,7 @@ non-zero ``stdout_capture_maxbytes`` or ``stderr_capture_maxbytes``
 parameter, each process represented by the program section may emit
 special tokens on its stdout or stderr stream (respectively) which
 will effectively cause supervisor to emit a ``PROCESS_COMMUNICATION``
-event (see :ref:`supervisor_events` for a description of events).
+event (see :ref:`events` for a description of events).
 
 The process communications protocol relies on two tags, one which
 commands supervisor to enter "capture mode" for the stream and one
