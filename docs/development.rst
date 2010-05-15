@@ -1,6 +1,9 @@
 Resources and Development
 =========================
 
+Mailing Lists
+-------------
+
 Supervisor has a maillist for users.  You may subscribe to the
 `Supervisor-users maillist
 <http://supervisord.org/mailman/listinfo/supervisor-users>`_.
@@ -9,9 +12,15 @@ Supervisor has a maillist for checkins too.  You may subscribe to the
 `Supervisor-checkins maillist
 <http://supervisord.org/mailman/listinfo/supervisor-checkins>`_.
 
+Bug Tracker
+-----------
+
 Supervisor has a bugtracker where you may report any bugs or other
 errors you find.  Please report bugs to the `collector
 <http://www.plope.com/software/collector>`_.
+
+Version Control Repository
+--------------------------
 
 You can also view the `Supervisor version control repository
 <http://svn.supervisord.org>`_.
@@ -36,14 +45,14 @@ Author Information
 The following people are responsible for creating Supervisor.
 
 Primary Authors and Maintainers
--------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Chris McDonough (`Agendaless Consulting, Inc. <http://agendaless.com>`_)
 
 - Mike Naberezny (`Maintainable Software, Inc. <http://maintainable.com>`_)
 
 Contributors
-------------
+~~~~~~~~~~~~
 
 - Anders Quist: Anders contributed the patch that was the basis for
   Supervisor’s ability to reload parts of its configuration without
