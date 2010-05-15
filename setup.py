@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (c) 2007 Agendaless Consulting and Contributors.
+# Copyright (c) 2006-2010 Agendaless Consulting and Contributors.
 # All Rights Reserved.
 #
 # This software is subject to the provisions of the BSD-like license at
@@ -11,8 +11,6 @@
 # FITNESS FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
-
-__revision__ = '$Id$'
 
 import urllib
 import urllib2
@@ -63,7 +61,6 @@ dist = setup(
     version = supervisor_version,
     license = 'BSD-derived (http://www.repoze.org/LICENSE.txt)',
     url = 'http://supervisord.org/',
-    download_url = 'http://dist.supervisord.org/',
     description = "A system for controlling process state under UNIX",
     long_description= DESC,
     classifiers = CLASSIFIERS,
