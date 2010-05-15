@@ -751,7 +751,7 @@ Indicates that :program:`supervisord` has started.
 ``SUPERVISOR_STATE_CHANGE_STOPPING`` Event Type
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Indicates that :perogram:`supervisord` is stopping.
+Indicates that :program:`supervisord` is stopping.
 
 *Name*: ``SUPERVISOR_STATE_CHANGE_STOPPING``
 
