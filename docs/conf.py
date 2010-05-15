@@ -13,6 +13,7 @@
 # out serve to show the default value.
 
 import sys, os
+from datetime import date
 
 # If your extensions are in another directory, add it here. If the
 # directory is relative to the documentation root, use os.path.abspath to
@@ -47,8 +48,9 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General substitutions.
-project = 'supervisor'
-copyright = '2004-2010, Agendaless Consulting <supervisor-users@lists.supervisord.org>'
+project = 'supervisor'                                              
+year = date.today().year
+copyright = '2004-%d, Agendaless Consulting and Contributors' % year
 
 # The default replacements for |version| and |release|, also used in various
 # other places throughout the built documents.
@@ -158,7 +160,7 @@ html_last_updated_fmt = '%b %d, %Y'
 #html_file_suffix = ''
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'atemplatedoc'
+htmlhelp_basename = 'supervisor'
 
 
 # Options for LaTeX output
