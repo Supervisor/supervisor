@@ -4,9 +4,8 @@ Supervisor: A Process Control System
 Overview
 --------
 
-``supervisor`` is a client/server system that allows its users to
-monitor and control a number of processes on UNIX-like operating
-systems.
+Supervisor is a client/server system that allows its users to monitor
+and control a number of processes on UNIX-like operating systems.
 
 It shares some of the same goals of programs like :term:`launchd`,
 :term:`daemontools`, and :term:`runit`. Unlike some of these programs,
@@ -27,6 +26,7 @@ Narrative Documentation
    configuration.rst
    subprocess.rst
    logging.rst
+   events.rst
 
 API Documentation
 -----------------
