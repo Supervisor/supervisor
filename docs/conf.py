@@ -19,6 +19,17 @@ import sys, os
 # make it absolute, like shown here.
 #sys.path.append(os.path.abspath('some/directory'))
 
+parent = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(os.path.join(os.path.abspath(parent), 'src'))
+wd = os.getcwd()
+os.chdir(parent)
+os.system('%s setup.py test -q' % sys.executable)
+os.chdir(wd)
+
+for item in os.listdir(parent):
+    if item.endswith('.egg'):
+        sys.path.append(os.path.join(parent, item))
+
 # General configuration
 # ---------------------
 
