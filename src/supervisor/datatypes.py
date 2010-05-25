@@ -85,7 +85,7 @@ def dict_of_key_value_pairs(arg):
         Quotes can be used to allow commas in the value
     """
     lexer = shlex.shlex(arg)
-    lexer.wordchars += '/.+-()'
+    lexer.wordchars += '/.+-():'
     
     tokens = list(lexer)
     tokens_len = len(tokens)

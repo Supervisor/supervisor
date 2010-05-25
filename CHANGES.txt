@@ -10,9 +10,9 @@ Next release
     
       environment=HOME=/home/auser
 
-    Alphanumeric characters, "_", "/", ".", "+", "-", "(", and ")" can all be
-    used as a value without quoting. If any other characters are needed in the
-    value, please quote it as in the first example above.  Thanks to Paul 
+    Alphanumeric characters, "_", "/", ".", "+", "-", "(", ")", and ":" can all 
+    be used as a value without quoting. If any other characters are needed in 
+    the value, please quote it as in the first example above.  Thanks to Paul 
     Heideman for reporting this issue.
 
   - Supervisor will now look for its config file in locations relative to the
