@@ -49,8 +49,6 @@ Primary Authors and Maintainers
 
 - Chris McDonough (`Agendaless Consulting, Inc. <http://agendaless.com>`_)
 
-- Mike Naberezny (`Maintainable Software, LLC. <http://maintainable.com>`_)
-
 Contributors
 ~~~~~~~~~~~~
 
