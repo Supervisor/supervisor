@@ -2,6 +2,8 @@ Next release
 
   - Import iterparse from xml.etree when available (eg: Python 2.6).
 
+  - Fixed the url to the supervisor-users mailing list.
+
   - When parsing "environment=" in the config file, changes introduced in
     3.0a8 prevented Supervisor from parsing some characters commonly
     found in paths unless quoting was used as in this example:

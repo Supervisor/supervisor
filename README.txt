@@ -78,24 +78,27 @@ Documentation
   XXX We need some way of getting people the entire docs set without
   needing to read it via HTML online.
 
-Maillist, Reporting Bugs, and Viewing the SVN Repository
+Mailing list, Reporting Bugs, and Viewing the Source Repository
 
-  You may subscribe to the 'Supervisor-users'
-  "maillist":http://lists.supervisord.org/mailman/listinfo/supervisor-users
+  You may subscribe to the 'Supervisor-users' "mailing
+  list":http://lists.supervisord.org/mailman/listinfo/supervisor-users
 
   Please report bugs at "the
   collector":http://www.plope.com/software/collector .
 
   XXX get a better bugtracker
 
-  You can view the Subversion repository for supervisor via
+  You can view the source repository for supervisor via
   http://svn.supervisord.org:"http://svn.supervisord.org"
+
+  A Bazaar mirror can be found in
+  "Launchpad":https://code.launchpad.net/supervisord
 
 Contributing
 
   If you'd like to contribute to supervisor directly, please contact
   the "supervisor-users
-  maillist":http://lists.supervisord.org/mailman/listinfo/supervisor-users
+  mailing list":http://lists.supervisord.org/mailman/listinfo/supervisor-users
 
 Author Information
 
@@ -104,6 +107,3 @@ Author Information
 
   Mike Naberezny (mike@maintainable.com)
   "Maintainable Software":http://www.maintainable.com
-
-    
-

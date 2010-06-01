@@ -4,12 +4,12 @@ Resources and Development
 Mailing Lists
 -------------
 
-Supervisor has a maillist for users.  You may subscribe to the
-`Supervisor-users maillist
+Supervisor has a mailing list for users.  You may subscribe to the
+`Supervisor-users mailing list
 <http://lists.supervisord.org/mailman/listinfo/supervisor-users>`_.
 
-Supervisor has a maillist for checkins too.  You may subscribe to the
-`Supervisor-checkins maillist
+Supervisor has a mailing list for checkins too.  You may subscribe to the
+`Supervisor-checkins mailing list
 <http://lists.supervisord.org/mailman/listinfo/supervisor-checkins>`_.
 
 Bug Tracker
@@ -29,7 +29,7 @@ Contributing
 ------------
 
 If you'd like to contribute to supervisor, please contact us through
-the maillist and we'll attempt to arrange for you to have direct
+the mailing list and we'll attempt to arrange for you to have direct
 access to the version control repository.  You may be required to sign
 a contributor's agreement before you can be provided with access.
 
