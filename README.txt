@@ -78,10 +78,10 @@ Documentation
   XXX We need some way of getting people the entire docs set without
   needing to read it via HTML online.
 
-Maillist, Reporting Bugs, and Viewing the CVS Repository
+Maillist, Reporting Bugs, and Viewing the SVN Repository
 
   You may subscribe to the 'Supervisor-users'
-  "maillist":http://supervisord.org/mailman/listinfo/supervisor-users
+  "maillist":http://lists.supervisord.org/mailman/listinfo/supervisor-users
 
   Please report bugs at "the
   collector":http://www.plope.com/software/collector .
@@ -95,7 +95,7 @@ Contributing
 
   If you'd like to contribute to supervisor directly, please contact
   the "supervisor-users
-  maillist":http://supervisord.org/mailman/listinfo/supervisor-users
+  maillist":http://lists.supervisord.org/mailman/listinfo/supervisor-users
 
 Author Information
 
