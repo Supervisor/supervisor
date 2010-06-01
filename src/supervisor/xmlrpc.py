@@ -527,8 +527,19 @@ def gettags(comment):
 
     return tags
 
+
 try:
-    from cElementTree import iterparse
+    # Python 2.6 contains a version of cElementTree inside it.
+    from xml.etree.ElementTree import iterparse
+except ImportError:
+    try:
+        # Failing that, try cElementTree instead.
+        from cElementTree import iterparse
+    except ImportError:
+        iterparse = None
+
+
+if iterparse is not None:
     import datetime, time
     from base64 import decodestring
 
@@ -565,7 +576,5 @@ try:
             elif elem.tag == "params":
                 params = tuple([v.text for v in elem])
         return params, method
-
-except ImportError:
+else:
     loads = None
-    
