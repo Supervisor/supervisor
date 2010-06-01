@@ -104,6 +104,3 @@ Author Information
 
   Chris McDonough (chrism@plope.com)
   "Agendaless Consulting":http://www.agendaless.com
-
-  Mike Naberezny (mike@maintainable.com)
-  "Maintainable Software":http://www.maintainable.com

@@ -61,6 +61,9 @@ Contributors
 - Derek DeVries: Derek did the web design of Supervisor’s internal web
   interface and website logos.
 
+- Mike Naberezny: Mike contributed to the design and implementation of
+  Supervisor versions 2 and 3.
+
 - Guido van Rossum: Guido authored ``zdrun`` and ``zdctl``, the
   programs from Zope that were the original basis for Supervisor.  He
   also created Python, the programming language that Supervisor is
