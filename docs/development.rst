@@ -6,11 +6,11 @@ Mailing Lists
 
 Supervisor has a maillist for users.  You may subscribe to the
 `Supervisor-users maillist
-<http://supervisord.org/mailman/listinfo/supervisor-users>`_.
+<http://lists.supervisord.org/mailman/listinfo/supervisor-users>`_.
 
 Supervisor has a maillist for checkins too.  You may subscribe to the
 `Supervisor-checkins maillist
-<http://supervisord.org/mailman/listinfo/supervisor-checkins>`_.
+<http://lists.supervisord.org/mailman/listinfo/supervisor-checkins>`_.
 
 Bug Tracker
 -----------
