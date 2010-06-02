@@ -1,8 +1,10 @@
 Next release
 
-  - Import iterparse from xml.etree when available (eg: Python 2.6).
+  - Import iterparse from xml.etree when available (eg: Python 2.6).  Patch
+    by Sidnei da Silva.
 
-  - Fixed the url to the supervisor-users mailing list.
+  - Fixed the url to the supervisor-users mailing list.  Patch by
+    Sidnei da Silva
 
   - When parsing "environment=" in the config file, changes introduced in
     3.0a8 prevented Supervisor from parsing some characters commonly
