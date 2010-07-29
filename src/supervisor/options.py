@@ -381,6 +381,7 @@ class ServerOptions(Options):
         self.configroot = Dummy()
         self.configroot.supervisord = Dummy()
         
+        self.add(None, None, "v", "version", self.version)
         self.add("nodaemon", "supervisord.nodaemon", "n", "nodaemon", flag=1,
                  default=0)
         self.add("user", "supervisord.user", "u:", "user=")
@@ -416,6 +417,12 @@ class ServerOptions(Options):
         self.pidhistory = {}
         self.process_group_configs = []
         self.parse_warnings = []
+
+    def version(self, dummy):
+        """Print version to stdout and exit(0).
+        """
+        self.stdout.write('%s\n' % VERSION)
+        self.exit(0)
 
     def getLogger(self, filename, level, fmt, rotating=False, maxbytes=0,
                   backups=0, stdout=False):

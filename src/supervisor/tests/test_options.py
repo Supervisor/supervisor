@@ -14,7 +14,6 @@ from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import DummyLogger
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
-from supervisor.tests.base import DummyPGroupConfig
 from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import lstrip
@@ -158,6 +157,14 @@ class ServerOptionsTests(unittest.TestCase):
 
     def _makeOne(self):
         return self._getTargetClass()()
+
+    def test_version(self):
+        from supervisor.options import VERSION
+        options = self._makeOne()
+        from StringIO import StringIO
+        options.stdout = StringIO()
+        self.assertRaises(SystemExit, options.version, None)
+        self.assertEqual(options.stdout.getvalue(), VERSION + '\n')
         
     def test_options(self):
         s = lstrip("""[inet_http_server]
@@ -675,7 +682,7 @@ class ServerOptionsTests(unittest.TestCase):
         config = UnhosedConfigParser()
         instance.logger = DummyLogger()
         config.read_string(text)
-        processes = instance.processes_from_section(config, 'program:foo', None)
+        instance.processes_from_section(config, 'program:foo', None)
         self.assertEqual(instance.parse_warnings[0],
              'For [program:foo], AUTO logging used for stdout_logfile '
              'without rollover, set maxbytes > 0 to avoid filling up '

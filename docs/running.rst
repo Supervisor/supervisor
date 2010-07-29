@@ -137,6 +137,10 @@ value in the configuration file.
 
    Strip ANSI escape sequences from all child log process.
 
+-v, --version
+
+   Print the supervisord version number out to stdout and exit.
+
 --profile_options=LIST
 
    Comma-separated options list for profiling.  Causes

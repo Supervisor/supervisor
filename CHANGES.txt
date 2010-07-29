@@ -1,5 +1,8 @@
 Next release
 
+  - Add a ``-v`` / ``--version`` option to supervisord: Print the
+    supervisord version number out to stdout and exit.  (Roger Hoover)
+
   - Import iterparse from xml.etree when available (eg: Python 2.6).  Patch
     by Sidnei da Silva.
 
