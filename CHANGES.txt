@@ -1,5 +1,21 @@
 Next release
 
+  - Use rich comparison methods rather than __cmp__ to sort process
+    configs and process group configs to better straddle Python
+    versions.  (thanks to Jonathan Riboux for identifying the problem
+    and supplying an initial patch).
+
+  - Fixed test_supervisorctl.test_maintail_dashf test for Python 2.7.
+    (thanks to Jonathan Riboux for identifying the problem and
+    supplying an initial patch).
+
+  - Fixed the way that supervisor.datatypes.url computes a "good" URL
+    for compatibility with Python 2.7 and Python >= 2.6.5.  URLs with
+    bogus "schemes://" will now be accepted as a version-straddling
+    compromise (before they were rejected before supervisor would
+    start).  (thanks to Jonathan Riboux for identifying the problem
+    and supplying an initial patch).
+
   - Add a ``-v`` / ``--version`` option to supervisord: Print the
     supervisord version number out to stdout and exit.  (Roger Hoover)
 

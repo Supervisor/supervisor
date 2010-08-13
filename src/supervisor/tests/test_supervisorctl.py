@@ -867,9 +867,9 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         error = errors[0]
         self.assertEqual(plugin.listener.closed,
-                         'http://localhost:92491/mainlogtail')
+                         'http://localhost:65532/mainlogtail')
         self.assertEqual(error[0],
-                         'http://localhost:92491/mainlogtail')
+                         'http://localhost:65532/mainlogtail')
         for msg in ('Cannot connect', 'socket.error'):
             self.assertTrue(msg in error[1])
 
@@ -951,7 +951,7 @@ class DummyPluginFactory:
 class DummyClientOptions:
     def __init__(self):
         self.prompt = 'supervisor'
-        self.serverurl = 'http://localhost:92491' # should be uncontactable
+        self.serverurl = 'http://localhost:65532'
         self.username = 'chrism'
         self.password = '123'
         self.history_file = None

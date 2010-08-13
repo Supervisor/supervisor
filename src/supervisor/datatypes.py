@@ -401,10 +401,11 @@ byte_size = SuffixMultiplier({'kb': 1024,
 
 def url(value):
     import urlparse
-    scheme, netloc, path, params, query, fragment = urlparse.urlparse(value)
-    if scheme and netloc:
-        return value     
-    if scheme == 'unix' and path.startswith('//') and len(path) > 2:
+    # earlier Python 2.6 urlparse (2.6.4 and under) can't parse unix:// URLs,
+    # later ones can but we need to straddle
+    uri = value.replace('unix://', 'http://', 1).strip()
+    scheme, netloc, path, params, query, fragment = urlparse.urlparse(uri)
+    if scheme and (netloc or path):
         return value
     raise ValueError("value %s is not a URL" % value)
 

@@ -198,10 +198,6 @@ class DatatypesTest(unittest.TestCase):
         bad_url = "unix://"
         self.assertRaises(ValueError, datatypes.url, bad_url)   
     
-    def test_url_rejects_urlparse_unrecognized_scheme_with_path(self):
-        bad_url = "bad://path"
-        self.assertRaises(ValueError, datatypes.url, bad_url)
-
 class InetStreamSocketConfigTests(unittest.TestCase):
     def _getTargetClass(self):
         return datatypes.InetStreamSocketConfig

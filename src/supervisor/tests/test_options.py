@@ -403,8 +403,13 @@ class ServerOptionsTests(unittest.TestCase):
         instance.realize(args=[])
 
         section = instance.configroot.supervisord
+
         self.assertEqual(len(section.process_group_configs), 2)
+
         cat = section.process_group_configs[0]
+        self.assertEqual(len(cat.process_configs), 1)
+
+        cat = section.process_group_configs[1]
         self.assertEqual(len(cat.process_configs), 2)
         self.assertTrue(section.process_group_configs is
                         instance.process_group_configs)
@@ -426,20 +431,22 @@ class ServerOptionsTests(unittest.TestCase):
         instance.process_config_file()
 
         section = instance.configroot.supervisord
-        self.assertEqual(len(section.process_group_configs), 2)
-        cat = section.process_group_configs[0]
-        self.assertEqual(len(cat.process_configs), 1)
-        proc = cat.process_configs[0]
-        self.assertEqual(proc.name, 'three')
-        self.assertEqual(proc.command, '/bin/pig')
 
-        cat = section.process_group_configs[1]
+        self.assertEqual(len(section.process_group_configs), 2)
+
+        cat = section.process_group_configs[0]
         self.assertEqual(len(cat.process_configs), 1)
         proc = cat.process_configs[0]
         self.assertEqual(proc.name, 'one')
         self.assertEqual(proc.command, '/bin/cat')
         self.assertTrue(section.process_group_configs is
                         instance.process_group_configs)
+
+        cat = section.process_group_configs[1]
+        self.assertEqual(len(cat.process_configs), 1)
+        proc = cat.process_configs[0]
+        self.assertEqual(proc.name, 'three')
+        self.assertEqual(proc.command, '/bin/pig')
 
     def test_readFile_failed(self):
         from supervisor.options import readFile
@@ -725,6 +732,12 @@ class ServerOptionsTests(unittest.TestCase):
         process_name = %(program_name)s_%(process_num)s
         command = /bin/cat
         numprocs = 3
+
+        [eventlistener:biz]
+        events=PROCESS_COMMUNICATION
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/biz
+        numprocs = 2
         """)
         from supervisor.options import UnhosedConfigParser
         from supervisor.dispatchers import default_handler
@@ -732,15 +745,20 @@ class ServerOptionsTests(unittest.TestCase):
         config.read_string(text)
         instance = self._makeOne()
         gconfigs = instance.process_groups_from_parser(config)
-        self.assertEqual(len(gconfigs), 2)
+        self.assertEqual(len(gconfigs), 3)
 
         gconfig1 = gconfigs[0]
+        self.assertEqual(gconfig1.name, 'biz')
+        self.assertEqual(gconfig1.result_handler, default_handler)
+        self.assertEqual(len(gconfig1.process_configs), 2)
+
+        gconfig1 = gconfigs[1]
         self.assertEqual(gconfig1.name, 'cat')
         self.assertEqual(gconfig1.priority, -1)
         self.assertEqual(gconfig1.result_handler, default_handler)
         self.assertEqual(len(gconfig1.process_configs), 3)
 
-        gconfig1 = gconfigs[1]
+        gconfig1 = gconfigs[2]
         self.assertEqual(gconfig1.name, 'dog')
         self.assertEqual(gconfig1.priority, 1)
         self.assertEqual(gconfig1.result_handler, default_handler)
@@ -840,6 +858,7 @@ class ServerOptionsTests(unittest.TestCase):
             return instance.process_groups_from_parser(config)
 
         gconfigs = get_process_groups(instance, config)
+        
         exp_owner = (sentinel.uid, sentinel.gid)
 
         self.assertEqual(len(gconfigs), 4)
@@ -856,7 +875,7 @@ class ServerOptionsTests(unittest.TestCase):
         pconfig_foo = gconf_foo.process_configs[0]
         self.assertEqual(pconfig_foo.__class__, FastCGIProcessConfig)
         
-        gconf_bar = gconfigs[2]
+        gconf_bar = gconfigs[1]
         self.assertEqual(gconf_bar.name, 'bar')
         self.assertEqual(gconf_bar.priority, 999)
         self.assertEqual(gconf_bar.socket_config.url,
@@ -865,7 +884,13 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(0700, gconf_bar.socket_config.get_mode())
         self.assertEqual(len(gconf_bar.process_configs), 3)
         
-        gconf_flub = gconfigs[1]
+        gconf_cub = gconfigs[2]
+        self.assertEqual(gconf_cub.name, 'cub')
+        self.assertEqual(gconf_cub.socket_config.url,
+                         'tcp://localhost:6000')
+        self.assertEqual(len(gconf_cub.process_configs), 1)
+
+        gconf_flub = gconfigs[3]
         self.assertEqual(gconf_flub.name, 'flub')
         self.assertEqual(gconf_flub.socket_config.url,
                          'unix:///tmp/flub.sock')
@@ -873,11 +898,6 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(0700, gconf_flub.socket_config.get_mode())
         self.assertEqual(len(gconf_flub.process_configs), 1)
         
-        gconf_cub = gconfigs[3]
-        self.assertEqual(gconf_cub.name, 'cub')
-        self.assertEqual(gconf_cub.socket_config.url,
-                         'tcp://localhost:6000')
-        self.assertEqual(len(gconf_cub.process_configs), 1)
         
 
     def test_fcgi_program_no_socket(self):

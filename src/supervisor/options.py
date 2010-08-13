@@ -694,7 +694,6 @@ class ServerOptions(Options):
                 FastCGIGroupConfig(self, program_name, priority, processes,
                                    socket_config)
                 )
-        
 
         groups.sort()
         return groups
@@ -1508,14 +1507,38 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
             else:
                 return default
 
-class Config:
-    def __cmp__(self, other):
-        return cmp(self.priority, other.priority)
+class Config(object):
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __lt__(self, other):
+        if self.priority == other.priority:
+            return self.name < other.name
+            
+        return self.priority < other.priority
+
+    def __le__(self, other):
+        if self.priority == other.priority:
+            return self.name <= other.name
+            
+        return self.priority <= other.priority
+
+    def __gt__(self, other):
+        if self.priority == other.priority:
+            return self.name > other.name
+            
+        return self.priority > other.priority
+
+    def __ge__(self, other):
+        if self.priority == other.priority:
+            return self.name >= other.name
+            
+        return self.priority >= other.priority
 
     def __repr__(self):
         return '<%s instance at %s named %s>' % (self.__class__, id(self),
                                                  self.name)
-    
+
 class ProcessConfig(Config):
     req_param_names = [
         'name', 'uid', 'command', 'directory', 'umask', 'priority',
@@ -1642,9 +1665,6 @@ class ProcessGroupConfig(Config):
 
         return True
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
     def after_setuid(self):
         for config in self.process_configs:
             config.create_autochildlogs()
@@ -1664,6 +1684,15 @@ class EventListenerPoolConfig(Config):
         self.pool_events = pool_events
         self.result_handler = result_handler
 
+    def __eq__(self, other):
+        if not isinstance(other, EventListenerPoolConfig):
+            return False
+        
+        if (self.name == other.name) and (self.priority == other.priority):
+            return True
+
+        return False
+            
     def after_setuid(self):
         for config in self.process_configs:
             config.create_autochildlogs()
