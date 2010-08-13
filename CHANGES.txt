@@ -1,4 +1,4 @@
-3.0b1 (2010-08-13)
+3.0a9 (2010-08-13)
 
   - Use rich comparison methods rather than __cmp__ to sort process
     configs and process group configs to better straddle Python
