@@ -66,7 +66,7 @@ configuration values are as follows.
   a UNIX username (e.g. ``chrism``) or a UNIX username and group
   separated by a colon (e.g. ``chrism:wheel``).
 
-  *Default*:  Use umask of user who starts supervisord.
+  *Default*:  Use the username and group of the user who starts supervisord.
 
   *Required*:  No.
 
