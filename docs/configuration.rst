@@ -1117,6 +1117,35 @@ sections do not have.
   keys "program_name" and "here" (the directory of the supervisord
   config file).
 
+  *Default*: No default.
+
+  *Required*:  Yes.
+
+  *Introduced*: 3.0
+  
+``socket_owner``
+  
+  For UNIX domain sockets, this parameter can be used to specify the user
+  and group for the FastCGI socket. May be a UNIX username (e.g. chrism) 
+  or a UNIX username and group separated by a colon (e.g. chrism:wheel).
+
+  *Default*: Uses the user and group set for the fcgi-program
+
+  *Required*:  No.
+
+  *Introduced*: 3.0 
+
+``socket_mode``
+
+  For UNIX domain sockets, this parameter can be used to specify the 
+  permission mode.
+
+  *Default*: 0700
+
+  *Required*:  No.
+
+  *Introduced*: 3.0 
+
 Consult :ref:`programx_section` for other allowable keys, delta the
 above constraints and additions.
 
