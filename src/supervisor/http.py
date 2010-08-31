@@ -547,7 +547,16 @@ class supervisor_af_inet_http_server(supervisor_http_server):
         host, port = self.socket.getsockname()
         if not ip:
             self.log_info('Computing default hostname', 'warning')
-            ip = socket.gethostbyname (socket.gethostname())
+            hostname = socket.gethostname()
+            try:
+                ip = socket.gethostbyname(hostname)
+            except socket.error:
+                raise ValueError(
+                    'Could not determine IP address for hostname %s, '
+                    'please try setting an explicit IP address in the "port" '
+                    'setting of your [inet_http_server] section.  For example, '
+                    'instead of "port = 9001", try "port = 127.0.0.1:9001."'
+                    % hostname)
         try:
             self.server_name = socket.gethostbyaddr (ip)[0]
         except socket.error:

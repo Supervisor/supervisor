@@ -1,3 +1,9 @@
+Next release
+
+  - Better error message when HTTP server cannot reverse-resolve a
+    hostname to an IP address.  Previous behavior: show a socket
+    error.  Current behavior: spit out a suggestion to stdout.
+
 3.0a9 (2010-08-13)
 
   - Use rich comparison methods rather than __cmp__ to sort process
