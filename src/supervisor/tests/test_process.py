@@ -1418,22 +1418,7 @@ class ProcessGroupTests(ProcessGroupBaseTests):
         group.processes = {'process1': process1}
         group.transition()
         self.assertEqual(process1.transitioned, True)
-        
-class FastCGIProcessGroupTests(unittest.TestCase):
-    def _getTargetClass(self):
-        from supervisor.process import FastCGIProcessGroup
-        return FastCGIProcessGroup
-        
-    def _makeOne(self, *args, **kw):
-        return self._getTargetClass()(*args, **kw)
-        
-    def test_stop_requested_signals_socket_close(self):
-        options = DummyOptions()
-        gconfig = DummyFCGIGroupConfig(options)
-        group = self._makeOne(gconfig, socketManager=DummySocketManager)
-        group.stop_requested()
-        self.assertTrue(group.socket_manager.request_close_called)
-        
+                
 class EventListenerPoolTests(ProcessGroupBaseTests):
     def setUp(self):
         from supervisor.events import clear

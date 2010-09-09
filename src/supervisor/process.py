@@ -640,12 +640,6 @@ class ProcessGroupBase:
         for process in self.processes.values():
             process.reopenlogs()
 
-    def stop_requested(self):
-        """ Hook so that the process group gets notified by
-            it's geting stopped by an RPC interface call
-        """
-        pass
-
     def stop_all(self):
         processes = self.processes.values()
         processes.sort()
@@ -692,15 +686,6 @@ class FastCGIProcessGroup(ProcessGroup):
             sock = self.socket_manager.get_socket()
         except Exception, e:
             raise ValueError('Could not create FastCGI socket %s: %s' % (self.socket_manager.config(), e))
-
-    def stop_requested(self):
-        """ Overriden from ProcessGroup
-            Request close on FCGI socket (it will actually be close when all
-            the child processes are reaped)
-        """
-        self.config.options.logger.debug('Stop requested for fcgi group %s' 
-                                         % self.config.name)
-        self.socket_manager.request_close()
 
 class EventListenerPool(ProcessGroupBase):
     def __init__(self, config):

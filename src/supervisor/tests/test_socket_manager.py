@@ -103,7 +103,6 @@ class SocketManagerTest(unittest.TestCase):
         self.assertEqual(sock_manager.socket_config, conf)
         sock = sock_manager.get_socket()
         self.assertEqual(sock.getsockname(), ('127.0.0.1', 12345))
-        sock_manager.request_close()
 
     def test_tcp_w_ip(self):
         conf = InetStreamSocketConfig('127.0.0.1', 12345)
@@ -111,7 +110,6 @@ class SocketManagerTest(unittest.TestCase):
         self.assertEqual(sock_manager.socket_config, conf)
         sock = sock_manager.get_socket()
         self.assertEqual(sock.getsockname(), ('127.0.0.1', 12345))
-        sock_manager.request_close()
 
     def test_unix(self):
         (tf_fd, tf_name) = tempfile.mkstemp();
@@ -121,7 +119,6 @@ class SocketManagerTest(unittest.TestCase):
         sock = sock_manager.get_socket()
         self.assertEqual(sock.getsockname(), tf_name)
         sock = None
-        sock_manager.request_close()
         os.close(tf_fd)
         
     def test_socket_lifecycle(self):
@@ -139,8 +136,6 @@ class SocketManagerTest(unittest.TestCase):
         self.assertNotEqual(sock, sock2)
         #Assert that they are the same underlying socket
         self.assertEqual(sock_id, sock2_id)
-        #Request socket close
-        sock_manager.request_close()
         #Socket not actually closed yet b/c ref ct is 2
         self.assertTrue(sock_manager.is_prepared())
         self.assertFalse(sock_manager.socket.close_called)
@@ -161,10 +156,6 @@ class SocketManagerTest(unittest.TestCase):
         self.assertNotEqual(sock_id, sock3_id)
         #Drop ref ct to zero
         del sock3
-        #Assert that socket is still open until close is requested
-        self.assertTrue(sock_manager.is_prepared())
-        self.assertFalse(sock_manager.socket.close_called)
-        sock_manager.request_close()
         #Now assert that socket is closed
         self.assertFalse(sock_manager.is_prepared())
         self.assertTrue(sock_manager.socket.close_called)
@@ -178,7 +169,6 @@ class SocketManagerTest(unittest.TestCase):
         self.assertTrue(sock.listen_called)
         self.assertEqual(sock.listen_backlog, socket.SOMAXCONN)
         self.assertFalse(sock.close_called)
-        sock_manager.request_close()
     
     def test_tcp_socket_already_taken(self):
         conf = InetStreamSocketConfig('127.0.0.1', 12345)
@@ -187,7 +177,6 @@ class SocketManagerTest(unittest.TestCase):
         sock_manager2 = self._makeOne(conf)
         self.assertRaises(socket.error, sock_manager2.get_socket)
         sock = None
-        sock_manager.request_close()
         
     def test_unix_bad_sock(self):
         conf = UnixStreamSocketConfig('/notthere/foo.sock')

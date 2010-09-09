@@ -339,7 +339,6 @@ class DummySocketConfig:
 class DummySocketManager:
     def __init__(self, config, **kwargs):
         self._config = config
-        self.request_close_called = False
 
     def config(self):
         return self._config
@@ -347,9 +346,6 @@ class DummySocketManager:
     def get_socket(self):
         return DummySocket(self._config.fd)
         
-    def request_close(self):
-        self.request_close_called = True
-
 class DummyProcess:
     # Initial state; overridden by instance variables
     pid = 0 # Subprocess pid; 0 when not running
@@ -929,7 +925,6 @@ class DummyProcessGroup:
         self.all_stopped = False
         self.dispatchers = {}
         self.unstopped_processes = []
-        self.stop_was_requested = False
 
     def transition(self):
         self.transitioned = True
@@ -937,9 +932,6 @@ class DummyProcessGroup:
     def stop_all(self):
         self.all_stopped = True
         
-    def stop_requested(self):
-        self.stop_was_requested = True
-
     def get_unstopped_processes(self):
         return self.unstopped_processes
 

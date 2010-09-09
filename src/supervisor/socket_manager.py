@@ -69,8 +69,7 @@ class SocketManager:
         self.socket = None
         self.prepared = False
         self.socket_config = socket_config
-        self.close_requested = False
-        self.ref_ctr = ReferenceCounter(on_zero=self._on_ref_ct_zero, on_non_zero=self._prepare_socket)
+        self.ref_ctr = ReferenceCounter(on_zero=self._close, on_non_zero=self._prepare_socket)
         
     def __repr__(self):
         return '<%s at %s for %s>' % (self.__class__,
@@ -91,14 +90,7 @@ class SocketManager:
     def get_socket_ref_count(self):
         self._require_prepared()
         return self.ref_ctr.get_count()
-    
-    def request_close(self):
-        if self.prepared:
-            if self.ref_ctr.get_count() == 0:
-                self._close()
-            else:
-                self.close_requested = True
-    
+        
     def _require_prepared(self):
         if not self.prepared:
             raise Exception('Socket has not been prepared')
@@ -110,12 +102,7 @@ class SocketManager:
             self.socket = self.socket_config.create_and_bind()
             self.socket.listen(socket.SOMAXCONN)
             self.prepared = True
-    
-    def _on_ref_ct_zero(self):
-        if self.close_requested:
-            self.close_requested = False
-            self._close()
-    
+
     def _close(self):
         self._require_prepared()
         if self.logger:
