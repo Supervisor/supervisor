@@ -1,4 +1,10 @@
 Next release
+  - Bug fix for FCGI sockets not getting cleaned up when the 'reload'
+    command is issued from supervisorctl.  Also, the default behavior
+    has changed for FCGI sockets.  They are new closed whenever the 
+    number ofrunning processes in a group hits zero.  Previously, 
+    the sockets were kept open unless a group-level stop command 
+    was issued.
 
   - Better error message when HTTP server cannot reverse-resolve a
     hostname to an IP address.  Previous behavior: show a socket
