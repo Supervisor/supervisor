@@ -559,6 +559,11 @@ class ServerOptions(Options):
         environ_str = expand(environ_str, {'here':self.here}, 'environment')
         section.environment = dict_of_key_value_pairs(environ_str)
         section.process_group_configs = self.process_groups_from_parser(parser)
+        for group in section.process_group_configs:
+            for proc in group.process_configs:
+                env = section.environment.copy()
+                env.update(proc.environment)
+                proc.environment = env
         section.rpcinterface_factories = self.get_plugins(
             parser,
             'supervisor.rpcinterface_factory',

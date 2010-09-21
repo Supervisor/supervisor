@@ -188,6 +188,7 @@ class ServerOptionsTests(unittest.TestCase):
         nocleanup=true
         minfds=2048
         minprocs=300
+        environment=FAKE_ENV_VAR=/some/path
         
         [program:cat1]
         command=/bin/cat
@@ -255,6 +256,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(options.minprocs, 300)
         self.assertEqual(options.nocleanup, True)
         self.assertEqual(len(options.process_group_configs), 4)
+        self.assertEqual(options.environment, dict(FAKE_ENV_VAR='/some/path'))
 
         cat1 = options.process_group_configs[0]
         self.assertEqual(cat1.name, 'cat1')
@@ -279,6 +281,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.exitcodes, [0,2])
         self.assertEqual(proc1.directory, '/tmp')
         self.assertEqual(proc1.umask, 002)
+        self.assertEqual(proc1.environment, dict(FAKE_ENV_VAR='/some/path'))
 
         cat2 = options.process_group_configs[1]
         self.assertEqual(cat2.name, 'cat2')

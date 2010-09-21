@@ -10,6 +10,10 @@ Next release
     hostname to an IP address.  Previous behavior: show a socket
     error.  Current behavior: spit out a suggestion to stdout.
 
+  - Environment variables set via ``environment=`` value within
+    ``[supervisord]`` section had no effect.  Thanks to Wyatt Baldwin
+    for a patch.
+
 3.0a9 (2010-08-13)
 
   - Use rich comparison methods rather than __cmp__ to sort process
