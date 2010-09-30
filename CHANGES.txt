@@ -1,4 +1,7 @@
 Next release
+
+  - Allow rpc interface plugins to register new events types.
+
   - Bug fix for FCGI sockets not getting cleaned up when the 'reload'
     command is issued from supervisorctl.  Also, the default behavior
     has changed for FCGI sockets.  They are new closed whenever the 

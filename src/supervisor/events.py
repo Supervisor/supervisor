@@ -216,7 +216,5 @@ def getEventNameByType(requested):
         if typ is requested:
             return name
 
-
-        
-        
-
+def register(name, event):
+    EventTypes.__dict__[name] = event

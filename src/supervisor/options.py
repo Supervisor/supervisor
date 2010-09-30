@@ -558,17 +558,19 @@ class ServerOptions(Options):
         environ_str = get('environment', '')
         environ_str = expand(environ_str, {'here':self.here}, 'environment')
         section.environment = dict_of_key_value_pairs(environ_str)
+        # Process rpcinterface plugins before groups to allow custom events to
+        # be registered.
+        section.rpcinterface_factories = self.get_plugins(
+            parser,
+            'supervisor.rpcinterface_factory',
+            'rpcinterface:'
+            )
         section.process_group_configs = self.process_groups_from_parser(parser)
         for group in section.process_group_configs:
             for proc in group.process_configs:
                 env = section.environment.copy()
                 env.update(proc.environment)
                 proc.environment = env
-        section.rpcinterface_factories = self.get_plugins(
-            parser,
-            'supervisor.rpcinterface_factory',
-            'rpcinterface:'
-            )
         section.server_configs = self.server_configs_from_parser(parser)
         section.profile_options = None
         return section
