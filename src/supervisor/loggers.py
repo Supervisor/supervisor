@@ -58,7 +58,7 @@ def getLevelNumByDescription(description):
     num = getattr(LevelsByDescription, description, None)
     return num
 
-class Handler:
+class Handler(object):
     fmt = '%(message)s'
     level = LevelsByName.INFO
     def setFormat(self, fmt):
@@ -153,6 +153,9 @@ class BoundIO:
         self.buf = ''
             
 class RotatingFileHandler(FileHandler):
+
+    open_streams = {}
+
     def __init__(self, filename, mode='a', maxBytes=512*1024*1024,
                  backupCount=10):
         """
@@ -177,11 +180,26 @@ class RotatingFileHandler(FileHandler):
         """
         if maxBytes > 0:
             mode = 'a' # doesn't make sense otherwise!
-        FileHandler.__init__(self, filename, mode)
+
+        self.mode = mode
+        self.baseFilename = filename
+        self.stream = self.stream or open(filename, mode)
+
         self.maxBytes = maxBytes
         self.backupCount = backupCount
         self.counter = 0
         self.every = 10
+
+    @property
+    def stream(self):
+        return self.open_streams.get(self.baseFilename)
+
+    @stream.setter
+    def stream(self, stream):
+        self.open_streams[self.baseFilename] = stream
+
+    def close(self):
+        if self.stream: self.stream.close()
 
     def emit(self, record):
         """

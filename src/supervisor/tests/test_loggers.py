@@ -134,6 +134,39 @@ class RotatingFileHandlerTests(FileHandlerTests):
         self.assertEqual(handler.maxBytes, 512*1024*1024)
         self.assertEqual(handler.backupCount, 10)
 
+    def test_emit_tracks_correct_file_for_multiple_handlers(self):
+        """
+        When more than one process logs to a singlefile, we want to
+        make sure that files get rotated properly.
+
+        When the file rotates, all handlers should start writing to
+        the file specified by handler.baseFilename.
+        """
+        handler1 = self._makeOne(self.filename, maxBytes=10, backupCount=2)
+        handler2 = self._makeOne(self.filename, maxBytes=10, backupCount=2)
+        record = self._makeLogRecord('a' * 4)
+        handler1.emit(record) #4 bytes
+        handler2.emit(record) #8 bytes
+        self.assertFalse(os.path.exists(self.filename + '.1'))
+        handler1.emit(record) #12 bytes
+        self.assertTrue(os.path.exists(self.filename + '.1'))
+        self.assertTrue(handler1.stream == handler2.stream)
+        new_record = self._makeLogRecord("NEW") 
+        handler2.emit(new_record) 
+        self.assertTrue(open(self.filename).read().endswith("NEW"))
+        handler1.emit(record)
+        self.assertTrue(open(self.filename).read().endswith("aaaa"))
+        handler2.emit(new_record)
+        self.assertTrue(open(self.filename).read().endswith(""))
+
+    def test_reopen_raises(self):
+        handler = self._makeOne(self.filename)
+        stream = DummyStream()
+        handler.baseFilename = os.path.join(self.basedir, 'notthere', 'a.log')
+        handler.open_streams[handler.baseFilename] = stream
+        self.assertRaises(IOError, handler.reopen)
+        self.assertEqual(stream.closed, True)
+
     def test_emit_does_rollover(self):
         handler = self._makeOne(self.filename, maxBytes=10, backupCount=2)
         record = self._makeLogRecord('a' * 4)
