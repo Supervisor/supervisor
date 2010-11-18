@@ -151,6 +151,10 @@ class BoundIO:
 
     def clear(self):
         self.buf = ''
+
+
+
+
             
 class RotatingFileHandler(FileHandler):
 
@@ -190,13 +194,25 @@ class RotatingFileHandler(FileHandler):
         self.counter = 0
         self.every = 10
 
-    @property
-    def stream(self):
-        return self.open_streams.get(self.baseFilename)
+    class stream(object):
+        """
+        Descriptor for managing open filehandles so that only one
+        filehandle per file path ever receives logging.
+        """
+        def __get__(self, obj, objtype):
+            """
+            Return open filehandle or None
+            """
+            return objtype.open_streams.get(obj.baseFilename)
 
-    @stream.setter
-    def stream(self, stream):
-        self.open_streams[self.baseFilename] = stream
+        def __set__(self, obj, stream):
+            """
+            Set open filehandle for filename defined on the
+            RotatingFileHandler
+            """
+            obj.open_streams[obj.baseFilename] = stream        
+
+    stream = stream()
 
     def close(self):
         if self.stream: self.stream.close()
