@@ -57,13 +57,7 @@ class ReferenceCounter:
         if self.ref_count == 0:
             self.on_zero()
 
-class SocketManager:
-    """ Class for managing sockets in servers that create/bind/listen
-        before forking multiple child processes to accept() 
-        Sockets are managed at the process group level and referenced counted
-        at the process level b/c that's really the only place to hook in
-    """
-    
+class ManagedSocket:
     def __init__(self, socket_config, **kwargs):
         self.logger = kwargs.get('logger', None)
         self.socket = None
@@ -109,3 +103,28 @@ class SocketManager:
             self.logger.info('Closing socket %s' % self.socket_config)
         self.socket.close()
         self.prepared = False
+
+class SocketManager:
+    """ Class for managing sockets in servers that create/bind/listen
+        before forking multiple child processes to accept()
+        Sockets are managed at the process group level and referenced counted
+        at the process level b/c that's really the only place to hook in
+    """
+
+    def __init__(self, socket_config, **kwargs):
+        self.logger = kwargs.get('logger', None)
+        self.m_socket = ManagedSocket(socket_config, logger=self.logger)
+        self.socket_config = socket_config
+
+    def config(self):
+        return self.socket_config
+
+    def get_socket(self):
+        return self.m_socket.get_socket()
+
+    def is_prepared(self):
+        return self.m_socket.is_prepared()
+
+    @property
+    def socket(self):
+        return self.m_socket.socket
