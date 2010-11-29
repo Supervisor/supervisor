@@ -64,7 +64,9 @@ class ManagedSocket:
         self.prepared = False
         self.socket_config = socket_config
         self.ref_ctr = ReferenceCounter(on_zero=self._close, on_non_zero=self._prepare_socket)
-        
+        self.outer_ref_ctr = ReferenceCounter(on_zero=self.unregister, on_non_zero=lambda:None)
+        self.url = socket_config.url
+
     def __repr__(self):
         return '<%s at %s for %s>' % (self.__class__,
                                       id(self),
@@ -104,6 +106,21 @@ class ManagedSocket:
         self.socket.close()
         self.prepared = False
 
+    def outer_incref(self):
+        self.outer_ref_ctr.increment()
+
+    def outer_decref(self):
+        self.outer_ref_ctr.decrement()
+
+    def unregister(self):
+        try:
+            s = SocketManager.sockets[self.url]
+        except KeyError:
+            return
+
+        if s is self:
+            del SocketManager.sockets[self.url]
+
 class SocketManager:
     """ Class for managing sockets in servers that create/bind/listen
         before forking multiple child processes to accept()
@@ -111,10 +128,24 @@ class SocketManager:
         at the process level b/c that's really the only place to hook in
     """
 
+    # if supervisord ever goes multithreaded, this requires locking
+    sockets = dict()
+
     def __init__(self, socket_config, **kwargs):
         self.logger = kwargs.get('logger', None)
-        self.m_socket = ManagedSocket(socket_config, logger=self.logger)
+        if socket_config.reuse:
+            sock = SocketManager.sockets.get(socket_config.url, None)
+        else:
+            sock = None
+
+        if sock is None:
+            sock = ManagedSocket(socket_config, logger=self.logger)
+        sock.outer_incref()
+
+        if socket_config.reuse:
+            SocketManager.sockets[socket_config.url] = sock
         self.socket_config = socket_config
+        self.m_socket = Proxy(sock, on_delete=sock.outer_decref)
 
     def config(self):
         return self.socket_config
