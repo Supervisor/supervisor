@@ -1,5 +1,9 @@
 Next release
 
+  - Fixed the stylesheet of the web interface so the footer line
+    won't overlap a long process list.  Thanks to Derek DeVries
+    for the patch.
+
   - Allow rpc interface plugins to register new events types.
 
   - Bug fix for FCGI sockets not getting cleaned up when the 'reload'
