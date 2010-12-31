@@ -31,9 +31,6 @@ fieldset {
 img, table {
   border-width: 0;
 }
-form {
-  display: inline;
-}
 
 /* =COLORS
 ----------------------------------------------- */
@@ -74,10 +71,21 @@ a:hover {
 
 /* =LAYOUT
 ----------------------------------------------- */
-#wrapper {
-  margin: 0pt auto;
-  width: 782px;
+html, body {
+  height: 100%;
 }
+#wrapper {
+  min-height: 100%;
+  height: auto !important;
+  height: 100%;
+  width: 782px;
+  margin: 0 auto -31px;
+}
+#footer, 
+.push {
+  height: 30px;
+}
+
 .hidden {
   display: none;
 }
@@ -194,11 +202,12 @@ tr.shade td {
 .statuserror { 
   background-image: url("../images/state3.gif");
 }
+
 #footer {
-  position: fixed;
-  bottom: 0pt;
-  width: 762px;
-  padding: 5px 10px 5px 10px;
+  width: 760px;
+  margin: 0 auto;
+  padding: 0 10px;
+  line-height: 30px;
   border: 1px solid #C8C8C2;
   border-bottom-width: 0;
   background-color: #FBFBFB;
