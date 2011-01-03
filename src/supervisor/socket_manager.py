@@ -133,17 +133,16 @@ class SocketManager:
 
     def __init__(self, socket_config, **kwargs):
         self.logger = kwargs.get('logger', None)
-        if socket_config.reuse:
-            sock = SocketManager.sockets.get(socket_config.url, None)
-        else:
-            sock = None
+        sock = SocketManager.sockets.get(socket_config.url, None)
+        if sock and (not socket_config.reuse or not sock.config().reuse):
+            raise Exception("Duplicate socket=%s directive. " % socket_config.url + \
+                "If this isn't a copy-paste error, set reuse_socket=True")
 
         if sock is None:
             sock = ManagedSocket(socket_config, logger=self.logger)
         sock.outer_incref()
 
-        if socket_config.reuse:
-            SocketManager.sockets[socket_config.url] = sock
+        SocketManager.sockets[socket_config.url] = sock
         self.socket_config = socket_config
         self.m_socket = Proxy(sock, on_delete=sock.outer_decref)
 
