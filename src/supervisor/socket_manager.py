@@ -58,6 +58,25 @@ class ReferenceCounter:
             self.on_zero()
 
 class ManagedSocket:
+    """ A doubly reference-counted socket
+
+    The outer reference count counts process _groups_ using this socket,
+    the inner one counts _processes_. As empty groups aren't configured,
+    the outer count is mostly redundant, except for one case described below.
+
+    > > What if the existing reference counter both closes the socket and
+    > > removes the reference?  I think that would make the code much simpler.
+    >
+    > I'm not sure it will work either, though I don't know if the problem may
+    > ever occur in supervisord in real life. If sockets are only closed just
+    > before destruction, it probably isn't an issue and would indeed be the
+    > simplest.
+    >
+    > If you get a ManagedSocket to close the socket and unregister itself, you
+    > may end up with two ManagedSockets for the same url -- one that is kept
+    > alive by a SocketManager but not present in SocketManager.sockets and a new
+    > one, created by _another_ SocketManager and put into .sockets.
+    """
     def __init__(self, socket_config, **kwargs):
         self.logger = kwargs.get('logger', None)
         self.socket = None
