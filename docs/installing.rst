@@ -35,14 +35,13 @@ to be the root user to install Supervisor successfully using
 Internet-Installing Without Setuptools
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If your system does not have setuptools installed, you will need to
-download the Supervisor distribution and install it by hand.  Current
-and previous Supervisor releases may be downloaded from
-`http://supervisord.org/dist/ <http://supervisord.org/dist/>`_.  After
-unpacking the software archive, run ``python setup.py install``.  This
-requires internet access.  It will download and install all
-distributions depended upon by Supervisor and finally install
-Supervisor itself.
+If your system does not have setuptools installed, you will need to download
+the Supervisor distribution and install it by hand.  Current and previous
+Supervisor releases may be downloaded from `PyPi
+<http://pypi.python.org/pypi/supervisor>`_.  After unpacking the software
+archive, run ``python setup.py install``.  This requires internet access.  It
+will download and install all distributions depended upon by Supervisor and
+finally install Supervisor itself.
 
 .. note::
 
