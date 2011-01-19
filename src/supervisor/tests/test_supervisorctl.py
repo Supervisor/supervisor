@@ -832,7 +832,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin.do_update('')
         self.assertEqual(supervisor.processes, ['removed_group'])
 
-    def test_pid(self):
+    def test_pid_supervisord(self):
         plugin = self._makeOne()
         result = plugin.do_pid('')
         options = plugin.ctl.options
@@ -840,6 +840,25 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0], str(options._server.supervisor.getPID()))
+
+    def test_pid_allprocesses(self):
+        plugin = self._makeOne()
+        result = plugin.do_pid('all')
+        self.assertEqual(result, None)
+        value = plugin.ctl.stdout.getvalue().strip()
+        self.assertEqual(value.split(), ['11', '12', '13'])
+
+    def test_pid_badname(self):
+        plugin = self._makeOne()
+        result = plugin.do_pid('BAD_NAME')
+        self.assertEqual(result, None)
+        value = plugin.ctl.stdout.getvalue().strip()
+        self.assertEqual(value, 'No such process BAD_NAME')
+
+    def test_pid_oneprocess(self):
+        plugin = self._makeOne()
+        result = plugin.do_pid('foo')
+        self.assertEqual(plugin.ctl.stdout.getvalue().strip(), '11')
 
     def test_maintail_toomanyargs(self):
         plugin = self._makeOne()

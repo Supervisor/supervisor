@@ -282,7 +282,7 @@ class Controller(cmd.Cmd):
             return results[state]
         else:
             exp = line.split()[0]
-            if exp in ['start','stop','restart','clear','status','tail','fg']:
+            if exp in ['start','stop','restart','clear','status','tail','fg','pid']:
                 if not line.endswith(' ') and len(line.split()) == 1:
                     return [text + ' ', None][state]
                 if exp == 'fg':
@@ -604,8 +604,26 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
     def do_pid(self, arg):
         supervisor = self.ctl.get_supervisor()
-        pid = supervisor.getPID()
-        self.ctl.output(str(pid))
+        if not self.ctl.upcheck():
+            return
+        names = arg.strip().split()
+        if not names:
+            pid = supervisor.getPID()
+            self.ctl.output(str(pid))
+        elif 'all' in names:
+            for info in supervisor.getAllProcessInfo():
+                self.ctl.output(str(info['pid']))
+        else:
+            for name in names:
+                try:
+                    info = supervisor.getProcessInfo(name)
+                except xmlrpclib.Fault, e:
+                    if e.faultCode == xmlrpc.Faults.BAD_NAME:
+                        self.ctl.output('No such process %s' % name)
+                    else:
+                        raise
+                    continue
+                self.ctl.output(str(info['pid']))
 
     def help_pid(self):
         self.ctl.output("pid\t\t\tGet the PID of supervisord.")    
