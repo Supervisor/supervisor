@@ -990,7 +990,7 @@ configuration.
 .. code-block:: ini
 
    [include]
-   file = /an/absolute/filename.conf /an/absolute/*.conf foo.conf config??.conf
+   files = /an/absolute/filename.conf /an/absolute/*.conf foo.conf config??.conf
 
 ``[group:x]`` Section Settings
 ------------------------------
