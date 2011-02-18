@@ -29,6 +29,7 @@ import stat
 import pkg_resources
 import select
 import glob
+import platform
 
 from fcntl import fcntl
 from fcntl import F_SETFL, F_GETFL
@@ -789,11 +790,12 @@ class ServerOptions(Options):
                 raise ValueError(
                     '%(process_num) must be present within process_name when '
                     'numprocs > 1')
-
+        host_node_name = platform.node()
         for process_num in range(numprocs_start, numprocs + numprocs_start):
             expansions = {'here':self.here,
                           'process_num':process_num,
                           'program_name':program_name,
+                          'host_node_name':host_node_name,
                           'group_name':group_name}
 
             environment = dict_of_key_value_pairs(
