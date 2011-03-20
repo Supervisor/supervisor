@@ -57,15 +57,48 @@ class ReferenceCounter:
         if self.ref_count == 0:
             self.on_zero()
 
-class SocketManager:
+class SocketManagerCacheMetaclass(type(object)):
+    """ Metaclass for reusing SocketManager instances with matching URLs
+    """
+
+    _cache = dict()
+
+    def __call__(metacls, socket_config, **kwargs):
+        cache = SocketManagerCacheMetaclass._cache
+        shared = kwargs.get('shared', False)
+        url = socket_config.url
+
+        refctr, inst = cache.get(url, (None, None))
+        if inst:
+            if not inst.shared or not shared:
+                raise Exception("Duplicate socket=%s directive. " % url + \
+                    "If this isn't a copy-paste error, set shared_socket=True")
+        else:
+            def on_zero_ref():
+                del SocketManagerCacheMetaclass._cache[url]
+            def on_non_zero_ref():
+                pass
+
+            refctr = ReferenceCounter(on_zero=on_zero_ref, on_non_zero=on_non_zero_ref)
+            inst = super(SocketManagerCacheMetaclass, metacls).__call__(
+                socket_config, **kwargs)
+            cache[url] = refctr, inst
+
+        refctr.increment()
+        return Proxy(inst, on_delete=refctr.decrement)
+
+class SocketManager(object):
     """ Class for managing sockets in servers that create/bind/listen
         before forking multiple child processes to accept() 
         Sockets are managed at the process group level and referenced counted
         at the process level b/c that's really the only place to hook in
     """
     
+    __metaclass__ = SocketManagerCacheMetaclass
+    
     def __init__(self, socket_config, **kwargs):
         self.logger = kwargs.get('logger', None)
+        self.shared = kwargs.get('shared', False)
         self.socket = None
         self.prepared = False
         self.socket_config = socket_config

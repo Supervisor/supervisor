@@ -206,10 +206,11 @@ class InetStreamSocketConfig(SocketConfig):
     host = None # host name or ip to bind to
     port = None # integer port to bind to
     
-    def __init__(self, host, port):
+    def __init__(self, host, port, shared=False):
         self.host = host.lower()
         self.port = port_number(port)
         self.url = 'tcp://%s:%d' % (self.host, self.port)
+        self.shared = shared
         
     def addr(self):
         return (self.host, self.port)
@@ -233,6 +234,7 @@ class UnixStreamSocketConfig(SocketConfig):
         self.url = 'unix://%s' % (path)
         self.mode = kwargs.get('mode', None)
         self.owner = kwargs.get('owner', None)
+        self.shared = kwargs.get('shared', False)
         
     def addr(self):
         return self.path
