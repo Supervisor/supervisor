@@ -21,6 +21,10 @@ Next release
     ``[supervisord]`` section had no effect.  Thanks to Wyatt Baldwin
     for a patch.
 
+  - Fix bug where stopping process would cause process output that happened
+    after the stop request was issued to be lost.  See
+    https://github.com/Supervisor/supervisor/issues/11.
+
 3.0a9 (2010-08-13)
 
   - Use rich comparison methods rather than __cmp__ to sort process

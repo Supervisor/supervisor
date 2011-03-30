@@ -608,7 +608,6 @@ class SubprocessTests(unittest.TestCase):
                          'signal SIGTERM')
         self.assertEqual(instance.killing, 1)
         self.assertEqual(options.kills[11], signal.SIGTERM)
-        self.assertEqual(dispatcher.write_event_handled, True)
 
     def test_give_up(self):
         options = DummyOptions()

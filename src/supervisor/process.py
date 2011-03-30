@@ -341,7 +341,6 @@ class Subprocess:
 
     def stop(self):
         """ Administrative stop """
-        self.drain()
         self.administrative_stop = 1
         return self.kill(self.config.stopsignal)
 
