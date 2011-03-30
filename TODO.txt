@@ -5,9 +5,6 @@
 - Add an option that allows numprocs for an existing process group to be
   adjusted at runtime.  Requested by Roger Hoover.
 
-- Subprocess logging appears to stop when the subprocess moves to the "killing"
-  state.  Reported to the mailing list by Nicolas Grilly on 2008-04-13.
-
 - supervisor.tailProcessLog() may return too many bytes when the number of
   bytes requested exceeds the number logged.  This is not certain and needs
   investigation.  Reported by Chris McDonough.
