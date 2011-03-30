@@ -937,11 +937,3 @@ Known issues
 
 - buffered event notifications may be lost at supervisor shutdown
   or restart time.
-
-Acknowledgements
-~~~~~~~~~~~~~~~~
-
-Maintainable Software (http://www.maintainable.com) contracted Agendless
-Consulting to add the event notification features and extensible XML-RPC
-namespaces feature to supervisor.
-
