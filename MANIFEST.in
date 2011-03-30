@@ -1,5 +1,6 @@
 include CHANGES.txt
 include COPYRIGHT.txt
+include HISTORY.txt
 include LICENSES.txt
 include README.txt
 include TODO.txt
