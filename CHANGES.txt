@@ -1,5 +1,5 @@
-Next release
-------------
+3.0a10 (2011-03-30)
+-------------------
 
 - Fixed the stylesheet of the web interface so the footer line won't overlap
   a long process list.  Thanks to Derek DeVries for the patch.
@@ -28,6 +28,9 @@ Next release
 
 - Converted ``CHANGES.txt`` and ``README.txt`` into proper ReStructuredText
   and included them in the ``long_description`` in ``setup.py``.
+
+- Added a tox.ini to the package (run via ``tox`` in the package dir).  Tests
+  supervisor on multiple Python versions.
 
 3.0a9 (2010-08-13)
 ------------------
