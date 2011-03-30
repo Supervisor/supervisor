@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (c) 2006-2010 Agendaless Consulting and Contributors.
+# Copyright (c) 2006-2011 Agendaless Consulting and Contributors.
 # All Rights Reserved.
 #
 # This software is subject to the provisions of the BSD-like license at
@@ -38,9 +38,15 @@ if sys.version_info[:2] < (2, 5):
 from setuptools import setup, find_packages
 here = os.path.abspath(os.path.normpath(os.path.dirname(__file__)))
 
-DESC = """\
+try:
+    here = os.path.abspath(os.path.dirname(__file__))
+    README = open(os.path.join(here, 'README.txt')).read()
+    CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
+except:
+    README = """\
 Supervisor is a client/server system that allows its users to
 control a number of processes on UNIX-like operating systems. """
+    CHANGES = ''
 
 CLASSIFIERS = [
     'Development Status :: 5 - Production/Stable',
@@ -62,7 +68,7 @@ dist = setup(
     license = 'BSD-derived (http://www.repoze.org/LICENSE.txt)',
     url = 'http://supervisord.org/',
     description = "A system for controlling process state under UNIX",
-    long_description= DESC,
+    long_description=README + '\n\n' +  CHANGES,
     classifiers = CLASSIFIERS,
     author = "Chris McDonough",
     author_email = "chrism@plope.com",

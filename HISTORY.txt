@@ -1,0 +1,107 @@
+2.2b1 (2007-03-31)
+
+  - Individual program configuration sections can now specify an
+    environment.
+
+  - Added a 'version' command to supervisorctl.  This returns the
+    version of the supervisor2 package which the remote supervisord
+    process is using.
+
+2.1 (2007-03-17)
+
+  - When supervisord was invoked more than once, and its configuration
+    was set up to use a UNIX domain socket as the HTTP server, the
+    socket file would be erased in error.  The symptom of this was
+    that a subsequent invocation of supervisorctl could not find the
+    socket file, so the process could not be controlled (it and all of
+    its subprocesses would need to be killed by hand).
+
+  - Close subprocess file descriptors properly when a subprocess exits
+    or otherwise dies.  This should result in fewer "too many open
+    files to spawn foo" messages when supervisor is left up for long
+    periods of time.
+
+  - When a process was not killable with a "normal" signal at shutdown
+    time, too many "INFO: waiting for x to die" messages would be sent
+    to the log until we ended up killing the process with a SIGKILL.
+    Now a maximum of one every three seconds is sent up until SIGKILL
+    time.  Thanks to Ian Bicking.
+
+  - Add an assertion: we never want to try to marshal None to XML-RPC
+    callers.  Issue 223 in the collector from vgatto indicates that
+    somehow a supervisor XML-RPC method is returning None (which
+    should never happen), but I cannot identify how.  Maybe the
+    assertion will give us more clues if it happens again.
+
+  - Supervisor would crash when run under Python 2.5 because the
+    xmlrpclib.Transport class in Python 2.5 changed in a
+    backward-incompatible way.  Thanks to Eric Westra for the bug
+    report and a fix.
+
+  - Tests now pass under Python 2.5.
+
+  - Better supervisorctl reporting on stop requests that have a FAILED
+    status.
+
+  - Removed duplicated code (readLog/readMainLog), thanks to Mike
+    Naberezny.
+
+  - Added tailProcessLog command to the XML-RPC API.  It provides a
+    more efficient way to tail logs than readProcessLog().  Use
+    readProcessLog() to read chunks and tailProcessLog() to tail.
+    (thanks to Mike Naberezny).
+
+2.1b1 (2006-08-30)
+
+  - "supervisord -h" and "supervisorctl -h" did not work (traceback
+    instead of showing help view (thanks to Damjan from Macedonia for
+    the bug report).
+
+  - Processes which started successfully after failing to start
+    initially are no longer reported in BACKOFF state once they are
+    started successfully (thanks to Damjan from Macdonia for the bug
+    report).
+
+  - Add new 'maintail' command to supervisorctl shell, which allows
+    you to tail the 'main' supervisor log.  This uses a new
+    readMainLog xmlrpc API.
+
+  - Various process-state-transition related changes, all internal.
+    README.txt updated with new state transition map.
+
+  - startProcess and startAllProcesses xmlrpc APIs changed: instead of
+    accepting a timeout integer, these accept a wait boolean (timeout
+    is implied by process' "startsecs" configuration).  If wait is
+    False, do not wait for startsecs.
+
+  Known issues:
+
+    Code does not match state transition map.  Processes which are
+    configured as autorestarting which start "successfully" but
+    subsequently die after 'startsecs' go through the transitions
+    RUNNING -> BACKOFF -> STARTING instead of the correct transitions
+    RUNNING -> EXITED -> STARTING.  This has no real negative effect,
+    but should be fixed for correctness.
+
+2.0 (2006-08-30)
+
+  - pidfile written in daemon mode had incorrect pid.
+
+  - supervisorctl: tail (non -f) did not pass through proper error
+    messages when supplied by the server.
+
+  - Log signal name used to kill processes at debug level.
+
+  - supervisorctl "tail -f" didn't work with supervisorctl sections
+    configured with an absolute unix:// URL
+
+  - New "environment" config file option allows you to add environment
+    variable values to supervisord environment from config file.
+
+2.0b1 (2006-07-12)
+
+  - fundamental rewrite based on 1.0.6, use distutils (only) for
+    installation, use ConfigParser rather than ZConfig, use HTTP for
+    wire protocol, web interface, less lies in supervisorctl.
+
+
