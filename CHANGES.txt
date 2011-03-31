@@ -4,7 +4,7 @@ Next release
 - Added a new ``host_node_name`` expansion that will be expanded to the 
   value returned by Python's ``platform.node`` (see
   http://docs.python.org/library/platform.html#platform.node).  
-  Patch by by Joseph Kondel.
+  Patch by Joseph Kondel.
 
 3.0a10 (2011-03-30)
 -------------------
