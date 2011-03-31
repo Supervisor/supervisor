@@ -4,7 +4,7 @@ import time
 import unittest
 import sys
 import errno
-from mock import Mock, patch_object, sentinel
+from mock import Mock, patch, sentinel
 
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
@@ -1238,7 +1238,7 @@ class FastCGISubprocessTests(unittest.TestCase):
         self.assertTrue(instance.fcgi_sock is None)
     
     #Patch Subprocess.finish() method for this test to verify override
-    @patch_object(Subprocess, 'finish', Mock(return_value=sentinel.finish_result))
+    @patch.object(Subprocess, 'finish', Mock(return_value=sentinel.finish_result))
     def test_finish_override(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
@@ -1260,7 +1260,7 @@ class FastCGISubprocessTests(unittest.TestCase):
                             'Subprocess.finish() sts arg was not passed')
                             
     #Patch Subprocess.spawn() method for this test to verify override
-    @patch_object(Subprocess, 'spawn', Mock(return_value=sentinel.ppid))
+    @patch.object(Subprocess, 'spawn', Mock(return_value=sentinel.ppid))
     def test_spawn_override_success(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
@@ -1276,7 +1276,7 @@ class FastCGISubprocessTests(unittest.TestCase):
                             'Subprocess.spawn() not called once')
 
     #Patch Subprocess.spawn() method for this test to verify error handling
-    @patch_object(Subprocess, 'spawn', Mock(return_value=None))
+    @patch.object(Subprocess, 'spawn', Mock(return_value=None))
     def test_spawn_error(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
