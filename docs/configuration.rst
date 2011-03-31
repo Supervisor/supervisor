@@ -548,9 +548,9 @@ where specified.
   e.g. ``/path/to/programname --port=80%(process_num)02d`` might
   expand to ``/path/to/programname --port=8000`` at runtime.  String
   expressions are evaluated against a dictionary containing the keys
-  ``group_name``, ``process_num``, ``program_name`` and ``here`` (the
-  directory of the supervisord config file).  Controlled programs
-  should themselves not be daemons, as supervisord assumes it is
+  ``group_name``, ``host_node_name``, ``process_num``, ``program_name``, 
+  and ``here`` (the directory of the supervisord config file).  Controlled 
+  programs should themselves not be daemons, as supervisord assumes it is
   responsible for daemonizing its subprocesses (see
   :ref:`nondaemonizing_of_subprocesses`).
 
@@ -566,8 +566,8 @@ where specified.
   process name for this process.  You usually don't need to worry
   about setting this unless you change ``numprocs``.  The string
   expression is evaluated against a dictionary that includes
-  ``group_name``, ``process_num``, ``program_name`` and ``here`` (the
-  directory of the supervisord config file).
+  ``group_name``, ``host_node_name``, ``process_num``, ``program_name``, 
+  and ``here`` (the directory of the supervisord config file).
 
   *Default*: ``%(program_name)s``
 
@@ -742,9 +742,9 @@ where specified.
   no log file.  ``AUTO`` log files and their backups will be deleted
   when :program:`supervisord` restarts.  The ``stdout_logfile`` value
   can contain Python string expressions that will evaluated against a
-  dictionary that contains the keys "process_num", "program_name",
-  "group_name", and "here" (the directory of the supervisord config
-  file).
+  dictionary that contains the keys ``group_name``, ``host_node_name``, 
+  ``process_num``, ``program_name``, and ``here`` (the directory of the 
+  supervisord config file).
 
   *Default*: ``AUTO``
 
@@ -870,10 +870,10 @@ where specified.
   A list of key/value pairs in the form ``KEY=val,KEY2=val2`` that
   will be placed in the child process' environment.  The environment
   string may contain Python string expressions that will be evaluated
-  against a dictionary containing "process_num", "program_name",
-  "group_name" and "here" (the directory of the supervisord config
-  file).  Values containing non-alphanumeric characters should be
-  placed in quotes (e.g. ``KEY="val:123",KEY2="val,456"``) **Note**
+  against a dictionary containing ``group_name``, ``host_node_name``, 
+  ``process_num``, ``program_name``, and ``here`` (the directory of the 
+  supervisord config file).  Values containing non-alphanumeric characters 
+  should be placed in quotes (e.g. ``KEY="val:123",KEY2="val,456"``) **Note**
   that the subprocess will inherit the environment variables of the
   shell used to start "supervisord" except for the ones overridden
   here.  See :ref:`subprocess_environment`.
