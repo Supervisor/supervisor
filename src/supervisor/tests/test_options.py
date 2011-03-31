@@ -627,6 +627,20 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(pconfig.environment,
                          {'KEY1':'val1', 'KEY2':'val2', 'KEY3':'0'})
 
+    def test_processes_from_section_host_node_name_expansion(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo --host=%(host_node_name)s
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        import platform
+        expected = "/bin/foo --host=" + platform.node()
+        self.assertEqual(pconfigs[0].command, expected)
+
     def test_processes_from_section_no_procnum_in_processname(self):
         instance = self._makeOne()
         text = lstrip("""\
