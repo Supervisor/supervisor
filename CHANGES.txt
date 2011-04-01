@@ -25,8 +25,8 @@ Next release
   spit out a suggestion to stdout.
 
 - Environment variables set via ``environment=`` value within
-    ``[supervisord]`` section had no effect.  Thanks to Wyatt Baldwin
-    for a patch.
+  ``[supervisord]`` section had no effect.  Thanks to Wyatt Baldwin
+  for a patch.
 
 - Fix bug where stopping process would cause process output that happened
   after the stop request was issued to be lost.  See
