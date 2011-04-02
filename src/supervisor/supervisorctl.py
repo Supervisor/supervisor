@@ -627,6 +627,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
     def help_pid(self):
         self.ctl.output("pid\t\t\tGet the PID of supervisord.")    
+        self.ctl.output("pid <name>\t\tGet the PID of a single "
+            "child process by name.")
+        self.ctl.output("pid all\t\t\tGet the PID of every child "
+            "process, one per line.")
 
     def _startresult(self, result):
         name = result['name']
