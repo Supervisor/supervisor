@@ -682,7 +682,7 @@ class DummySupervisorRPCNamespace:
         {
         'name':'baz_01',
         'group':'baz',
-        'pid':12,
+        'pid':13,
         'state':ProcessStates.STOPPED,
         'statename':'STOPPED',
         'start':_NOW - 100,
