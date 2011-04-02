@@ -1,6 +1,9 @@
 Next release
 ------------
 
+- The ``pid`` command in supervisorctl can now be used to retrieve the PIDs
+  of child processes.  See ``help pid``.  Patch by Gregory Wisniewski.
+
 - Added a new ``host_node_name`` expansion that will be expanded to the 
   value returned by Python's ``platform.node`` (see
   http://docs.python.org/library/platform.html#platform.node).  
