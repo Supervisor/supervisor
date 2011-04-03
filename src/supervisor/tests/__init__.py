@@ -10,5 +10,5 @@ def assertFalse(self, value, extra=None):
 if not hasattr(TestCase, 'assertTrue'): # Python 2.3.3
     TestCase.assertTrue = assertTrue
 
-if not hasattr(TestCase, 'assertFalse'): # Pytthon 2.3.3
+if not hasattr(TestCase, 'assertFalse'): # Python 2.3.3
     TestCase.assertFalse = assertFalse
