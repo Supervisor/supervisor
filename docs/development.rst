@@ -16,14 +16,14 @@ Bug Tracker
 -----------
 
 Supervisor has a bugtracker where you may report any bugs or other
-errors you find.  Please report bugs to the `collector
-<http://www.plope.com/software/collector>`_.
+errors you find.  Please report bugs to the `GitHub issues page
+<https://github.com/supervisor/supervisor/issues>`_.
 
 Version Control Repository
 --------------------------
 
 You can also view the `Supervisor version control repository
-<http://svn.supervisord.org>`_.
+<https://github.com/supervisor/supervisor>`_.
 
 Contributing
 ------------
