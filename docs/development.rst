@@ -47,7 +47,10 @@ The following people are responsible for creating Supervisor.
 Primary Authors and Maintainers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- Chris McDonough (`Agendaless Consulting, Inc. <http://agendaless.com>`_)
+- `Chris McDonough <http://plope.com>`_ is the original author of Supervisor.
+
+- `Mike Naberezny <http://mikenaberezny.com>`_ is the primary maintainer
+  of Supervisor.
 
 Contributors
 ~~~~~~~~~~~~
@@ -58,9 +61,6 @@ Contributors
 
 - Derek DeVries: Derek did the web design of Supervisor’s internal web
   interface and website logos.
-
-- Mike Naberezny: Mike contributed to the design and implementation of
-  Supervisor versions 2 and 3.
 
 - Guido van Rossum: Guido authored ``zdrun`` and ``zdctl``, the
   programs from Zope that were the original basis for Supervisor.  He

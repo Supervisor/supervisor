@@ -72,8 +72,8 @@ dist = setup(
     classifiers = CLASSIFIERS,
     author = "Chris McDonough",
     author_email = "chrism@plope.com",
-    maintainer = "Chris McDonough",
-    maintainer_email = "chrism@plope.com",
+    maintainer = "Mike Naberezny",
+    maintainer_email = "mike@naberezny.com",
     package_dir = {'':'src'},
     packages = find_packages(os.path.join(here, 'src')),
     # put data files in egg 'doc' dir
