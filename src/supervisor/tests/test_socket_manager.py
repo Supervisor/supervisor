@@ -98,18 +98,18 @@ class SocketManagerTest(unittest.TestCase):
         self.assertEqual(conf, sock_manager.config())
 
     def test_tcp_w_hostname(self):
-        conf = InetStreamSocketConfig('localhost', 12345)
+        conf = InetStreamSocketConfig('localhost', 51041)
         sock_manager = self._makeOne(conf)
         self.assertEqual(sock_manager.socket_config, conf)
         sock = sock_manager.get_socket()
-        self.assertEqual(sock.getsockname(), ('127.0.0.1', 12345))
+        self.assertEqual(sock.getsockname(), ('127.0.0.1', 51041))
 
     def test_tcp_w_ip(self):
-        conf = InetStreamSocketConfig('127.0.0.1', 12345)
+        conf = InetStreamSocketConfig('127.0.0.1', 51041)
         sock_manager = self._makeOne(conf)
         self.assertEqual(sock_manager.socket_config, conf)
         sock = sock_manager.get_socket()
-        self.assertEqual(sock.getsockname(), ('127.0.0.1', 12345))
+        self.assertEqual(sock.getsockname(), ('127.0.0.1', 51041))
 
     def test_unix(self):
         (tf_fd, tf_name) = tempfile.mkstemp();
@@ -171,7 +171,7 @@ class SocketManagerTest(unittest.TestCase):
         self.assertFalse(sock.close_called)
     
     def test_tcp_socket_already_taken(self):
-        conf = InetStreamSocketConfig('127.0.0.1', 12345)
+        conf = InetStreamSocketConfig('127.0.0.1', 51041)
         sock_manager = self._makeOne(conf)
         sock = sock_manager.get_socket()
         sock_manager2 = self._makeOne(conf)
