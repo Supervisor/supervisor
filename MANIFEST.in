@@ -1,9 +1,0 @@
-include CHANGES.txt
-include COPYRIGHT.txt
-include HISTORY.txt
-include LICENSES.txt
-include README.rst
-include TODO.txt
-recursive-include docs *
-prune docs/*.pyc
-prune docs/.build
