@@ -264,7 +264,8 @@ class http_request:
 
     def push (self, thing):
         if type(thing) == type(''):
-            self.outgoing.append(producers.simple_producer(thing))
+            self.outgoing.append(producers.simple_producer(thing,
+              buffer_size=len(thing)))
         else:
             self.outgoing.append(thing)
 
