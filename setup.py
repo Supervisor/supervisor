@@ -40,7 +40,7 @@ here = os.path.abspath(os.path.normpath(os.path.dirname(__file__)))
 
 try:
     here = os.path.abspath(os.path.dirname(__file__))
-    README = open(os.path.join(here, 'README.txt')).read()
+    README = open(os.path.join(here, 'README.rst')).read()
     CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 except:
     README = """\
@@ -78,7 +78,7 @@ dist = setup(
     packages = find_packages(os.path.join(here, 'src')),
     # put data files in egg 'doc' dir
     data_files=[ ('doc', [
-        'README.txt',
+        'README.rst',
         'CHANGES.txt',
         'TODO.txt',
         'LICENSES.txt',

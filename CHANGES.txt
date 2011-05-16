@@ -12,6 +12,9 @@ Next release
 - Fixed a bug in the web interface where pages over 64K would be truncated.
   Thanks to Drew Perttula and Timothy Jones for reporting this.
 
+- Renamed ``README.txt`` to ``README.rst`` so GitHub renders the file as
+  ReStructuredText.
+
 3.0a10 (2011-03-30)
 -------------------
 
