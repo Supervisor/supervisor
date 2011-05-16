@@ -1296,7 +1296,7 @@ class TestProcessConfig(unittest.TestCase):
                      'stderr_events_enabled',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
                      'stopsignal', 'stopwaitsecs', 'exitcodes',
-                     'redirect_stderr', 'environment'):
+                     'redirect_stderr', 'environment', 'socket_shared'):
             defaults[name] = name
         defaults.update(kw)
         return self._getTargetClass()(*arg, **defaults)
@@ -1370,7 +1370,7 @@ class FastCGIProcessConfigTest(unittest.TestCase):
                      'stderr_events_enabled',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
                      'stopsignal', 'stopwaitsecs', 'exitcodes',
-                     'redirect_stderr', 'environment'):
+                     'redirect_stderr', 'environment', 'socket_shared'):
             defaults[name] = name
         defaults.update(kw)
         return self._getTargetClass()(*arg, **defaults)

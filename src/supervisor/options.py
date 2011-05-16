@@ -665,6 +665,7 @@ class ServerOptions(Options):
             priority = integer(get(section, 'priority', 999))
             
             proc_uid = name_to_uid(get(section, 'user', None))
+            socket_shared = boolean(get(section, 'socket_shared', False))
             
             socket_owner = get(section, 'socket_owner', None)
             if socket_owner is not None:
@@ -692,7 +693,8 @@ class ServerOptions(Options):
             socket = expand(socket, expansions, 'socket')
             try:
                 socket_config = self.parse_fcgi_socket(socket, proc_uid,
-                                                    socket_owner, socket_mode)
+                                                    socket_owner, socket_mode,
+                                                    socket_shared)
             except ValueError, e:
                 raise ValueError('%s in [%s] socket' % (str(e), section))
             
@@ -706,7 +708,8 @@ class ServerOptions(Options):
         groups.sort()
         return groups
 
-    def parse_fcgi_socket(self, sock, proc_uid, socket_owner, socket_mode):
+    def parse_fcgi_socket(self, sock, proc_uid, socket_owner, socket_mode,
+        socket_shared):
         if sock.startswith('unix://'):
             path = sock[7:]
             #Check it's an absolute path
@@ -724,7 +727,8 @@ class ServerOptions(Options):
                 socket_mode = 0700
             
             return UnixStreamSocketConfig(path, owner=socket_owner,
-                                                mode=socket_mode)
+                                                mode=socket_mode,
+                                                shared=socket_shared)
         
         if socket_owner is not None or socket_mode is not None:
             raise ValueError("socket_owner and socket_mode params should"
@@ -734,7 +738,7 @@ class ServerOptions(Options):
         if m:
             host = m.group(1)
             port = int(m.group(2))
-            return InetStreamSocketConfig(host, port)
+            return InetStreamSocketConfig(host, port, shared=socket_shared)
         
         raise ValueError("Bad socket format %s", sock)
         
@@ -764,6 +768,7 @@ class ServerOptions(Options):
         numprocs = integer(get(section, 'numprocs', 1))
         numprocs_start = integer(get(section, 'numprocs_start', 0))
         process_name = get(section, 'process_name', '%(program_name)s')
+        socket_shared = boolean(get(section, 'socket_shared', 'false'))
         environment_str = get(section, 'environment', '')
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
         stdout_events = boolean(get(section, 'stdout_events_enabled','false'))
@@ -855,6 +860,7 @@ class ServerOptions(Options):
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
                 environment=environment,
+                socket_shared=socket_shared,
                 serverurl=serverurl)
 
             programs.append(pconfig)
@@ -1558,7 +1564,8 @@ class ProcessConfig(Config):
         'stderr_logfile', 'stderr_capture_maxbytes', 
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
         'stderr_events_enabled',
-        'stopsignal', 'stopwaitsecs', 'exitcodes', 'redirect_stderr' ]
+        'stopsignal', 'stopwaitsecs', 'exitcodes', 'redirect_stderr',
+        'socket_shared']
     optional_param_names = [ 'environment', 'serverurl' ]
 
     def __init__(self, options, **params):

@@ -174,8 +174,16 @@ class SocketManagerTest(unittest.TestCase):
         conf = InetStreamSocketConfig('127.0.0.1', 51041)
         sock_manager = self._makeOne(conf)
         sock = sock_manager.get_socket()
-        sock_manager2 = self._makeOne(conf)
-        self.assertRaises(socket.error, sock_manager2.get_socket)
+        self.assertRaises(Exception, self._makeOne, conf)
+        sock = None
+
+    def test_tcp_socket_shared(self):
+        conf = InetStreamSocketConfig('127.0.0.1', 12345)
+        sock_manager = self._makeOne(conf, shared=True)
+        sock = sock_manager.get_socket()
+        sock_manager2 = self._makeOne(conf, shared=True)
+        sock2 = sock_manager2.get_socket()
+        self.assertEqual(id(sock._get()), id(sock2._get()))
         sock = None
         
     def test_unix_bad_sock(self):
