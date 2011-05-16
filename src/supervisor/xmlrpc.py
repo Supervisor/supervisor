@@ -343,6 +343,17 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
 
             params, method = self.loads(data)
 
+            # no <methodName> in the request or name is an empty string
+            if not method:
+                logger.trace('XML-RPC request received with no method name')
+                request.error(400)
+                return
+            
+            # we allow xml-rpc clients that do not send empty <params>
+            # when there are no parameters for the method call
+            if params is None:
+                params = ()
+
             try:
                 logger.trace('XML-RPC method called: %s()' % method)
                 value = self.call(method, params)

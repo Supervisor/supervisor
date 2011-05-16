@@ -92,6 +92,56 @@ class XMLRPCHandlerTests(unittest.TestCase):
         self.assertEqual(request.headers['Content-Type'], 'text/xml')
         self.assertEqual(request.headers['Content-Length'], len(xml_response))
 
+    def test_continue_request_no_params_in_request(self):
+        supervisor = DummySupervisor()
+        subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
+        handler = self._makeOne(supervisor, subinterfaces)
+        data = '<?xml version="1.0" encoding="UTF-8"?>' \
+               '<methodCall>' \
+               '<methodName>supervisor.getAPIVersion</methodName>' \
+               '</methodCall>'
+        request = DummyRequest('/what/ever', None, None, None)
+        handler.continue_request(data, request)
+        logdata = supervisor.options.logger.data
+        from supervisor.xmlrpc import loads
+        if loads:
+            expected = 2
+        else:
+            expected = 3
+        self.assertEqual(len(logdata), expected)
+        self.assertEqual(logdata[-2],
+               u'XML-RPC method called: supervisor.getAPIVersion()')
+        self.assertEqual(logdata[-1],
+            u'XML-RPC method supervisor.getAPIVersion() returned successfully')
+        self.assertEqual(len(request.producers), 1)
+        xml_response = request.producers[0]
+        import xmlrpclib
+        response = xmlrpclib.loads(xml_response)
+        self.assertEqual(response[0][0], '3.0')
+        self.assertEqual(request._done, True)
+        self.assertEqual(request.headers['Content-Type'], 'text/xml')
+        self.assertEqual(request.headers['Content-Length'], len(xml_response))
+
+    def test_continue_request_400_if_method_name_is_empty(self):
+        supervisor = DummySupervisor()
+        subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
+        handler = self._makeOne(supervisor, subinterfaces)
+        data = '<?xml version="1.0" encoding="UTF-8"?>' \
+               '<methodCall><methodName></methodName></methodCall>'
+        request = DummyRequest('/what/ever', None, None, None)
+        handler.continue_request(data, request)
+        logdata = supervisor.options.logger.data
+        from supervisor.xmlrpc import loads
+        if loads:
+            expected = 1
+        else:
+            expected = 2
+        self.assertEqual(len(logdata), expected)
+        self.assertEqual(logdata[-1],
+               u'XML-RPC request received with no method name')
+        self.assertEqual(len(request.producers), 0)
+        self.assertEqual(request._error, 400)
+
     def test_continue_request_500(self):
         supervisor = DummySupervisor()
         subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]

@@ -15,6 +15,10 @@ Next release
 - Renamed ``README.txt`` to ``README.rst`` so GitHub renders the file as
   ReStructuredText.
 
+- The XML-RPC server is now compatible with clients that do not send empty
+  <params> when there are no parameters for the method call.  Thanks to
+  Johannes Becker for reporting this. 
+
 3.0a10 (2011-03-30)
 -------------------
 
