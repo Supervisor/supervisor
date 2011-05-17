@@ -12,22 +12,22 @@
 #
 ##############################################################################
 
+import os
+import sys
+
+if sys.version_info[:2] < (2, 3) or sys.version_info[0] > 2:
+    msg = ("Supervisor requires Python 2.3 or later but does not work on "
+           "any version of Python 3.  You are using version %s.  Please "
+           "install using a supported version." % sys.version)
+    sys.stderr.write(msg)
+    sys.exit(1)
+
 import urllib
 import urllib2
 if not hasattr(urllib2, 'splituser'):
     # setuptools wants to import this from urllib2 but it's not
     # in there in Python 2.3.3, so we just alias it.
     urllib2.splituser = urllib.splituser
-
-import os
-import sys
-
-if sys.version_info[:2] < (2, 3):
-    msg = ("supervisor requires Python 2.3 or better, you are attempting to "
-           "install it using version %s.  Please install with a "
-           "supported version" % sys.version)
-    sys.stderr.write(msg)
-    sys.exit(1)
 
 requires = ['setuptools', 'meld3 >= 0.6.5']
 
