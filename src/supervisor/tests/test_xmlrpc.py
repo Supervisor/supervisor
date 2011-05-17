@@ -87,7 +87,8 @@ class XMLRPCHandlerTests(unittest.TestCase):
         self.assertEqual(len(request.producers), 1)
         xml_response = request.producers[0]
         response = xmlrpclib.loads(xml_response)
-        self.assertEqual(response[0][0], '3.0')
+        from supervisor.rpcinterface import API_VERSION
+        self.assertEqual(response[0][0], API_VERSION)
         self.assertEqual(request._done, True)
         self.assertEqual(request.headers['Content-Type'], 'text/xml')
         self.assertEqual(request.headers['Content-Length'], len(xml_response))
@@ -117,7 +118,8 @@ class XMLRPCHandlerTests(unittest.TestCase):
         xml_response = request.producers[0]
         import xmlrpclib
         response = xmlrpclib.loads(xml_response)
-        self.assertEqual(response[0][0], '3.0')
+        from supervisor.rpcinterface import API_VERSION
+        self.assertEqual(response[0][0], API_VERSION)
         self.assertEqual(request._done, True)
         self.assertEqual(request.headers['Content-Type'], 'text/xml')
         self.assertEqual(request.headers['Content-Length'], len(xml_response))
