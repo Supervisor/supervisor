@@ -188,7 +188,7 @@ class TraverseTests(unittest.TestCase):
         xmlrpc.traverse(dummy, 'foo', [1])
         self.assertEqual(L, [1])
 
-class TesstSupervisorTransport(unittest.TestCase):
+class SupervisorTransportTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.xmlrpc import SupervisorTransport
         return SupervisorTransport
@@ -285,7 +285,7 @@ class TesstSupervisorTransport(unittest.TestCase):
         # would be an AttributeError for _use_datetime under Python 2.5
         parser, unmarshaller = instance.getparser() # this uses _use_datetime
 
-class TestIterparseLoads(unittest.TestCase):
+class IterparseLoadsTests(unittest.TestCase):
     def test_iterparse_loads_methodcall(self):
         s = """<?xml version="1.0"?>
         <methodCall>
