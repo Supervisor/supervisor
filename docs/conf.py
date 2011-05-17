@@ -21,7 +21,7 @@ from datetime import date
 #sys.path.append(os.path.abspath('some/directory'))
 
 parent = os.path.dirname(os.path.dirname(__file__))
-sys.path.append(os.path.join(os.path.abspath(parent), 'src'))
+sys.path.append(os.path.abspath(parent))
 wd = os.getcwd()
 os.chdir(parent)
 os.system('%s setup.py test -q' % sys.executable)

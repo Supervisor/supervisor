@@ -11,5 +11,5 @@ docs/.build/
 dist/
 .tox/
 nosetests.xml
-src/supervisor/coverage.xml
+supervisor/coverage.xml
 tmp/

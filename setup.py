@@ -59,7 +59,7 @@ CLASSIFIERS = [
     'Topic :: System :: Systems Administration',
     ]
 
-version_txt = os.path.join(here, 'src/supervisor/version.txt')
+version_txt = os.path.join(here, 'supervisor/version.txt')
 supervisor_version = open(version_txt).read().strip()
 
 dist = setup(
@@ -74,8 +74,7 @@ dist = setup(
     author_email = "chrism@plope.com",
     maintainer = "Mike Naberezny",
     maintainer_email = "mike@naberezny.com",
-    package_dir = {'':'src'},
-    packages = find_packages(os.path.join(here, 'src')),
+    packages = find_packages(),
     # put data files in egg 'doc' dir
     data_files=[ ('doc', [
         'CHANGES.txt',
