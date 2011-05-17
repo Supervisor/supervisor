@@ -75,16 +75,6 @@ dist = setup(
     maintainer = "Mike Naberezny",
     maintainer_email = "mike@naberezny.com",
     packages = find_packages(),
-    # put data files in egg 'doc' dir
-    data_files=[ ('doc', [
-        'CHANGES.txt',
-        'COPYRIGHT.txt'
-        'HISTORY.txt',
-        'LICENSES.txt',
-        'README.rst',
-        'TODO.txt',
-        ]
-    )],
     install_requires = requires,
     extras_require = {'iterparse':['cElementTree >= 1.0.2']},
     tests_require = requires + ['mock >= 0.5.0'],
