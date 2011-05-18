@@ -2,7 +2,7 @@
 
 """supervisorctl -- control applications run by supervisord from the cmd line.
 
-Usage: python supervisorctl.py [-c file] [-h] [action [arguments]]
+Usage: %s [options] [action [arguments]]
 
 Options:
 -c/--configuration -- configuration file path (default /etc/supervisor.conf)
@@ -17,7 +17,7 @@ Options:
 action [arguments] -- see below
 
 Actions are commands like "tail" or "stop".  If -i is specified or no action is
-specified on the command line, a"shell" interpreting actions typed
+specified on the command line, a "shell" interpreting actions typed
 interactively is started.  Use the action "help" to find out about available
 actions.
 """

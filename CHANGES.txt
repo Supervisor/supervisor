@@ -19,6 +19,8 @@ Next release
   <params> when there are no parameters for the method call.  Thanks to
   Johannes Becker for reporting this. 
 
+- Fixed ``supervisorctl --help`` output to show the correct program name.
+
 3.0a10 (2011-03-30)
 -------------------
 
