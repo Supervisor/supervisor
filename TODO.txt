@@ -63,6 +63,8 @@
 
    - Display more information about Supervisor (identification, pid, etc.)
 
+   - Should use POST requests for actions that change server state
+
 - Expat error on Jens' system running slapd as root after reload.
 
 - Unit tests for log rotation.
