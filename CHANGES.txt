@@ -21,6 +21,8 @@ Next release
 
 - Fixed ``supervisorctl --help`` output to show the correct program name.
 
+- Added support for dependant processes.
+
 3.0a10 (2011-03-30)
 -------------------
 

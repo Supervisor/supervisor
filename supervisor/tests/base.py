@@ -481,7 +481,7 @@ class DummyPConfig:
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10,
-                 exitcodes=(0,2), environment=None, serverurl=None):
+                 exitcodes=(0,2), environment=None, serverurl=None, depends = []):
         self.options = options
         self.name = name
         self.command = command
@@ -513,6 +513,7 @@ class DummyPConfig:
         self.umask = umask
         self.autochildlogs_created = False
         self.serverurl = serverurl
+        self.depends = depends
 
     def create_autochildlogs(self):
         self.autochildlogs_created = True

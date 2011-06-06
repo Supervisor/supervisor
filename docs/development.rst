@@ -78,3 +78,5 @@ Contributors
 - Siddhant Goel: Siddhant worked on :program:`supervisorctl` as our
   Google Summer of Code student for 2008. He implemented the ``fg``
   command and also added tab completion.
+
+- Holden Karau: Contributed support for dependencies

@@ -175,7 +175,7 @@ class Subprocess:
         self.spawnerr = msg
         self.config.options.logger.info("spawnerr: %s" % msg)
 
-    def spawn(self):
+    def spawn(self, supervisord):
         """Start the subprocess.  It must not be running already.
 
         Return the process id.  If the fork() call fails, return None.
@@ -200,6 +200,28 @@ class Subprocess:
 
         self.change_state(ProcessStates.STARTING)
 
+        for process_name in self.config.depends:
+            group_name, process_name = split_namespec(process_name)
+            group = self.supervisord.process_groups.get(group_name)
+            dprocess = group.processes.get(process_name)
+            if (not (dprocess.get_state() in RUNNING_STATES)):
+                dprocess.spawn(supervisord)
+            if (dprocess.spawnerr):
+                self.record_spawnerr(what.args[0]+dprocess.spawnerr)
+                self._assertInState(ProcessStates.STARTING)
+                self.change_state(ProcessStates.BACKOFF)
+                return
+            t = time.time()
+            runtime = (t - started[0])
+            while (dprocess.state == ProcessStates.STARTING and runtime < dprocess.startsecs):
+                sleep(1)
+                runtime = (t - started[0])
+            if (dprocess.state != ProcessStates.STARTING and dprocess.state != ProcessStates.RUNNING):
+                self.record_spawnerr(what.args[0]+"(children failed to start)")
+                self._assertInState(ProcessStates.STARTING)
+                self.change_state(ProcessStates.BACKOFF)
+                return
+            
         try:
             filename, argv = self.get_execv_args()
         except ProcessException, what:
@@ -480,7 +502,7 @@ class Subprocess:
     def get_state(self):
         return self.state
 
-    def transition(self):
+    def transition(self,supervisord):
         now = time.time()
         state = self.state
 
@@ -492,20 +514,20 @@ class Subprocess:
                 if self.config.autorestart:
                     if self.config.autorestart is RestartUnconditionally:
                         # EXITED -> STARTING
-                        self.spawn()
+                        self.spawn(supervisord)
                     else: # autorestart is RestartWhenExitUnexpected
                         if self.exitstatus not in self.config.exitcodes:
                             # EXITED -> STARTING
-                            self.spawn()
+                            self.spawn(supervisord)
             elif state == ProcessStates.STOPPED and not self.laststart:
                 if self.config.autostart:
                     # STOPPED -> STARTING
-                    self.spawn()
+                    self.spawn(supervisord)
             elif state == ProcessStates.BACKOFF:
                 if self.backoff <= self.config.startretries:
                     if now > self.delay:
                         # BACKOFF -> STARTING
-                        self.spawn()
+                        self.spawn(supervisord)
 
         if state == ProcessStates.STARTING:
             if now - self.laststart > self.config.startsecs:
@@ -559,12 +581,12 @@ class FastCGISubprocess(Subprocess):
                                       '%s:%s' % (self.group, dir(self.group)))
         self.fcgi_sock = self.group.socket_manager.get_socket()
 
-    def spawn(self):
+    def spawn(self,supervisord):
         """
         Overrides Subprocess.spawn() so we can hook in before it happens
         """
         self.before_spawn()
-        pid = Subprocess.spawn(self)
+        pid = Subprocess.spawn(self,supervisord)
         if pid is None:
             #Remove object reference to decrement the reference count on error
             self.fcgi_sock = None
