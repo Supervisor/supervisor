@@ -1180,7 +1180,7 @@ class FastCGISubprocessTests(unittest.TestCase):
         options.forkpid = 0
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
         instance = self._makeOne(config)
-        self.assertRaises(NotImplementedError, instance.spawn(self.supervisord))
+        self.assertRaises(NotImplementedError, instance.spawn, self.supervisord)
 
     def test_no_socket_manager(self):
         options = DummyOptions()
@@ -1188,7 +1188,7 @@ class FastCGISubprocessTests(unittest.TestCase):
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
         instance = self._makeOne(config)
         instance.group = DummyProcessGroup(DummyPGroupConfig(options))
-        self.assertRaises(NotImplementedError, instance.spawn(self.supervisord))
+        self.assertRaises(NotImplementedError, instance.spawn, self.supervisord)
         
     def test_prepare_child_fds(self):
         options = DummyOptions()
