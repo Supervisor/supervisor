@@ -1545,7 +1545,7 @@ class ProcessConfig(Config):
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
         'stderr_events_enabled',
         'stopsignal', 'stopwaitsecs', 'exitcodes', 'redirect_stderr' ]
-    optional_param_names = [ 'environment', 'serverurl' ]
+    optional_param_names = [ 'environment', 'serverurl', 'depends' ]
 
     def __init__(self, options, **params):
         self.options = options

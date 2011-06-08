@@ -19,8 +19,12 @@ from supervisor.tests.base import DummyFCGIProcessGroup
 from supervisor.tests.base import DummySocketManager
 
 from supervisor.process import Subprocess
+from supervisor.supervisord import Supervisor
+
 
 class SubprocessTests(unittest.TestCase):
+    supervisord = Supervisor
+
     def _getTargetClass(self):
         from supervisor.process import Subprocess
         return Subprocess
@@ -161,7 +165,7 @@ class SubprocessTests(unittest.TestCase):
         instance.pid = True
         from supervisor.states import ProcessStates
         instance.state = ProcessStates.RUNNING
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(options.logger.data[0], "process 'sh' already running")
         self.assertEqual(instance.state, ProcessStates.RUNNING)
@@ -175,7 +179,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor import events
         L = []
         events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr, 'bad filename')
         self.assertEqual(options.logger.data[0], "spawnerr: bad filename")
@@ -200,7 +204,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor import events
         L = []
         events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr,
                          "too many open files to spawn 'good'")
@@ -225,7 +229,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor import events
         L = []
         events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
         self.assertEqual(options.logger.data[0],
@@ -250,7 +254,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor import events
         L = []
         events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr,
                          "Too many processes in process table to spawn 'good'")
@@ -277,7 +281,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor import events
         L = []
         events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
         self.assertEqual(options.logger.data[0],
@@ -298,7 +302,7 @@ class SubprocessTests(unittest.TestCase):
         options.forkpid = 0
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
         instance = self._makeOne(config)
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(options.parent_pipes_closed, None)
         self.assertEqual(options.child_pipes_closed, None)
@@ -317,7 +321,7 @@ class SubprocessTests(unittest.TestCase):
         options.setuid_msg = 'screwed'
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
         instance = self._makeOne(config)
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(options.parent_pipes_closed, None)
         self.assertEqual(options.child_pipes_closed, None)
@@ -337,7 +341,7 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig(options, 'good', '/good/filename',
                               directory='/tmp')
         instance = self._makeOne(config)
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(options.parent_pipes_closed, None)
         self.assertEqual(options.child_pipes_closed, None)
@@ -355,7 +359,7 @@ class SubprocessTests(unittest.TestCase):
         options.forkpid = 0
         config = DummyPConfig(options, 'good', '/good/filename', umask=002)
         instance = self._makeOne(config)
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(options.written, {})
         self.assertEqual(options.execv_args,
@@ -370,7 +374,7 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig(options, 'good', '/good/filename',
                               directory='/tmp')
         instance = self._makeOne(config)
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(options.parent_pipes_closed, None)
         self.assertEqual(options.child_pipes_closed, None)
@@ -389,7 +393,7 @@ class SubprocessTests(unittest.TestCase):
         options.execv_error = 1
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(options.parent_pipes_closed, None)
         self.assertEqual(options.child_pipes_closed, None)
@@ -407,7 +411,7 @@ class SubprocessTests(unittest.TestCase):
         options.execv_error = 2
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(options.parent_pipes_closed, None)
         self.assertEqual(options.child_pipes_closed, None)
@@ -426,7 +430,7 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig(options, 'cat', '/bin/cat',
                               environment={'_TEST_':'1'})
         instance = self._makeOne(config)
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(options.execv_args, ('/bin/cat', ['/bin/cat']) )
         self.assertEqual(options.execv_environment['_TEST_'], '1')
@@ -440,7 +444,7 @@ class SubprocessTests(unittest.TestCase):
             name = 'dummy'
         instance.group = Dummy()
         instance.group.config = Dummy()
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(options.execv_args, ('/bin/cat', ['/bin/cat']) )
         self.assertEqual(
@@ -459,7 +463,7 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
         config.redirect_stderr = True
         instance = self._makeOne(config)
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(options.parent_pipes_closed, None)
         self.assertEqual(options.child_pipes_closed, None)
@@ -477,7 +481,7 @@ class SubprocessTests(unittest.TestCase):
         options.forkpid = 10
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, 10)
         self.assertEqual(instance.dispatchers[4].__class__, DummyDispatcher)
         self.assertEqual(instance.dispatchers[5].__class__, DummyDispatcher)
@@ -500,7 +504,7 @@ class SubprocessTests(unittest.TestCase):
         config = DummyPConfig(options, 'good', '/good/filename',
                               redirect_stderr=True)
         instance = self._makeOne(config)
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, 10)
         self.assertEqual(instance.dispatchers[4].__class__, DummyDispatcher)
         self.assertEqual(instance.dispatchers[5].__class__, DummyDispatcher)
@@ -516,7 +520,7 @@ class SubprocessTests(unittest.TestCase):
         sent = 'a' * (1 << 13)
         self.assertRaises(OSError, instance.write, sent)
         options.forkpid = 1
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         instance.write(sent)
         stdin_fd = instance.pipes['stdin']
         self.assertEqual(sent, instance.dispatchers[stdin_fd].input_buffer)
@@ -531,7 +535,7 @@ class SubprocessTests(unittest.TestCase):
         sent = 'a' * (1 << 13)
         self.assertRaises(OSError, instance.write, sent)
         options.forkpid = 1
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         stdin_fd = instance.pipes['stdin']
         instance.dispatchers[stdin_fd].close()
         self.assertRaises(OSError, instance.write, sent)
@@ -544,7 +548,7 @@ class SubprocessTests(unittest.TestCase):
         sent = 'a' * (1 << 13)
         self.assertRaises(OSError, instance.write, sent)
         options.forkpid = 1
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         stdin_fd = instance.pipes['stdin']
         instance.dispatchers[stdin_fd].flush_error = errno.EPIPE
         self.assertRaises(OSError, instance.write, sent)
@@ -561,7 +565,7 @@ class SubprocessTests(unittest.TestCase):
             options = DummyOptions()
             config = DummyPConfig(options, 'spew', executable)
             instance = self._makeOne(config)
-            result = instance.spawn()
+            result = instance.spawn(self.supervisord)
             msg = options.logger.data[0]
             self.failUnless(msg.startswith("spawned: 'spew' with pid"))
             self.assertEqual(len(instance.pipes), 6)
@@ -882,7 +886,7 @@ class SubprocessTests(unittest.TestCase):
         process = self._makeOne(pconfig)
         process.laststart = 0
         process.state = ProcessStates.STOPPED
-        process.transition()
+        process.transition(self.supervisord)
         self.assertEqual(process.state, ProcessStates.STOPPED)
         self.assertEqual(L, [])
 
@@ -898,7 +902,7 @@ class SubprocessTests(unittest.TestCase):
         process = self._makeOne(pconfig)
         process.laststart = 0
         process.state = ProcessStates.STOPPED
-        process.transition()
+        process.transition(self.supervisord)
         self.assertEqual(process.state, ProcessStates.STARTING)
         self.assertEqual(len(L), 1)
         event = L[0]
@@ -920,7 +924,7 @@ class SubprocessTests(unittest.TestCase):
         process.laststart = 1
         process.system_stop = 1
         process.state = ProcessStates.EXITED
-        process.transition()
+        process.transition(self.supervisord)
         self.assertEqual(process.state, ProcessStates.EXITED)
         self.assertEqual(process.system_stop, 1)
         self.assertEqual(L, [])
@@ -938,7 +942,7 @@ class SubprocessTests(unittest.TestCase):
         process = self._makeOne(pconfig)
         process.laststart = 1
         process.state = ProcessStates.EXITED
-        process.transition()
+        process.transition(self.supervisord)
         self.assertEqual(process.state, ProcessStates.STARTING)
         self.assertEqual(len(L), 1)
         event = L[0]
@@ -958,7 +962,7 @@ class SubprocessTests(unittest.TestCase):
         process.laststart = 1
         process.state = ProcessStates.EXITED
         process.exitstatus = 'bogus'
-        process.transition()
+        process.transition(self.supervisord)
         self.assertEqual(process.state, ProcessStates.STARTING)
         self.assertEqual(len(L), 1)
         event = L[0]
@@ -978,7 +982,7 @@ class SubprocessTests(unittest.TestCase):
         process.laststart = 1
         process.state = ProcessStates.EXITED
         process.exitstatus = 0
-        process.transition()
+        process.transition(self.supervisord)
         self.assertEqual(process.state, ProcessStates.EXITED)
         self.assertEqual(L, [])
 
@@ -996,7 +1000,7 @@ class SubprocessTests(unittest.TestCase):
         process.delay = 0
         process.backoff = 0
         process.state = ProcessStates.BACKOFF
-        process.transition()
+        process.transition(self.supervisord)
         self.assertEqual(process.state, ProcessStates.BACKOFF)
         self.assertEqual(L, [])
 
@@ -1014,7 +1018,7 @@ class SubprocessTests(unittest.TestCase):
         process.delay = 0
         process.backoff = 0
         process.state = ProcessStates.BACKOFF
-        process.transition()
+        process.transition(self.supervisord)
         self.assertEqual(process.state, ProcessStates.STARTING)
         self.assertEqual(len(L), 1)
         self.assertEqual(L[0].__class__, events.ProcessStateStartingEvent)
@@ -1033,7 +1037,7 @@ class SubprocessTests(unittest.TestCase):
         process.delay = sys.maxint
         process.backoff = 0
         process.state = ProcessStates.BACKOFF
-        process.transition()
+        process.transition(self.supervisord)
         self.assertEqual(process.state, ProcessStates.BACKOFF)
         self.assertEqual(L, [])
 
@@ -1045,7 +1049,7 @@ class SubprocessTests(unittest.TestCase):
 
         options = DummyOptions()
 
-        # this should go from STARTING to RUNNING via transition()
+        # this should go from STARTING to RUNNING via transition(self.supervisord)
         pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
         process = self._makeOne(pconfig)
         process.backoff = 1
@@ -1056,7 +1060,7 @@ class SubprocessTests(unittest.TestCase):
         process.stdout_buffer = 'abc'
         process.stderr_buffer = 'def'
         process.state = ProcessStates.STARTING
-        process.transition()
+        process.transition(self.supervisord)
 
         # this implies RUNNING
         self.assertEqual(process.backoff, 0)
@@ -1076,7 +1080,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor.states import ProcessStates
         options = DummyOptions()
 
-        # this should go from BACKOFF to FATAL via transition()
+        # this should go from BACKOFF to FATAL via transition(self.supervisord)
         pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
         process = self._makeOne(pconfig)
         process.laststart = 1
@@ -1087,7 +1091,7 @@ class SubprocessTests(unittest.TestCase):
         process.stderr_buffer = 'def'
         process.state = ProcessStates.BACKOFF
 
-        process.transition()
+        process.transition(self.supervisord)
 
         # this implies FATAL
         self.assertEqual(process.backoff, 0)
@@ -1112,7 +1116,7 @@ class SubprocessTests(unittest.TestCase):
         process.delay = sys.maxint
         process.state = ProcessStates.STOPPING
 
-        process.transition()
+        process.transition(self.supervisord)
         self.assertEqual(process.state, ProcessStates.STOPPING)
         self.assertEqual(L, [])
 
@@ -1130,7 +1134,7 @@ class SubprocessTests(unittest.TestCase):
         process.killing = 0
         process.state = ProcessStates.STOPPING
 
-        process.transition()
+        process.transition(self.supervisord)
         self.assertEqual(process.killing, 1)
         self.assertNotEqual(process.delay, 0)
         self.assertEqual(process.state, ProcessStates.STOPPING)
@@ -1158,6 +1162,8 @@ class SubprocessTests(unittest.TestCase):
         self.failUnless(instance.delay > 0)
 
 class FastCGISubprocessTests(unittest.TestCase):
+    supervisord = Supervisor
+
     def _getTargetClass(self):
         from supervisor.process import FastCGISubprocess
         return FastCGISubprocess
@@ -1174,7 +1180,7 @@ class FastCGISubprocessTests(unittest.TestCase):
         options.forkpid = 0
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
         instance = self._makeOne(config)
-        self.assertRaises(NotImplementedError, instance.spawn)
+        self.assertRaises(NotImplementedError, instance.spawn, self.supervisord)
 
     def test_no_socket_manager(self):
         options = DummyOptions()
@@ -1182,7 +1188,7 @@ class FastCGISubprocessTests(unittest.TestCase):
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
         instance = self._makeOne(config)
         instance.group = DummyProcessGroup(DummyPGroupConfig(options))
-        self.assertRaises(NotImplementedError, instance.spawn)
+        self.assertRaises(NotImplementedError, instance.spawn, self.supervisord)
         
     def test_prepare_child_fds(self):
         options = DummyOptions()
@@ -1193,7 +1199,7 @@ class FastCGISubprocessTests(unittest.TestCase):
         gconfig = DummyFCGIGroupConfig(options, 'whatever', 999, None, 
                                        sock_config)
         instance.group = DummyFCGIProcessGroup(gconfig)
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(options.duped[7], 0)
@@ -1211,7 +1217,7 @@ class FastCGISubprocessTests(unittest.TestCase):
         gconfig = DummyFCGIGroupConfig(options, 'whatever', 999, None, 
                                        sock_config)
         instance.group = DummyFCGIProcessGroup(gconfig)
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(result, None)
         self.assertEqual(len(options.duped), 2)
         self.assertEqual(options.duped[13], 0)
@@ -1259,23 +1265,23 @@ class FastCGISubprocessTests(unittest.TestCase):
         self.assertEqual(sentinel.sts, sts_arg,
                             'Subprocess.finish() sts arg was not passed')
                             
-    #Patch Subprocess.spawn() method for this test to verify override
+    #Patch Subprocess.spawn(self.supervisord) method for this test to verify override
     @patch.object(Subprocess, 'spawn', Mock(return_value=sentinel.ppid))
     def test_spawn_override_success(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
         instance = self._makeOne(config)
         instance.before_spawn = Mock()
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(sentinel.ppid, result,
-                        'FastCGISubprocess.spawn() did not pass thru result')
+                        'FastCGISubprocess.spawn(self.supervisord) did not pass thru result')
         self.assertEqual(1, instance.before_spawn.call_count,
                             'FastCGISubprocess.before_spawn() not called once')
         spawn_mock = Subprocess.spawn
         self.assertEqual(1, spawn_mock.call_count,
-                            'Subprocess.spawn() not called once')
+                            'Subprocess.spawn(self.supervisord) not called once')
 
-    #Patch Subprocess.spawn() method for this test to verify error handling
+    #Patch Subprocess.spawn(self.supervisord) method for this test to verify error handling
     @patch.object(Subprocess, 'spawn', Mock(return_value=None))
     def test_spawn_error(self):
         options = DummyOptions()
@@ -1283,13 +1289,13 @@ class FastCGISubprocessTests(unittest.TestCase):
         instance = self._makeOne(config)
         instance.before_spawn = Mock()
         instance.fcgi_sock = 'nuke me on error'
-        result = instance.spawn()
+        result = instance.spawn(self.supervisord)
         self.assertEqual(None, result,
-                        'FastCGISubprocess.spawn() did return None on error')
+                        'FastCGISubprocess.spawn(self.supervisord) did return None on error')
         self.assertEqual(1, instance.before_spawn.call_count,
                             'FastCGISubprocess.before_spawn() not called once')
         self.assertEqual(None, instance.fcgi_sock,
-                'FastCGISubprocess.spawn() did not remove sock ref on error')    
+                'FastCGISubprocess.spawn(self.supervisord) did not remove sock ref on error')    
 
 class ProcessGroupBaseTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -1394,6 +1400,8 @@ class ProcessGroupBaseTests(unittest.TestCase):
         self.assertEqual(L, [group2, group1])
 
 class ProcessGroupTests(ProcessGroupBaseTests):
+    supervisord = Supervisor
+
     def _getTargetClass(self):
         from supervisor.process import ProcessGroup
         return ProcessGroup
@@ -1419,6 +1427,8 @@ class ProcessGroupTests(ProcessGroupBaseTests):
         self.assertEqual(process1.transitioned, True)
                 
 class EventListenerPoolTests(ProcessGroupBaseTests):
+    supervisord = Supervisor
+
     def setUp(self):
         from supervisor.events import clear
         clear()
