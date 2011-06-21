@@ -1212,7 +1212,7 @@ class ServerOptions(Options):
             
             if (soft < min) and (soft != -1): # -1 means unlimited 
                 if (hard < min) and (hard != -1):
-                    self.usage(msg % locals())
+                    hard = min
 
                 try:
                     resource.setrlimit(res, (min, hard))
