@@ -1212,6 +1212,8 @@ class ServerOptions(Options):
             
             if (soft < min) and (soft != -1): # -1 means unlimited 
                 if (hard < min) and (hard != -1):
+                    # setrlimit should increase the hard limit if we are
+                    # root, if not then setrlimit raises and we print usage
                     hard = min
 
                 try:

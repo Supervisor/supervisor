@@ -21,6 +21,13 @@ Next release
 
 - Fixed ``supervisorctl --help`` output to show the correct program name.
 
+- The behavior of the configuration options ``minfds`` and ``minprocs`` has
+  changed.  Previously, if a hard limit was less than ``minfds`` or
+  ``minprocs``, supervisord would unconditionally abort with an error.  Now,
+  supervisord will attempt to raise the hard limit.  This may succeed if
+  supervisord is run as root, otherwise the error is printed as before.
+  Patch by Benoit Sigoure.
+
 3.0a10 (2011-03-30)
 -------------------
 

@@ -269,12 +269,14 @@ follows.
 ``minfds``
 
   The minimum number of file descriptors that must be available before
-  supervisord will start successfully.  supervisord uses file
-  descriptors liberally, and will enter a failure mode when one cannot
-  be obtained fromt he OS, so it's useful to be able to specify a
-  minimum value to ensure it doesn't run out of them during execution.
-  This option is particularly useful on Solaris, which has a low
-  per-process fd limit by default.
+  supervisord will start successfully.  A call to setrlimit will be made
+  to attempt to raise the soft and hard limits of the supervisord process to
+  satisfy ``minfds``.  The hard limit may only be raised if supervisord
+  is run as root.  supervisord uses file descriptors liberally, and will
+  enter a failure mode when one cannot be obtained from the OS, so it's
+  useful to be able to specify a minimum value to ensure it doesn't run out
+  of them during execution. This option is particularly useful on Solaris,
+  which has a low per-process fd limit by default.
 
   *Default*:  1024
 
@@ -284,11 +286,13 @@ follows.
 
 ``minprocs``
 
-  The minimum nymber of process descriptors that must be available
-  before supervisord will start successfully.  Supervisor will enter a
-  failure mode when the OS runs out of process descriptors, so it's
-  useful to ensure that enough process descriptors are available upon
-  :program:`supervisord` startup.
+  The minimum number of process descriptors that must be available
+  before supervisord will start successfully.  A call to setrlimit will be
+  made to attempt to raise the soft and hard limits of the supervisord process
+  to satisfy ``minprocs``.  The hard limit may only be raised if supervisord
+  is run as root.  supervisord will enter a failure mode when the OS runs out
+  of process descriptors, so it's useful to ensure that enough process
+  descriptors are available upon :program:`supervisord` startup.
 
   *Default*:  200
 
