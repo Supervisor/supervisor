@@ -226,7 +226,7 @@ class Options:
 
         doc      -- usage message (default is __main__.__doc__)
         """
-         # Provide dynamic default method arguments
+        # Provide dynamic default method arguments
         if args is None:
             args = sys.argv[1:]
         if progname is None:
@@ -606,7 +606,7 @@ class ServerOptions(Options):
         # process "event listener" homogeneous groups
         for section in all_sections:
             if not section.startswith('eventlistener:'):
-                 continue
+                continue
             pool_name = section.split(':', 1)[1]
             # give listeners a "high" default priority so they are started first
             # and stopped last at mainloop exit
@@ -725,7 +725,6 @@ class ServerOptions(Options):
         raise ValueError("Bad socket format %s", sock)
         
     def get_gid_for_uid(self, uid):
-        import pwd
         pwrec = pwd.getpwuid(uid)
         return pwrec[3]
 
