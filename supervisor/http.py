@@ -307,6 +307,15 @@ class deferring_http_request(http_server.http_request):
                     env[key]=value
         return env
 
+    def get_referring_url(self):
+        environ = self.cgi_environment()
+        if environ.has_key('HTTP_REFERER'):
+            url = environ['HTTP_REFERER'].strip()
+            url = url.split('?')[0]
+            return url
+        else:
+            return ''
+    
     def get_server_url(self):
         """ Functionality that medusa's http request doesn't have; set an
         attribute named 'server_url' on the request based on the Host: header
