@@ -106,10 +106,10 @@ foreground is available from `http://smarden.org/runit/runscripts.html
 Some processes (like :program:`mysqld`) ignore signals sent to the
 actual process which is spawned by :program:`supervisord`.  Instead, a
 "special" thread/process is created by these kinds of programs which
-is responsible for handling signals.  This is problematic, because
+is responsible for handling signals.  This is problematic because
 :program:`supervisord` can only kill a process which it creates
-itself.  It cannot kill not any child processes of the processes which
-it creates.
+itself.  If a process created by :program:`supervisord` creates its
+own child processes, :program:`supervisord` cannot kill them.
 
 Fortunately, these types of programs typically write a "pidfile" which
 contains the "special" process' PID, and is meant to be read and used
