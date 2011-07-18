@@ -276,7 +276,7 @@ unconditionally.  The number of transitions between ``RUNNING`` and
 configuration that endlessly restarts an exited process.  This is a
 feature, not a bug.
     
-An autorestarted process will never be automtatically restarted if it
+An autorestarted process will never be automatically restarted if it
 ends up in the ``FATAL`` state (it must be manually restarted from
 this state).
     
