@@ -744,6 +744,7 @@ class ServerOptions(Options):
         uid = name_to_uid(get(section, 'user', None))
         stopsignal = signal_number(get(section, 'stopsignal', 'TERM'))
         stopwaitsecs = integer(get(section, 'stopwaitsecs', 10))
+        killasgroup = boolean(get(section, 'killasgroup', 'false'))
         exitcodes = list_of_exitcodes(get(section, 'exitcodes', '0,2'))
         redirect_stderr = boolean(get(section, 'redirect_stderr','false'))
         numprocs = integer(get(section, 'numprocs', 1))
@@ -837,6 +838,7 @@ class ServerOptions(Options):
                 stderr_logfile_maxbytes=logfiles['stderr_logfile_maxbytes'],
                 stopsignal=stopsignal,
                 stopwaitsecs=stopwaitsecs,
+                killasgroup=killasgroup,
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
                 environment=environment,
@@ -1545,7 +1547,8 @@ class ProcessConfig(Config):
         'stderr_logfile', 'stderr_capture_maxbytes', 
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
         'stderr_events_enabled',
-        'stopsignal', 'stopwaitsecs', 'exitcodes', 'redirect_stderr' ]
+        'stopsignal', 'stopwaitsecs', 'killasgroup',
+        'exitcodes', 'redirect_stderr' ]
     optional_param_names = [ 'environment', 'serverurl' ]
 
     def __init__(self, options, **params):
