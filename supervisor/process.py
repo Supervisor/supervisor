@@ -351,9 +351,16 @@ class Subprocess:
             options.logger.debug(msg)
             return msg
 
-        options.logger.debug('killing %s (pid %s) with signal %s'
+        killasgroup = self.config.killasgroup and sig == signal.SIGKILL
+
+        as_group = ""
+        if killasgroup:
+            as_group = "process group "
+
+        options.logger.debug('killing %s (pid %s) %swith signal %s'
                              % (self.config.name,
                                 self.pid,
+                                as_group,
                                 signame(sig))
                              )
 
@@ -366,8 +373,13 @@ class Subprocess:
                             ProcessStates.STOPPING)
         self.change_state(ProcessStates.STOPPING)
 
+        pid = self.pid
+        if killasgroup:
+            # send to the whole process group instead
+            pid = -self.pid
+
         try:
-            options.kill(self.pid, sig)
+            options.kill(pid, sig)
         except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
