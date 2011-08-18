@@ -259,6 +259,7 @@ class SupervisordTests(unittest.TestCase):
                 'stderr_logfile_backups': 0, 'stderr_logfile_maxbytes': 0,
                 'redirect_stderr': False,
                 'stopsignal': None, 'stopwaitsecs': 10,
+                'killasgroup': False,
                 'exitcodes': (0,2), 'environment': None, 'serverurl': None }
             result.update(params)
             return ProcessConfig(options, **result)
