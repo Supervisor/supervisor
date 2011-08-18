@@ -712,6 +712,19 @@ where specified.
 
   *Introduced*: 3.0
 
+``killasgroup``
+
+  If true, when resorting to send SIGKILL to the program to terminate
+  it send it to its whole process group instead, taking care of its
+  children as well, useful e.g with Python programs using
+  :mod:`multiprocessing`.
+
+  *Default*: false
+
+  *Required*:  No.
+
+  *Introduced*: 3.0a11
+
 ``user``
 
   If :program:`supervisord` runs as root, this UNIX user account will

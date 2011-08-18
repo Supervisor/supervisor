@@ -28,6 +28,11 @@ Next release
   supervisord is run as root, otherwise the error is printed as before.
   Patch by Benoit Sigoure.
 
+- Add a boolean program option ``killasgroup``, defaulting to false,
+  if true when resorting to send SIGKILL to stop/terminate the process
+  send it to its whole process group instead to take care of possible
+  children as well and not leave them behind.
+
 3.0a10 (2011-03-30)
 -------------------
 
