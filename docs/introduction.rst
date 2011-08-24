@@ -165,7 +165,7 @@ XML-RPC Interface
   .. code-block:: python
 
      import xmlrpclib
-     server = xmlrpclib.Server('http://localhost:9001')
+     server = xmlrpclib.Server('http://localhost:9001/RPC2')
           
   You may call methods against the :program:`supervisord` and its
   subprocesses by using the ``supervisor`` namespace.  An example is
