@@ -741,7 +741,7 @@ where specified.
 ``redirect_stderr``
 
   If true, cause the process' stderr output to be sent back to
-  :program:`supervisord` on it's stdout file descriptor (in UNIX shell
+  :program:`supervisord` on its stdout file descriptor (in UNIX shell
   terms, this is the equivalent of executing ``/the/program 2>&1``).
 
   *Default*: false
@@ -1099,10 +1099,10 @@ to take advantage of newer event-driven web servers such as lighttpd
 or nginx which don't include a built-in process manager, you had to
 use scripts like cgi-fcgi or spawn-fcgi.  These can be used in
 conjunction with a process manager such as supervisord or daemontools
-but require each FastCGI child process to bind to it's own socket.
+but require each FastCGI child process to bind to its own socket.
 The disadvantages of this are: unnecessarily complicated web server
 configuration, ungraceful restarts, and reduced fault tolerance.  With
-less sockets to configure, web server configurations are much smaller
+fewer sockets to configure, web server configurations are much smaller
 if groups of FastCGI processes can share sockets.  Shared sockets
 allow for graceful restarts because the socket remains bound by the
 parent process while any of the child processes are being restarted.
