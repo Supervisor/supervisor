@@ -293,7 +293,10 @@ class deferring_http_request(http_server.http_request):
         if query:
             env['QUERY_STRING'] = query
         env['GATEWAY_INTERFACE'] = 'CGI/1.1'
-        env['REMOTE_ADDR'] = self.channel.addr[0]
+        if self.channel.addr:
+            env['REMOTE_ADDR'] = self.channel.addr[0]
+        else:
+            env['REMOTE_ADDR'] = '127.0.0.1'
 
         for header in self.header:
             key,value=header.split(":",1)
