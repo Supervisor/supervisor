@@ -86,10 +86,13 @@ class POutputDispatcher(PDispatcher):
         if logfile:
             maxbytes = getattr(process.config, '%s_logfile_maxbytes' % channel)
             backups = getattr(process.config, '%s_logfile_backups' % channel)
+            frmt = '%(message)s'
+            if logfile == 'syslog':
+                frmt = '%s %s' % (process.config.name, frmt)
             self.mainlog = process.config.options.getLogger(
                 logfile,
                 loggers.LevelsByName.INFO,
-                '%(message)s',
+                frmt,
                 rotating=not not maxbytes, # optimization
                 maxbytes=maxbytes,
                 backups=backups)

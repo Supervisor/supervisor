@@ -214,6 +214,30 @@ class RotatingFileHandler(FileHandler):
             os.rename(self.baseFilename, dfn)
         self.stream = open(self.baseFilename, 'w')
 
+class SyslogHandler(Handler):
+
+    def __init__(self):
+        import syslog
+        self.syslog = syslog.syslog
+
+    def close(self):
+        pass
+
+    def emit(self, record):
+        try:
+            params = record.asdict()
+            message = params['message']
+            msgs = []
+            for line in message.rstrip('\n').split('\n'):
+                params['message'] = line
+                msg = self.fmt % params
+                try:
+                    self.syslog(msg)
+                except UnicodeError:
+                    self.syslog(msg.encode("UTF-8"))
+        except:
+            self.handleError(record)
+
 class LogRecord:
     def __init__(self, level, msg, **kw):
         self.level = level
@@ -303,6 +327,9 @@ def getLogger(filename, level, fmt, rotating=False, maxbytes=0, backups=0,
         io = BoundIO(maxbytes)
         handlers.append(StreamHandler(io))
         logger.getvalue = io.getvalue
+
+    elif filename == 'syslog':
+        handlers.append(SyslogHandler())
 
     else:
         if rotating is False:
