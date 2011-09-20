@@ -283,13 +283,6 @@ class StatusView(MeldView):
                 donothing.delay = 0.05
                 return donothing
 
-            elif action == 'reloadconfig':
-                result = rpcinterface.supervisor.reloadConfig()
-                def reloadconfig():
-                    return 'Reloaded config at %s' % time.ctime()
-                reloadconfig.delay = 0.05
-                return reloadconfig
-
             elif action == 'stopall':
                 callback = rpcinterface.supervisor.stopAllProcesses()
                 def stopall():
@@ -311,6 +304,43 @@ class StatusView(MeldView):
                     return 'All restarted at %s' % time.ctime()
                 restartall.delay = 0.05
                 return restartall
+
+            elif action == 'updateall':
+                result = rpcinterface.supervisor.reloadConfig()
+                added, changed, removed = result[0]
+                calls = []
+                for gname in removed:
+                    calls.extend(
+                        [ {'methodName':'supervisor.stopProcessGroup',
+                           'params': [gname]},
+                          {'methodName':'supervisor.removeProcessGroup',
+                           'params': [gname]},
+                          ]
+                        )
+                for gname in changed:
+                    calls.extend(
+                        [ {'methodName':'supervisor.stopProcessGroup',
+                           'params': [gname]},
+                          {'methodName':'supervisor.removeProcessGroup',
+                           'params': [gname]},
+                          {'methodName':'supervisor.addProcessGroup',
+                           'params': [gname]},
+                          ]
+                        )
+                for gname in added:
+                    calls.extend(
+                        [ {'methodName':'supervisor.addProcessGroup',
+                           'params': [gname]},
+                          ]
+                        )
+                callback = rpcinterface.system.multicall(calls)
+                def updateall():
+                    result = callback()
+                    if result is NOT_DONE_YET:
+                        return NOT_DONE_YET
+                    return 'Reloaded config at %s' % time.ctime()
+                updateall.delay = 0.05
+                return updateall
 
             elif namespec:
                 def wrong():
