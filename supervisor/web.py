@@ -338,7 +338,7 @@ class StatusView(MeldView):
                     result = callback()
                     if result is NOT_DONE_YET:
                         return NOT_DONE_YET
-                    return 'Reloaded config at %s' % time.ctime()
+                    return 'All updated at %s' % time.ctime()
                 updateall.delay = 0.05
                 return updateall
 
