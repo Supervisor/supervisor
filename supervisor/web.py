@@ -284,12 +284,9 @@ class StatusView(MeldView):
                 return donothing
 
             elif action == 'reloadconfig':
-                callback = rpcinterface.supervisor.reloadConfig()
+                result = rpcinterface.supervisor.reloadConfig()
                 def reloadconfig():
-                    if callback() is NOT_DONE_YET:
-                        return NOT_DONE_YET
-                    else:
-                        return 'Reloaded config at %s' % time.ctime()
+                    return 'Reloaded config at %s' % time.ctime()
                 reloadconfig.delay = 0.05
                 return reloadconfig
 
