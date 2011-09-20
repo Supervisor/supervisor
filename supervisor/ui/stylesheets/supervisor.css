@@ -115,7 +115,6 @@ html, body {
 #buttons button {
   float: left;
   display: block;
-  padding: 1px 0 0 0;
   font: 9px/1.5em "Lucida Sans";
   letter-spacing: 1px;
 }
