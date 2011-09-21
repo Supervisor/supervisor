@@ -82,6 +82,7 @@ dist = setup(
     zip_safe = False,
     namespace_packages = ['supervisor'],
     test_suite = "supervisor.tests",
+    data_files = [ ('supervisor', [version_txt]) ],
     entry_points = {
      'supervisor_rpc':['main = supervisor.rpcinterface:make_main_rpcinterface'],
      'console_scripts': [
