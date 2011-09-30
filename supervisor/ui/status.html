@@ -16,11 +16,12 @@
   <div meld:id="content">
     <div class="hidden" meld:id="statusmessage">#</div>
 
-    <form meld:id="form" action="index.html" method="post">
+    <form meld:id="form" action="index.html" method="get">
       <ul id="buttons" class="clr">
-        <li id="refresh"><a href="index.html?action=refresh">&amp;nbsp;</a></li>
-        <li id="restart_all"><a href="index.html?action=restartall">&amp;nbsp;</a></li>
-        <li id="stop_all"><a href="index.html?action=stopall">&amp;nbsp;</a></li>
+        <li id="refresh"><button name="action" value="refresh">REFRESH</button></li>
+        <li id="restart_all"><button name="action" value="restartall">RESTART ALL</button></li>
+        <li id="stop_all"><button name="action" value="stopall">STOP ALL</button></li>
+        <li id="update_all"><button name="action" value="updateall">UPDATE ALL</button></li>
       </ul>
 
       <table cellspacing="0" meld:id="statustable">
@@ -49,7 +50,7 @@
         </tbody>
       </table>
     </form>
-    
+
   </div>
 
   <div class="push">
