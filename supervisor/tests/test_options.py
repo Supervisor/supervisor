@@ -649,6 +649,20 @@ class ServerOptionsTests(unittest.TestCase):
         expected = "/bin/foo --host=" + platform.node()
         self.assertEqual(pconfigs[0].command, expected)
 
+    def test_processes_from_section_environment_variables_expansion(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo --path='%(ENV_PATH)s'
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        import platform
+        expected = "/bin/foo --path='%s'" % os.environ['PATH']
+        self.assertEqual(pconfigs[0].command, expected)
+
     def test_processes_from_section_no_procnum_in_processname(self):
         instance = self._makeOne()
         text = lstrip("""\
