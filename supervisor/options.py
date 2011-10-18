@@ -542,8 +542,10 @@ class ServerOptions(Options):
         section.nocleanup = boolean(get('nocleanup', 'false'))
         section.strip_ansi = boolean(get('strip_ansi', 'false'))
 
+        expansions = {'here':self.here}
+        expansions.update(environ_expansions())
         environ_str = get('environment', '')
-        environ_str = expand(environ_str, {'here':self.here}, 'environment')
+        environ_str = expand(environ_str, expansions, 'environment')
         section.environment = dict_of_key_value_pairs(environ_str)
         # Process rpcinterface plugins before groups to allow custom events to
         # be registered.
@@ -675,6 +677,7 @@ class ServerOptions(Options):
 
             expansions = {'here':self.here,
                           'program_name':program_name}
+            expansions.update(environ_expansions())
             socket = expand(socket, expansions, 'socket')
             try:
                 socket_config = self.parse_fcgi_socket(socket, proc_uid,
@@ -783,6 +786,7 @@ class ServerOptions(Options):
                           'program_name':program_name,
                           'host_node_name':host_node_name,
                           'group_name':group_name}
+            expansions.update(environ_expansions())
 
             environment = dict_of_key_value_pairs(
                 expand(environment_str, expansions, 'environment'))
@@ -1859,6 +1863,25 @@ def expand(s, expansions, name):
         raise ValueError(
             'Format string %r for %r is badly formatted' % (s, name)
             )
+
+_environ_expansions = None
+
+def environ_expansions():
+    """Return dict of environment variables, suitable for use in string
+    expansions.
+
+    Every environment variable is prefixed by 'ENV_'.
+    """
+    global _environ_expansions
+
+    if _environ_expansions:
+        return _environ_expansions
+
+    _environ_expansions = {}
+    for key, value in os.environ.iteritems():
+        _environ_expansions['ENV_%s' % key] = value
+
+    return _environ_expansions
 
 def make_namespec(group_name, process_name):
     # we want to refer to the process by its "short name" (a process named

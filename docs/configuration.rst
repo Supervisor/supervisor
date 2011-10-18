@@ -553,7 +553,8 @@ where specified.
   expand to ``/path/to/programname --port=8000`` at runtime.  String
   expressions are evaluated against a dictionary containing the keys
   ``group_name``, ``host_node_name``, ``process_num``, ``program_name``, 
-  and ``here`` (the directory of the supervisord config file).  Controlled 
+  ``here`` (the directory of the supervisord config file), and all
+  supervisord's environment variables prefixed with ``ENV_``.  Controlled 
   programs should themselves not be daemons, as supervisord assumes it is
   responsible for daemonizing its subprocesses (see
   :ref:`nondaemonizing_of_subprocesses`).
