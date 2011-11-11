@@ -72,3 +72,5 @@
 - Unit tests for log rotation.
 
 - Command-line arg tests.
+
+- Consider adding a dependency mechanism.  See pull request #20.
