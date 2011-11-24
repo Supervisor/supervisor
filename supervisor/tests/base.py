@@ -39,7 +39,7 @@ class DummyOptions:
         self.directory = None
         self.waitpid_return = None, None
         self.kills = {}
-        self.signal = None
+        self.signals = []
         self.parent_pipes_closed = None
         self.child_pipes_closed = None
         self.forkpid = 0

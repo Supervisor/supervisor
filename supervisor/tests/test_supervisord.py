@@ -137,43 +137,43 @@ class SupervisordTests(unittest.TestCase):
 
     def test_handle_sigterm(self):
         options = DummyOptions()
-        options.signal = signal.SIGTERM
+        options.signals = [ signal.SIGTERM ]
         supervisord = self._makeOne(options)
-        supervisord.handle_signal()
+        supervisord.handle_signals()
         self.assertEqual(supervisord.options.mood, -1)
         self.assertEqual(options.logger.data[0],
                          'received SIGTERM indicating exit request')
 
     def test_handle_sigint(self):
         options = DummyOptions()
-        options.signal = signal.SIGINT
+        options.signals = [ signal.SIGINT ]
         supervisord = self._makeOne(options)
-        supervisord.handle_signal()
+        supervisord.handle_signals()
         self.assertEqual(supervisord.options.mood, -1)
         self.assertEqual(options.logger.data[0],
                          'received SIGINT indicating exit request')
 
     def test_handle_sigquit(self):
         options = DummyOptions()
-        options.signal = signal.SIGQUIT
+        options.signals = [ signal.SIGQUIT ]
         supervisord = self._makeOne(options)
-        supervisord.handle_signal()
+        supervisord.handle_signals()
         self.assertEqual(supervisord.options.mood, -1)
         self.assertEqual(options.logger.data[0],
                          'received SIGQUIT indicating exit request')
 
     def test_handle_sighup(self):
         options = DummyOptions()
-        options.signal = signal.SIGHUP
+        options.signals = [ signal.SIGHUP ]
         supervisord = self._makeOne(options)
-        supervisord.handle_signal()
+        supervisord.handle_signals()
         self.assertEqual(supervisord.options.mood, 0)
         self.assertEqual(options.logger.data[0],
                          'received SIGHUP indicating restart request')
 
     def test_handle_sigusr2(self):
         options = DummyOptions()
-        options.signal = signal.SIGUSR2
+        options.signals = [ signal.SIGUSR2 ]
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
         from supervisor.process import ProcessStates
         process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
@@ -183,7 +183,7 @@ class SupervisordTests(unittest.TestCase):
         options.process_group_configs = DummyPGroupConfig(
             options, 'foo',
             pconfigs=pconfigs)
-        supervisord.handle_signal()
+        supervisord.handle_signals()
         self.assertEqual(supervisord.options.mood, 1)
         self.assertEqual(options.logs_reopened, True)
         self.assertEqual(options.logger.data[0],
@@ -191,12 +191,23 @@ class SupervisordTests(unittest.TestCase):
 
     def test_handle_unknown_signal(self):
         options = DummyOptions()
-        options.signal = signal.SIGUSR1
+        options.signals = [ signal.SIGUSR1 ]
         supervisord = self._makeOne(options)
-        supervisord.handle_signal()
+        supervisord.handle_signals()
         self.assertEqual(supervisord.options.mood, 1)
         self.assertEqual(options.logger.data[0],
                          'received SIGUSR1 indicating nothing')
+
+    def test_handle_multiple_signals(self):
+        options = DummyOptions()
+        options.signals = [ signal.SIGCHLD, signal.SIGQUIT ]
+        supervisord = self._makeOne(options)
+        supervisord.handle_signals()
+        self.assertEqual(supervisord.options.mood, -1)
+        self.assertEqual(options.logger.data[0],
+                         'received SIGQUIT indicating exit request')
+        self.assertEqual(options.logger.data[1],
+                         'received SIGCLD indicating a child quit')
 
     def test_diff_add_remove(self):
         options = DummyOptions()

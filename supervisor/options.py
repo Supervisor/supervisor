@@ -357,7 +357,7 @@ class ServerOptions(Options):
     pidfile = None
     passwdfile = None
     nodaemon = None
-    signal = None
+    signals = []
     environment = None
     httpservers = ()
     unlink_socketfiles = True
@@ -1041,7 +1041,10 @@ class ServerOptions(Options):
         signal.signal(signal.SIGUSR2, self.sigreceiver)
 
     def sigreceiver(self, sig, frame):
-        self.signal = sig
+        # A basic list is used as a signal queue. The lack of explicit
+        # synchronization should be fine as signals are always received and
+        # handled in the same thread.
+        self.signals.insert(0, sig)
 
     def openhttpservers(self, supervisord):
         try:

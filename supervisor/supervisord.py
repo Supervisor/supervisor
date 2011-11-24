@@ -252,7 +252,7 @@ class Supervisor:
             [ group.transition() for group  in pgroups ]
 
             self.reap()
-            self.handle_signal()
+            self.handle_signals()
             self.tick()
 
             if self.options.mood < SupervisorStates.RUNNING:
@@ -290,9 +290,9 @@ class Supervisor:
             if not once:
                 self.reap() # keep reaping until no more kids to reap
 
-    def handle_signal(self):
-        if self.options.signal:
-            sig, self.options.signal = self.options.signal, None
+    def handle_signals(self):
+        while len(self.options.signals) > 0:
+            sig = self.options.signals.pop()
             if sig in (signal.SIGTERM, signal.SIGINT, signal.SIGQUIT):
                 self.options.logger.warn(
                     'received %s indicating exit request' % signame(sig))
