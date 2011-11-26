@@ -137,7 +137,7 @@ class SupervisordTests(unittest.TestCase):
 
     def test_handle_sigterm(self):
         options = DummyOptions()
-        options.signal = signal.SIGTERM
+        options._signal = signal.SIGTERM
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
         self.assertEqual(supervisord.options.mood, -1)
@@ -146,7 +146,7 @@ class SupervisordTests(unittest.TestCase):
 
     def test_handle_sigint(self):
         options = DummyOptions()
-        options.signal = signal.SIGINT
+        options._signal = signal.SIGINT
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
         self.assertEqual(supervisord.options.mood, -1)
@@ -155,7 +155,7 @@ class SupervisordTests(unittest.TestCase):
 
     def test_handle_sigquit(self):
         options = DummyOptions()
-        options.signal = signal.SIGQUIT
+        options._signal = signal.SIGQUIT
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
         self.assertEqual(supervisord.options.mood, -1)
@@ -164,7 +164,7 @@ class SupervisordTests(unittest.TestCase):
 
     def test_handle_sighup(self):
         options = DummyOptions()
-        options.signal = signal.SIGHUP
+        options._signal = signal.SIGHUP
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
         self.assertEqual(supervisord.options.mood, 0)
@@ -173,7 +173,7 @@ class SupervisordTests(unittest.TestCase):
 
     def test_handle_sigusr2(self):
         options = DummyOptions()
-        options.signal = signal.SIGUSR2
+        options._signal = signal.SIGUSR2
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
         from supervisor.process import ProcessStates
         process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
@@ -191,7 +191,7 @@ class SupervisordTests(unittest.TestCase):
 
     def test_handle_unknown_signal(self):
         options = DummyOptions()
-        options.signal = signal.SIGUSR1
+        options._signal = signal.SIGUSR1
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
         self.assertEqual(supervisord.options.mood, 1)

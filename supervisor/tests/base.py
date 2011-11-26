@@ -39,7 +39,7 @@ class DummyOptions:
         self.directory = None
         self.waitpid_return = None, None
         self.kills = {}
-        self.signal = None
+        self._signal = None
         self.parent_pipes_closed = None
         self.child_pipes_closed = None
         self.forkpid = 0
@@ -101,6 +101,9 @@ class DummyOptions:
 
     def setsignals(self):
         self.signals_set = True
+
+    def get_signal(self):
+        return self._signal
 
     def get_socket_map(self):
         return self.socket_map

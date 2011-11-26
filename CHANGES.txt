@@ -33,6 +33,10 @@ Next release
   send it to its whole process group instead to take care of possible
   children as well and not leave them behind.  Patch by Samuele Pedroni.
 
+- Fixed a race condition where supervisord might not act on a signal sent
+  to it.  Thanks to Adar Dembo for reporting the issue and supplying the
+  initial patch.
+
 3.0a10 (2011-03-30)
 -------------------
 

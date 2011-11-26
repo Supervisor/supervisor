@@ -470,6 +470,14 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         self.assertEqual(os.getpid(), instance.get_pid())
 
+    def test_get_signal_delegates_to_signal_receiver(self):
+        instance = self._makeOne()
+        instance.signal_receiver.receive(signal.SIGTERM, None)
+        instance.signal_receiver.receive(signal.SIGCHLD, None)
+        self.assertEqual(instance.get_signal(), signal.SIGTERM)
+        self.assertEqual(instance.get_signal(), signal.SIGCHLD)
+        self.assertEqual(instance.get_signal(), None)
+
     def test_check_execv_args_cant_find_command(self):
         instance = self._makeOne()
         from supervisor.options import NotFound
@@ -1498,6 +1506,39 @@ class FastCGIGroupConfigTests(unittest.TestCase):
 
         self.assertTrue(instance1 != instance2)
         self.assertFalse(instance1 == instance2)
+
+class SignalReceiverTests(unittest.TestCase):
+    def test_returns_None_initially(self):
+        from supervisor.options import SignalReceiver
+        sr = SignalReceiver()
+        self.assertEquals(sr.get_signal(), None)
+
+    def test_returns_signals_in_order_received(self):
+        from supervisor.options import SignalReceiver
+        sr = SignalReceiver()
+        sr.receive(signal.SIGTERM, 'frame')
+        sr.receive(signal.SIGCHLD, 'frame')
+        self.assertEquals(sr.get_signal(), signal.SIGTERM)
+        self.assertEquals(sr.get_signal(), signal.SIGCHLD)
+        self.assertEquals(sr.get_signal(), None)
+
+    def test_does_not_queue_duplicate_signals(self):
+        from supervisor.options import SignalReceiver
+        sr = SignalReceiver()
+        sr.receive(signal.SIGTERM, 'frame')
+        sr.receive(signal.SIGTERM, 'frame')
+        self.assertEquals(sr.get_signal(), signal.SIGTERM)
+        self.assertEquals(sr.get_signal(), None)
+
+    def test_queues_again_after_being_emptied(self):
+        from supervisor.options import SignalReceiver
+        sr = SignalReceiver()
+        sr.receive(signal.SIGTERM, 'frame')
+        self.assertEquals(sr.get_signal(), signal.SIGTERM)
+        self.assertEquals(sr.get_signal(), None)
+        sr.receive(signal.SIGCHLD, 'frame')
+        self.assertEquals(sr.get_signal(), signal.SIGCHLD)
+        self.assertEquals(sr.get_signal(), None)
 
 class UtilFunctionsTests(unittest.TestCase):
     def test_make_namespec(self):

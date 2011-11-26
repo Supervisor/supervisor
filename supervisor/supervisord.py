@@ -291,8 +291,8 @@ class Supervisor:
                 self.reap() # keep reaping until no more kids to reap
 
     def handle_signal(self):
-        if self.options.signal:
-            sig, self.options.signal = self.options.signal, None
+        sig = self.options.get_signal()
+        if sig:
             if sig in (signal.SIGTERM, signal.SIGINT, signal.SIGQUIT):
                 self.options.logger.warn(
                     'received %s indicating exit request' % signame(sig))

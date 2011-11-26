@@ -357,7 +357,6 @@ class ServerOptions(Options):
     pidfile = None
     passwdfile = None
     nodaemon = None
-    signal = None
     environment = None
     httpservers = ()
     unlink_socketfiles = True
@@ -404,6 +403,7 @@ class ServerOptions(Options):
         self.pidhistory = {}
         self.process_group_configs = []
         self.parse_warnings = []
+        self.signal_receiver = SignalReceiver()
 
     def version(self, dummy):
         """Print version to stdout and exit(0).
@@ -1033,15 +1033,16 @@ class ServerOptions(Options):
         self.logger.close()
 
     def setsignals(self):
-        signal.signal(signal.SIGTERM, self.sigreceiver)
-        signal.signal(signal.SIGINT, self.sigreceiver)
-        signal.signal(signal.SIGQUIT, self.sigreceiver)
-        signal.signal(signal.SIGHUP, self.sigreceiver)
-        signal.signal(signal.SIGCHLD, self.sigreceiver)
-        signal.signal(signal.SIGUSR2, self.sigreceiver)
+        receive = self.signal_receiver.receive
+        signal.signal(signal.SIGTERM, receive)
+        signal.signal(signal.SIGINT, receive)
+        signal.signal(signal.SIGQUIT, receive)
+        signal.signal(signal.SIGHUP, receive)
+        signal.signal(signal.SIGCHLD, receive)
+        signal.signal(signal.SIGUSR2, receive)
 
-    def sigreceiver(self, sig, frame):
-        self.signal = sig
+    def get_signal(self):
+        return self.signal_receiver.get_signal()
 
     def openhttpservers(self, supervisord):
         try:
@@ -1849,6 +1850,21 @@ def _init_signames():
         if k_startswith("SIG") and not k_startswith("SIG_"):
             d[v] = k
     _signames = d
+
+class SignalReceiver:
+    def __init__(self):
+        self._signals_recvd = []
+
+    def receive(self, sig, frame):
+        if sig not in self._signals_recvd:
+            self._signals_recvd.append(sig)
+
+    def get_signal(self):
+        if self._signals_recvd:
+            sig = self._signals_recvd.pop(0)
+        else:
+            sig = None
+        return sig
 
 # miscellaneous utility functions
 
