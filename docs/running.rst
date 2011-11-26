@@ -162,7 +162,7 @@ shell will be presented that will allow you to control the processes
 that are currently managed by :program:`supervisord`.  Type "help" at
 the prompt to get information about the supported commands.
 
-The :command:supervisorctl` executable may be invoked with "one time"
+The :command:`supervisorctl` executable may be invoked with "one time"
 commands when invoked with arguments from a command line.  An example:
 ``supervisorctl stop all``.  If arguments are present on the
 command-line, it will prevent the interactive shell from being
