@@ -4,9 +4,9 @@ Next release
 - The ``pid`` command in supervisorctl can now be used to retrieve the PIDs
   of child processes.  See ``help pid``.  Patch by Gregory Wisniewski.
 
-- Added a new ``host_node_name`` expansion that will be expanded to the 
+- Added a new ``host_node_name`` expansion that will be expanded to the
   value returned by Python's ``platform.node`` (see
-  http://docs.python.org/library/platform.html#platform.node).  
+  http://docs.python.org/library/platform.html#platform.node).
   Patch by Joseph Kondel.
 
 - Fixed a bug in the web interface where pages over 64K would be truncated.
@@ -17,7 +17,7 @@ Next release
 
 - The XML-RPC server is now compatible with clients that do not send empty
   <params> when there are no parameters for the method call.  Thanks to
-  Johannes Becker for reporting this. 
+  Johannes Becker for reporting this.
 
 - Fixed ``supervisorctl --help`` output to show the correct program name.
 
@@ -36,6 +36,9 @@ Next release
 - Fixed a race condition where supervisord might not act on a signal sent
   to it.  Thanks to Adar Dembo for reporting the issue and supplying the
   initial patch.
+
+- Updated the output of ``echo_supervisord_conf`` to fix typos and
+  improve comments.  Thanks to Jens Rantil for noticing these.
 
 3.0a10 (2011-03-30)
 -------------------
@@ -102,16 +105,16 @@ Next release
 - When parsing "environment=" in the config file, changes introduced in
   3.0a8 prevented Supervisor from parsing some characters commonly
   found in paths unless quoting was used as in this example::
-  
+
     environment=HOME='/home/auser'
-  
+
   Supervisor once again allows the above line to be written as::
-  
+
     environment=HOME=/home/auser
 
-  Alphanumeric characters, "_", "/", ".", "+", "-", "(", ")", and ":" can all 
-  be used as a value without quoting. If any other characters are needed in 
-  the value, please quote it as in the first example above.  Thanks to Paul 
+  Alphanumeric characters, "_", "/", ".", "+", "-", "(", ")", and ":" can all
+  be used as a value without quoting. If any other characters are needed in
+  the value, please quote it as in the first example above.  Thanks to Paul
   Heideman for reporting this issue.
 
 - Supervisor will now look for its config file in locations relative to the
@@ -149,7 +152,7 @@ Next release
   pairs failed on Python 2.3 due to use of regular expression syntax
   introduced in Python 2.4.
 
-- Removed the test suite for the ``memmon`` console script, which was 
+- Removed the test suite for the ``memmon`` console script, which was
   moved to the Superlance package in 3.0a7.
 
 - Added release dates to CHANGES.txt.
@@ -169,14 +172,14 @@ Next release
 - Fixed a bug where the --serverurl option of supervisorctl would not
   accept a URL with a "unix" scheme.  (Jason Kirtland)
 
-- Running the tests now requires the "mock" package.  This dependency has 
+- Running the tests now requires the "mock" package.  This dependency has
   been added to "tests_require" in setup.py.  (Roger Hoover)
 
 - Added support for setting the ownership and permissions for an FCGI socket.
   This is done using new "socket_owner" and "socket_mode" options in an
   [fcgi-program:x] section.  See the manual for details.  (Roger Hoover)
-  
-- Fixed a bug where the FCGI socket reference count was not getting 
+
+- Fixed a bug where the FCGI socket reference count was not getting
   decremented on spawn error.  (Roger Hoover)
 
 - Fixed a Python 2.6 deprecation warning on use of the "sha" module.
@@ -196,16 +199,16 @@ Next release
 
 3.0a7 (2009-05-24)
 ------------------
- 
+
 - We now bundle our own patched version of Medusa contributed by Jason
-  Kirtland to allow Supervisor to run on Python 2.6.  This was done 
-  because Python 2.6 introduced backwards incompatible changes to 
+  Kirtland to allow Supervisor to run on Python 2.6.  This was done
+  because Python 2.6 introduced backwards incompatible changes to
   asyncore and asynchat in the stdlib.
 
 - The console script ``memmon``, introduced in Supervisor 3.0a4, has
-  been moved to Superlance (http://pypi.python.org/pypi/superlance).  
+  been moved to Superlance (http://pypi.python.org/pypi/superlance).
   The Superlance package contains other useful monitoring tools designed
-  to run under Supervisor.    
+  to run under Supervisor.
 
 - Supervisorctl now correctly interprets all of the error codes that can
   be returned when starting a process.  Patch by Francesc Alted.
@@ -216,14 +219,14 @@ Next release
   PROCESS_LOG events for a program.  If unspecified, the default is False.
 
   If enabled for a subprocess, and data is received from the stdout or
-  stderr of the subprocess while not in the special capture mode used by 
+  stderr of the subprocess while not in the special capture mode used by
   PROCESS_COMMUNICATION, an event will be emitted.
 
-  Event listeners can subscribe to either PROCESS_LOG_STDOUT or 
+  Event listeners can subscribe to either PROCESS_LOG_STDOUT or
   PROCESS_LOG_STDERR individually, or PROCESS_LOG for both.
 
 - Values for subprocess environment variables specified with environment=
-  in supervisord.conf can now be optionally quoted, allowing them to 
+  in supervisord.conf can now be optionally quoted, allowing them to
   contain commas.  Patch by Tim Godfrey.
 
 - Added a new event type, REMOTE_COMMUNICATION, that is emitted by a new
@@ -296,7 +299,7 @@ Next release
       zegroup:baz                      in use    auto      999:999
       zegroup:gazonk                   in use    auto      999:999
 
-- Fix bug with symptom "KeyError: 'process_name'" when using a logfile name 
+- Fix bug with symptom "KeyError: 'process_name'" when using a logfile name
   including documented``process_name`` Python string expansions.
 
 - Tab completions in the supervisorctl shell, and a foreground mode for
@@ -319,7 +322,7 @@ Next release
   that is running in the background no longer causes supervisord
   to crash.
 
-- Configuration options for logfiles now accept mixed case reserved 
+- Configuration options for logfiles now accept mixed case reserved
   words (e.g. "AUTO" or "auto") for consistency with other options.
 
 - childutils.eventdata was buggy, it could not deal with carriage returns
@@ -327,7 +330,7 @@ Next release
   to Ian Bicking.
 
 - Per-process exitcodes= configuration now will not accept exit
-  codes that are not 8-bit unsigned integers (supervisord will not 
+  codes that are not 8-bit unsigned integers (supervisord will not
   start when one of the exit codes is outside the range of 0 - 255).
 
 - Per-process ``directory`` value can now contain expandable values like
@@ -400,7 +403,7 @@ Next release
 
 - Instead of making a user root around for the sample.conf file,
   provide a convenience command "echo_supervisord_conf", which he can
-  use to echo the sample.conf to his terminal (and redirect to a file 
+  use to echo the sample.conf to his terminal (and redirect to a file
   appropriately).  This is a new user convenience (especially one who
   has no Python experience).
 
@@ -558,12 +561,12 @@ Next release
   memmon.py, which works on both Linux and Mac OS.  This script is
   now a console script named "memmon".
 
-- Allow "web handler" (the handler which receives http requests from 
+- Allow "web handler" (the handler which receives http requests from
   browsers visiting the web UI of supervisor) to deal with POST requests.
 
 - RPC interface methods stopProcess(), stopProcessGroup(), and
   stopAllProcesses() now take an optional "wait" argument that defaults
-  to True for parity with the start methods.  
+  to True for parity with the start methods.
 
 3.0a3 (2007-10-02)
 ------------------
@@ -612,7 +615,7 @@ Next release
 
   Now it looks like::
 
-    ver:3.0 server:supervisor serial:21 ... 
+    ver:3.0 server:supervisor serial:21 ...
 
 - Specific event payload serializations have changed.  All event
   types that deal with processes now include the pid of the process
@@ -879,8 +882,8 @@ Next release
   sequences from logs for smaller/more readable logs (submitted by
   Mike Naberezny).
 
-- The XML-RPC method supervisor.getVersion() has been renamed for 
-  clarity to supervisor.getAPIVersion().  The old name is aliased 
+- The XML-RPC method supervisor.getVersion() has been renamed for
+  clarity to supervisor.getAPIVersion().  The old name is aliased
   for compatibility but is deprecated and will be removed in a
   future version (Mike Naberezny).
 
