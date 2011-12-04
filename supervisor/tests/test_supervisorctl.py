@@ -109,15 +109,15 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(plugin.helped, True)
 
     def test_completionmatches(self):
-        options=DummyClientOptions()
-        controller=self._makeOne(options)
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
         controller.stdout=StringIO()
-        plugin=DummyPlugin()
+        plugin = DummyPlugin()
         controller.options.plugin=(plugin,)
         for i in ['add','remove']:
-            result=controller.completionmatches('',i+' ',1)
+            result = controller.completionmatches('',i+' ',1)
             self.assertEqual(result,['foo ','bar ','baz '])
-        result=controller.completionmatches('','fg baz:')
+        result = controller.completionmatches('','fg baz:')
         self.assertEqual(result,['baz_01 '])
 
     def test_nohelp(self):
