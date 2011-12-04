@@ -77,7 +77,12 @@ class Options:
     # If you want positional arguments, set this to 1 in your subclass.
     positional_args_allowed = 0
 
-    def __init__(self):
+    def __init__(self, require_configfile=True):
+        """Constructor.
+
+        Params:
+        require_configfile -- whether we should fail on no config file.
+        """
         self.names_list = []
         self.short_options = []
         self.long_options = []
@@ -86,25 +91,28 @@ class Options:
         self.required_map = {}
         self.environ_map = {}
         self.attr_priorities = {}
+        self.require_configfile = require_configfile
         self.add(None, None, "h", "help", self.help)
         self.add("configfile", None, "c:", "configuration=")
 
-    def default_configfile(self):
-        """Return the name of the found config file or raise. """
         here = os.path.dirname(os.path.dirname(sys.argv[0]))
-        paths = [os.path.join(here, 'etc', 'supervisord.conf'),
-                 os.path.join(here, 'supervisord.conf'),
-                 'supervisord.conf', 'etc/supervisord.conf',
-                 '/etc/supervisord.conf']
+        searchpaths = [os.path.join(here, 'etc', 'supervisord.conf'),
+                       os.path.join(here, 'supervisord.conf'),
+                       'supervisord.conf', 'etc/supervisord.conf',
+                       '/etc/supervisord.conf']
+        self.searchpaths = searchpaths
+
+    def default_configfile(self):
+        """Return the name of the found config file or print usage/exit."""
         config = None
-        for path in paths:
+        for path in self.searchpaths:
             if os.path.exists(path):
                 config = path
                 break
-        if config is None:
+        if config is None and self.require_configfile:
             self.usage('No config file found at default paths (%s); '
                        'use the -c option to specify a config file '
-                       'at a different path' % ', '.join(paths))
+                       'at a different path' % ', '.join(self.searchpaths))
         return config
 
     def help(self, dummy):
@@ -281,7 +289,8 @@ class Options:
         if self.configfile is None:
             self.configfile = self.default_configfile()
 
-        self.process_config_file()
+        if self.configfile:
+            self.process_config_file()
 
     def process_config_file(self, do_usage=True):
         """Process config file."""
@@ -1402,7 +1411,7 @@ class ClientOptions(Options):
     history_file = None
 
     def __init__(self):
-        Options.__init__(self)
+        Options.__init__(self, require_configfile=False)
         self.configroot = Dummy()
         self.configroot.supervisorctl = Dummy()
         self.configroot.supervisorctl.interactive = None
