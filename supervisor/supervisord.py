@@ -322,7 +322,15 @@ def timeslice(period, when):
 
 # profile entry point
 def profile(cmd, globals, locals, sort_order, callers):
-    import profile
+    try:
+        import profile
+    except ImportError, e:
+        # 'profile' is not included in standard Python distribution on Debian
+        # due to licensing issues[1]. We try to use *cProfile* (which mimics
+        # profile's behaviour) instead.
+        #
+        # [1] http://stackoverflow.com/questions/8369678/is-the-profile-package-part-of-python-standard-distribution
+        import cProfile as profile
     import pstats
     import tempfile
     fd, fn = tempfile.mkstemp()
