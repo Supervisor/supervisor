@@ -313,7 +313,7 @@ class Supervisor:
             else:
                 self.options.logger.blather(
                     'received %s indicating nothing' % signame(sig))
-        
+
     def get_state(self):
         return self.options.mood
 
@@ -322,7 +322,10 @@ def timeslice(period, when):
 
 # profile entry point
 def profile(cmd, globals, locals, sort_order, callers):
-    import profile
+    try:
+        import cProfile as profile
+    except ImportError:
+        import profile # python < 2.5
     import pstats
     import tempfile
     fd, fn = tempfile.mkstemp()
