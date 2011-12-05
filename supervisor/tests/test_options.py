@@ -427,8 +427,8 @@ class ServerOptionsTests(unittest.TestCase):
         class DummyException(Exception):
             def __init__(self, exitcode):
                 self.exitcode = exitcode
-        def dummy_exit(exitcode=0):
-            """Important default exitcode=2 like sys.exit."""
+        def dummy_exit(exitcode=2):
+            # Important default exitcode=2 like sys.exit.
             raise DummyException(exitcode)
         instance.exit = dummy_exit
 
