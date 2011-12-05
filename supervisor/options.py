@@ -156,7 +156,6 @@ class Options:
         env=...      -- if not None, name of environment variable that
                         overrides the configuration file or default
         """
-
         if flag is not None:
             if handler is not None:
                 raise ValueError, "use at most one of flag= and handler="
@@ -285,7 +284,7 @@ class Options:
         self.process_config_file()
 
     def process_config_file(self, do_usage=True):
-        # Process config file
+        """Process config file."""
         if not hasattr(self.configfile, 'read'):
             self.here = os.path.abspath(os.path.dirname(self.configfile))
             set_here(self.here)
