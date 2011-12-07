@@ -1,3 +1,9 @@
+3.0a12 (2011-06-06)
+-------------------
+
+- Released to replace a broken 3.0a11 package where non-Python files were
+  not included in the package.
+
 3.0a11 (2011-06-06)
 -------------------
 
