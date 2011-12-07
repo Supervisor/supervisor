@@ -49,6 +49,13 @@ class OptionTests(unittest.TestCase):
                     short='p:', long='other=', handler=integer)
         return options
 
+    def test_searchpaths(self):
+        options = self._makeOptions()
+        self.assertEquals(len(options.searchpaths), 5)
+        self.assertTrue('supervisord.conf' in options.searchpaths)
+        self.assertTrue('etc/supervisord.conf' in options.searchpaths)
+        self.assertTrue('/etc/supervisord.conf' in options.searchpaths)
+
     def test_options_and_args_order(self):
         # Only config file exists
         options = self._makeOptions()
@@ -116,7 +123,29 @@ class ClientOptionsTests(unittest.TestCase):
 
     def _makeOne(self):
         return self._getTargetClass()()
-        
+
+    def test_no_config_file(self):
+        """Making sure config file is not required."""
+        instance = self._makeOne()
+
+        # No default config file search in case they would exist
+        self.assertTrue(len(instance.searchpaths) > 0)
+        instance.searchpaths = []
+
+        class DummyException(Exception):
+            pass
+        def dummy_exit(self, _exitcode=0):
+            raise DummyException()
+        instance.exit = dummy_exit
+
+        instance.realize(args=['-s', 'http://localhost:9001', '-u', 'chris',
+                               '-p', '123'])
+
+        self.assertEquals(instance.interactive, 1)
+        self.assertEqual(instance.serverurl, 'http://localhost:9001')
+        self.assertEqual(instance.username, 'chris')
+        self.assertEqual(instance.password, '123')
+
     def test_options(self):
         tempdir = tempfile.gettempdir()
         s = lstrip("""[supervisorctl]
@@ -387,6 +416,31 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.nocleanup, True)
         self.assertEqual(instance.minfds, 2048)
         self.assertEqual(instance.minprocs, 300)
+
+    def test_no_config_file_exits(self):
+        instance = self._makeOne()
+
+        # No default config file search in case they would exist
+        self.assertTrue(len(instance.searchpaths) > 0)
+        instance.searchpaths = []
+
+        class DummyException(Exception):
+            def __init__(self, exitcode):
+                self.exitcode = exitcode
+        def dummy_exit(exitcode=2):
+            # Important default exitcode=2 like sys.exit.
+            raise DummyException(exitcode)
+        instance.exit = dummy_exit
+
+        try:
+            instance.realize()
+        except DummyException, e:
+            print "Caught expected exception: %s" % e
+            import traceback
+            self.assertEquals(e.exitcode, 2,
+                              "Wrong exitcode for: %s" % traceback.format_exc(e))
+        else:
+            self.fail("Did not get a DummyException.")
 
     def test_reload(self):
         from cStringIO import StringIO
