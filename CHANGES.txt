@@ -1,5 +1,5 @@
-Next release
-------------
+3.0a11 (2011-06-06)
+-------------------
 
 - The ``pid`` command in supervisorctl can now be used to retrieve the PIDs
   of child processes.  See ``help pid``.  Patch by Gregory Wisniewski.
