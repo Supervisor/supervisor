@@ -13,9 +13,8 @@ likely work fine on most UNIX systems.
 
 Supervisor will not run at all under any version of Windows.
 
-Supervisor is known to work with Python 2.3.3 or better, and it may work with
-Python 2.3.0, Python 2.3.1 and Python 2.3.2 (although these have not been
-tested).  It will not work under Python versions 2.2 or before.
+Supervisor is known to work with Python 2.4 or later but will not work
+under any version of Python 3.
 
 Documentation
 -------------

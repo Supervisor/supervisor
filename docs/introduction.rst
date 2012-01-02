@@ -54,7 +54,7 @@ Distributed Control
   and automatically controlling processes on groups of machines.
 
 Process Groups
-      
+
   Processes often need to be started and stopped in groups, sometimes
   even in a "priority order".  It's often difficult to explain to
   people how to do this.  Supervisor allows you to assign priorities
@@ -128,7 +128,7 @@ Supervisor Components
   unencrypted usernames and passwords.
 
 :program:`supervisorctl`
-      
+
   The command-line client piece of the supervisor is named
   :program:`supervisorctl`.  It provides a shell-like interface to the
   features provided by :program:`supervisord`.  From
@@ -136,7 +136,7 @@ Supervisor Components
   :program:`supervisord` processes, get status on the subprocesses
   controlled by, stop and start subprocesses of, and get lists of
   running processes of a :program:`supervisord`.
-          
+
   The command-line client talks to the server across a UNIX domain
   socket or an internet (TCP) socket.  The server can assert that the
   user of a client should present authentication credentials before it
@@ -145,7 +145,7 @@ Supervisor Components
   with a ``[supervisorctl]`` section in it will work.
 
 Web Server
-      
+
   A (sparse) web user interface with functionality comparable to
   :program:`supervisorctl` may be accessed via a browser if you start
   :program:`supervisord` against an internet socket.  Visit the server
@@ -166,11 +166,11 @@ XML-RPC Interface
 
      import xmlrpclib
      server = xmlrpclib.Server('http://localhost:9001/RPC2')
-          
+
   You may call methods against the :program:`supervisord` and its
   subprocesses by using the ``supervisor`` namespace.  An example is
   provided below.
-          
+
   .. code-block:: python
 
      server.supervisor.getState()
@@ -180,20 +180,20 @@ XML-RPC Interface
   ``system.listMethods`` API:
 
   .. code-block:: python
-          
+
      server.system.listMethods()
-          
+
   You can see help on a method by using the ``system.methodHelp`` API
   against the method:
 
   .. code-block:: python
-          
+
      print server.system.methodHelp('supervisor.shutdown')
 
   The :program:`supervisord` XML-RPC interface also supports the
   nascent `XML-RPC multicall API
   <http://www.xmlrpc.com/discuss/msgReader$1208>`_.
-          
+
   You can extend :program:`supervisord` functionality with new XML-RPC
   API methods by adding new top-level RPC interfaces as necessary.
   See :ref:`rpcinterface_factories`.
@@ -204,11 +204,8 @@ Platform Requirements
 Supervisor has been tested and is known to run on Linux (Ubuntu 9.10),
 Mac OS X (10.4/10.5/10.6), and Solaris (10 for Intel) and FreeBSD 6.1.
 It will likely work fine on most UNIX systems.
-      
+
 Supervisor will *not* run at all under any version of Windows.
 
-Supervisor is known to work with Python 2.3.3 or better, and it may
-work with Python 2.3.0, Python 2.3.1 and Python 2.3.2 (although these
-have not been tested).  It will not work at all with Python versions
-before 2.3.0.  Supervisor is not compatible with Python 3.X.
-
+Supervisor is known to work with Python 2.4 or later but will not work
+under any version of Python 3.

@@ -1,6 +1,9 @@
 Next release
 ------------
 
+- Python 2.3 is no longer supported.  The last version that supported Python
+  2.3 is Supervisor 3.0a12.
+
 - Removed the unused "supervisor_rpc" entry point from setup.py.
 
 3.0a12 (2011-06-06)
