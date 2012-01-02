@@ -22,13 +22,6 @@ if sys.version_info[:2] < (2, 4) or sys.version_info[0] > 2:
     sys.stderr.write(msg)
     sys.exit(1)
 
-import urllib
-import urllib2
-if not hasattr(urllib2, 'splituser'):
-    # setuptools wants to import this from urllib2 but it's not
-    # in there in Python 2.3.3, so we just alias it.
-    urllib2.splituser = urllib.splituser
-
 requires = ['setuptools', 'meld3 >= 0.6.5']
 
 if sys.version_info[:2] < (2, 5):

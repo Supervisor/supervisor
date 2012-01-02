@@ -23,7 +23,7 @@ def integer(value):
         return int(value)
     except ValueError:
         return long(value) # why does this help? (CM)
-    except OverflowError: # pragma: no cover (python 2.3)
+    except OverflowError:
         return long(value)
 
 TRUTHY_STRINGS = ('yes', 'true', 'on', '1')

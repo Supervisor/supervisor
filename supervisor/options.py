@@ -1921,7 +1921,6 @@ def split_namespec(namespec):
     return group_name, process_name
 
 def dedupe(L):
-    # cant use sets, they dont exist in 2.3
     D = {}
     for thing in L:
         D[thing] = 1
