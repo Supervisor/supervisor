@@ -15,6 +15,9 @@ Next release
 3.0a11 (2011-06-06)
 -------------------
 
+- Added a new file, ``PLUGINS.rst``, with a listing of third-party plugins
+  for Supervisor.  Contributed by Jens Rantil.
+
 - The ``pid`` command in supervisorctl can now be used to retrieve the PIDs
   of child processes.  See ``help pid``.  Patch by Gregory Wisniewski.
 
@@ -48,8 +51,7 @@ Next release
   children as well and not leave them behind.  Patch by Samuele Pedroni.
 
 - Environment variables may now be used in the configuration file
-  for options that support string expansion.  Patch by GitHub user
-  "silver-".
+  for options that support string expansion.  Patch by Aleksey Sivokon.
 
 - Fixed a race condition where supervisord might not act on a signal sent
   to it.  Thanks to Adar Dembo for reporting the issue and supplying the
