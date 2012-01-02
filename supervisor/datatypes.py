@@ -8,7 +8,7 @@ from supervisor.loggers import getLevelNumByDescription
 # I dont know why we bother, this doesn't run on Windows, but just
 # in case it ever does, avoid this bug magnet by leaving it.
 if sys.platform[:3] == "win": # pragma: no cover
-    DEFAULT_HOST = "localhost" 
+    DEFAULT_HOST = "localhost"
 else:
     DEFAULT_HOST = ""
 
@@ -72,13 +72,13 @@ def dict_of_key_value_pairs(arg):
     """
     lexer = shlex.shlex(arg)
     lexer.wordchars += '/.+-():'
-    
+
     tokens = list(lexer)
     tokens_len = len(tokens)
 
     D = {}
     i = 0
-    while i in range(0, tokens_len):   
+    while i in range(0, tokens_len):
         k_eq_v = tokens[i:i+3]
         if len(k_eq_v) != 3:
             raise ValueError, "Unexpected end of key/value pairs"
@@ -164,10 +164,10 @@ class SocketConfig:
         return '<%s at %s for %s>' % (self.__class__,
                                       id(self),
                                       self.url)
-                                      
+
     def __str__(self):
         return str(self.url)
-        
+
     def __eq__(self, other):
         if not isinstance(other, SocketConfig):
             return False
@@ -182,30 +182,30 @@ class SocketConfig:
 
     def addr(self): # pragma: no cover
         raise NotImplementedError
-        
+
     def create_and_bind(self): # pragma: no cover
         raise NotImplementedError
 
 class InetStreamSocketConfig(SocketConfig):
     """ TCP socket config helper """
-    
+
     host = None # host name or ip to bind to
     port = None # integer port to bind to
-    
+
     def __init__(self, host, port):
         self.host = host.lower()
         self.port = port_number(port)
         self.url = 'tcp://%s:%d' % (self.host, self.port)
-        
+
     def addr(self):
         return (self.host, self.port)
-        
+
     def create_and_bind(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(self.addr())
         return sock
-        
+
 class UnixStreamSocketConfig(SocketConfig):
     """ Unix domain socket config helper """
 
@@ -213,16 +213,16 @@ class UnixStreamSocketConfig(SocketConfig):
     mode = None # Unix permission mode bits for socket
     owner = None # Tuple (uid, gid) for Unix ownership of socket
     sock = None # socket object
-    
+
     def __init__(self, path, **kwargs):
         self.path = path
         self.url = 'unix://%s' % (path)
         self.mode = kwargs.get('mode', None)
         self.owner = kwargs.get('owner', None)
-        
+
     def addr(self):
         return self.path
-        
+
     def create_and_bind(self):
         if os.path.exists(self.path):
             os.unlink(self.path)
@@ -236,13 +236,13 @@ class UnixStreamSocketConfig(SocketConfig):
             os.unlink(self.path)
             raise
         return sock
-        
+
     def get_mode(self):
         return self.mode
-        
+
     def get_owner(self):
         return self.owner
-        
+
     def _chmod(self):
         if self.mode is not None:
             try:
@@ -250,7 +250,7 @@ class UnixStreamSocketConfig(SocketConfig):
             except Exception, e:
                 raise ValueError("Could not change permissions of socket "
                                     + "file: %s" % (e))
-        
+
     def _chown(self):
         if self.owner is not None:
             try:
@@ -258,7 +258,7 @@ class UnixStreamSocketConfig(SocketConfig):
             except Exception, e:
                 raise ValueError("Could not change ownership of socket file: "
                                     + "%s" % (e))
-                
+
 
 def colon_separated_user_group(arg):
     try:

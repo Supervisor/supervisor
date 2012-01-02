@@ -360,12 +360,12 @@ class ServerOptions(Options):
     httpservers = ()
     unlink_socketfiles = True
     mood = states.SupervisorStates.RUNNING
-    
+
     def __init__(self):
         Options.__init__(self)
         self.configroot = Dummy()
         self.configroot.supervisord = Dummy()
-        
+
         self.add(None, None, "v", "version", self.version)
         self.add("nodaemon", "supervisord.nodaemon", "n", "nodaemon", flag=1,
                  default=0)
@@ -519,7 +519,7 @@ class ServerOptions(Options):
         get = parser.getdefault
         section.minfds = integer(get('minfds', 1024))
         section.minprocs = integer(get('minprocs', 200))
-        
+
         directory = get('directory', None)
         if directory is None:
             section.directory = None
@@ -611,7 +611,7 @@ class ServerOptions(Options):
             pool_name = section.split(':', 1)[1]
             # give listeners a "high" default priority so they are started first
             # and stopped last at mainloop exit
-            priority = integer(get(section, 'priority', -1)) 
+            priority = integer(get(section, 'priority', -1))
             buffer_size = integer(get(section, 'buffer_size', 10))
             result_handler = get(section, 'result_handler',
                                        'supervisor.dispatchers:default_handler')
@@ -650,17 +650,17 @@ class ServerOptions(Options):
                 continue
             program_name = section.split(':', 1)[1]
             priority = integer(get(section, 'priority', 999))
-            
+
             proc_uid = name_to_uid(get(section, 'user', None))
-            
+
             socket_owner = get(section, 'socket_owner', None)
             if socket_owner is not None:
                 try:
                     socket_owner = colon_separated_user_group(socket_owner)
                 except ValueError:
                     raise ValueError('Invalid socket_owner value %s'
-                                                                % socket_owner)                
-                
+                                                                % socket_owner)
+
             socket_mode = get(section, 'socket_mode', None)
             if socket_mode is not None:
                 try:
@@ -668,7 +668,7 @@ class ServerOptions(Options):
                 except (TypeError, ValueError):
                     raise ValueError('Invalid socket_mode value %s'
                                                                 % socket_mode)
-            
+
             socket = get(section, 'socket', None)
             if not socket:
                 raise ValueError('[%s] section requires a "socket" line' %
@@ -683,7 +683,7 @@ class ServerOptions(Options):
                                                     socket_owner, socket_mode)
             except ValueError, e:
                 raise ValueError('%s in [%s] socket' % (str(e), section))
-            
+
             processes=self.processes_from_section(parser, section, program_name,
                                                   FastCGIProcessConfig)
             groups.append(
@@ -702,30 +702,30 @@ class ServerOptions(Options):
                 raise ValueError("Unix socket path %s is not an absolute path",
                                  path)
             path = normalize_path(path)
-            
+
             if socket_owner is None:
                 uid = os.getuid()
                 if proc_uid is not None and proc_uid != uid:
                     socket_owner = (proc_uid, self.get_gid_for_uid(proc_uid))
-                    
+
             if socket_mode is None:
                 socket_mode = 0700
-            
+
             return UnixStreamSocketConfig(path, owner=socket_owner,
                                                 mode=socket_mode)
-        
+
         if socket_owner is not None or socket_mode is not None:
             raise ValueError("socket_owner and socket_mode params should"
                     + " only be used with a Unix domain socket")
-        
+
         m = re.match(r'tcp://([^\s:]+):(\d+)$', sock)
         if m:
             host = m.group(1)
             port = int(m.group(2))
             return InetStreamSocketConfig(host, port)
-        
+
         raise ValueError("Bad socket format %s", sock)
-        
+
     def get_gid_for_uid(self, uid):
         pwrec = pwd.getpwuid(uid)
         return pwrec[3]
@@ -990,7 +990,7 @@ class ServerOptions(Options):
             self.logger.critical('could not write pidfile %s' % self.pidfile)
         else:
             self.logger.info('supervisord started with pid %s' % pid)
-                
+
     def cleanup(self):
         try:
             for config, server in self.httpservers:
@@ -1058,7 +1058,7 @@ class ServerOptions(Options):
                 if errorname is None:
                     self.usage('%s %s' % (help, why[0]))
                 else:
-                    self.usage('%s errno.%s (%d)' % 
+                    self.usage('%s errno.%s (%d)' %
                                (help, errorname, why[0]))
             self.unlink_socketfiles = False
         except ValueError, why:
@@ -1081,7 +1081,7 @@ class ServerOptions(Options):
         except (IOError, OSError):
             self.logger.warn('Could not clear childlog dir')
             return
-        
+
         for filename in filenames:
             if fnre.match(filename):
                 pathname = os.path.join(childlogdir, filename)
@@ -1205,7 +1205,7 @@ class ServerOptions(Options):
                 })
 
         msgs = []
-            
+
         for limit in limits:
 
             min = limit['min']
@@ -1214,8 +1214,8 @@ class ServerOptions(Options):
             name = limit['name']
 
             soft, hard = resource.getrlimit(res)
-            
-            if (soft < min) and (soft != -1): # -1 means unlimited 
+
+            if (soft < min) and (soft != -1): # -1 means unlimited
                 if (hard < min) and (hard != -1):
                     # setrlimit should increase the hard limit if we are
                     # root, if not then setrlimit raises and we print usage
@@ -1280,7 +1280,7 @@ class ServerOptions(Options):
         # set os._urandomfd as a hack around bad file descriptor bug
         # seen in the wild, see
         # http://www.plope.com/software/collector/252
-        os._urandomfd = None 
+        os._urandomfd = None
         fd, filename = tempfile.mkstemp(suffix, prefix, dir)
         os.close(fd)
         return filename
@@ -1345,7 +1345,7 @@ class ServerOptions(Options):
 
     def chdir(self, dir):
         os.chdir(dir)
-        
+
     def make_pipes(self, stderr=True):
         """ Create pipes for parent to child stdin/stdout/stderr
         communications.  Open fd in nonblocking mode so we can read them
@@ -1436,7 +1436,7 @@ class ClientOptions(Options):
         config.readfp(fp)
         sections = config.sections()
         if not 'supervisorctl' in sections:
-            raise ValueError,'.ini file does not include supervisorctl section' 
+            raise ValueError,'.ini file does not include supervisorctl section'
         serverurl = config.getdefault('serverurl', 'http://localhost:9001')
         if serverurl.startswith('unix://'):
             sf = serverurl[7:]
@@ -1490,7 +1490,7 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
         from StringIO import StringIO
         s = StringIO(s)
         return self.readfp(s)
-    
+
     def getdefault(self, option, default=_marker):
         try:
             return self.get(self.mysection, option)
@@ -1516,25 +1516,25 @@ class Config(object):
     def __lt__(self, other):
         if self.priority == other.priority:
             return self.name < other.name
-            
+
         return self.priority < other.priority
 
     def __le__(self, other):
         if self.priority == other.priority:
             return self.name <= other.name
-            
+
         return self.priority <= other.priority
 
     def __gt__(self, other):
         if self.priority == other.priority:
             return self.name > other.name
-            
+
         return self.priority > other.priority
 
     def __ge__(self, other):
         if self.priority == other.priority:
             return self.name >= other.name
-            
+
         return self.priority >= other.priority
 
     def __repr__(self):
@@ -1548,7 +1548,7 @@ class ProcessConfig(Config):
         'stdout_logfile', 'stdout_capture_maxbytes',
         'stdout_events_enabled',
         'stdout_logfile_backups', 'stdout_logfile_maxbytes',
-        'stderr_logfile', 'stderr_capture_maxbytes', 
+        'stderr_logfile', 'stderr_capture_maxbytes',
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
         'stderr_events_enabled',
         'stopsignal', 'stopwaitsecs', 'killasgroup',
@@ -1583,7 +1583,7 @@ class ProcessConfig(Config):
             self.stdout_logfile = get_autoname(name, sid, 'stdout')
         if self.stderr_logfile is Automatic:
             self.stderr_logfile = get_autoname(name, sid, 'stderr')
-            
+
     def make_process(self, group=None):
         from supervisor.process import Subprocess
         process = Subprocess(self)
@@ -1629,7 +1629,7 @@ class EventListenerConfig(ProcessConfig):
         return dispatchers, p
 
 class FastCGIProcessConfig(ProcessConfig):
-    
+
     def make_process(self, group=None):
         if group is None:
             raise NotImplementedError('FastCGI programs require a group')
@@ -1690,12 +1690,12 @@ class EventListenerPoolConfig(Config):
     def __eq__(self, other):
         if not isinstance(other, EventListenerPoolConfig):
             return False
-        
+
         if (self.name == other.name) and (self.priority == other.priority):
             return True
 
         return False
-            
+
     def after_setuid(self):
         for config in self.process_configs:
             config.create_autochildlogs()
@@ -1704,7 +1704,7 @@ class EventListenerPoolConfig(Config):
         from supervisor.process import EventListenerPool
         return EventListenerPool(self)
 
-class FastCGIGroupConfig(ProcessGroupConfig):        
+class FastCGIGroupConfig(ProcessGroupConfig):
     def __init__(self, options, name, priority, process_configs,
                  socket_config):
         self.options = options
@@ -1716,16 +1716,16 @@ class FastCGIGroupConfig(ProcessGroupConfig):
     def __eq__(self, other):
         if not isinstance(other, FastCGIGroupConfig):
             return False
-        
+
         if self.socket_config != other.socket_config:
             return False
-            
+
         return ProcessGroupConfig.__eq__(self, other)
-        
+
     def make_group(self):
         from supervisor.process import FastCGIProcessGroup
-        return FastCGIProcessGroup(self)        
-    
+        return FastCGIProcessGroup(self)
+
 def readFile(filename, offset, length):
     """ Read length bytes from the file named by filename starting at
     offset """
@@ -1761,7 +1761,7 @@ def readFile(filename, offset, length):
     return data
 
 def tailFile(filename, offset, length):
-    """ 
+    """
     Read length bytes from the file named by filename starting at
     offset, automatically increasing offset and setting overflow
     flag if log size has grown beyond (offset + length).  If length
