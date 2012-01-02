@@ -83,7 +83,6 @@ dist = setup(
     namespace_packages = ['supervisor'],
     test_suite = "supervisor.tests",
     entry_points = {
-     'supervisor_rpc':['main = supervisor.rpcinterface:make_main_rpcinterface'],
      'console_scripts': [
          'supervisord = supervisor.supervisord:main',
          'supervisorctl = supervisor.supervisorctl:main',

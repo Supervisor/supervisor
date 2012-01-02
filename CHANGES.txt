@@ -1,3 +1,8 @@
+Next release
+------------
+
+- Removed the unused "supervisor_rpc" entry point from setup.py.
+
 3.0a12 (2011-06-06)
 -------------------
 
