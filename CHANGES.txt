@@ -7,7 +7,8 @@ Next release
 - Removed the unused "supervisor_rpc" entry point from setup.py.
 
 - Fixed a bug in the rotating log handler that would cause unexpected
-  results when two processes were set to log to the same file.
+  results when two processes were set to log to the same file.  Patch
+  by Whit Morriss.
 
 3.0a12 (2011-12-06)
 -------------------
