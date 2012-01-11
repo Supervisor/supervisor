@@ -64,6 +64,11 @@ Next release
 - Updated the output of ``echo_supervisord_conf`` to fix typos and
   improve comments.  Thanks to Jens Rantil for noticing these.
 
+- Fixed a possible 500 Server Error from the web interface.  This was
+  observed when using Supervisor on a domain socket behind Nginx, where
+  Supervisor would raise an exception because REMOTE_ADDR was not set.
+  Patch by David Bennett.
+
 3.0a10 (2011-03-30)
 -------------------
 
