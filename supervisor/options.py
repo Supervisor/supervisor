@@ -1121,7 +1121,7 @@ class ServerOptions(Options):
     def dropPrivileges(self, user):
         # Drop root privileges if we have them
         if user is None:
-            return "No used specified to setuid to!"
+            return "No user specified to setuid to!"
         if os.getuid() != 0:
             return "Can't drop privilege as nonroot user"
         try:
