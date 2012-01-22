@@ -483,10 +483,12 @@ class ServerOptions(Options):
     def read_config(self, fp):
         section = self.configroot.supervisord
         if not hasattr(fp, 'read'):
+            if not os.path.exists(fp):
+                raise ValueError("could not find config file %s" % fp)
             try:
                 fp = open(fp, 'r')
             except (IOError, OSError):
-                raise ValueError("could not find config file %s" % fp)
+                raise ValueError("could not read config file %s" % fp)
         parser = UnhosedConfigParser()
         try:
             parser.readfp(fp)
@@ -1427,10 +1429,12 @@ class ClientOptions(Options):
         section = self.configroot.supervisorctl
         if not hasattr(fp, 'read'):
             self.here = os.path.dirname(normalize_path(fp))
+            if not os.path.exists(fp):
+                raise ValueError("could not find config file %s" % fp)
             try:
                 fp = open(fp, 'r')
             except (IOError, OSError):
-                raise ValueError("could not find config file %s" % fp)
+                raise ValueError("could not read config file %s" % fp)
         config = UnhosedConfigParser()
         config.mysection = 'supervisorctl'
         config.readfp(fp)
