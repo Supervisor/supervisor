@@ -73,7 +73,7 @@ dist = setup(
     tests_require = requires + ['mock >= 0.5.0'],
     include_package_data = True,
     package_data = {
-        'supervisor': ['supervisor/version.txt']
+        '': ['version.txt']
     },
     zip_safe = False,
     namespace_packages = ['supervisor'],
