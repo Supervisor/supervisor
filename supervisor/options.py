@@ -1137,15 +1137,22 @@ class ServerOptions(Options):
                 pwrec = pwd.getpwuid(uid)
             except KeyError:
                 return "Can't find uid %r" % uid
+        gid = pwrec[3]
         if hasattr(os, 'setgroups'):
             user = pwrec[0]
             groups = [grprec[2] for grprec in grp.getgrall() if user in
                       grprec[3]]
+
+            # always put our primary gid first in this list, otherwise we can
+            # lose group info since sometimes the first group in the setgroups
+            # list gets overwritten on the subsequent setgid call (at least on 
+            # freebsd 9 with python 2.7 - this will be safe though for all unix
+            # /python version combos)
+            groups.insert(0, gid)
             try:
                 os.setgroups(groups)
             except OSError:
                 return 'Could not set groups of effective user'
-        gid = pwrec[3]
         try:
             os.setgid(gid)
         except OSError:
