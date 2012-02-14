@@ -182,6 +182,7 @@ class Supervisor:
         timeout = 1 # this cannot be fewer than the smallest TickEvent (5)
 
         socket_map = self.options.get_socket_map()
+        poller = select.poll()
 
         while 1:
             combined_map = {}
@@ -214,14 +215,30 @@ class Supervisor:
                 if dispatcher.writable():
                     w.append(fd)
 
+                # fixme: find out the bitmask
+                # http://docs.python.org/library/select.html#select.poll.register
+                # default is: POLLIN | POLLPRI | POLLOUT
+                #
+                # I don't think there is a problem on registering the same file
+                # descriptor multiple times, since all it does is add the file
+                # descriptor to an internal dict, so duplicate registers just
+                # override existing ones
+                poller.register(fd)
+
             try:
-                r, w, x = self.options.select(r, w, x, timeout)
+                poll_events = poller.poll(timeout * 1000)
             except select.error, err:
                 r = w = x = []
                 if err[0] == errno.EINTR:
                     self.options.logger.blather('EINTR encountered in select')
                 else:
                     raise
+
+            for fd, bitmask in poll_events:
+                if bitmask & select.POLLIN or bitmask & select.POLLPRI:
+                    r.append(fd)
+                if bitmask & select.POLLOUT:
+                    w.append(fd)
 
             for fd in r:
                 if combined_map.has_key(fd):
