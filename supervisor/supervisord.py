@@ -43,6 +43,7 @@ from supervisor.options import signame
 from supervisor import events
 from supervisor.states import SupervisorStates
 from supervisor.states import getProcessStateDescription
+from supervisor.poller import Poller
 
 class Supervisor:
     stopping = False # set after we detect that we are handling a stop request
@@ -52,6 +53,7 @@ class Supervisor:
 
     def __init__(self, options):
         self.options = options
+        self.poller = Poller(options)
         self.process_groups = {}
         self.ticks = {}
 
@@ -182,7 +184,6 @@ class Supervisor:
         timeout = 1 # this cannot be fewer than the smallest TickEvent (5)
 
         socket_map = self.options.get_socket_map()
-        poller = select.poll()
 
         while 1:
             combined_map = {}
@@ -207,38 +208,13 @@ class Supervisor:
                     # killing everything), it's OK to swtop or reload
                     raise asyncore.ExitNow
 
-            r, w, x = [], [], []
-
             for fd, dispatcher in combined_map.items():
                 if dispatcher.readable():
-                    r.append(fd)
+                    self.poller.register_readable(fd)
                 if dispatcher.writable():
-                    w.append(fd)
+                    self.poller.register_writable(fd)
 
-                # fixme: find out the bitmask
-                # http://docs.python.org/library/select.html#select.poll.register
-                # default is: POLLIN | POLLPRI | POLLOUT
-                #
-                # I don't think there is a problem on registering the same file
-                # descriptor multiple times, since all it does is add the file
-                # descriptor to an internal dict, so duplicate registers just
-                # override existing ones
-                poller.register(fd)
-
-            try:
-                poll_events = poller.poll(timeout * 1000)
-            except select.error, err:
-                r = w = x = []
-                if err[0] == errno.EINTR:
-                    self.options.logger.blather('EINTR encountered in select')
-                else:
-                    raise
-
-            for fd, bitmask in poll_events:
-                if bitmask & select.POLLIN or bitmask & select.POLLPRI:
-                    r.append(fd)
-                if bitmask & select.POLLOUT:
-                    w.append(fd)
+            r, w = self.poller.poll(timeout * 1000)
 
             for fd in r:
                 if combined_map.has_key(fd):
