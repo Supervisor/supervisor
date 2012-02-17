@@ -1,5 +1,6 @@
 import select
 import errno
+import time
 
 class Poller:
     '''
@@ -19,10 +20,15 @@ class Poller:
     def register_writable(self, fd):
         self._poller.register(fd, self.WRITE)
 
+    def unregister(self, fd):
+        self._poller.unregister(fd)
+
     def poll(self, timeout):
         fds = self._poll_fds(timeout)
         readables, writables = [], []
         for fd, eventmask in fds:
+            if self._ignore_invalid(fd, eventmask):
+                continue
             if eventmask & self.READ:
                 readables.append(fd)
             if eventmask & self.WRITE:
@@ -37,3 +43,13 @@ class Poller:
                 self.options.logger.blather('EINTR encountered in select')
                 return []
             raise
+
+    def _ignore_invalid(self, fd, eventmask):
+        if eventmask & select.POLLNVAL:
+            # POLLNVAL means `fd` value is invalid, not open.
+            # When a process quits it's `fd`s are closed so there
+            # is no more reason to keep this `fd` registered
+            # If the process restarts it's `fd`s are registered again
+            self.unregister(fd)
+            return True
+        return False

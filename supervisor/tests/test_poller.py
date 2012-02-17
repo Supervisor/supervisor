@@ -27,7 +27,9 @@ class PollerTests(unittest.TestCase):
         self.assertEqual(select_poll.registered_as_writable, [6])
 
     def test_poll_returns_readables_and_writables(self):
-        select_poll = DummySelectPoll(result={'readables': [6,7], 'writables': [7,8]})
+        select_poll = DummySelectPoll(result=[(6, Poller.READ),
+                                              (7, Poller.READ),
+                                              (8, Poller.WRITE)])
         poller = self._makeOne(DummyOptions())
         poller._poller = select_poll
         poller.register_readable(6)
@@ -35,7 +37,7 @@ class PollerTests(unittest.TestCase):
         poller.register_writable(8)
         readables, writables = poller.poll(1000)
         self.assertEqual(readables, [6,7])
-        self.assertEqual(writables, [7,8])
+        self.assertEqual(writables, [8])
 
     def test_poll_ignore_eintr(self):
         select_poll = DummySelectPoll(error=errno.EINTR)
@@ -54,13 +56,24 @@ class PollerTests(unittest.TestCase):
         poller.register_readable(9)
         self.assertRaises(select.error, poller.poll, (1000,))
 
+    def test_poll_ignores_and_unregisters_closed_fd(self):
+        select_poll = DummySelectPoll(result=[(6, select.POLLNVAL),
+                                              (7, Poller.READ)])
+        poller = self._makeOne(DummyOptions())
+        poller._poller = select_poll
+        poller.register_readable(6)
+        poller.register_readable(7)
+        readables, writables = poller.poll(1000)
+        self.assertEqual(readables, [7])
+        self.assertEqual(select_poll.unregistered, [6])
 
 class DummySelectPoll:
     def __init__(self, result=None, error=None):
-        self.result = result or {'readables': [], 'writables': []}
+        self.result = result or []
         self.error = error
         self.registered_as_readable = []
         self.registered_as_writable = []
+        self.unregistered = []
 
     def register(self, fd, eventmask):
         if eventmask == Poller.READ:
@@ -70,21 +83,13 @@ class DummySelectPoll:
         else:
             raise ValueError("Registered a fd on unknown eventmask: '{0}'".format(eventmask))
 
-    def poll(self, timeout):
-        self._raise_error_if_defined()
-        return self._format_expected_result()
+    def unregister(self, fd):
+        self.unregistered.append(fd)
 
-    def _raise_error_if_defined(self):
+    def poll(self, timeout):
         if self.error:
             raise select.error(self.error)
-
-    def _format_expected_result(self):
-        fds = []
-        for fd in self.result['readables']:
-            fds.append((fd, Poller.READ))
-        for fd in self.result['writables']:
-            fds.append((fd, Poller.WRITE))
-        return fds
+        return self.result
 
 
 def test_suite():
