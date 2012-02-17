@@ -395,6 +395,8 @@ class SupervisordTests(unittest.TestCase):
 
     def test_runforever_select_dispatcher_exitnow(self):
         options = DummyOptions()
+        poller = DummyPoller(options)
+        poller.result = [6], []
         supervisord = self._makeOne(options)
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
         process = DummyProcess(pconfig)
@@ -404,7 +406,7 @@ class SupervisordTests(unittest.TestCase):
         exitnow = DummyDispatcher(readable=True, error=asyncore.ExitNow)
         pgroup.dispatchers = {6:exitnow}
         supervisord.process_groups = {'foo': pgroup}
-        options.select_result = [6], [], []
+        supervisord.poller = poller
         options.test = True
         self.assertRaises(asyncore.ExitNow, supervisord.runforever)
 

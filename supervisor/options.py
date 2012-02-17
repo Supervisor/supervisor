@@ -13,7 +13,6 @@ import grp
 import resource
 import stat
 import pkg_resources
-import select
 import glob
 import platform
 import warnings
@@ -1155,9 +1154,6 @@ class ServerOptions(Options):
                 os.close(x)
             except OSError:
                 pass
-
-    def select(self, r, w, x, timeout):
-        return select.select(r, w, x, timeout)
 
     def kill(self, pid, signal):
         os.kill(pid, signal)
