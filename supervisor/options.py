@@ -481,6 +481,9 @@ class ServerOptions(Options):
         self.process_group_configs = new
 
     def read_config(self, fp):
+        # Clear parse warnings, since we may be re-reading the
+        # config a second time after a reload.
+        self.parse_warnings = []
         section = self.configroot.supervisord
         if not hasattr(fp, 'read'):
             try:
