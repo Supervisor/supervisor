@@ -484,6 +484,7 @@ class ServerOptions(Options):
         # Clear parse warnings, since we may be re-reading the
         # config a second time after a reload.
         self.parse_warnings = []
+
         section = self.configroot.supervisord
         if not hasattr(fp, 'read'):
             try:
