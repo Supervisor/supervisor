@@ -10,6 +10,10 @@ Next release
   results when two processes were set to log to the same file.  Patch
   by Whit Morriss.
 
+- Fixed a bug in config file reloading where each reload could leak memory
+  because a list of warning messages would be appended but never cleared.
+  Patch by Philip Zeyliger.
+
 3.0a12 (2011-12-06)
 -------------------
 
