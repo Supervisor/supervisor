@@ -64,3 +64,5 @@ with 3rd party applications:
     supervisor.
 `node-supervisord-eventlistener <https://github.com/sugendran/node-supervisord-eventlistener>`_
     Lists for supervisord events and raises them.
+`ruby-supervisor <https://github.com/schmurfy/ruby-supervisor>`_
+    Ruby client library for Supervisor's XML-RPC interface.
