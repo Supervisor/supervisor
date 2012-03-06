@@ -162,6 +162,11 @@ class ControllerTests(unittest.TestCase):
         from supervisor.options import ClientOptions
         args = [] # simulating starting without parameters
         options = ClientOptions()
+
+        # No default config file search in case they would exist
+        self.assertTrue(len(options.searchpaths) > 0)
+        options.searchpaths = []
+
         options.realize(args, doc=__doc__)
         c = self._makeOne(options)
 
