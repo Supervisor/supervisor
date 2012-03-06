@@ -1428,6 +1428,11 @@ class ClientOptions(Options):
         self.configroot.supervisorctl.password = None
         self.configroot.supervisorctl.history_file = None
 
+        from supervisor.supervisorctl import DefaultControllerPlugin
+        default_factory = ('default', DefaultControllerPlugin, {})
+        # we always add the default factory. If you want to a supervisorctl
+        # without the default plugin, please write your own supervisorctl.
+        self.plugin_factories = [default_factory]
 
         self.add("interactive", "supervisorctl.interactive", "i",
                  "interactive", flag=1, default=0)
@@ -1477,16 +1482,11 @@ class ClientOptions(Options):
             section.history_file = None
             self.history_file = None
 
-        from supervisor.supervisorctl import DefaultControllerPlugin
-        self.plugin_factories = self.get_plugins(
+        self.plugin_factories += self.get_plugins(
             config,
             'supervisor.ctl_factory',
             'ctlplugin:'
             )
-        default_factory = ('default', DefaultControllerPlugin, {})
-        # if you want to a supervisorctl without the default plugin,
-        # please write your own supervisorctl.
-        self.plugin_factories.insert(0, default_factory)
 
         return section
 
