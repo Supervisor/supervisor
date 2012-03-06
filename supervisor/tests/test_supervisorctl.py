@@ -158,6 +158,13 @@ class ControllerTests(unittest.TestCase):
         expected = options.getServerProxy().system
         self.assertEqual(proxy, expected)
 
+    def test_real_controller_initialization(self):
+        from supervisor.options import ClientOptions
+        args = [] # simulating starting without parameters
+        options = ClientOptions()
+        options.realize(args, doc=__doc__)
+        c = self._makeOne(options)
+
 
 class TestControllerPluginBase(unittest.TestCase):
     def _getTargetClass(self):
