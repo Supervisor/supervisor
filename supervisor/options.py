@@ -290,10 +290,13 @@ class Options:
             self.configfile = self.default_configfile()
 
         if self.configfile:
-            self.process_config_file()
+            self.process_config()
 
-    def process_config_file(self, do_usage=True):
-        """Process config file."""
+    def process_config(self, do_usage=True):
+        """Process configuration data structure.
+        
+        This includes reading config file if necessary, setting defaults etc.
+        """
         if not hasattr(self.configfile, 'read'):
             self.here = os.path.abspath(os.path.dirname(self.configfile))
             set_here(self.here)
@@ -483,8 +486,8 @@ class ServerOptions(Options):
 
         self.identifier = section.identifier
 
-    def process_config_file(self, do_usage=True):
-        Options.process_config_file(self, do_usage=do_usage)
+    def process_config(self, do_usage=True):
+        Options.process_config(self, do_usage=do_usage)
 
         new = self.configroot.supervisord.process_group_configs
         self.process_group_configs = new

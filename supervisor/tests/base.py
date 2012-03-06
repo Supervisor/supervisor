@@ -79,7 +79,7 @@ class DummyOptions:
         self.realizeargs = args
         self.realizekw = kw
 
-    def process_config_file(self, do_usage=True):
+    def process_config(self, do_usage=True):
         pass
 
     def cleanup_fds(self):

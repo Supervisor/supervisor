@@ -232,12 +232,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         value = interface.reloadConfig()
         self.assertEqual(value, [[['added'], ['changed'], ['dropped']]])
 
-    def test_reloadConfig_process_config_file_raises_ValueError(self):
+    def test_reloadConfig_process_config_raises_ValueError(self):
         from supervisor import xmlrpc
         options = DummyOptions()
         def raise_exc(*arg, **kw):
             raise ValueError('foo')
-        options.process_config_file = raise_exc
+        options.process_config = raise_exc
         supervisord = DummySupervisor(options)
         interface = self._makeOne(supervisord)
         self._assertRPCError(xmlrpc.Faults.CANT_REREAD, interface.reloadConfig)

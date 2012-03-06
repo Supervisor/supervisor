@@ -80,12 +80,12 @@ class OptionTests(unittest.TestCase):
         options.realize([])
         self.assertEquals(options.other, 41)
         options.master['other'] = 42
-        options.process_config_file()
+        options.process_config()
         self.assertEquals(options.other, 42)
 
     def test_config_reload_do_usage_false(self):
         options = self._makeOptions(read_error='error')
-        self.assertRaises(ValueError, options.process_config_file,
+        self.assertRaises(ValueError, options.process_config,
                           False)
 
     def test_config_reload_do_usage_true(self):
@@ -98,7 +98,7 @@ class OptionTests(unittest.TestCase):
         options.exit = exit
         options.configroot.anoption = 1
         options.configroot.other = 1
-        options.process_config_file(True)
+        options.process_config(True)
         self.assertEqual(L, [2])
 
     def test__set(self):
@@ -491,7 +491,7 @@ class ServerOptionsTests(unittest.TestCase):
         programs = three
         """)
         instance.configfile = StringIO(text)
-        instance.process_config_file()
+        instance.process_config()
 
         section = instance.configroot.supervisord
 
