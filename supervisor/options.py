@@ -289,26 +289,15 @@ class Options:
         if self.configfile is None:
             self.configfile = self.default_configfile()
 
-        if self.configfile:
-            self.process_config()
+        self.process_config()
 
     def process_config(self, do_usage=True):
         """Process configuration data structure.
         
         This includes reading config file if necessary, setting defaults etc.
         """
-        if not hasattr(self.configfile, 'read'):
-            self.here = os.path.abspath(os.path.dirname(self.configfile))
-            set_here(self.here)
-        try:
-            self.read_config(self.configfile)
-        except ValueError, msg:
-            if do_usage:
-                # if this is not called from an RPC method, run usage and exit.
-                self.usage(str(msg))
-            else:
-                # if this is called from an RPC method, raise an error
-                raise ValueError(msg)
+        if self.configfile:
+            self.process_config_file(do_usage)
 
         # Copy config options to attributes of self.  This only fills
         # in options that aren't already set from the command line.
@@ -332,6 +321,21 @@ class Options:
         for name, message in self.required_map.items():
             if getattr(self, name) is None:
                 self.usage(message)
+
+    def process_config_file(self, do_usage):
+        # Process config file
+        if not hasattr(self.configfile, 'read'):
+            self.here = os.path.abspath(os.path.dirname(self.configfile))
+            set_here(self.here)
+        try:
+            self.read_config(self.configfile)
+        except ValueError, msg:
+            if do_usage:
+                # if this is not called from an RPC method, run usage and exit.
+                self.usage(str(msg))
+            else:
+                # if this is called from an RPC method, raise an error
+                raise ValueError(msg)
 
     def get_plugins(self, parser, factory_key, section_prefix):
         factories = []
