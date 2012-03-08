@@ -27,16 +27,18 @@ class PollerTests(unittest.TestCase):
         self.assertEqual(select_poll.registered_as_writable, [6])
 
     def test_poll_returns_readables_and_writables(self):
-        select_poll = DummySelectPoll(result=[(6, Poller.READ),
-                                              (7, Poller.READ),
-                                              (8, Poller.WRITE)])
+        select_poll = DummySelectPoll(result=[(6, select.POLLIN),
+                                              (7, select.POLLPRI),
+                                              (8, select.POLLOUT),
+                                              (9, select.POLLHUP)])
         poller = self._makeOne(DummyOptions())
         poller._poller = select_poll
         poller.register_readable(6)
         poller.register_readable(7)
         poller.register_writable(8)
+        poller.register_readable(9)
         readables, writables = poller.poll(1000)
-        self.assertEqual(readables, [6,7])
+        self.assertEqual(readables, [6,7,9])
         self.assertEqual(writables, [8])
 
     def test_poll_ignore_eintr(self):

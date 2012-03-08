@@ -7,7 +7,7 @@ class Poller:
     Wrapper for select.poll()
     '''
 
-    READ = select.POLLIN | select.POLLPRI
+    READ = select.POLLIN | select.POLLPRI | select.POLLHUP
     WRITE = select.POLLOUT
 
     def __init__(self, options):
