@@ -40,7 +40,7 @@ class Poller:
             return self._poller.poll(timeout)
         except select.error, err:
             if err[0] == errno.EINTR:
-                self.options.logger.blather('EINTR encountered in select')
+                self.options.logger.blather('EINTR encountered in poll')
                 return []
             raise
 

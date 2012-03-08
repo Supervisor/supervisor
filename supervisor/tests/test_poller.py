@@ -46,7 +46,7 @@ class PollerTests(unittest.TestCase):
         poller._poller = select_poll
         poller.register_readable(9)
         poller.poll(1000)
-        self.assertEqual(options.logger.data[0], 'EINTR encountered in select')
+        self.assertEqual(options.logger.data[0], 'EINTR encountered in poll')
 
     def test_poll_uncaught_exception(self):
         select_poll = DummySelectPoll(error=errno.EBADF)
