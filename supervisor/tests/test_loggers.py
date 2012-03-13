@@ -3,6 +3,7 @@ import unittest
 import tempfile
 import shutil
 import os
+import syslog
 
 from supervisor.tests.base import DummyStream
 
@@ -51,7 +52,7 @@ class FileHandlerTests(HandlerTests, unittest.TestCase):
         handler.stream = DummyStream()
         handler.close()
         self.assertEqual(handler.stream.closed, True)
-        
+
     def test_close_raises(self):
         handler = self._makeOne(self.filename)
         handler.stream = DummyStream(OSError)
@@ -86,7 +87,7 @@ class FileHandlerTests(HandlerTests, unittest.TestCase):
         self.assertFalse(os.path.exists(self.filename), self.filename)
         handler.remove() # should not raise
         self.assertFalse(os.path.exists(self.filename), self.filename)
-        
+
     def test_remove_raises(self):
         handler = self._makeOne(self.filename)
         os.remove(self.filename)
@@ -100,7 +101,7 @@ class FileHandlerTests(HandlerTests, unittest.TestCase):
         handler.emit(record)
         content = open(self.filename, 'r').read()
         self.assertEqual(content, 'hello!')
-        
+
     def test_emit_unicode_noerror(self):
         handler = self._makeOne(self.filename)
         record = self._makeLogRecord(u'fi\xed')
@@ -124,7 +125,7 @@ class FileHandlerTests(HandlerTests, unittest.TestCase):
                         dummy_stderr.written)
 
 class RotatingFileHandlerTests(FileHandlerTests):
-    
+
     def _getTargetClass(self):
         from supervisor.loggers import RotatingFileHandler
         return RotatingFileHandler
@@ -138,7 +139,7 @@ class RotatingFileHandlerTests(FileHandlerTests):
     def test_emit_tracks_correct_file_for_multiple_handlers(self):
         """
         Rollovers should roll for all handlers of the same file.
-        
+
         When more than one process logs to a singlefile, we want to
         make sure that files get rotated properly.
 
@@ -154,8 +155,8 @@ class RotatingFileHandlerTests(FileHandlerTests):
         handler1.emit(record) #12 bytes
         self.assertTrue(os.path.exists(self.filename + '.1'))
         self.assertTrue(handler1.stream == handler2.stream)
-        new_record = self._makeLogRecord("NEW") 
-        handler2.emit(new_record) 
+        new_record = self._makeLogRecord("NEW")
+        handler2.emit(new_record)
         self.assertTrue(open(self.filename).read().endswith("NEW"))
         handler1.emit(record)
         self.assertTrue(open(self.filename).read().endswith("aaaa"))
@@ -265,7 +266,7 @@ class LoggerTests(unittest.TestCase):
         logger.level = LevelsByName.DEBG
         logger.trace('hello')
         self.assertEqual(len(handler.records), 1)
-        
+
     def test_debug(self):
         from supervisor.loggers import LevelsByName
         handler = DummyHandler(LevelsByName.DEBG)
@@ -320,6 +321,30 @@ class LoggerTests(unittest.TestCase):
         logger.close()
         self.assertEqual(handler.closed, True)
 
+class SyslogHandlerTests(unittest.TestCase):
+    def setUp(self):
+        # mock syslog
+        self.orig_syslog = syslog.syslog
+        syslog.syslog = DummySysLog()
+
+    def tearDown(self):
+        syslog.syslog = self.orig_syslog
+
+    def _getTargetClass(self):
+        return __import__('supervisor.loggers').loggers.SyslogHandler
+
+    def _makeOne(self):
+        return self._getTargetClass()()
+
+    def test_write(self):
+        handler = self._makeOne()
+        handler.write('foo')
+        self.assertEqual(len(syslog.syslog), 1)
+        self.assertEqual(syslog.syslog[-1]['args'] == 'foo')
+        handler.write('bar')
+        self.assertEqual(len(syslog.syslog), 2)
+        self.assertEqual(syslog.syslog[-1]['args'] == 'bar')
+
 class DummyHandler:
     close = False
     def __init__(self, level):
@@ -330,10 +355,12 @@ class DummyHandler:
     def close(self):
         self.closed = True
 
+class DummySysLog(list):
+    def __call__(self, *args, **kwargs):
+        self.append(dict(args=args, kwargs=kwargs))
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
 
 if __name__ == '__main__':
     unittest.main(defaultTest='test_suite')
-
