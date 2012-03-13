@@ -13,6 +13,12 @@ import sys
 import time
 import traceback
 
+try:
+    import syslog
+except ImportError:
+    # only required when 'syslog' is specified as the log filename
+    pass
+
 class LevelsByName:
     CRIT = 50   # messages that probably require immediate user attention
     ERRO = 40   # messages that indicate a potentially ignorable error condition
@@ -106,7 +112,7 @@ class FileHandler(Handler):
 class StreamHandler(Handler):
     def __init__(self, strm=None):
         self.stream = strm
-        
+
     def remove(self):
         if hasattr(self.stream, 'clear'):
             self.stream.clear()
@@ -136,7 +142,7 @@ class BoundIO:
 
     def clear(self):
         self.buf = ''
-            
+
 class RotatingFileHandler(FileHandler):
 
     open_streams = {}
@@ -190,7 +196,7 @@ class RotatingFileHandler(FileHandler):
             Set open filehandle for filename defined on the
             RotatingFileHandler
             """
-            obj.open_streams[obj.baseFilename] = stream        
+            obj.open_streams[obj.baseFilename] = stream
 
     stream = _stream()
 
@@ -285,11 +291,11 @@ class Logger:
     def trace(self, msg, **kw):
         if LevelsByName.TRAC >= self.level:
             self.log(LevelsByName.TRAC, msg, **kw)
-    
+
     def debug(self, msg, **kw):
         if LevelsByName.DEBG >= self.level:
             self.log(LevelsByName.DEBG, msg, **kw)
-    
+
     def info(self, msg, **kw):
         if LevelsByName.INFO >= self.level:
             self.log(LevelsByName.INFO, msg, **kw)
@@ -318,19 +324,43 @@ class Logger:
     def getvalue(self):
         raise NotImplementedError
 
+class SyslogHandler(Handler):
+    def __init__(self):
+        assert 'syslog' in globals(), "Syslog module not present"
+
+    def close(self):
+        pass
+
+    def emit(self, record):
+        try:
+            params = record.asdict()
+            message = params['message']
+            for line in message.rstrip('\n').split('\n'):
+                params['message'] = line
+                msg = self.fmt % params
+                try:
+                    syslog.syslog(msg)
+                except UnicodeError:
+                    syslog.syslog(msg.encode("UTF-8"))
+        except:
+            self.handleError(record)
+
 def getLogger(filename, level, fmt, rotating=False, maxbytes=0, backups=0,
               stdout=False):
 
     handlers = []
 
     logger = Logger(level)
-    
+
     if filename is None:
         if not maxbytes:
             maxbytes = 1<<21 #2MB
         io = BoundIO(maxbytes)
         handlers.append(StreamHandler(io))
         logger.getvalue = io.getvalue
+
+    elif filename == 'syslog':
+        handlers.append(SyslogHandler())
 
     else:
         if rotating is False:

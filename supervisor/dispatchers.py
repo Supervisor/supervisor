@@ -4,7 +4,7 @@ from supervisor.medusa.asyncore_25 import compact_traceback
 from supervisor.events import notify
 from supervisor.events import EventRejectedEvent
 from supervisor.events import ProcessLogStderrEvent
-from supervisor.events import ProcessLogStdoutEvent 
+from supervisor.events import ProcessLogStdoutEvent
 from supervisor.states import EventListenerStates
 from supervisor import loggers
 
@@ -86,10 +86,13 @@ class POutputDispatcher(PDispatcher):
         if logfile:
             maxbytes = getattr(process.config, '%s_logfile_maxbytes' % channel)
             backups = getattr(process.config, '%s_logfile_backups' % channel)
+            fmt = '%(message)s'
+            if logfile == 'syslog':
+                fmt = ' '.join((process.config.name, fmt))
             self.mainlog = process.config.options.getLogger(
                 logfile,
                 loggers.LevelsByName.INFO,
-                '%(message)s',
+                fmt=fmt,
                 rotating=not not maxbytes, # optimization
                 maxbytes=maxbytes,
                 backups=backups)
@@ -144,13 +147,13 @@ class POutputDispatcher(PDispatcher):
             if self.channel == 'stdout':
                 if self.stdout_events_enabled:
                     notify(
-                        ProcessLogStdoutEvent(self.process, 
+                        ProcessLogStdoutEvent(self.process,
                             self.process.pid, data)
                     )
             else: # channel == stderr
                 if self.stderr_events_enabled:
                     notify(
-                        ProcessLogStderrEvent(self.process, 
+                        ProcessLogStderrEvent(self.process,
                             self.process.pid, data)
                     )
 
@@ -161,7 +164,7 @@ class POutputDispatcher(PDispatcher):
             self.output_buffer = ''
             self._log(data)
             return
-            
+
         if self.capturemode:
             token, tokenlen = self.endtoken_data
         else:
@@ -192,7 +195,7 @@ class POutputDispatcher(PDispatcher):
 
     def toggle_capturemode(self):
         self.capturemode = not self.capturemode
-    
+
         if self.capturelog is not None:
             if self.capturemode:
                 self.childlog = self.capturelog
@@ -204,7 +207,7 @@ class POutputDispatcher(PDispatcher):
                 procname = self.process.config.name
                 event = self.event_type(self.process, self.process.pid, data)
                 notify(event)
-                                        
+
                 msg = "%(procname)r %(channel)s emitted a comm event"
                 self.process.config.options.logger.debug(msg,
                                                          procname=procname,
@@ -216,7 +219,7 @@ class POutputDispatcher(PDispatcher):
 
     def writable(self):
         return False
-    
+
     def readable(self):
         if self.closed:
             return False
@@ -283,7 +286,7 @@ class PEventListenerDispatcher(PDispatcher):
 
     def writable(self):
         return False
-    
+
     def readable(self):
         if self.closed:
             return False
@@ -355,7 +358,7 @@ class PEventListenerDispatcher(PDispatcher):
             self.state_buffer = ''
             process.event = None
             return
-                
+
         elif state == EventListenerStates.BUSY:
             if self.resultlen is None:
                 # we haven't begun gathering result data yet
@@ -444,7 +447,7 @@ class PInputDispatcher(PDispatcher):
         sent = self.process.config.options.write(self.fd,
                                                  self.input_buffer)
         self.input_buffer = self.input_buffer[sent:]
-    
+
     def handle_write_event(self):
         if self.input_buffer:
             try:
@@ -457,9 +460,9 @@ class PInputDispatcher(PDispatcher):
                     raise
 
 ANSI_ESCAPE_BEGIN = '\x1b['
-ANSI_TERMINATORS = ('H', 'f', 'A', 'B', 'C', 'D', 'R', 's', 'u', 'J', 
-                    'K', 'h', 'l', 'p', 'm')    
-    
+ANSI_TERMINATORS = ('H', 'f', 'A', 'B', 'C', 'D', 'R', 's', 'u', 'J',
+                    'K', 'h', 'l', 'p', 'm')
+
 def stripEscapes(string):
     """
     Remove all ANSI color escapes from the given string.
