@@ -5,6 +5,8 @@ import shutil
 import os
 import syslog
 
+import mock
+
 from supervisor.tests.base import DummyStream
 
 class LevelTests(unittest.TestCase):
@@ -321,14 +323,22 @@ class LoggerTests(unittest.TestCase):
         logger.close()
         self.assertEqual(handler.closed, True)
 
-class SyslogHandlerTests(unittest.TestCase):
+class MockSysLog(mock.Mock):
+    def __call__(self, *args, **kwargs):
+        message = args[-1]
+        if sys.version_info < (3, 0) and isinstance(message, unicode):
+            # Python 2.x raises a UnicodeEncodeError when attempting to
+            #  transmit unicode characters that don't encode in the
+            #  default encoding.
+            message.encode()
+        super(MockSysLog, self).__call__(*args, **kwargs)
+
+class SyslogHandlerTests(HandlerTests, unittest.TestCase):
     def setUp(self):
-        # mock syslog
-        self.orig_syslog = syslog.syslog
-        syslog.syslog = DummySysLog()
+        pass
 
     def tearDown(self):
-        syslog.syslog = self.orig_syslog
+        pass
 
     def _getTargetClass(self):
         return __import__('supervisor.loggers').loggers.SyslogHandler
@@ -336,14 +346,22 @@ class SyslogHandlerTests(unittest.TestCase):
     def _makeOne(self):
         return self._getTargetClass()()
 
-    def test_write(self):
+    @mock.patch('syslog.syslog', MockSysLog())
+    def test_emit_ascii_noerror(self):
         handler = self._makeOne()
-        handler.write('foo')
-        self.assertEqual(len(syslog.syslog), 1)
-        self.assertEqual(syslog.syslog[-1]['args'] == 'foo')
-        handler.write('bar')
-        self.assertEqual(len(syslog.syslog), 2)
-        self.assertEqual(syslog.syslog[-1]['args'] == 'bar')
+        record = self._makeLogRecord('hello!')
+        handler.emit(record)
+        syslog.syslog.assert_called_with('hello!')
+
+    @mock.patch('syslog.syslog', MockSysLog())
+    def test_emit_unicode_noerror(self):
+        handler = self._makeOne()
+        record = self._makeLogRecord(u'fi\xed')
+        handler.emit(record)
+        if sys.version_info < (3, 0):
+            syslog.syslog.assert_called_with('fi\xc3\xad')
+        else:
+            syslog.syslog.assert_called_with(u'fi\xed')
 
 class DummyHandler:
     close = False
@@ -354,10 +372,6 @@ class DummyHandler:
         self.records.append(record)
     def close(self):
         self.closed = True
-
-class DummySysLog(list):
-    def __call__(self, *args, **kwargs):
-        self.append(dict(args=args, kwargs=kwargs))
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
