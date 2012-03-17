@@ -14,6 +14,9 @@ Next release
   because a list of warning messages would be appended but never cleared.
   Patch by Philip Zeyliger.
 
+- Added a new Syslog log handler.  Thanks to Denis Bilenko, Nathan L. Smith,
+  and Jason R. Coombs, who each contributed to the patch.
+
 3.0a12 (2011-12-06)
 -------------------
 
