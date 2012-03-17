@@ -1406,7 +1406,7 @@ class ClientOptions(Options):
         self.configroot = Dummy()
         self.configroot.supervisorctl = Dummy()
         self.configroot.supervisorctl.interactive = None
-        self.configroot.supervisorctl.prompt = None
+        self.configroot.supervisorctl.prompt = 'supervisor'
         self.configroot.supervisorctl.serverurl = None
         self.configroot.supervisorctl.username = None
         self.configroot.supervisorctl.password = None
@@ -1448,10 +1448,13 @@ class ClientOptions(Options):
             path = normalize_path(path)
             serverurl = 'unix://%s' % path
         section.serverurl = serverurl
-        section.prompt = config.getdefault('prompt', 'supervisor')
-        section.username = config.getdefault('username', None)
-        section.password = config.getdefault('password', None)
-        history_file = config.getdefault('history_file', None)
+
+        # The defaults used below are really set in __init__ (since
+        # section==self.configroot.supervisorctl)
+        section.prompt = config.getdefault('prompt', section.prompt)
+        section.username = config.getdefault('username', section.username)
+        section.password = config.getdefault('password', section.password)
+        history_file = config.getdefault('history_file', section.history_file)
 
         if history_file:
             history_file = normalize_path(history_file)
