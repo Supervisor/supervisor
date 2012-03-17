@@ -34,7 +34,7 @@ Sample Activity Log Output
    2007-09-08 14:43:23,990 INFO spawned: 'grower' with pid 27351
    2007-09-08 14:43:24,059 DEBG 'listener_00' stderr output:
     /Users/chrism/projects/supervisor/supervisor2/dev-sandbox/bin/python:
-    can't open file '/Users/chrism/projects/supervisor/supervisor2/src/supervisor/scripts/osx_eventgen_listener.py': 
+    can't open file '/Users/chrism/projects/supervisor/supervisor2/src/supervisor/scripts/osx_eventgen_listener.py':
     [Errno 2] No such file or directory
    2007-09-08 14:43:24,060 DEBG fd 7 closed, stopped monitoring <PEventListenerDispatcher at 19910168 for
     <Subprocess at 18892960 with name listener_00 in state STARTING> (stdout)>
@@ -64,26 +64,26 @@ shows up in activity log output lines.
 =================   ===========   ============================================
 Config File Value   Output Code   Description
 =================   ===========   ============================================
-critical            CRIT          Messages that indicate a condition that 
-                                  requires immediate user attention, a 
-                                  supervisor state change, or an error in 
+critical            CRIT          Messages that indicate a condition that
+                                  requires immediate user attention, a
+                                  supervisor state change, or an error in
                                   supervisor itself.
-error               ERRO          Messages that indicate a potentially 
-                                  ignorable error condition (e.g. unable to 
+error               ERRO          Messages that indicate a potentially
+                                  ignorable error condition (e.g. unable to
                                   clear a log directory).
-warn                WARN          Messages that indicate an anomalous 
+warn                WARN          Messages that indicate an anomalous
                                   condition which isn't an error.
-info                INFO          Normal informational output.  This is the 
-                                  default log level if none is explicitly 
+info                INFO          Normal informational output.  This is the
+                                  default log level if none is explicitly
                                   configured.
-debug               DEBG          Messages useful for users trying to debug 
-                                  process configuration and communications 
-                                  behavior (process output, listener state 
+debug               DEBG          Messages useful for users trying to debug
+                                  process configuration and communications
+                                  behavior (process output, listener state
                                   changes, event notifications).
-trace               TRAC          Messages useful for developers trying to 
-                                  debug supervisor plugins, and information 
+trace               TRAC          Messages useful for developers trying to
+                                  debug supervisor plugins, and information
                                   about HTTP and RPC requests and responses.
-blather             BLAT          Messages useful for developers trying to 
+blather             BLAT          Messages useful for developers trying to
                                   debug supervisor itself.
 =================   ===========   ============================================
 
@@ -137,6 +137,10 @@ The configuration keys that influence child process logging in
 ``stdout_logfile_backups``, ``stdout_capture_maxbytes``,
 ``stderr_logfile``, ``stderr_logfile_maxbytes``,
 ``stderr_logfile_backups`` and ``stderr_capture_maxbytes``.
+
+One may set ``stdout_logfile`` or ``stderr_logfile`` to the
+special string "syslog". In this case, logs will be routed to the
+syslog service instead of being saved to files.
 
 ``[eventlistener:x]`` sections may not specify
 ``stdout_capture_maxbytes`` or ``stderr_capture_maxbytes``,
