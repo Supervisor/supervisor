@@ -351,21 +351,20 @@ def gid_for_uid(uid):
 
 def existing_directory(v):
     nv = v % {'here': here}
-    nv = os.path.expanduser(nv)
+    nv = os.path.expandvars(os.path.expanduser(nv))
     if os.path.isdir(nv):
         return nv
     raise ValueError('%s is not an existing directory' % v)
 
 
 def existing_dirpath(v):
-    import os
     nv = v % {'here': here}
-    nv = os.path.expanduser(nv)
-    dir = os.path.dirname(nv)
-    if not dir:
+    nv = os.path.expandvars(os.path.expanduser(nv))
+    dir_ = os.path.dirname(nv)
+    if not dir_:
         # relative pathname with no directory component
         return nv
-    if os.path.isdir(dir):
+    if os.path.isdir(dir_):
         return nv
     raise ValueError('The directory named as part of the path %s '
                        'does not exist.' % v)
