@@ -6,10 +6,14 @@
 *.swp
 .DS_Store
 .coverage
+.tox/
 build/
 docs/.build/
 dist/
-.tox/
+bin/
+include/
+lib/
+local/
+tmp/
 nosetests.xml
 supervisor/coverage.xml
-tmp/
