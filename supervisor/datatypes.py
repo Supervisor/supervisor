@@ -1,8 +1,12 @@
+import grp
 import os
-import re
+import pwd
 import sys
-import socket
+import signal
 import shlex
+import socket
+import urlparse
+
 from supervisor.loggers import getLevelNumByDescription
 
 # I dont know why we bother, this doesn't run on Windows, but just
@@ -14,9 +18,11 @@ else:
 
 here = None
 
+
 def set_here(v):
     global here
     here = v
+
 
 def integer(value):
     try:
@@ -26,8 +32,10 @@ def integer(value):
     except OverflowError:
         return long(value)
 
+
 TRUTHY_STRINGS = ('yes', 'true', 'on', '1')
 FALSY_STRINGS  = ('no', 'false', 'off', '0')
+
 
 def boolean(s):
     """Convert a string value to a boolean value."""
@@ -39,6 +47,7 @@ def boolean(s):
     else:
         raise ValueError("not a valid boolean value: " + repr(s))
 
+
 def list_of_strings(arg):
     if not arg:
         return []
@@ -46,6 +55,7 @@ def list_of_strings(arg):
         return [x.strip() for x in arg.split(',')]
     except:
         raise ValueError("not a valid list of strings: " + repr(arg))
+
 
 def list_of_ints(arg):
     if not arg:
@@ -56,6 +66,7 @@ def list_of_ints(arg):
         except:
             raise ValueError("not a valid list of ints: " + repr(arg))
 
+
 def list_of_exitcodes(arg):
     try:
         vals = list_of_ints(arg)
@@ -65,6 +76,7 @@ def list_of_exitcodes(arg):
         return vals
     except:
         raise ValueError("not a valid list of exit codes: " + repr(arg))
+
 
 def dict_of_key_value_pairs(arg):
     """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'}
@@ -81,16 +93,18 @@ def dict_of_key_value_pairs(arg):
     while i in range(0, tokens_len):
         k_eq_v = tokens[i:i+3]
         if len(k_eq_v) != 3:
-            raise ValueError, "Unexpected end of key/value pairs"
+            raise ValueError("Unexpected end of key/value pairs")
         D[k_eq_v[0]] = k_eq_v[2].strip('\'"')
         i += 4
     return D
 
-class Automatic:
-    pass
+
+Automatic = object()
+
 
 LOGFILE_NONES = ('none', 'off', None)
 LOGFILE_AUTOS = (Automatic, 'auto')
+
 
 def logfile_name(val):
     if hasattr(val, 'lower'):
@@ -105,7 +119,8 @@ def logfile_name(val):
     else:
         return existing_dirpath(val)
 
-class RangeCheckedConversion:
+
+class RangeCheckedConversion(object):
     """Conversion helper that range checks another conversion."""
 
     def __init__(self, conversion, min=None, max=None):
@@ -116,14 +131,13 @@ class RangeCheckedConversion:
     def __call__(self, value):
         v = self._conversion(value)
         if self._min is not None and v < self._min:
-            raise ValueError("%s is below lower bound (%s)"
-                             % (`v`, `self._min`))
+            raise ValueError("%r is below lower bound (%r)" % (v, self._min))
         if self._max is not None and v > self._max:
-            raise ValueError("%s is above upper bound (%s)"
-                             % (`v`, `self._max`))
+            raise ValueError("%r is above upper bound (%r)" % (v, self._max))
         return v
 
-port_number = RangeCheckedConversion(integer, min=1, max=0xffff).__call__
+port_number = RangeCheckedConversion(integer, min=1, max=0xffff)
+
 
 def inet_address(s):
     # returns (host, port) tuple
@@ -144,7 +158,8 @@ def inet_address(s):
         host = DEFAULT_HOST
     return host, port
 
-class SocketAddress:
+
+class SocketAddress(object):
     def __init__(self, s):
         # returns (family, address) tuple
         if "/" in s or s.find(os.sep) >= 0 or ":" not in s:
@@ -154,16 +169,15 @@ class SocketAddress:
             self.family = socket.AF_INET
             self.address = inet_address(s)
 
-class SocketConfig:
+
+class SocketConfig(object):
     """ Abstract base class which provides a uniform abstraction
     for TCP vs Unix sockets """
     url = '' # socket url
     addr = None #socket addr
 
     def __repr__(self):
-        return '<%s at %s for %s>' % (self.__class__,
-                                      id(self),
-                                      self.url)
+        return '<%s at %s for %s>' % (type(self).__name__, id(self), self.url)
 
     def __str__(self):
         return str(self.url)
@@ -186,6 +200,7 @@ class SocketConfig:
     def create_and_bind(self): # pragma: no cover
         raise NotImplementedError
 
+
 class InetStreamSocketConfig(SocketConfig):
     """ TCP socket config helper """
 
@@ -205,6 +220,7 @@ class InetStreamSocketConfig(SocketConfig):
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(self.addr())
         return sock
+
 
 class UnixStreamSocketConfig(SocketConfig):
     """ Unix domain socket config helper """
@@ -281,7 +297,8 @@ def colon_separated_user_group(arg):
             return (uid, gid)
         return result
     except:
-        raise ValueError, 'Invalid user.group definition %s' % arg
+        raise ValueError('Invalid user.group definition %s' % arg)
+
 
 def octal_type(arg):
     try:
@@ -289,77 +306,79 @@ def octal_type(arg):
     except TypeError:
         raise ValueError('%s is not convertable to an octal type' % arg)
 
+
 def name_to_uid(name):
     if name is None:
         return None
 
-    import pwd
     try:
-	uid = int(name)
+        uid = int(name)
     except ValueError:
-	try:
-	    pwrec = pwd.getpwnam(name)
-	except KeyError:
+        try:
+            pwrec = pwd.getpwnam(name)
+        except KeyError:
             return None
-	uid = pwrec[2]
+        uid = pwrec[2]
     else:
-	try:
-	    pwrec = pwd.getpwuid(uid)
-	except KeyError:
+        try:
+            pwrec = pwd.getpwuid(uid)
+        except KeyError:
             return None
     return uid
 
+
 def name_to_gid(name):
-    import grp
     try:
-	gid = int(name)
+        gid = int(name)
     except ValueError:
-	try:
-	    pwrec = grp.getgrnam(name)
-	except KeyError:
+        try:
+            pwrec = grp.getgrnam(name)
+        except KeyError:
             return None
-	gid = pwrec[2]
+        gid = pwrec[2]
     else:
-	try:
-	    pwrec = grp.getgrgid(gid)
-	except KeyError:
+        try:
+            pwrec = grp.getgrgid(gid)
+        except KeyError:
             return None
     return gid
 
+
 def gid_for_uid(uid):
-    import pwd
     pwrec = pwd.getpwuid(uid)
     return pwrec[3]
 
+
 def existing_directory(v):
-    import os
-    nv = v % {'here':here}
-    nv = os.path.expanduser(nv)
+    nv = v % {'here': here}
+    nv = os.path.expandvars(os.path.expanduser(nv))
     if os.path.isdir(nv):
         return nv
     raise ValueError('%s is not an existing directory' % v)
 
+
 def existing_dirpath(v):
-    import os
-    nv = v % {'here':here}
-    nv = os.path.expanduser(nv)
-    dir = os.path.dirname(nv)
-    if not dir:
+    nv = v % {'here': here}
+    nv = os.path.expandvars(os.path.expanduser(nv))
+    dir_ = os.path.dirname(nv)
+    if not dir_:
         # relative pathname with no directory component
         return nv
-    if os.path.isdir(dir):
+    if os.path.isdir(dir_):
         return nv
-    raise ValueError, ('The directory named as part of the path %s '
+    raise ValueError('The directory named as part of the path %s '
                        'does not exist.' % v)
+
 
 def logging_level(value):
     s = str(value).lower()
-    level = getLevelNumByDescription(value)
+    level = getLevelNumByDescription(s)
     if level is None:
         raise ValueError('bad logging level name %r' % value)
     return level
 
-class SuffixMultiplier:
+
+class SuffixMultiplier(object):
     # d is a dictionary of suffixes to integer multipliers.  If no suffixes
     # match, default is the multiplier.  Matches are case insensitive.  Return
     # values are in the fundamental unit.
@@ -383,10 +402,10 @@ class SuffixMultiplier:
 
 byte_size = SuffixMultiplier({'kb': 1024,
                               'mb': 1024*1024,
-                              'gb': 1024*1024*1024L,})
+                              'gb': 1024*1024*1024, })
+
 
 def url(value):
-    import urlparse
     # earlier Python 2.6 urlparse (2.6.4 and under) can't parse unix:// URLs,
     # later ones can but we need to straddle
     uri = value.replace('unix://', 'http://', 1).strip()
@@ -395,8 +414,8 @@ def url(value):
         return value
     raise ValueError("value %s is not a URL" % value)
 
+
 def signal_number(value):
-    import signal
     result = None
     try:
         result = int(value)
@@ -408,18 +427,17 @@ def signal_number(value):
     except (ValueError, TypeError):
         raise ValueError('value %s is not a signal name/number' % value)
 
-class RestartWhenExitUnexpected:
-    pass
 
-class RestartUnconditionally:
-    pass
+RestartWhenExitUnexpected = object()
+RestartUnconditionally = object()
+
 
 def auto_restart(value):
     value = str(value.lower())
-    computed_value  = value
-    if value in ('true', '1', 'on', 'yes'):
+    computed_value = value
+    if value in TRUTHY_STRINGS:
         computed_value = RestartUnconditionally
-    elif value in ('false', '0', 'off', 'no'):
+    elif value in FALSY_STRINGS:
         computed_value = False
     elif value == 'unexpected':
         computed_value = RestartWhenExitUnexpected
@@ -428,8 +446,9 @@ def auto_restart(value):
         raise ValueError("invalid 'autorestart' value %r" % value)
     return computed_value
 
+
 def profile_options(value):
-    options = [x.lower() for x in list_of_strings(value) ]
+    options = [x.lower() for x in list_of_strings(value)]
     sort_options = []
     callers = False
     for thing in options:

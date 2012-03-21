@@ -54,13 +54,20 @@ mydir = os.path.abspath(os.path.dirname(__file__))
 version_txt = os.path.join(mydir, 'version.txt')
 VERSION = open(version_txt).read().strip()
 
+
 def normalize_path(v):
-    return os.path.normpath(os.path.abspath(os.path.expanduser(v)))
+    return os.path.normpath(
+            os.path.abspath(
+                os.path.expandvars(
+                    os.path.expanduser(v)
+                )))
+
 
 class Dummy:
     pass
 
-class Options:
+
+class Options(object):
     stderr = sys.stderr
     stdout = sys.stdout
     exit = sys.exit
@@ -772,8 +779,8 @@ class ServerOptions(Options):
 
         command = get(section, 'command', None)
         if command is None:
-            raise ValueError, (
-                'program section %s does not specify a command' % section)
+            raise ValueError(
+                    'program section %s does not specify a command' % section)
 
         if numprocs > 1:
             if process_name.find('%(process_num)') == -1:
@@ -795,7 +802,7 @@ class ServerOptions(Options):
                 expand(environment_str, expansions, 'environment'))
 
             if directory:
-                directory = expand(directory, expansions, 'directory')
+                directory = expand_directory(directory, expansions, 'directory')
 
             logfiles = {}
 
@@ -1211,7 +1218,6 @@ class ServerOptions(Options):
         msgs = []
 
         for limit in limits:
-
             min = limit['min']
             res = limit['resource']
             msg = limit['msg']
@@ -1235,7 +1241,7 @@ class ServerOptions(Options):
 
     def make_logger(self, critical_messages, warn_messages, info_messages):
         # must be called after realize() and after supervisor does setuid()
-        format =  '%(asctime)s %(levelname)s %(message)s\n'
+        format = '%(asctime)s %(levelname)s %(message)s\n'
         self.logger = loggers.getLogger(
             self.logfile,
             self.loglevel,
@@ -1243,7 +1249,7 @@ class ServerOptions(Options):
             rotating=True,
             maxbytes=self.logfile_maxbytes,
             backups=self.logfile_backups,
-            stdout = self.nodaemon,
+            stdout=self.nodaemon,
             )
         for msg in critical_messages:
             self.logger.critical(msg)
@@ -1873,6 +1879,9 @@ class SignalReceiver:
         return sig
 
 # miscellaneous utility functions
+
+def expand_directory(s, expansions, name):
+    return expand(os.path.expandvars(os.path.expanduser(s)), expansions, name)
 
 def expand(s, expansions, name):
     try:
