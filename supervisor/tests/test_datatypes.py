@@ -217,7 +217,7 @@ class InetStreamSocketConfigTests(unittest.TestCase):
         conf = self._makeOne('127.0.0.1', 8675)
         s = repr(conf)
         self.assertTrue(s.startswith(
-            '<supervisor.datatypes.InetStreamSocketConfig at'), s)
+            '<InetStreamSocketConfig at'), s)
         self.assertTrue(s.endswith('for tcp://127.0.0.1:8675>'), s)
 
     def test_addr(self):
@@ -275,7 +275,7 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
         conf = self._makeOne('/tmp/foo.sock')
         s = repr(conf)
         self.assertTrue(s.startswith(
-            '<supervisor.datatypes.UnixStreamSocketConfig at'), s)
+            '<UnixStreamSocketConfig at'), s)
         self.assertTrue(s.endswith('for unix:///tmp/foo.sock>'), s)
 
     def test_get_addr(self):
