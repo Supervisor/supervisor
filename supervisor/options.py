@@ -751,7 +751,7 @@ class ServerOptions(Options):
         stopsignal = signal_number(get(section, 'stopsignal', 'TERM'))
         stopwaitsecs = integer(get(section, 'stopwaitsecs', 10))
         stopasgroup = boolean(get(section, 'stopasgroup', 'false'))
-        killasgroup = boolean(get(section, 'killasgroup', 'false'))
+        killasgroup = boolean(get(section, 'killasgroup', stopasgroup))
         exitcodes = list_of_exitcodes(get(section, 'exitcodes', '0,2'))
         redirect_stderr = boolean(get(section, 'redirect_stderr','false'))
         numprocs = integer(get(section, 'numprocs', 1))
@@ -783,6 +783,10 @@ class ServerOptions(Options):
                 raise ValueError(
                     '%(process_num) must be present within process_name when '
                     'numprocs > 1')
+                    
+        if stopasgroup and not killasgroup:
+            raise ValueError("Cannot set stopasgroup=true and killasgroup=false")
+
         host_node_name = platform.node()
         for process_num in range(numprocs_start, numprocs + numprocs_start):
             expansions = {'here':self.here,

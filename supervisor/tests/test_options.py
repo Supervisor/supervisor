@@ -634,7 +634,6 @@ class ServerOptionsTests(unittest.TestCase):
         stdout_events_enabled = true
         stopsignal = KILL
         stopwaitsecs = 100
-        stopasgroup = true
         killasgroup = true
         exitcodes = 1,4
         redirect_stderr = false
@@ -660,7 +659,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(pconfig.stdout_logfile_maxbytes, 104857600)
         self.assertEqual(pconfig.stdout_events_enabled, True)
         self.assertEqual(pconfig.stopsignal, signal.SIGKILL)
-        self.assertEqual(pconfig.stopasgroup, True)
+        self.assertEqual(pconfig.stopasgroup, False)
         self.assertEqual(pconfig.killasgroup, True)
         self.assertEqual(pconfig.stopwaitsecs, 100)
         self.assertEqual(pconfig.exitcodes, [1,4])
@@ -739,6 +738,38 @@ class ServerOptionsTests(unittest.TestCase):
         [program:foo]
         command = /bin/cat
         process_name = %(program_name)
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        self.assertRaises(ValueError, instance.processes_from_section,
+                          config, 'program:foo', None)
+
+    def test_processes_from_section_stopasgroup_implies_killasgroup(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/cat
+        process_name = %(program_name)s
+        stopasgroup = true
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(len(pconfigs), 1)
+        pconfig = pconfigs[0]
+        self.assertEqual(pconfig.stopasgroup, True)
+        self.assertEqual(pconfig.killasgroup, True)
+    
+    def test_processes_from_section_killasgroup_mismatch_w_stopasgroup(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/cat
+        process_name = %(program_name)s
+        stopasgroup = true
+        killasgroup = false
         """)
         from supervisor.options import UnhosedConfigParser
         config = UnhosedConfigParser()
