@@ -483,7 +483,7 @@ class DummyPConfig:
                  stderr_events_enabled=False,
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  redirect_stderr=False,
-                 stopsignal=None, stopwaitsecs=10, killasgroup=False,
+                 stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
                  exitcodes=(0,2), environment=None, serverurl=None):
         self.options = options
         self.name = name
@@ -510,6 +510,7 @@ class DummyPConfig:
             stopsignal = signal.SIGTERM
         self.stopsignal = stopsignal
         self.stopwaitsecs = stopwaitsecs
+        self.stopasgroup = stopasgroup
         self.killasgroup = killasgroup
         self.exitcodes = exitcodes
         self.environment = environment

@@ -1,6 +1,12 @@
 Next release
 ------------
 
+- Add a boolean program option ``stopasgroup``, defaulting to false.
+  When true, the flag causes supervisor to send the stop signal to the
+  whole process group.  This is useful for programs, such as Flask in debug
+  mode, that do not propagate stop signals to their children, leaving them
+  orphaned.
+
 - Python 2.3 is no longer supported.  The last version that supported Python
   2.3 is Supervisor 3.0a12.
 

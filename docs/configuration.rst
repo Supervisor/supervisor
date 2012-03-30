@@ -713,6 +713,19 @@ where specified.
 
   *Introduced*: 3.0
 
+``stopasgroup``
+
+  If true, the flag causes supervisor to send the stop signal to the
+  whole process group and implies ``killasgroup``=true.  This is useful 
+  for programs, such as Flask in debug mode, that do not propagate
+  stop signals to their children, leaving them orphaned.
+
+  *Default*: false
+
+  *Required*:  No.
+
+  *Introduced*: 3.0a12
+
 ``killasgroup``
 
   If true, when resorting to send SIGKILL to the program to terminate

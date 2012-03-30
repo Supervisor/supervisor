@@ -218,6 +218,7 @@ class ServerOptionsTests(unittest.TestCase):
         command=/bin/cat
         autorestart=true
         exitcodes=0,1,127
+        stopasgroup=true
         killasgroup=true
 
         [program:cat4]
@@ -276,6 +277,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.stdout_logfile, '/tmp/cat.log')
         self.assertEqual(proc1.stopsignal, signal.SIGKILL)
         self.assertEqual(proc1.stopwaitsecs, 5)
+        self.assertEqual(proc1.stopasgroup, False)
         self.assertEqual(proc1.killasgroup, False)
         self.assertEqual(proc1.stdout_logfile_maxbytes,
                          datatypes.byte_size('50MB'))
@@ -299,6 +301,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc2.uid, None)
         self.assertEqual(proc2.stdout_logfile, '/tmp/cat2.log')
         self.assertEqual(proc2.stopsignal, signal.SIGTERM)
+        self.assertEqual(proc2.stopasgroup, False)
         self.assertEqual(proc2.killasgroup, False)
         self.assertEqual(proc2.stdout_logfile_maxbytes, 1024)
         self.assertEqual(proc2.stdout_logfile_backups, 2)
@@ -323,6 +326,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc3.stdout_logfile_backups, 10)
         self.assertEqual(proc3.exitcodes, [0,1,127])
         self.assertEqual(proc3.stopsignal, signal.SIGTERM)
+        self.assertEqual(proc3.stopasgroup, True)
         self.assertEqual(proc3.killasgroup, True)
 
         cat4 = options.process_group_configs[3]
@@ -344,6 +348,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc4_a.stdout_logfile_backups, 10)
         self.assertEqual(proc4_a.exitcodes, [0,2])
         self.assertEqual(proc4_a.stopsignal, signal.SIGTERM)
+        self.assertEqual(proc4_a.stopasgroup, False)
         self.assertEqual(proc4_a.killasgroup, False)
 
         proc4_b = cat4.process_configs[1]
@@ -360,6 +365,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc4_b.stdout_logfile_backups, 10)
         self.assertEqual(proc4_b.exitcodes, [0,2])
         self.assertEqual(proc4_b.stopsignal, signal.SIGTERM)
+        self.assertEqual(proc4_b.stopasgroup, False)
         self.assertEqual(proc4_b.killasgroup, False)
 
         here = os.path.abspath(os.getcwd())
@@ -628,6 +634,7 @@ class ServerOptionsTests(unittest.TestCase):
         stdout_events_enabled = true
         stopsignal = KILL
         stopwaitsecs = 100
+        stopasgroup = true
         killasgroup = true
         exitcodes = 1,4
         redirect_stderr = false
@@ -653,6 +660,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(pconfig.stdout_logfile_maxbytes, 104857600)
         self.assertEqual(pconfig.stdout_events_enabled, True)
         self.assertEqual(pconfig.stopsignal, signal.SIGKILL)
+        self.assertEqual(pconfig.stopasgroup, True)
         self.assertEqual(pconfig.killasgroup, True)
         self.assertEqual(pconfig.stopwaitsecs, 100)
         self.assertEqual(pconfig.exitcodes, [1,4])
@@ -1341,7 +1349,7 @@ class TestProcessConfig(unittest.TestCase):
                      'stderr_logfile', 'stderr_capture_maxbytes',
                      'stderr_events_enabled',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
-                     'stopsignal', 'stopwaitsecs', 'killasgroup', 'exitcodes',
+                     'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup', 'exitcodes',
                      'redirect_stderr', 'environment'):
             defaults[name] = name
         defaults.update(kw)
@@ -1415,7 +1423,7 @@ class FastCGIProcessConfigTest(unittest.TestCase):
                      'stderr_logfile', 'stderr_capture_maxbytes',
                      'stderr_events_enabled',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
-                     'stopsignal', 'stopwaitsecs', 'killasgroup', 'exitcodes',
+                     'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup', 'exitcodes',
                      'redirect_stderr', 'environment'):
             defaults[name] = name
         defaults.update(kw)
