@@ -417,9 +417,9 @@ class RestartUnconditionally:
 def auto_restart(value):
     value = str(value.lower())
     computed_value  = value
-    if value in ('true', '1', 'on', 'yes'):
+    if value in TRUTHY_STRINGS:
         computed_value = RestartUnconditionally
-    elif value in ('false', '0', 'off', 'no'):
+    elif value in FALSY_STRINGS:
         computed_value = False
     elif value == 'unexpected':
         computed_value = RestartWhenExitUnexpected
