@@ -351,7 +351,12 @@ class Subprocess:
             options.logger.debug(msg)
             return msg
 
-        killasgroup = self.config.killasgroup and sig == signal.SIGKILL
+        #If we're in the stopping state, then we've already sent the stop
+        #signal and this is the kill signal
+        if self.state == ProcessStates.STOPPING:
+            killasgroup = self.config.killasgroup
+        else:
+            killasgroup = self.config.stopasgroup
 
         as_group = ""
         if killasgroup:
