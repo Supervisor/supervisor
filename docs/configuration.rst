@@ -724,7 +724,7 @@ where specified.
 
   *Required*:  No.
 
-  *Introduced*: 3.0a12
+  *Introduced*: 3.0a13
 
 ``killasgroup``
 
