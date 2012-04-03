@@ -72,9 +72,6 @@ dist = setup(
     extras_require = {'iterparse':['cElementTree >= 1.0.2']},
     tests_require = requires + ['mock >= 0.5.0'],
     include_package_data = True,
-    data_files = [
-        ('supervisor', ['supervisor/version.txt'])
-    ],
     zip_safe = False,
     namespace_packages = ['supervisor'],
     test_suite = "supervisor.tests",
