@@ -1,6 +1,15 @@
 Next release
 ------------
 
+- When supervisord starts up as root, if the ``-c`` flag was not provided, a
+  warning is now emitted to the console.  Rationale: supervisord looks in the
+  current working directory for a ``supervisord.conf`` file; someone might
+  trick the root user into starting supervisord while cd'ed into a directory
+  that has a rogue ``supervisord.conf``.
+
+- A warning was added to the documentation about the security implications of
+  starting supervisord without the ``-c`` flag.
+
 - Add a boolean program option ``stopasgroup``, defaulting to false.
   When true, the flag causes supervisor to send the stop signal to the
   whole process group.  This is useful for programs, such as Flask in debug

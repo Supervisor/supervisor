@@ -48,6 +48,17 @@ You may start the :command:`supervisord` executable in the foreground
 by passing the ``-n`` flag on its command line.  This is useful to
 debug startup problems.
 
+.. warning::
+
+   When :program:`supervisord` starts up, it will search for its
+   configuration file in default locations *including the current working
+   directory*.  If you are security-conscious you will probably want to
+   specify a "-c" argument after the :program:`supervisord` command
+   specifying an absolute path to a configuration file to ensure that someone
+   doesn't trick you into running supervisor from within a directory that
+   contains a rogue ``supervisord.conf`` file.  A warning is emitted when
+   supervisor is started as root without this ``-c`` argument.
+
 To change the set of programs controlled by :program:`supervisord`,
 edit the :file:`supervisord.conf` file and ``kill -HUP`` or otherwise
 restart the :program:`supervisord` process.  This file has several
