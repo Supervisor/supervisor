@@ -214,7 +214,7 @@ class Supervisor:
                 if dispatcher.writable():
                     self.poller.register_writable(fd)
 
-            r, w = self.poller.poll(timeout * 1000)
+            r, w = self.poller.poll(timeout)
 
             for fd in r:
                 if combined_map.has_key(fd):
