@@ -387,6 +387,7 @@ class deferring_http_channel(http_server.http_channel):
 
                 elif data:
                     self.ac_out_buffer = self.ac_out_buffer + data
+                    self.delay = False
                     return
                 else:
                     self.producer_fifo.pop()
