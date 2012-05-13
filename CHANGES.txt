@@ -1,6 +1,9 @@
 Next release
 ------------
 
+- Fixed a bug in the HTTP server code that could cause unnecessary delays
+  when sending large responses.  Patch by Philip Zeyliger.
+
 - When supervisord starts up as root, if the ``-c`` flag was not provided, a
   warning is now emitted to the console.  Rationale: supervisord looks in the
   current working directory for a ``supervisord.conf`` file; someone might
