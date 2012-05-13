@@ -264,7 +264,7 @@ class deferring_http_request(http_server.http_request):
         # (those that don't start with 'HTTP_')
         header2env= {'content-length'    : 'CONTENT_LENGTH',
                      'content-type'      : 'CONTENT_TYPE',
-                     'connection'        : 'CONNECTION_TYPE'} 
+                     'connection'        : 'CONNECTION_TYPE'}
 
         workdir = os.getcwd()
         (path, params, query, fragment) = self.split_uri()
@@ -341,10 +341,10 @@ class deferring_http_request(http_server.http_request):
 
 class deferring_http_channel(http_server.http_channel):
 
-    # use a 4906-byte buffer size instead of the default 65536-byte buffer in
+    # use a 4096-byte buffer size instead of the default 65536-byte buffer in
     # order to spew tail -f output faster (speculative)
     ac_out_buffer_size = 4096
-    
+
     delay = False
     writable_check = time.time()
 
@@ -493,7 +493,7 @@ class supervisor_http_server(http_server.http_server):
 
         sock.setblocking(0)
         self.set_reuse_addr()
-        
+
     def postbind(self):
         from supervisor.medusa.counter import counter
         from supervisor.medusa.http_server import VERSION_STRING
@@ -589,7 +589,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
                     if used:
                         # cooperate with 'openhttpserver' in supervisord
                         raise socket.error(errno.EADDRINUSE)
-                        
+
                     # Stale socket -- delete, sleep, and try again.
                     msg = "Unlinking stale socket %s\n" % socketname
                     sys.stderr.write(msg)
@@ -681,7 +681,7 @@ class logtail_handler:
 
     def match(self, request):
         return request.uri.startswith(self.path)
-        
+
     def handle_request(self, request):
         if request.command != 'GET':
             request.error (400) # bad request
@@ -866,4 +866,4 @@ class supervisor_auth_handler(auth_handler):
         auth_handler.__init__(self, dict, handler, realm)
         # override the authorizer with one that knows about SHA hashes too
         self.authorizer = encrypted_dictionary_authorizer(dict)
-        
+
