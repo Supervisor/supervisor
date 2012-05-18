@@ -366,6 +366,15 @@ class Subprocess:
         """
         now = time.time()
         options = self.config.options
+
+        # Properly stop processes in BACKOFF state.
+        if self.state == ProcessStates.BACKOFF:
+            msg = ("Attempted to kill %s, which is in BACKOFF state." %
+                   (self.config.name))
+            options.logger.debug(msg)
+            self.change_state(ProcessStates.STOPPED)
+            return None
+
         if not self.pid:
             msg = ("attempted to kill %s with sig %s but it wasn't running" %
                    (self.config.name, signame(sig)))
@@ -760,7 +769,7 @@ class EventListenerPool(ProcessGroupBase):
     def _acceptEvent(self, event, head=False):
         # events are required to be instances
         # this has a side effect to fail with an attribute error on 'old style' classes
-        event_type = event.__class__ 
+        event_type = event.__class__
         if not hasattr(event, 'serial'):
             event.serial = new_serial(GlobalSerial)
         if not hasattr(event, 'pool_serials'):

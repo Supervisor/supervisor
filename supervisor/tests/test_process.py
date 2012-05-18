@@ -754,6 +754,22 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.kills[11], signal.SIGKILL)
         self.assertEqual(L, []) # no event because we didn't change state
 
+    def test_kill_from_backoff(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        L = []
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        events.subscribe(events.Event, L.append)
+        instance.state = ProcessStates.BACKOFF
+        instance.kill(signal.SIGKILL)
+        self.assertEqual(options.logger.data[0],
+                         'Attempted to kill test, which is in BACKOFF state.')
+        self.assertEqual(instance.killing, 0)
+        event = L[0]
+        self.assertEqual(event.__class__, events.ProcessStateStoppedEvent)
+
     def test_kill_from_stopping_w_killasgroup(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test', killasgroup=True)
