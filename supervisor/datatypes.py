@@ -78,7 +78,7 @@ def dict_of_key_value_pairs(arg):
 
     D = {}
     i = 0
-    while i in range(0, tokens_len):
+    while i < tokens_len:
         k_eq_v = tokens[i:i+3]
         if len(k_eq_v) != 3:
             raise ValueError, "Unexpected end of key/value pairs"
