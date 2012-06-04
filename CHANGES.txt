@@ -1,6 +1,9 @@
 Next release
 ------------
 
+- Fixed a bug where parsing ``environment=`` did not verify that key/value
+  pairs were correctly separated.  Patch by Martijn Pieters.
+
 - Fixed a bug in the HTTP server code that could cause unnecessary delays
   when sending large responses.  Patch by Philip Zeyliger.
 

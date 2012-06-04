@@ -138,6 +138,11 @@ class DatatypesTest(unittest.TestCase):
         self.assertRaises(ValueError,
                           datatypes.dict_of_key_value_pairs, 'foo=bar,baz=')
 
+    def test_dict_of_key_value_pairs_raises_when_comma_is_missing(self):
+        kvp = 'KEY1=no-comma KEY2=ends-with-comma,'
+        self.assertRaises(ValueError,
+                          datatypes.dict_of_key_value_pairs, kvp)
+
     def test_logfile_name_returns_none_for_none_values(self):
         for thing in datatypes.LOGFILE_NONES:
             actual = datatypes.logfile_name(thing)
