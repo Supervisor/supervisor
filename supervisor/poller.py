@@ -28,14 +28,13 @@ class SelectPoller(BasePoller):
 
     def initialize(self):
         self._select = select
-        self.readable = []
-        self.writable = []
+        self._init_fdsets()
 
     def register_readable(self, fd):
-        self.readable.append(fd)
+        self.readable.add(fd)
 
     def register_writable(self, fd):
-        self.writable.append(fd)
+        self.writable.add(fd)
 
     def unregister(self, fd):
         if fd in self.readable:
@@ -44,8 +43,7 @@ class SelectPoller(BasePoller):
             self.writable.remove(fd)
 
     def unregister_all(self):
-        self.writable = []
-        self.readable = []
+        self._init_fdsets()
 
     def poll(self, timeout):
         try:
@@ -60,6 +58,10 @@ class SelectPoller(BasePoller):
                 return [], []
             raise
         return r, w
+
+    def _init_fdsets(self):
+        self.readable = set()
+        self.writable = set()
 
 class PollPoller(BasePoller):
 
@@ -137,7 +139,7 @@ class KQueuePoller(BasePoller):
     def _kqueue_control(self, fd, kevent):
         try:
             self._kqueue.control([kevent], 0)
-        except OSError as error:
+        except OSError, error:
             if error.errno == errno.EBADF:
                 self.options.logger.blather('EBADF encountered in kqueue. '
                                             'Invalid file descriptor %s' % fd)

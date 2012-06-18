@@ -21,13 +21,13 @@ class SelectPollerTests(unittest.TestCase):
         poller = self._makeOne(DummyOptions())
         poller.register_readable(6)
         poller.register_readable(7)
-        self.assertEqual(poller.readable, [6,7])
+        self.assertEqual(sorted(poller.readable), [6,7])
 
     def test_register_writable(self):
         poller = self._makeOne(DummyOptions())
         poller.register_writable(6)
         poller.register_writable(7)
-        self.assertEqual(poller.writable, [6,7])
+        self.assertEqual(sorted(poller.writable), [6,7])
 
     def test_poll_returns_readables_and_writables(self):
         _select = DummySelect(result={'readables': [6],
@@ -58,8 +58,8 @@ class SelectPollerTests(unittest.TestCase):
         poller.register_readable(6)
         poller.poll(1)
         self.assertEqual(options.logger.data[0], 'EBADF encountered in poll')
-        self.assertEqual(poller.readable, [])
-        self.assertEqual(poller.writable, [])
+        self.assertEqual(list(poller.readable), [])
+        self.assertEqual(list(poller.writable), [])
 
     def test_poll_uncaught_exception(self):
         _select = DummySelect(error=errno.EPERM)
