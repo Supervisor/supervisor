@@ -24,6 +24,13 @@ class BasePoller:
     def poll(self, timeout):
         raise NotImplementedError
 
+    def before_daemonize(self):
+        pass
+
+    def after_daemonize(self):
+        pass
+
+
 class SelectPoller(BasePoller):
 
     def initialize(self):
@@ -120,13 +127,17 @@ class KQueuePoller(BasePoller):
 
     def initialize(self):
         self._kqueue = select.kqueue()
+        self.readables = set()
+        self.writables = set()
 
     def register_readable(self, fd):
+        self.readables.add(fd)
         kevent = select.kevent(fd, filter=select.KQ_FILTER_READ,
                                flags=select.KQ_EV_ADD)
         self._kqueue_control(fd, kevent)
 
     def register_writable(self, fd):
+        self.writables.add(fd)
         kevent = select.kevent(fd, filter=select.KQ_FILTER_WRITE,
                                flags=select.KQ_EV_ADD)
         self._kqueue_control(fd, kevent)
@@ -165,6 +176,16 @@ class KQueuePoller(BasePoller):
 
         return readables, writables
 
+    def before_daemonize(self):
+        self._kqueue.close()
+        self._kqueue = None
+
+    def after_daemonize(self):
+        self._kqueue = select.kqueue()
+        for fd in self.readables:
+            self.register_readable(fd)
+        for fd in self.writables:
+            self.register_writable(fd)
 
 def implements_poll():
     return hasattr(select, 'poll')

@@ -43,7 +43,6 @@ from supervisor.options import signame
 from supervisor import events
 from supervisor.states import SupervisorStates
 from supervisor.states import getProcessStateDescription
-from supervisor.poller import Poller
 
 class Supervisor:
     stopping = False # set after we detect that we are handling a stop request
@@ -53,7 +52,6 @@ class Supervisor:
 
     def __init__(self, options):
         self.options = options
-        self.poller = Poller(options)
         self.process_groups = {}
         self.ticks = {}
 
@@ -210,11 +208,11 @@ class Supervisor:
 
             for fd, dispatcher in combined_map.items():
                 if dispatcher.readable():
-                    self.poller.register_readable(fd)
+                    self.options.poller.register_readable(fd)
                 if dispatcher.writable():
-                    self.poller.register_writable(fd)
+                    self.options.poller.register_writable(fd)
 
-            r, w = self.poller.poll(timeout)
+            r, w = self.options.poller.poll(timeout)
 
             for fd in r:
                 if combined_map.has_key(fd):

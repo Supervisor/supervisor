@@ -2,6 +2,7 @@ import sys
 import unittest
 import errno
 import select
+from mock import Mock
 
 from supervisor.poller import SelectPoller, PollPoller, KQueuePoller
 from supervisor.poller import implements_poll, implements_kqueue
@@ -84,6 +85,7 @@ class KQueuePollerTests(KQueuePollerTestsBase):
         poller = self._makeOne(DummyOptions())
         poller._kqueue = kqueue
         poller.register_readable(6)
+        self.assertEqual(list(poller.readables), [6])
         self.assertEqual(len(kqueue.registered_kevents), 1)
         self.assertReadEventAdded(kqueue, kqueue.registered_kevents[0], 6)
 
@@ -92,6 +94,7 @@ class KQueuePollerTests(KQueuePollerTestsBase):
         poller = self._makeOne(DummyOptions())
         poller._kqueue = kqueue
         poller.register_writable(7)
+        self.assertEqual(list(poller.writables), [7])
         self.assertEqual(len(kqueue.registered_kevents), 1)
         self.assertWriteEventAdded(kqueue, kqueue.registered_kevents[0], 7)
 
@@ -143,6 +146,27 @@ class KQueuePollerTests(KQueuePollerTestsBase):
         poller._kqueue = kqueue
         poller.register_readable(6)
         self.assertRaises(OSError, poller.poll, 1000)
+
+    def test_before_daemonize_closes_kqueue(self):
+        mock_kqueue = Mock()
+        options = DummyOptions()
+        poller = self._makeOne(options)
+        poller._kqueue = mock_kqueue
+        poller.before_daemonize()
+        mock_kqueue.close.assert_called_once_with()
+        self.assertEqual(poller._kqueue, None)
+
+    def test_after_daemonize_restores_kqueue(self):
+        options = DummyOptions()
+        poller = self._makeOne(options)
+        poller.readables = [1]
+        poller.writables = [3]
+        poller.register_readable = Mock()
+        poller.register_writable = Mock()
+        poller.after_daemonize()
+        self.assertTrue(isinstance(poller._kqueue, select.kqueue))
+        poller.register_readable.assert_called_with(1)
+        poller.register_writable.assert_called_with(3)
 
     def assertReadEventAdded(self, kqueue, kevent, fd):
         self.assertEventAdded(kqueue, kevent, fd, select.KQ_FILTER_READ)

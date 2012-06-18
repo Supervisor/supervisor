@@ -373,8 +373,7 @@ class SupervisordTests(unittest.TestCase):
 
     def test_runforever_poll_dispatchers(self):
         options = DummyOptions()
-        poller = DummyPoller(options)
-        poller.result = [6], [7, 8]
+        options.poller.result = [6], [7, 8]
         supervisord = self._makeOne(options)
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
         process = DummyProcess(pconfig)
@@ -385,7 +384,6 @@ class SupervisordTests(unittest.TestCase):
         error = DummyDispatcher(writable=True, error=OSError)
         pgroup.dispatchers = {6:readable, 7:writable, 8:error}
         supervisord.process_groups = {'foo': pgroup}
-        supervisord.poller = poller
         options.test = True
         supervisord.runforever()
         self.assertEqual(pgroup.transitioned, True)
@@ -395,8 +393,7 @@ class SupervisordTests(unittest.TestCase):
 
     def test_runforever_select_dispatcher_exitnow(self):
         options = DummyOptions()
-        poller = DummyPoller(options)
-        poller.result = [6], []
+        options.poller.result = [6], []
         supervisord = self._makeOne(options)
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
         process = DummyProcess(pconfig)
@@ -406,7 +403,6 @@ class SupervisordTests(unittest.TestCase):
         exitnow = DummyDispatcher(readable=True, error=asyncore.ExitNow)
         pgroup.dispatchers = {6:exitnow}
         supervisord.process_groups = {'foo': pgroup}
-        supervisord.poller = poller
         options.test = True
         self.assertRaises(asyncore.ExitNow, supervisord.runforever)
 
@@ -506,19 +502,6 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(supervisord.ticks[3600], 3600)
         self.assertEqual(len(L), 6)
         self.assertEqual(L[-1].__class__, events.Tick3600Event)
-
-class DummyPoller:
-    def __init__(self, options):
-        self.result = []
-
-    def register_readable(self, fd):
-        pass
-
-    def register_writable(self, fd):
-        pass
-
-    def poll(self, timeout):
-        return self.result
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

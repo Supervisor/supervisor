@@ -50,6 +50,7 @@ from supervisor.datatypes import set_here
 from supervisor import loggers
 from supervisor import states
 from supervisor import xmlrpc
+from supervisor import poller
 
 mydir = os.path.abspath(os.path.dirname(__file__))
 version_txt = os.path.join(mydir, 'version.txt')
@@ -431,6 +432,7 @@ class ServerOptions(Options):
         self.process_group_configs = []
         self.parse_warnings = []
         self.signal_receiver = SignalReceiver()
+        self.poller = poller.Poller(self)
 
     def version(self, dummy):
         """Print version to stdout and exit(0).
@@ -982,6 +984,11 @@ class ServerOptions(Options):
         return configs
 
     def daemonize(self):
+        self.poller.before_daemonize()
+        self._daemonize()
+        self.poller.after_daemonize()
+
+    def _daemonize(self):
         # To daemonize, we need to become the leader of our own session
         # (process) group.  If we do not, signals sent to our
         # parent process will also be sent to us.   This might be bad because

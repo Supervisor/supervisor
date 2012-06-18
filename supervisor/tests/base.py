@@ -67,6 +67,7 @@ class DummyOptions:
         self.changed_directory = False
         self.chdir_error = None
         self.umaskset = None
+        self.poller = DummyPoller(self)
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -1035,6 +1036,19 @@ class DummyEvent:
 
     def __str__(self):
         return 'dummy event'
+
+class DummyPoller:
+    def __init__(self, options):
+        self.result = [], []
+
+    def register_readable(self, fd):
+        pass
+
+    def register_writable(self, fd):
+        pass
+
+    def poll(self, timeout):
+        return self.result
         
 def dummy_handler(event, result):
     pass
