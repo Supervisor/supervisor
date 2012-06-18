@@ -117,7 +117,6 @@ class PollPoller(BasePoller):
             return True
         return False
 
-
 class KQueuePoller(BasePoller):
     '''
     Wrapper for select.kqueue()/kevent()
@@ -145,6 +144,7 @@ class KQueuePoller(BasePoller):
     def unregister(self, fd):
         kevent = select.kevent(fd, filter=(select.KQ_FILTER_READ | select.KQ_FILTER_WRITE),
                                flags=select.KQ_EV_DELETE)
+        self._forget_fd(fd)
         self._kqueue_control(fd, kevent)
 
     def _kqueue_control(self, fd, kevent):
@@ -156,6 +156,13 @@ class KQueuePoller(BasePoller):
                                             'Invalid file descriptor %s' % fd)
             else:
                 raise
+
+    def _forget_fd(self, fd):
+        for collection in (self.readables, self.writables):
+            try:
+                collection.remove(fd)
+            except KeyError:
+                pass
 
     def poll(self, timeout):
         readables, writables = [], []

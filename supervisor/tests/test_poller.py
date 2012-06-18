@@ -87,7 +87,7 @@ class KQueuePollerTests(KQueuePollerTestsBase):
         poller.register_readable(6)
         self.assertEqual(list(poller.readables), [6])
         self.assertEqual(len(kqueue.registered_kevents), 1)
-        self.assertReadEventAdded(kqueue, kqueue.registered_kevents[0], 6)
+        self.assertReadEventAdded(kqueue.registered_kevents[0], 6)
 
     def test_register_writable(self):
         kqueue = DummyKQueue()
@@ -96,7 +96,21 @@ class KQueuePollerTests(KQueuePollerTestsBase):
         poller.register_writable(7)
         self.assertEqual(list(poller.writables), [7])
         self.assertEqual(len(kqueue.registered_kevents), 1)
-        self.assertWriteEventAdded(kqueue, kqueue.registered_kevents[0], 7)
+        self.assertWriteEventAdded(kqueue.registered_kevents[0], 7)
+
+    def test_unregister(self):
+        kqueue = DummyKQueue()
+        poller = self._makeOne(DummyOptions())
+        poller._kqueue = kqueue
+        poller.register_writable(7)
+        poller.register_readable(8)
+        poller.unregister(7)
+        poller.unregister(100)  # not registered, ignore error
+        self.assertEqual(list(poller.writables), [])
+        self.assertEqual(list(poller.readables), [8])
+        self.assertWriteEventAdded(kqueue.registered_kevents[0], 7)
+        self.assertReadEventAdded(kqueue.registered_kevents[1], 8)
+        self.assertDeletedEvent(kqueue.registered_kevents[2], 7)
 
     def test_poll_returns_readables_and_writables(self):
         kqueue = DummyKQueue(result=[(6, select.KQ_FILTER_READ),
@@ -168,16 +182,20 @@ class KQueuePollerTests(KQueuePollerTestsBase):
         poller.register_readable.assert_called_with(1)
         poller.register_writable.assert_called_with(3)
 
-    def assertReadEventAdded(self, kqueue, kevent, fd):
-        self.assertEventAdded(kqueue, kevent, fd, select.KQ_FILTER_READ)
+    def assertReadEventAdded(self, kevent, fd):
+        self.assertKevent(kevent, fd, select.KQ_FILTER_READ, select.KQ_EV_ADD)
 
-    def assertWriteEventAdded(self, kqueue, kevent, fd):
-        self.assertEventAdded(kqueue, kevent, fd, select.KQ_FILTER_WRITE)
+    def assertWriteEventAdded(self, kevent, fd):
+        self.assertKevent(kevent, fd, select.KQ_FILTER_WRITE, select.KQ_EV_ADD)
 
-    def assertEventAdded(self, kqueue, kevent, fd, filter_spec):
-        self.assertEqual(kevent.ident, fd)
-        self.assertEqual(kevent.filter, filter_spec)
-        self.assertEqual(kevent.flags, select.KQ_EV_ADD)
+    def assertDeletedEvent(self, kevent, fd):
+        self.assertKevent(kevent, fd, select.KQ_FILTER_READ | select.KQ_FILTER_WRITE,
+                          select.KQ_EV_DELETE)
+
+    def assertKevent(self, kevent, ident, filter, flags):
+        self.assertEqual(kevent.ident, ident)
+        self.assertEqual(kevent.filter, filter)
+        self.assertEqual(kevent.flags, flags)
 
 
 if implements_poll():
