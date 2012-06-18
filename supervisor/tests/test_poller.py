@@ -3,10 +3,76 @@ import unittest
 import errno
 import select
 
-from supervisor.poller import Poller, KQueuePoller
+from supervisor.poller import SelectPoller, PollPoller, KQueuePoller
+from supervisor.poller import implements_poll, implements_kqueue
 from supervisor.tests.base import DummyOptions
 
-class KQueuePollerTests(unittest.TestCase):
+# this base class is used instead of unittest.TestCase to hide
+# a TestCase subclass from test runner when the implementation is
+# not available
+SkipTestCase = object
+
+class SelectPollerTests(unittest.TestCase):
+
+    def _makeOne(self, options):
+        return SelectPoller(options)
+
+    def test_register_readable(self):
+        poller = self._makeOne(DummyOptions())
+        poller.register_readable(6)
+        poller.register_readable(7)
+        self.assertEqual(poller.readable, [6,7])
+
+    def test_register_writable(self):
+        poller = self._makeOne(DummyOptions())
+        poller.register_writable(6)
+        poller.register_writable(7)
+        self.assertEqual(poller.writable, [6,7])
+
+    def test_poll_returns_readables_and_writables(self):
+        _select = DummySelect(result={'readables': [6],
+                                      'writables': [8]})
+        poller = self._makeOne(DummyOptions())
+        poller._select = _select
+        poller.register_readable(6)
+        poller.register_readable(7)
+        poller.register_writable(8)
+        readables, writables = poller.poll(1)
+        self.assertEqual(readables, [6])
+        self.assertEqual(writables, [8])
+
+    def test_poll_ignores_eintr(self):
+        _select = DummySelect(error=errno.EINTR)
+        options = DummyOptions()
+        poller = self._makeOne(options)
+        poller._select = _select
+        poller.register_readable(6)
+        poller.poll(1)
+        self.assertEqual(options.logger.data[0], 'EINTR encountered in poll')
+
+    def test_poll_ignores_ebadf(self):
+        _select = DummySelect(error=errno.EBADF)
+        options = DummyOptions()
+        poller = self._makeOne(options)
+        poller._select = _select
+        poller.register_readable(6)
+        poller.poll(1)
+        self.assertEqual(options.logger.data[0], 'EBADF encountered in poll')
+
+    def test_poll_uncaught_exception(self):
+        _select = DummySelect(error=errno.EPERM)
+        options = DummyOptions()
+        poller = self._makeOne(options)
+        poller._select = _select
+        poller.register_readable(6)
+        self.assertRaises(select.error, poller.poll, (1,))
+
+if implements_kqueue():
+    KQueuePollerTestsBase = unittest.TestCase
+else:
+    KQueuePollerTestsBase = SkipTestCase
+
+class KQueuePollerTests(KQueuePollerTestsBase):
 
     def _makeOne(self, options):
         return KQueuePoller(options)
@@ -69,10 +135,15 @@ class KQueuePollerTests(unittest.TestCase):
         self.assertEqual(kevent.flags, select.KQ_EV_ADD)
 
 
-class PollerPollTests(unittest.TestCase):
+if implements_poll():
+    PollerPollTestsBase = unittest.TestCase
+else:
+    PollerPollTestsBase = SkipTestCase
+
+class PollerPollTests(PollerPollTestsBase):
 
     def _makeOne(self, options):
-        return Poller(options)
+        return PollPoller(options)
 
     def test_register_readable(self):
         select_poll = DummySelectPoll()
@@ -123,7 +194,7 @@ class PollerPollTests(unittest.TestCase):
 
     def test_poll_ignores_and_unregisters_closed_fd(self):
         select_poll = DummySelectPoll(result=[(6, select.POLLNVAL),
-                                              (7, Poller.READ)])
+                                              (7, select.POLLPRI)])
         poller = self._makeOne(DummyOptions())
         poller._poller = select_poll
         poller.register_readable(6)
@@ -132,7 +203,25 @@ class PollerPollTests(unittest.TestCase):
         self.assertEqual(readables, [7])
         self.assertEqual(select_poll.unregistered, [6])
 
+class DummySelect(object):
+    '''
+    Fake implementation of select.select()
+    '''
+    def __init__(self, result=None, error=None):
+        result = result or {}
+        self.readables = result.get('readables', [])
+        self.writables = result.get('writables', [])
+        self.error = error
+
+    def select(self, r, w, x, timeout):
+        if self.error:
+            raise select.error(self.error)
+        return self.readables, self.writables, []
+
 class DummySelectPoll(object):
+    '''
+    Fake implementation of select.poll()
+    '''
     def __init__(self, result=None, error=None):
         self.result = result or []
         self.error = error
@@ -141,9 +230,9 @@ class DummySelectPoll(object):
         self.unregistered = []
 
     def register(self, fd, eventmask):
-        if eventmask == Poller.READ:
+        if eventmask == select.POLLIN | select.POLLPRI | select.POLLHUP:
             self.registered_as_readable.append(fd)
-        elif eventmask == Poller.WRITE:
+        elif eventmask == select.POLLOUT:
             self.registered_as_writable.append(fd)
         else:
             raise ValueError("Registered a fd on unknown eventmask: '{0}'".format(eventmask))
@@ -158,6 +247,9 @@ class DummySelectPoll(object):
 
 
 class DummyKQueue(object):
+    '''
+    Fake implementation of select.kqueue()
+    '''
     def __init__(self, result=None, raise_errno=None):
         self.result = result or []
         self.errno = raise_errno

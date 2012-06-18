@@ -24,17 +24,49 @@ class BasePoller:
     def poll(self, timeout):
         raise NotImplementedError
 
+class SelectPoller(BasePoller):
+
+    def initialize(self):
+        self._select = select
+        self.readable = []
+        self.writable = []
+
+    def register_readable(self, fd):
+        self.readable.append(fd)
+
+    def register_writable(self, fd):
+        self.writable.append(fd)
+
+    def unregister(self, fd):
+        if fd in self.readable:
+            self.readable.remove(fd)
+        if fd in self.writable:
+            self.writable.remove(fd)
+
+    def unregister_all(self):
+        self.writable = []
+        self.readable = []
+
+    def poll(self, timeout):
+        try:
+            r, w, x = self._select.select(self.readable, self.writable, [], timeout)
+        except select.error, err:
+            if err[0] == errno.EINTR:
+                self.options.logger.blather('EINTR encountered in poll')
+                return [], []
+            if err[0] == errno.EBADF:
+                self.options.logger.blather('EBADF encountered in poll')
+                self.unregister_all()
+                return [], []
+            raise
+        return r, w
 
 class PollPoller(BasePoller):
-    '''
-    Wrapper for select.poll()
-    '''
-
-    READ = select.POLLIN | select.POLLPRI | select.POLLHUP
-    WRITE = select.POLLOUT
 
     def initialize(self):
         self._poller = select.poll()
+        self.READ = select.POLLIN | select.POLLPRI | select.POLLHUP
+        self.WRITE = select.POLLOUT
 
     def register_readable(self, fd):
         self._poller.register(fd, self.READ)
@@ -122,7 +154,15 @@ class KQueuePoller(BasePoller):
         return readables, writables
 
 
-if hasattr(select, "kqueue"):
+def implements_poll():
+    return hasattr(select, 'poll')
+
+def implements_kqueue():
+    return hasattr(select, 'kqueue')
+
+if implements_kqueue():
     Poller = KQueuePoller
-else:
+elif implements_poll():
     Poller = PollPoller
+else:
+    Poller = SelectPoller
