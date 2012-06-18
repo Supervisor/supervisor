@@ -58,6 +58,8 @@ class SelectPollerTests(unittest.TestCase):
         poller.register_readable(6)
         poller.poll(1)
         self.assertEqual(options.logger.data[0], 'EBADF encountered in poll')
+        self.assertEqual(poller.readable, [])
+        self.assertEqual(poller.writable, [])
 
     def test_poll_uncaught_exception(self):
         _select = DummySelect(error=errno.EPERM)
@@ -65,7 +67,7 @@ class SelectPollerTests(unittest.TestCase):
         poller = self._makeOne(options)
         poller._select = _select
         poller.register_readable(6)
-        self.assertRaises(select.error, poller.poll, (1,))
+        self.assertRaises(select.error, poller.poll, 1)
 
 if implements_kqueue():
     KQueuePollerTestsBase = unittest.TestCase
@@ -107,7 +109,7 @@ class KQueuePollerTests(KQueuePollerTestsBase):
         self.assertEqual(writables, [8])
 
     def test_poll_ignores_eintr(self):
-        kqueue = DummyKQueue(raise_errno=errno.EINTR)
+        kqueue = DummyKQueue(raise_errno_poll=errno.EINTR)
         options = DummyOptions()
         poller = self._makeOne(options)
         poller._kqueue = kqueue
@@ -115,13 +117,32 @@ class KQueuePollerTests(KQueuePollerTestsBase):
         poller.poll(1000)
         self.assertEqual(options.logger.data[0], 'EINTR encountered in poll')
 
+    def test_register_readable_and_writable_ignores_ebadf(self):
+        _kqueue = DummyKQueue(raise_errno_register=errno.EBADF)
+        options = DummyOptions()
+        poller = self._makeOne(options)
+        poller._kqueue = _kqueue
+        poller.register_readable(6)
+        poller.register_writable(7)
+        self.assertEqual(options.logger.data[0],
+                         'EBADF encountered in kqueue. Invalid file descriptor 6')
+        self.assertEqual(options.logger.data[1],
+                         'EBADF encountered in kqueue. Invalid file descriptor 7')
+
+    def test_register_uncaught_exception(self):
+        _kqueue = DummyKQueue(raise_errno_register=errno.ENOMEM)
+        options = DummyOptions()
+        poller = self._makeOne(options)
+        poller._kqueue = _kqueue
+        self.assertRaises(OSError, poller.register_readable, 5)
+
     def test_poll_uncaught_exception(self):
-        kqueue = DummyKQueue(raise_errno=errno.EBADF)
+        kqueue = DummyKQueue(raise_errno_poll=errno.EINVAL)
         options = DummyOptions()
         poller = self._makeOne(options)
         poller._kqueue = kqueue
         poller.register_readable(6)
-        self.assertRaises(OSError, poller.poll, (1000,))
+        self.assertRaises(OSError, poller.poll, 1000)
 
     def assertReadEventAdded(self, kqueue, kevent, fd):
         self.assertEventAdded(kqueue, kevent, fd, select.KQ_FILTER_READ)
@@ -190,7 +211,7 @@ class PollerPollTests(PollerPollTestsBase):
         poller = self._makeOne(options)
         poller._poller = select_poll
         poller.register_readable(9)
-        self.assertRaises(select.error, poller.poll, (1000,))
+        self.assertRaises(select.error, poller.poll, 1000)
 
     def test_poll_ignores_and_unregisters_closed_fd(self):
         select_poll = DummySelectPoll(result=[(6, select.POLLNVAL),
@@ -250,26 +271,28 @@ class DummyKQueue(object):
     '''
     Fake implementation of select.kqueue()
     '''
-    def __init__(self, result=None, raise_errno=None):
+    def __init__(self, result=None, raise_errno_poll=None, raise_errno_register=None):
         self.result = result or []
-        self.errno = raise_errno
+        self.errno_poll = raise_errno_poll
+        self.errno_register = raise_errno_register
         self.registered_kevents = []
         self.registered_flags = []
 
     def control(self, kevents, max_events, timeout=None):
         if kevents is None:    # being called on poll()
             self.assert_max_events_on_poll(max_events)
-            self.raise_error()
+            self.raise_error(self.errno_poll)
             return self.build_result()
 
         self.assert_max_events_on_register(max_events)
+        self.raise_error(self.errno_register)
         self.registered_kevents.extend(kevents)
 
-    def raise_error(self):
-        if self.errno:
-            ex = OSError()
-            ex.errno = self.errno
-            raise ex
+    def raise_error(self, err):
+        if not err: return
+        ex = OSError()
+        ex.errno = err
+        raise ex
 
     def build_result(self):
         return [FakeKEvent(ident, filter) for ident,filter in self.result]
