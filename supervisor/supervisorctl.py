@@ -764,6 +764,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output("restart <name> <name>\tRestart multiple processes or "
                      "groups")
         self.ctl.output("restart all\t\tRestart all processes")
+        self.ctl.output("Note: restart does not reread config files. For that,"
+                        " see reread and update.")
 
     def do_shutdown(self, arg):
         if self.ctl.options.interactive:
