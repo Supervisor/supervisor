@@ -1,4 +1,3 @@
-Configuration File
 ==================
 
 The Supervisor configuration file is conventionally named

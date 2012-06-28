@@ -82,6 +82,20 @@ Finally, run supervisor's ``python setup.py install``.
    need to be the root user to invoke ``python setup.py install``
    sucessfully for each package.
 
+Installing a distribution package
+---------------------------------
+
+Some Linux distributions such as Ubuntu have started to include Supervisor.
+However the packaged version will not be the very latest, and may include 
+distribution-specific configuration.
+
+Use the package management tools of your distribution to check availability; 
+e.g. on Ubuntu you can run ``apt-cache show supervisor``, and on CentOS
+you can run ``yum info supervisor``.
+
+Packaged Supervisor will normally already be integrated into the service
+management infrastructure of your distribution.
+
 Creating a Configuration File
 -----------------------------
 
