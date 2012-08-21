@@ -174,7 +174,13 @@ class RotatingFileHandlerTests(FileHandlerTests):
         self.assertEqual(stream.closed, True)
 
     def test_emit_does_rollover(self):
-        handler = self._makeOne(self.filename, maxBytes=10, backupCount=2)
+        self._test_rollover(backupCount=2)
+
+    def test_0backups_does_rollover(self):
+        self._test_rollover(backupCount=0)
+
+    def _test_rollover(self, backupCount):
+        handler = self._makeOne(self.filename, maxBytes=10, backupCount=backupCount)
         record = self._makeLogRecord('a' * 4)
 
         handler.emit(record) # 4 bytes
