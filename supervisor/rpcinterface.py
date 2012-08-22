@@ -10,6 +10,7 @@ from supervisor.options import NotFound
 from supervisor.options import NoPermission
 from supervisor.options import make_namespec
 from supervisor.options import split_namespec
+from supervisor.options import VERSION
 
 from supervisor.events import notify
 from supervisor.events import RemoteCommunicationEvent
@@ -53,8 +54,7 @@ class SupervisorNamespaceRPCInterface:
         @return string version version id
         """
         self._update('getSupervisorVersion')
-        import options
-        return options.VERSION
+        return VERSION
 
     def getIdentification(self):
         """ Return identifiying string of supervisord
