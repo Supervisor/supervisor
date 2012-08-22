@@ -157,46 +157,7 @@ XML-RPC Interface
 
   The same HTTP server which serves the web UI serves up an XML-RPC
   interface that can be used to interrogate and control supervisor and
-  the programs it runs.  To use the XML-RPC interface, connect to
-  supervisor's http port with any XML-RPC client library and run
-  commands against it.  An example of doing this using Python's
-  ``xmlrpclib`` client library is as follows.
-
-  .. code-block:: python
-
-     import xmlrpclib
-     server = xmlrpclib.Server('http://localhost:9001/RPC2')
-
-  You may call methods against the :program:`supervisord` and its
-  subprocesses by using the ``supervisor`` namespace.  An example is
-  provided below.
-
-  .. code-block:: python
-
-     server.supervisor.getState()
-
-  You can get a list of methods supported by the
-  :program:`supervisord` XML-RPC interface by using the XML-RPC
-  ``system.listMethods`` API:
-
-  .. code-block:: python
-
-     server.system.listMethods()
-
-  You can see help on a method by using the ``system.methodHelp`` API
-  against the method:
-
-  .. code-block:: python
-
-     print server.system.methodHelp('supervisor.shutdown')
-
-  The :program:`supervisord` XML-RPC interface also supports the
-  nascent `XML-RPC multicall API
-  <http://www.xmlrpc.com/discuss/msgReader$1208>`_.
-
-  You can extend :program:`supervisord` functionality with new XML-RPC
-  API methods by adding new top-level RPC interfaces as necessary.
-  See :ref:`rpcinterface_factories`.
+  the programs it runs.  See :ref:`xml_rpc`.
 
 Platform Requirements
 ---------------------
