@@ -1,8 +1,12 @@
+import grp
 import os
+import pwd
 import re
+import signal
 import sys
 import socket
 import shlex
+import urlparse
 from supervisor.loggers import getLevelNumByDescription
 
 # I dont know why we bother, this doesn't run on Windows, but just
@@ -293,7 +297,6 @@ def name_to_uid(name):
     if name is None:
         return None
 
-    import pwd
     try:
         uid = int(name)
     except ValueError:
@@ -310,7 +313,6 @@ def name_to_uid(name):
     return uid
 
 def name_to_gid(name):
-    import grp
     try:
         gid = int(name)
     except ValueError:
@@ -327,12 +329,10 @@ def name_to_gid(name):
     return gid
 
 def gid_for_uid(uid):
-    import pwd
     pwrec = pwd.getpwuid(uid)
     return pwrec[3]
 
 def existing_directory(v):
-    import os
     nv = v % {'here':here}
     nv = os.path.expanduser(nv)
     if os.path.isdir(nv):
@@ -340,7 +340,6 @@ def existing_directory(v):
     raise ValueError('%s is not an existing directory' % v)
 
 def existing_dirpath(v):
-    import os
     nv = v % {'here':here}
     nv = os.path.expanduser(nv)
     dir = os.path.dirname(nv)
@@ -386,7 +385,6 @@ byte_size = SuffixMultiplier({'kb': 1024,
                               'gb': 1024*1024*1024L,})
 
 def url(value):
-    import urlparse
     # earlier Python 2.6 urlparse (2.6.4 and under) can't parse unix:// URLs,
     # later ones can but we need to straddle
     uri = value.replace('unix://', 'http://', 1).strip()
@@ -396,7 +394,6 @@ def url(value):
     raise ValueError("value %s is not a URL" % value)
 
 def signal_number(value):
-    import signal
     result = None
     try:
         result = int(value)
