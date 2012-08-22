@@ -295,34 +295,34 @@ def name_to_uid(name):
 
     import pwd
     try:
-	uid = int(name)
+        uid = int(name)
     except ValueError:
-	try:
-	    pwrec = pwd.getpwnam(name)
-	except KeyError:
+        try:
+            pwrec = pwd.getpwnam(name)
+        except KeyError:
             return None
-	uid = pwrec[2]
+        uid = pwrec[2]
     else:
-	try:
-	    pwrec = pwd.getpwuid(uid)
-	except KeyError:
+        try:
+            pwrec = pwd.getpwuid(uid)
+        except KeyError:
             return None
     return uid
 
 def name_to_gid(name):
     import grp
     try:
-	gid = int(name)
+        gid = int(name)
     except ValueError:
-	try:
-	    pwrec = grp.getgrnam(name)
-	except KeyError:
+        try:
+            pwrec = grp.getgrnam(name)
+        except KeyError:
             return None
-	gid = pwrec[2]
+        gid = pwrec[2]
     else:
-	try:
-	    pwrec = grp.getgrgid(gid)
-	except KeyError:
+        try:
+            pwrec = grp.getgrgid(gid)
+        except KeyError:
             return None
     return gid
 
