@@ -1134,6 +1134,156 @@ Known issues:
 2.0b1 (2006-07-12)
 ------------------
 
-- fundamental rewrite based on 1.0.6, use distutils (only) for
+- Fundamental rewrite based on 1.0.7, use distutils (only) for
   installation, use ConfigParser rather than ZConfig, use HTTP for
   wire protocol, web interface, less lies in supervisorctl.
+
+1.0.7 (2006-07-11)
+------------------
+
+- Don't log a waitpid error if the error value is "no children".
+
+- Use select() against child file descriptor pipes and bump up select
+  timeout appropriately.
+
+1.0.6 (2005-11-20)
+------------------
+
+- Various tweaks to make run more effectively on Mac OS X
+  (including fixing tests to run there, no more "error reading
+  from fd XXX" in logtail output, reduced disk/CPU usage as a
+  result of not writing to log file unnecessarily on Mac OS).
+
+1.0.5 (2004-07-29)
+------------------
+
+- Short description: In previous releases, managed programs that
+  created voluminous stdout/stderr output could run more slowly
+  than usual when invoked under supervisor, now they do not.
+
+  Long description: The supervisord manages child output by
+  polling pipes related to child process stderr/stdout.  Polling
+  operations are performed in the mainloop, which also performs a
+  'select' on the filedescriptor(s) related to client/server
+  operations.  In prior releases, the select timeout was set to 2
+  seconds.  This release changes the timeout to 1/10th of a second
+  in order to keep up with client stdout/stderr output.
+
+  Gory description: On Linux, at least, there is a pipe buffer
+  size fixed by the kernel of somewhere between 512 - 4096 bytes;
+  when a child process writes enough data to fill the pipe buffer,
+  it will block on further stdout/stderr output until supervisord
+  comes along and clears out the buffer by reading bytes from the
+  pipe within the mainloop.  We now clear these buffers much more
+  quickly than we did before due to the increased frequency of
+  buffer reads in the mainloop; the timeout value of 1/10th of a
+  second seems to be fast enough to clear out the buffers of child
+  process pipes when managing programs on even a very fast system
+  while still enabling the supervisord process to be in a sleeping
+  state for most of the time.
+
+1.0.4 or "Alpha 4" (2004-06-30)
+-------------------------------
+
+- Forgot to update version tag in configure.py, so the supervisor version
+  in a3 is listed as "1.0.1", where it should be "1.0.3".  a4 will be
+  listed as "1.0.4'.
+
+- Instead of preventing a process from starting if setuid() can't
+  be called (if supervisord is run as nonroot, for example), just log
+  the error and proceed.
+
+1.0.3 or "Alpha 3" (2004-05-26)
+-------------------------------
+
+- The daemon could chew up a lot of CPU time trying to select()
+  on real files (I didn't know select() failed to block when a file
+  is at EOF).  Fixed by polling instead of using select().
+
+- Processes could "leak" and become zombies due to a bug in
+  reaping dead children.
+
+- supervisord now defaults to daemonizing itself.
+
+- 'daemon' config file option and -d/--daemon command-line option
+  removed from supervisord acceptable options.  In place of these
+  options, we now have a 'nodaemon' config file option and a
+  -n/--nodaemon command-line option.
+
+- logtail now works.
+
+- pidproxy changed slightly to reap children synchronously.
+
+- in alpha2 changelist, supervisord was reported to have a
+  "noauth" command-line option.  This was not accurate.  The way
+  to turn off auth on the server is to disinclude the "passwdfile"
+  config file option from the server config file.  The client
+  however does indeed still have a noauth option, which prevents
+  it from ever attempting to send authentication credentials to
+  servers.
+
+- ZPL license added for ZConfig to LICENSE.txt
+
+1.0.2 or "Alpha 2" (Unreleased)
+-------------------------------
+
+- supervisorctl and supervisord no longer need to run on the same machine
+  due to the addition of internet socket support.
+
+- supervisorctl and supervisord no longer share a common configuration
+  file format.
+
+- supervisorctl now uses a persistent connection to supervisord
+  (as opposed to creating a fresh connection for each command).
+
+- SRP (Secure Remote Password) authentication is now a supported form
+  of access control for supervisord.  In supervisorctl interactive mode,
+  by default, users will be asked for credentials when attempting to
+  talk to a supervisord that requires SRP authentication.
+
+- supervisord has a new command-line option and configuration file
+  option for specifying "noauth" mode, which signifies that it
+  should not require authentication from clients.
+
+- supervisorctl has a new command-line option and configuration
+  option for specifying "noauth" mode, which signifies that it
+  should never attempt to send authentication info to servers.
+
+- supervisorctl has new commands: open: opens a connection to a new
+  supervisord; close: closes the current connection.
+
+- supervisorctl's "logtail" command now retrieves log data from
+  supervisord's log file remotely (as opposed to reading it
+  directly from a common filesystem).  It also no longer emulates
+  "tail -f", it just returns <n> lines of the server's log file.
+
+- The supervisord/supervisorctl wire protocol now has protocol versioning
+  and is documented in "protocol.txt".
+
+- "configfile" command-line override -C changed to -c
+
+- top-level section name for supervisor schema changed to 'supervisord'
+  from 'supervisor'
+
+- Added 'pidproxy' shim program.
+
+Known issues in alpha 2:
+
+- If supervisorctl loses a connection to a supervisord or if the
+  remote supervisord crashes or shuts down unexpectedly, it is
+  possible that any supervisorctl talking to it will "hang"
+  indefinitely waiting for data.  Pressing Ctrl-C will allow you
+  to restart supervisorctl.
+
+- Only one supervisorctl process may talk to a given supervisord
+  process at a time.  If two supervisorctl processes attempt to talk
+  to the same supervisord process, one will "win" and the other will
+  be disconnected.
+
+- Sometimes if a pidproxy is used to start a program, the pidproxy
+  program itself will "leak".
+
+1.0.0 or "Alpha 1" (Unreleased)
+-------------------------------
+
+Initial release.
