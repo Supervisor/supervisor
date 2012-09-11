@@ -1,5 +1,5 @@
-Next release
-------------
+3.0b1 (2012-09-10)
+------------------
 
 - Fixed a bug where parsing ``environment=`` did not verify that key/value
   pairs were correctly separated.  Patch by Martijn Pieters.
