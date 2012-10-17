@@ -5,8 +5,7 @@
 # all the underlying machinery [select, asyncore, asynchat, etc...] in
 # a context where there is virtually no processing of the data.
 
-import socket
-import select
+import supervisor.medusa.text_socket as socket
 import sys
 
 # ==================================================
@@ -30,7 +29,7 @@ class test_channel (asynchat.async_chat):
 
     def collect_incoming_data (self, data):
         self.buffer = self.buffer + data
-        test_channel.total_in = test_channel.total_in + len(data)
+        test_channel.total_in += len(data)
 
     def found_terminator (self):
         # we've gotten the data, now send it back
@@ -47,7 +46,7 @@ class test_channel (asynchat.async_chat):
 
 class test_server (asyncore.dispatcher):
     def __init__ (self, addr):
-
+        asyncore.dispatcher.__init__(self)
         if type(addr) == type(''):
             f = socket.AF_UNIX
         else:
@@ -56,7 +55,7 @@ class test_server (asyncore.dispatcher):
         self.create_socket (f, socket.SOCK_STREAM)
         self.bind (addr)
         self.listen (5)
-        print 'server started on',addr
+        print('server started on %s' % str(addr))
 
     def handle_accept (self):
         conn, addr = self.accept()
@@ -90,7 +89,7 @@ class test_client (test_channel):
         pass
 
     def found_terminator (self):
-        self.count = self.count + 1
+        self.count += 1
         if self.count == self.number:
             sys.stdout.write('.'); sys.stdout.flush()
             self.close()
@@ -107,8 +106,6 @@ class timer:
         return time.time() - self.start
 
 if __name__ == '__main__':
-    import string
-
     if '--poll' in sys.argv:
         sys.argv.remove ('--poll')
         use_poll=1
@@ -116,20 +113,20 @@ if __name__ == '__main__':
         use_poll=0
 
     if len(sys.argv) == 1:
-        print 'usage: %s\n' \
-        '  (as a server) [--poll] -s <ip> <port>\n' \
-        '  (as a client) [--poll] -c <ip> <port> <packet-size> <num-packets> <num-connections>\n' % sys.argv[0]
+        print('usage: %s\n'\
+              '  (as a server) [--poll] -s <ip> <port>\n'\
+              '  (as a client) [--poll] -c <ip> <port> <packet-size> <num-packets> <num-connections>\n' % sys.argv[0])
         sys.exit(0)
     if sys.argv[1] == '-s':
-        s = test_server ((sys.argv[2], string.atoi (sys.argv[3])))
+        s = test_server ((sys.argv[2], int (sys.argv[3])))
         asyncore.loop(use_poll=use_poll)
     elif sys.argv[1] == '-c':
         # create the packet
-        packet = string.atoi(sys.argv[4]) * 'B'
+        packet = int(sys.argv[4]) * 'B'
         host = sys.argv[2]
-        port = string.atoi (sys.argv[3])
-        num_packets = string.atoi (sys.argv[5])
-        num_conns = string.atoi (sys.argv[6])
+        port = int (sys.argv[3])
+        num_packets = int (sys.argv[5])
+        num_conns = int (sys.argv[6])
 
         t = timer()
         for i in range (num_conns):
@@ -152,8 +149,5 @@ if __name__ == '__main__':
         sys.stderr.write ( 'transactions/second: %.2f\n' % trans_per_sec)
 
         sys.stdout.write (
-                string.join (
-                        map (str, (num_conns, num_packets, len(packet), throughput, trans_per_sec)),
-                        ','
-                        ) + '\n'
-                )
+            ','.join([str(i) for i in (num_conns, num_packets, len(packet), throughput, trans_per_sec)]) + '\n'
+        )

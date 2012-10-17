@@ -7,6 +7,7 @@ from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyLogger
 from supervisor.tests.base import DummyEvent
+from supervisor import read_file
 
 class POutputDispatcherTests(unittest.TestCase):
     def setUp(self):
@@ -276,7 +277,7 @@ class POutputDispatcherTests(unittest.TestCase):
         try:
             dispatcher.output_buffer = data
             dispatcher.record_output()
-            self.assertEqual(open(logfile, 'r').read(), '')
+            self.assertEqual(read_file(logfile), '')
             self.assertEqual(dispatcher.output_buffer, '')
             self.assertEqual(len(events), 1)
 
@@ -301,7 +302,10 @@ class POutputDispatcherTests(unittest.TestCase):
             events.append(event)
         subscribe(ProcessCommunicationEvent, doit)
         import string
-        letters = string.letters
+        try:
+            letters = string.letters
+        except Exception:
+            letters = string.ascii_letters
         digits = string.digits * 4
         BEGIN_TOKEN = ProcessCommunicationEvent.BEGIN_TOKEN
         END_TOKEN = ProcessCommunicationEvent.END_TOKEN
@@ -326,7 +330,7 @@ class POutputDispatcherTests(unittest.TestCase):
             dispatcher.output_buffer = first
             dispatcher.record_output()
             [ x.flush() for x in dispatcher.childlog.handlers]
-            self.assertEqual(open(logfile, 'r').read(), letters)
+            self.assertEqual(read_file(logfile), letters)
             self.assertEqual(dispatcher.output_buffer, first[len(letters):])
             self.assertEqual(len(events), 0)
 
@@ -334,14 +338,14 @@ class POutputDispatcherTests(unittest.TestCase):
             dispatcher.record_output()
             self.assertEqual(len(events), 0)
             [ x.flush() for x in dispatcher.childlog.handlers]
-            self.assertEqual(open(logfile, 'r').read(), letters)
+            self.assertEqual(read_file(logfile), letters)
             self.assertEqual(dispatcher.output_buffer, first[len(letters):])
             self.assertEqual(len(events), 0)
 
             dispatcher.output_buffer += third
             dispatcher.record_output()
             [ x.flush() for x in dispatcher.childlog.handlers]
-            self.assertEqual(open(logfile, 'r').read(), letters *2)
+            self.assertEqual(read_file(logfile), letters *2)
             self.assertEqual(len(events), 1)
             event = events[0]
             from supervisor.events import ProcessCommunicationStdoutEvent
@@ -434,9 +438,9 @@ class POutputDispatcherTests(unittest.TestCase):
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         drepr = repr(dispatcher)
-        self.assertTrue(drepr.startswith('<POutputDispatcher at'), drepr)
+        self.assertTrue('POutputDispatcher' in drepr)
         self.assertNotEqual(
-            drepr.find('<supervisor.tests.base.DummyProcess instance at'),
+            drepr.find('supervisor.tests.base.DummyProcess'),
             -1)
         self.assertTrue(drepr.endswith('(stdout)>'), drepr)
 
@@ -571,9 +575,9 @@ class PInputDispatcherTests(unittest.TestCase):
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         drepr = repr(dispatcher)
-        self.assertTrue(drepr.startswith('<PInputDispatcher at'), drepr)
+        self.assertTrue('PInputDispatcher' in drepr)
         self.assertNotEqual(
-            drepr.find('<supervisor.tests.base.DummyProcess instance at'),
+            drepr.find('supervisor.tests.base.DummyProcess'),
             -1)
         self.assertTrue(drepr.endswith('(stdin)>'), drepr)
 
@@ -1038,9 +1042,9 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         drepr = repr(dispatcher)
-        self.assertTrue(drepr.startswith('<PEventListenerDispatcher at'), drepr)
+        self.assertTrue('PEventListenerDispatcher' in drepr)
         self.assertNotEqual(
-            drepr.find('<supervisor.tests.base.DummyProcess instance at'),
+            drepr.find('supervisor.tests.base.DummyProcess'),
             -1)
         self.assertTrue(drepr.endswith('(stdout)>'), drepr)
     

@@ -1,6 +1,11 @@
 import sys
 import unittest
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+    import xmlrpclib
+except ImportError:
+    from io import StringIO
+    import xmlrpc.client as xmlrpclib
 
 from supervisor.tests.base import DummyRPCServer
 
@@ -37,10 +42,9 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_unknown_method(self):
         options = DummyClientOptions()
-        from xmlrpclib import Fault
         from supervisor.xmlrpc import Faults
         def getVersion():
-            raise Fault(Faults.UNKNOWN_METHOD, 'duh')
+            raise xmlrpclib.Fault(Faults.UNKNOWN_METHOD, 'duh')
         options._server.supervisor.getVersion = getVersion
         controller = self._makeOne(options)
         controller.stdout = StringIO()
@@ -55,7 +59,7 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_catches_socket_error_ECONNREFUSED(self):
         options = DummyClientOptions()
-        import socket
+        import supervisor.medusa.text_socket as socket
         import errno
         def raise_fault(*arg, **kw):     
             raise socket.error(errno.ECONNREFUSED, 'nobody home')
@@ -72,7 +76,7 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_catches_socket_error_ENOENT(self):
         options = DummyClientOptions()
-        import socket
+        import supervisor.medusa.text_socket as socket
         import errno
         def raise_fault(*arg, **kw):     
             raise socket.error(errno.ENOENT, 'nobody home')
@@ -540,8 +544,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_shutdown_catches_xmlrpc_fault_shutdown_state(self):
         plugin = self._makeOne()
         from supervisor import xmlrpc
-        import xmlrpclib
-        
+
         def raise_fault(*arg, **kw):     
             raise xmlrpclib.Fault(xmlrpc.Faults.SHUTDOWN_STATE, 'bye')
         plugin.ctl.options._server.supervisor.shutdown = raise_fault
@@ -554,8 +557,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_shutdown_reraises_other_xmlrpc_faults(self):
         plugin = self._makeOne()
         from supervisor import xmlrpc
-        import xmlrpclib
-        
+
         def raise_fault(*arg, **kw):     
             raise xmlrpclib.Fault(xmlrpc.Faults.CANT_REREAD, 'ouch')
         plugin.ctl.options._server.supervisor.shutdown = raise_fault
@@ -565,7 +567,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_catches_socket_error_ECONNREFUSED(self):
         plugin = self._makeOne()
-        import socket
+        import supervisor.medusa.text_socket as socket
         import errno
         
         def raise_fault(*arg, **kw):     
@@ -580,7 +582,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_catches_socket_error_ENOENT(self):
         plugin = self._makeOne()
-        import socket
+        import supervisor.medusa.text_socket as socket
         import errno
         
         def raise_fault(*arg, **kw):     
@@ -595,7 +597,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_reraises_other_socket_errors(self):
         plugin = self._makeOne()
-        import socket
+        import supervisor.medusa.text_socket as socket
         import errno
 
         def raise_fault(*arg, **kw):     
@@ -622,7 +624,6 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_reread_Fault(self):
         plugin = self._makeOne()
         from supervisor import xmlrpc
-        import xmlrpclib
         def raise_fault(*arg, **kw):
             raise xmlrpclib.Fault(xmlrpc.Faults.CANT_REREAD, 'cant')
         plugin.ctl.options._server.supervisor.reloadConfig = raise_fault
@@ -718,7 +719,6 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         supervisor = plugin.ctl.options._server.supervisor
         def reloadConfig():
             from supervisor import xmlrpc
-            import xmlrpclib
             raise xmlrpclib.Fault(xmlrpc.Faults.SHUTDOWN_STATE, 'blah')
         supervisor.reloadConfig = reloadConfig
         supervisor.processes = ['removed']
@@ -739,7 +739,6 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_update_changed_procs(self):
         from supervisor import xmlrpc
-        import xmlrpclib
 
         plugin = self._makeOne()
         supervisor = plugin.ctl.options._server.supervisor
@@ -864,19 +863,19 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin = self._makeOne()
         result = plugin.do_maintail('foo bar')
         val = plugin.ctl.stdout.getvalue()
-        self.failUnless(val.startswith('Error: too many'), val)
+        self.assertTrue(val.startswith('Error: too many'), val)
 
     def test_maintail_minus_string_fails(self):
         plugin = self._makeOne()
         result = plugin.do_maintail('-wrong')
         val = plugin.ctl.stdout.getvalue()
-        self.failUnless(val.startswith('Error: bad argument -wrong'), val)
+        self.assertTrue(val.startswith('Error: bad argument -wrong'), val)
 
     def test_maintail_wrong(self):
         plugin = self._makeOne()
         result = plugin.do_maintail('wrong')
         val = plugin.ctl.stdout.getvalue()
-        self.failUnless(val.startswith('Error: bad argument wrong'), val)
+        self.assertTrue(val.startswith('Error: bad argument wrong'), val)
 
     def test_maintail_dashf(self):
         plugin = self._makeOne()

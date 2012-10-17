@@ -13,14 +13,18 @@ from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummyProcessGroup
 from supervisor.tests.base import DummyDispatcher
 
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
 class EntryPointTests(unittest.TestCase):
     def test_main_noprofile(self):
         from supervisor.supervisord import main
         conf = os.path.join(
             os.path.abspath(os.path.dirname(__file__)), 'fixtures',
             'donothing.conf')
-        import StringIO
-        new_stdout = StringIO.StringIO()
+        new_stdout = StringIO()
         old_stdout = sys.stdout
         try:
             tempdir = tempfile.mkdtemp()
@@ -33,7 +37,7 @@ class EntryPointTests(unittest.TestCase):
             sys.stdout = old_stdout
             shutil.rmtree(tempdir)
         output = new_stdout.getvalue()
-        self.failUnless(output.find('supervisord started') != 1, output)
+        self.assertTrue(output.find('supervisord started') != 1, output)
 
     if sys.version_info[:2] >= (2, 4):
         def test_main_profile(self):
@@ -41,8 +45,7 @@ class EntryPointTests(unittest.TestCase):
             conf = os.path.join(
                 os.path.abspath(os.path.dirname(__file__)), 'fixtures',
                 'donothing.conf')
-            import StringIO
-            new_stdout = StringIO.StringIO()
+            new_stdout = StringIO()
             old_stdout = sys.stdout
             try:
                 tempdir = tempfile.mkdtemp()
@@ -55,7 +58,7 @@ class EntryPointTests(unittest.TestCase):
                 sys.stdout = old_stdout
                 shutil.rmtree(tempdir)
             output = new_stdout.getvalue()
-            self.failUnless(output.find('cumulative time, call count') != -1,
+            self.assertTrue(output.find('cumulative time, call count') != -1,
                             output)
 
 class SupervisordTests(unittest.TestCase):
@@ -106,7 +109,7 @@ class SupervisordTests(unittest.TestCase):
         supervisord.main()
         self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.fds_cleaned_up, True)
-        self.failIf(hasattr(options, 'rlimits_set'))
+        self.assertFalse(hasattr(options, 'rlimits_set'))
         self.assertEqual(options.make_logger_messages,
                          (['setuid_called'], [], []))
         self.assertEqual(options.autochildlogdir_cleared, True)
@@ -312,7 +315,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(supervisord.process_groups, {})
 
         result = supervisord.add_process_group(gconfig)
-        self.assertEqual(supervisord.process_groups.keys(), ['foo'])
+        self.assertEqual(list(supervisord.process_groups.keys()), ['foo'])
         self.assertTrue(result)
 
         group = supervisord.process_groups['foo']
@@ -337,7 +340,7 @@ class SupervisordTests(unittest.TestCase):
         supervisord.add_process_group(gconfig)
         supervisord.process_groups['foo'].unstopped_processes = [DummyProcess(None)]
         result = supervisord.remove_process_group('foo')
-        self.assertEqual(supervisord.process_groups.keys(), ['foo'])
+        self.assertEqual(list(supervisord.process_groups.keys()), ['foo'])
         self.assertTrue(not result)
 
     def test_runforever_emits_generic_startup_event(self):

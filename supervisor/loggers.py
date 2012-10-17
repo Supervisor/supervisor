@@ -12,8 +12,10 @@ import errno
 import sys
 import time
 import traceback
+from supervisor.py3compat import *
 
 try:
+    #noinspection PyUnresolvedReferences
     import syslog
 except ImportError:
     # only required when 'syslog' is specified as the log filename
@@ -53,6 +55,10 @@ def getLevelNumByDescription(description):
 class Handler(object):
     fmt = '%(message)s'
     level = LevelsByName.INFO
+    def __init__(self, stream=None):
+        self.stream = stream
+        self.closed = False
+
     def setFormat(self, fmt):
         self.fmt = fmt
 
@@ -62,17 +68,20 @@ class Handler(object):
     def flush(self):
         try:
             self.stream.flush()
-        except IOError, why:
+        except IOError:
+            why = sys.exc_info()[1]
             # if supervisor output is piped, EPIPE can be raised at exit
-            if why[0] != errno.EPIPE:
+            if why.args[0] != errno.EPIPE:
                 raise
 
     def close(self):
-        if hasattr(self.stream, 'fileno'):
-            fd = self.stream.fileno()
-            if fd < 3: # don't ever close stdout or stderr
-                return
-        self.stream.close()
+        if not self.closed:
+            if hasattr(self.stream, 'fileno'):
+                fd = self.stream.fileno()
+                if fd < 3: # don't ever close stdout or stderr
+                    return
+            self.stream.close()
+            self.closed = True
 
     def emit(self, record):
         try:
@@ -85,6 +94,7 @@ class Handler(object):
         except:
             self.handleError(record)
 
+    #noinspection PyUnusedLocal
     def handleError(self, record):
         ei = sys.exc_info()
         traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
@@ -94,24 +104,27 @@ class FileHandler(Handler):
     """File handler which supports reopening of logs.
     """
     def __init__(self, filename, mode="a"):
-        self.stream = open(filename, mode)
+        Handler.__init__(self, open(filename, mode))
         self.baseFilename = filename
         self.mode = mode
 
     def reopen(self):
         self.close()
         self.stream = open(self.baseFilename, self.mode)
+        self.closed = False
 
     def remove(self):
+        self.close()
         try:
             os.remove(self.baseFilename)
-        except OSError, why:
-            if why[0] != errno.ENOENT:
+        except OSError:
+            why = sys.exc_info()[1]
+            if why.args[0] != errno.ENOENT:
                 raise
 
 class StreamHandler(Handler):
     def __init__(self, strm=None):
-        self.stream = strm
+        Handler.__init__(self, strm)
 
     def remove(self):
         if hasattr(self.stream, 'clear'):
@@ -169,6 +182,7 @@ class RotatingFileHandler(FileHandler):
 
         If maxBytes is zero, rollover never occurs.
         """
+#        FileHandler.__init__(self, filename, mode)
         if maxBytes > 0:
             mode = 'a' # doesn't make sense otherwise!
         self.mode = mode
@@ -232,18 +246,20 @@ class RotatingFileHandler(FileHandler):
                     if os.path.exists(dfn):
                         try:
                             os.remove(dfn)
-                        except OSError, why:
+                        except OSError:
+                            why = sys.exc_info()[1]
                             # catch race condition (already deleted)
-                            if why[0] != errno.ENOENT:
+                            if why.args[0] != errno.ENOENT:
                                 raise
                     os.rename(sfn, dfn)
             dfn = self.baseFilename + ".1"
             if os.path.exists(dfn):
                 try:
                     os.remove(dfn)
-                except OSError, why:
+                except OSError:
+                    why = sys.exc_info()[1]
                     # catch race condition (already deleted)
-                    if why[0] != errno.ENOENT:
+                    if why.args[0] != errno.ENOENT:
                         raise
             os.rename(self.baseFilename, dfn)
         self.stream = open(self.baseFilename, 'w')
@@ -326,6 +342,7 @@ class Logger:
 
 class SyslogHandler(Handler):
     def __init__(self):
+        Handler.__init__(self)
         assert 'syslog' in globals(), "Syslog module not present"
 
     def close(self):

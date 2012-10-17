@@ -3,7 +3,7 @@
 import sys
 import os
 import unittest
-import socket
+import supervisor.medusa.text_socket as socket
 import tempfile
 
 from supervisor.tests.base import DummySocketConfig
@@ -38,11 +38,11 @@ class ProxyTest(unittest.TestCase):
     
     def test_proxy_getattr(self):
         proxy = self._makeOne(TestObject())
-        self.assertEquals(5, proxy.getValue())
+        self.assertEqual(5, proxy.getValue())
         
     def test_on_delete(self):
         proxy = self._makeOne(TestObject(), on_delete=self.setOnDeleteCalled)
-        self.assertEquals(5, proxy.getValue())
+        self.assertEqual(5, proxy.getValue())
         proxy = None
         self.assertTrue(self.on_deleteCalled)
         
@@ -69,16 +69,16 @@ class ReferenceCounterTest(unittest.TestCase):
         self.assertFalse(self.running)
         ctr.increment()
         self.assertTrue(self.running)
-        self.assertEquals(1, ctr.get_count())
+        self.assertEqual(1, ctr.get_count())
         ctr.increment()
         self.assertTrue(self.running)
-        self.assertEquals(2, ctr.get_count())
+        self.assertEqual(2, ctr.get_count())
         ctr.decrement()
         self.assertTrue(self.running)
-        self.assertEquals(1, ctr.get_count())
+        self.assertEqual(1, ctr.get_count())
         ctr.decrement()
         self.assertFalse(self.running)
-        self.assertEquals(0, ctr.get_count())
+        self.assertEqual(0, ctr.get_count())
     
     def test_decr_at_zero_raises_error(self):
         ctr = self._makeOne(on_zero=self.stop,on_non_zero=self.start)
@@ -112,7 +112,7 @@ class SocketManagerTest(unittest.TestCase):
         self.assertEqual(sock.getsockname(), ('127.0.0.1', 51041))
 
     def test_unix(self):
-        (tf_fd, tf_name) = tempfile.mkstemp();
+        (tf_fd, tf_name) = tempfile.mkstemp()
         conf = UnixStreamSocketConfig(tf_name)
         sock_manager = self._makeOne(conf)
         self.assertEqual(sock_manager.socket_config, conf)
@@ -169,7 +169,7 @@ class SocketManagerTest(unittest.TestCase):
         self.assertTrue(sock.listen_called)
         self.assertEqual(sock.listen_backlog, socket.SOMAXCONN)
         self.assertFalse(sock.close_called)
-    
+
     def test_tcp_socket_already_taken(self):
         conf = InetStreamSocketConfig('127.0.0.1', 51041)
         sock_manager = self._makeOne(conf)
@@ -177,11 +177,11 @@ class SocketManagerTest(unittest.TestCase):
         sock_manager2 = self._makeOne(conf)
         self.assertRaises(socket.error, sock_manager2.get_socket)
         sock = None
-        
+
     def test_unix_bad_sock(self):
         conf = UnixStreamSocketConfig('/notthere/foo.sock')
         sock_manager = self._makeOne(conf)
-        self.assertRaises(socket.error, sock_manager.get_socket)        
+        self.assertRaises(socket.error, sock_manager.get_socket)
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

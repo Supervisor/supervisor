@@ -1,19 +1,16 @@
 # -*- Mode: Python -*-
 
 import re
-import string
-import StringIO
+try:
+    #noinspection PyUnresolvedReferences
+    from StringIO import StringIO
+except:
+    from io import StringIO
 import sys
 
-import os
-import sys
-import time
-
-import select_trigger
+import supervisor.medusa.thread.select_trigger as select_trigger
 from supervisor.medusa import counter
-from supervisor.medusa import producers
-
-from supervisor.medusa.default_handler import unquote, get_header
+from supervisor.medusa.default_handler import unquote
 
 import threading
 
@@ -53,9 +50,9 @@ header2env= {
         }
 
 # convert keys to lower case for case-insensitive matching
-for (key,value) in header2env.items():
+for (key,value) in list(header2env.items()):
     del header2env[key]
-    key=string.lower(key)
+    key=key.lower()
     header2env[key]=value
 
 class thread_output_file (select_trigger.trigger_file):
@@ -79,15 +76,15 @@ class script_handler:
     def match (self, request):
         uri = request.uri
 
-        i = string.find(uri, "/", 1)
+        i = uri.find("/", 1)
         if i != -1:
             uri = uri[:i]
 
-        i = string.find(uri, "?", 1)
+        i = uri.find("?", 1)
         if i != -1:
             uri = uri[:i]
 
-        if self.modules.has_key (uri):
+        if uri in self.modules:
             request.module = self.modules[uri]
             return 1
         else:
@@ -103,16 +100,11 @@ class script_handler:
         if '%' in path:
             path = unquote (path)
 
-        env = {}
+        env = {'REQUEST_URI': "/" + path, 'REQUEST_METHOD': request.command.upper(),
+               'SERVER_PORT': str(request.channel.server.port), 'SERVER_NAME': request.channel.server.server_name,
+               'SERVER_SOFTWARE': request['Server'], 'DOCUMENT_ROOT': self.document_root}
 
-        env['REQUEST_URI'] = "/" + path
-        env['REQUEST_METHOD']   = string.upper(request.command)
-        env['SERVER_PORT']       = str(request.channel.server.port)
-        env['SERVER_NAME']       = request.channel.server.server_name
-        env['SERVER_SOFTWARE'] = request['Server']
-        env['DOCUMENT_ROOT']     = self.document_root
-
-        parts = string.split(path, "/")
+        parts = path.split("/")
 
         # are script_name and path_info ok?
 
@@ -124,7 +116,7 @@ class script_handler:
         env['QUERY_STRING']     = query
 
         try:
-            path_info = "/" + string.join(parts[1:], "/")
+            path_info = "/" + "/".join(parts[1:])
         except:
             path_info = ''
 
@@ -134,29 +126,24 @@ class script_handler:
         env['REMOTE_HOST']              =request.channel.addr[0]        # TODO: connect to resolver
 
         for header in request.header:
-            [key,value]=string.split(header,": ",1)
-            key=string.lower(key)
+            [key,value]=header.split(": ",1)
+            key=key.lower()
 
-            if header2env.has_key(key):
+            if key in header2env:
                 if header2env[key]:
                     env[header2env[key]]=value
             else:
-                key = 'HTTP_' + string.upper(
-                        string.join(
-                                string.split (key,"-"),
-                                "_"
-                                )
-                        )
+                key = 'HTTP_' + "_".join(key.split ("-")).upper()
                 env[key]=value
 
         ## remove empty environment variables
         for key in env.keys():
-            if env[key]=="" or env[key]==None:
+            if env[key]=="" or env[key] is None:
                 del env[key]
 
         try:
             httphost = env['HTTP_HOST']
-            parts = string.split(httphost,":")
+            parts = httphost.split(":")
             env['HTTP_HOST'] = parts[0]
         except KeyError:
             pass
@@ -167,7 +154,7 @@ class script_handler:
             request.collector = collector (self, request, env)
             request.channel.set_terminator (None)
         else:
-            sin = StringIO.StringIO ('')
+            sin = StringIO ('')
             self.continue_request (sin, request, env)
 
     def continue_request (self, stdin, request, env):
@@ -207,7 +194,7 @@ class header_scanning_file:
             # to use a different HTTP reply code [like '302 Moved']
             #
             self.buffer = self.buffer + data
-            lines = string.split (self.buffer, '\n')
+            lines = self.buffer.split ('\n')
             # ignore the last piece, it is either empty, or a partial line
             lines = lines[:-1]
             # look for something un-header-like
@@ -220,7 +207,7 @@ class header_scanning_file:
                     h = self.build_header (lines[:i])
                     self._write (h)
                     # rejoin the rest of the data
-                    d = string.join (lines[i:], '\n')
+                    d = '\n'.join(lines[i:])
                     self._write (d)
                     self.buffer = ''
                     break
@@ -232,7 +219,7 @@ class header_scanning_file:
         for line in lines:
             mo = hl.match (line)
             if mo is not None:
-                h = string.lower (mo.group(1))
+                h = mo.group(1).lower()
                 if h == 'status':
                     status = mo.group(2)
                 elif h == 'content-type':
@@ -243,14 +230,14 @@ class header_scanning_file:
         if not saw_content_type:
             lines.append ('Content-Type: text/html')
         lines.append ('Connection: close')
-        return string.join (lines, '\r\n')+'\r\n\r\n'
+        return '\r\n'.join(lines)+'\r\n\r\n'
 
     def _write (self, data):
         self.bytes_out.increment (len(data))
         self.file.write (data)
 
     def writelines(self, list):
-        self.write (string.join (list, ''))
+        self.write(''.join(list))
 
     def flush(self):
         pass
@@ -272,13 +259,13 @@ class header_scanning_file:
 
 class collector:
 
-    "gathers input for PUT requests"
+    """gathers input for PUT requests"""
 
     def __init__ (self, handler, request, env):
         self.handler    = handler
         self.env = env
         self.request    = request
-        self.data = StringIO.StringIO()
+        self.data = StringIO()
 
         # make sure there's a content-length header
         self.cl = request.get_header ('content-length')
@@ -287,7 +274,7 @@ class collector:
             request.error (411)
             return
         else:
-            self.cl = string.atoi(self.cl)
+            self.cl = int(self.cl)
 
     def collect_incoming_data (self, data):
         self.data.write (data)
@@ -327,11 +314,11 @@ if __name__ == '__main__':
     import sys
 
     if len(sys.argv) < 2:
-        print 'Usage: %s <worker_threads>' % sys.argv[0]
+        print('Usage: %s <worker_threads>' % sys.argv[0])
     else:
-        nthreads = string.atoi (sys.argv[1])
+        nthreads = int(sys.argv[1])
 
-        import asyncore_25 as asyncore
+        import supervisor.medusa.asyncore_25 as asyncore
         from supervisor.medusa import http_server
         # create a generic web server
         hs = http_server.http_server ('', 7080)
@@ -346,8 +333,8 @@ if __name__ == '__main__':
         hs.install_handler (sh)
 
         # get a couple of CGI modules
-        import test_module
-        import pi_module
+        import supervisor.medusa.thread.test_module as test_module
+        import supervisor.medusa.thread.pi_module as pi_module
 
         # install the module on the script handler
         sh.add_module (test_module, 'test')

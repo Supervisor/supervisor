@@ -1,3 +1,4 @@
+import sys
 import errno
 from supervisor.medusa.asyncore_25 import compact_traceback
 
@@ -18,7 +19,11 @@ class PDispatcher:
     """ Asyncore dispatcher for mainloop, representing a process channel
     (stdin, stdout, or stderr).  This class is abstract. """
 
-    closed = False # True if close() has been called
+    def __init__(self, process, channel, fd):
+        self.process = process  # process which "owns" this dispatcher
+        self.channel = channel  # 'stderr' or 'stdout'
+        self.fd = fd
+        self.closed = False     # True if close() has been called
 
     def __repr__(self):
         return '<%s at %s for %s (%s)>' % (self.__class__.__name__,
@@ -65,8 +70,6 @@ class POutputDispatcher(PDispatcher):
     <!--XSUPERVISOR:BEGIN--><!--XSUPERVISOR:END--> tags and notify
     with a ProcessCommunicationEvent """
 
-    process = None # process which "owns" this dispatcher
-    channel = None # 'stderr' or 'stdout'
     capturemode = False # are we capturing process event data
     mainlog = None #  the process' "normal" logger
     capturelog = None # the logger while we're in capturemode
@@ -74,10 +77,9 @@ class POutputDispatcher(PDispatcher):
     output_buffer = '' # data waiting to be logged
 
     def __init__(self, process, event_type, fd):
-        self.process = process
+        channel = event_type.channel
+        PDispatcher.__init__(self, process, channel, fd)
         self.event_type = event_type
-        self.fd = fd
-        self.channel = channel = self.event_type.channel
 
         logfile = getattr(process.config, '%s_logfile' % channel)
         capture_maxbytes = getattr(process.config,
@@ -238,8 +240,6 @@ class POutputDispatcher(PDispatcher):
 class PEventListenerDispatcher(PDispatcher):
     """ An output dispatcher that monitors and changes a process'
     listener_state """
-    process = None # process which "owns" this dispatcher
-    channel = None # 'stderr' or 'stdout'
     childlog = None # the logger
     state_buffer = ''  # data waiting to be reviewed for state changes
 
@@ -249,15 +249,13 @@ class PEventListenerDispatcher(PDispatcher):
     RESULT_TOKEN_START_LEN = len(RESULT_TOKEN_START)
 
     def __init__(self, process, channel, fd):
-        self.process = process
+        PDispatcher.__init__(self, process, channel, fd)
         # the initial state of our listener is ACKNOWLEDGED; this is a
         # "busy" state that implies we're awaiting a READY_FOR_EVENTS_TOKEN
         self.process.listener_state = EventListenerStates.ACKNOWLEDGED
         self.process.event = None
         self.result = ''
         self.resultlen = None
-        self.channel = channel
-        self.fd = fd
 
         logfile = getattr(process.config, '%s_logfile' % channel)
 
@@ -384,11 +382,13 @@ class PEventListenerDispatcher(PDispatcher):
                     return
 
             else:
+                #noinspection PyTypeChecker
                 needed = self.resultlen - len(self.result)
 
                 if needed:
                     self.result += self.state_buffer[:needed]
                     self.state_buffer = self.state_buffer[needed:]
+                    #noinspection PyTypeChecker
                     needed = self.resultlen - len(self.result)
 
                 if not needed:
@@ -424,14 +424,9 @@ class PEventListenerDispatcher(PDispatcher):
 
 class PInputDispatcher(PDispatcher):
     """ Input (stdin) dispatcher """
-    process = None # process which "owns" this dispatcher
-    channel = None # 'stdin'
-    input_buffer = '' # data waiting to be sent to the child process
 
     def __init__(self, process, channel, fd):
-        self.process = process
-        self.channel = channel
-        self.fd = fd
+        PDispatcher.__init__(self, process, channel, fd)
         self.input_buffer = ''
 
     def writable(self):
@@ -452,8 +447,9 @@ class PInputDispatcher(PDispatcher):
         if self.input_buffer:
             try:
                 self.flush()
-            except OSError, why:
-                if why[0] == errno.EPIPE:
+            except OSError:
+                why = sys.exc_info()[1]
+                if why.args[0] == errno.EPIPE:
                     self.input_buffer = ''
                     self.close()
                 else:
@@ -482,13 +478,14 @@ def stripEscapes(string):
                 result = result + string[i:n]
                 i = n
                 show = 0
-        i = i + 1
+        i += 1
     return result
 
 class RejectEvent(Exception):
     """ The exception type expected by a dispatcher when a handler wants
     to reject an event """
 
+#noinspection PyUnusedLocal
 def default_handler(event, response):
     if response != 'OK':
         raise RejectEvent(response)

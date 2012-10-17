@@ -13,3 +13,5 @@ dist/
 nosetests.xml
 supervisor/coverage.xml
 tmp/
+env/
+.idea/

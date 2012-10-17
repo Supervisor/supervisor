@@ -1,7 +1,6 @@
 # -*- Mode: Python -*-
 
 import re
-import string
 import time
 
 def concat (*args):
@@ -55,7 +54,7 @@ rfc822_reg = re.compile (rfc822_date)
 
 def unpack_rfc822 (m):
     g = m.group
-    a = string.atoi
+    a = int
     return (
             a(g(4)),                # year
             monmap[g(3)],   # month
@@ -88,7 +87,7 @@ rfc850_reg = re.compile (rfc850_date)
 # they actually unpack the same way
 def unpack_rfc850 (m):
     g = m.group
-    a = string.atoi
+    a = int
     return (
             a(g(4)),                # year
             monmap[g(3)],   # month
@@ -101,14 +100,14 @@ def unpack_rfc850 (m):
             0
             )
 
-# parsdate.parsedate    - ~700/sec.
+# parsedate.parsedate    - ~700/sec.
 # parse_http_date       - ~1333/sec.
 
 def build_http_date (when):
     return time.strftime ('%a, %d %b %Y %H:%M:%S GMT', time.gmtime(when))
 
 def parse_http_date (d):
-    d = string.lower (d)
+    d = d.lower()
     tz = time.timezone
     m = rfc850_reg.match (d)
     if m and m.end() == len(d):
@@ -122,5 +121,5 @@ def parse_http_date (d):
     # Thanks to Craig Silverstein <csilvers@google.com> for pointing
     # out the DST discrepancy
     if time.daylight and time.localtime(retval)[-1] == 1: # DST correction
-        retval = retval + (tz - time.altzone)
+        retval += tz - time.altzone
     return retval

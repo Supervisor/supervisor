@@ -4,31 +4,30 @@
 #       Copyright 1996-2000 by Sam Rushing
 #                                                All Rights Reserved.
 #
-
 RCS_ID =  '$Id: http_server.py,v 1.12 2004/04/21 15:11:44 akuchling Exp $'
 
 # python modules
-import os
 import re
-import socket
-import string
+import supervisor.medusa.text_socket as socket
 import sys
 import time
 
 # async modules
-import asyncore_25 as asyncore
-import asynchat_25 as asynchat
+import supervisor.medusa.asyncore_25 as asyncore
+import supervisor.medusa.asynchat_25 as asynchat
 
 # medusa modules
-import http_date
-import producers
-import status_handler
-import logger
+import supervisor.medusa.http_date as http_date
+import supervisor.medusa.producers as producers
+import supervisor.medusa.logger as logger
 
-VERSION_STRING = string.split(RCS_ID)[2]
+VERSION_STRING = RCS_ID.split()[2]
 
-from counter import counter
-from urllib import unquote, splitquery
+from supervisor.medusa.counter import counter
+try:
+    from urllib import unquote, splitquery
+except ImportError:
+    from urllib.parse import unquote, splitquery
 
 # ===========================================================================
 #                                                       Request Object
@@ -82,17 +81,14 @@ class http_request:
     def __getitem__ (self, key):
         return self.reply_headers[key]
 
+    def __contains__(self, key):
+        return key in self.reply_headers
+
     def has_key (self, key):
-        return self.reply_headers.has_key (key)
+        return key in self.reply_headers
 
     def build_reply_header (self):
-        return string.join (
-                [self.response(self.reply_code)] + map (
-                        lambda x: '%s: %s' % x,
-                        self.reply_headers.items()
-                        ),
-                '\r\n'
-                ) + '\r\n\r\n'
+        return '\r\n'.join ([self.response(self.reply_code)] + ['%s: %s' % item for item in self.reply_headers.items()]) + '\r\n\r\n'
 
     ####################################################
     # multiple reply header management
@@ -127,19 +123,19 @@ class http_request:
         found_it = 0
         
         # Remove things from the old dict as well
-        if (self.reply_headers.has_key(name) and
+        if (name in self.reply_headers and
             (value is None or 
              self.reply_headers[name] == value)):
             del self.reply_headers[name]
             found_it = 1
 
 
+        removed_headers = []
         if not value is None:
             if (name, value) in self.__reply_header_list:
                 removed_headers = [(name, value)]
                 found_it = 1
         else:
-            removed_headers = []
             for h in self.__reply_header_list:
                 if h[0] == name:
                     removed_headers.append(h)
@@ -190,7 +186,7 @@ class http_request:
         headers = [self.response(self.reply_code)]
         headers += ["%s: %s" % h for h in header_tuples]
         
-        return string.join(headers, '\r\n') + '\r\n\r\n'
+        return '\r\n'.join(headers) + '\r\n\r\n'
 
     #---------------------------------------------------
     # This is the end of the new reply header 
@@ -212,7 +208,7 @@ class http_request:
         if self._split_uri is None:
             m = self.path_regex.match (self.uri)
             if m.end() != len(self.uri):
-                raise ValueError, "Broken URI"
+                raise ValueError("Broken URI")
             else:
                 self._split_uri = m.groups()
         return self._split_uri
@@ -225,13 +221,13 @@ class http_request:
         return ''
 
     def get_header (self, header):
-        header = string.lower (header)
+        header = header.lower()
         hc = self._header_cache
-        if not hc.has_key (header):
+        if header not in hc:
             h = header + ': '
             hl = len(h)
             for line in self.header:
-                if string.lower (line[:hl]) == h:
+                if line[:hl].lower() == h:
                     r = line[hl:]
                     hc[header] = r
                     return r
@@ -291,7 +287,7 @@ class http_request:
     reply_now = error
 
     def done (self):
-        "finalize this transaction - send output to the http channel"
+        """finalize this transaction - send output to the http channel"""
 
         # ----------------------------------------
         # persistent connection management
@@ -299,14 +295,14 @@ class http_request:
 
         #  --- BUCKLE UP! ----
 
-        connection = string.lower (get_header (CONNECTION, self.header))
+        connection = get_header(CONNECTION, self.header).lower()
 
         close_it = 0
         wrap_in_chunking = 0
 
         if self.version == '1.0':
             if connection == 'keep-alive':
-                if not self.has_key ('Content-Length'):
+                if 'Content-Length' not in self:
                     close_it = 1
                 else:
                     self['Connection'] = 'Keep-Alive'
@@ -315,8 +311,8 @@ class http_request:
         elif self.version == '1.1':
             if connection == 'close':
                 close_it = 1
-            elif not self.has_key ('Content-Length'):
-                if self.has_key ('Transfer-Encoding'):
+            elif 'Content-Length' not in self:
+                if 'Transfer-Encoding' in self:
                     if not self['Transfer-Encoding'] == 'chunked':
                         close_it = 1
                 elif self.use_chunked:
@@ -439,7 +435,7 @@ class http_request:
             }
 
     # Default error message
-    DEFAULT_ERROR_MESSAGE = string.join (
+    DEFAULT_ERROR_MESSAGE = '\r\n'.join (
             ['<head>',
              '<title>Error response</title>',
              '</head>',
@@ -449,9 +445,11 @@ class http_request:
              '<p>Message: %(message)s.',
              '</body>',
              ''
-             ],
-            '\r\n'
+             ]
             )
+
+    def log_info(self, msg, level):
+        pass
 
 
 # ===========================================================================
@@ -533,7 +531,7 @@ class http_channel (asynchat.async_chat):
     def handle_error (self):
         t, v = sys.exc_info()[:2]
         if t is SystemExit:
-            raise t, v
+            raise t(v)
         else:
             asynchat.async_chat.handle_error (self)
 
@@ -558,7 +556,7 @@ class http_channel (asynchat.async_chat):
         else:
             header = self.in_buffer
             self.in_buffer = ''
-            lines = string.split (header, '\r\n')
+            lines = header.split('\r\n')
 
             # --------------------------------------------------
             # crack the request header
@@ -746,10 +744,11 @@ class http_server (asyncore.dispatcher):
         self.handlers.remove (handler)
 
     def status (self):
+        from supervisor.medusa.status_handler import english_bytes
         def nice_bytes (n):
-            return string.join (status_handler.english_bytes (n))
+            return ''.join(english_bytes (n))
 
-        handler_stats = filter (None, map (maybe_status, self.handlers))
+        handler_stats = [_f for _f in map (maybe_status, self.handlers) if _f]
 
         if self.total_clients:
             ratio = self.total_requests.as_long() / float(self.total_clients.as_long())
@@ -764,7 +763,7 @@ class http_server (asyncore.dispatcher):
                          '<p><ul>'
                          '<li>Total <b>Clients:</b> %s'                 % self.total_clients,
                          '<b>Requests:</b> %s'                                  % self.total_requests,
-                         '<b>Requests/Client:</b> %.1f'                 % (ratio),
+                         '<b>Requests/Client:</b> %.1f'                 % ratio,
                          '<li>Total <b>Bytes In:</b> %s'        % (nice_bytes (self.bytes_in.as_long())),
                          '<b>Bytes Out:</b> %s'                         % (nice_bytes (self.bytes_out.as_long())),
                          '<li>Total <b>Exceptions:</b> %s'              % self.exceptions,
@@ -822,22 +821,22 @@ def crack_request (r):
 if __name__ == '__main__':
     import sys
     if len(sys.argv) < 2:
-        print 'usage: %s <root> <port>' % (sys.argv[0])
+        print('usage: %s <root> <port>' % (sys.argv[0]))
     else:
-        import monitor
-        import filesys
-        import default_handler
-        import status_handler
-        import ftp_server
-        import chat_server
-        import resolver
-        import logger
+        import supervisor.medusa.monitor as monitor
+        import supervisor.medusa.filesys as filesys
+        import supervisor.medusa.default_handler as default_handler
+        import supervisor.medusa.status_handler as status_handler
+        import supervisor.medusa.ftp_server as ftp_server
+        import supervisor.medusa.chat_server as chat_server
+        import supervisor.medusa.resolver as resolver
+        import supervisor.medusa.logger as logger
         rs = resolver.caching_resolver ('127.0.0.1')
         lg = logger.file_logger (sys.stdout)
         ms = monitor.secure_monitor_server ('fnord', '127.0.0.1', 9999)
         fs = filesys.os_filesystem (sys.argv[1])
         dh = default_handler.default_handler (fs)
-        hs = http_server ('', string.atoi (sys.argv[2]), rs, lg)
+        hs = http_server ('', int(sys.argv[2]), rs, lg)
         hs.install_handler (dh)
         ftp = ftp_server.ftp_server (
                 ftp_server.dummy_authorizer(sys.argv[1]),
@@ -848,7 +847,7 @@ if __name__ == '__main__':
         cs = chat_server.chat_server ('', 7777)
         sh = status_handler.status_extension([hs,ms,ftp,cs,rs])
         hs.install_handler (sh)
-        if ('-p' in sys.argv):
+        if '-p' in sys.argv:
             def profile_loop ():
                 try:
                     asyncore.loop()
