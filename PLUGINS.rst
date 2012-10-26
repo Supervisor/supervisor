@@ -24,7 +24,7 @@ listeners.
     processes to the number of cores on the supervisor host.
 `supervisor-wildcards <https://github.com/aleszoulek/supervisor-wildcards>`_
     Implemenents start/stop/restart commands with wildcard support for
-    Supervisor.
+    Supervisor.  These commands run in parallel and can be much faster than the built-in start/stop/restart commands.
 `mr.laforge <https://github.com/fschulze/mr.laforge>`_
     Lets you easily make sure that ``supervisord`` and specific
     processes controlled by it are running from within shell and
