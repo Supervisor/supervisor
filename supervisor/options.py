@@ -447,7 +447,11 @@ class ServerOptions(Options):
         else:
             logfile = section.logfile
 
-        self.logfile = normalize_path(logfile)
+        if logfile != 'syslog':
+            # if the value for logfile is "syslog", we don't want to
+            # normalize the path to something like $CWD/syslog.log, but
+            # instead use the syslog service.
+            self.logfile = normalize_path(logfile)
 
         if self.pidfile:
             pidfile = self.pidfile
