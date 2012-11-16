@@ -85,10 +85,12 @@ configuration values are as follows.
 ``password``
 
   The password required for authentication to this HTTP server.  This
-  can be a cleartext password, or can be specified as a SHA hash if
+  can be a cleartext password, or can be specified as a SHA-1 hash if
   prefixed by the string ``{SHA}``.  For example,
   ``{SHA}82ab876d1387bfafe46cc1c8a2ef074eae50cb1d`` is the SHA-stored
   version of the password "thepassword".
+
+  Note that hashed password must be in hex format.
 
   *Default*:  No password required.
 
@@ -148,10 +150,12 @@ configuration values are as follows.
 ``password``
 
   The password required for authentication to this HTTP server.  This
-  can be a cleartext password, or can be specified as a SHA hash if
+  can be a cleartext password, or can be specified as a SHA-1 hash if
   prefixed by the string ``{SHA}``.  For example,
   ``{SHA}82ab876d1387bfafe46cc1c8a2ef074eae50cb1d`` is the SHA-stored
   version of the password "thepassword".
+
+  Note that hashed password must be in hex format.
 
   *Default*:  No password required.
 
