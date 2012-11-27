@@ -1,12 +1,16 @@
 import grp
 import os
 import pwd
-import re
 import signal
 import sys
-import socket
+import supervisor.medusa.text_socket as socket
 import shlex
-import urlparse
+from supervisor.py3compat import *
+if PY3:
+    import urllib.parse as urlparse
+else:
+    #noinspection PyUnresolvedReferences
+    import urlparse
 from supervisor.loggers import getLevelNumByDescription
 
 # I dont know why we bother, this doesn't run on Windows, but just
@@ -56,7 +60,7 @@ def list_of_ints(arg):
         return []
     else:
         try:
-            return map(int, arg.split(","))
+            return list(map(int, arg.split(",")))
         except:
             raise ValueError("not a valid list of ints: " + repr(arg))
 
@@ -74,7 +78,7 @@ def dict_of_key_value_pairs(arg):
     """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'}
         Quotes can be used to allow commas in the value
     """
-    lexer = shlex.shlex(arg)
+    lexer = shlex.shlex(str(arg))
     lexer.wordchars += '/.+-():'
 
     tokens = list(lexer)
@@ -85,7 +89,7 @@ def dict_of_key_value_pairs(arg):
     while i < tokens_len:
         k_eq_v = tokens[i:i+3]
         if len(k_eq_v) != 3 or k_eq_v[1] != '=':
-            raise ValueError, "Unexpected end of key/value pairs"
+            raise ValueError("Unexpected end of key/value pairs %s" % repr(arg))
         D[k_eq_v[0]] = k_eq_v[2].strip('\'"')
         i += 4
     return D
@@ -121,10 +125,10 @@ class RangeCheckedConversion:
         v = self._conversion(value)
         if self._min is not None and v < self._min:
             raise ValueError("%s is below lower bound (%s)"
-                             % (`v`, `self._min`))
+                             % (repr(v), repr(self._min)))
         if self._max is not None and v > self._max:
             raise ValueError("%s is above upper bound (%s)"
-                             % (`v`, `self._max`))
+                             % (repr(v), repr(self._max)))
         return v
 
 port_number = RangeCheckedConversion(integer, min=1, max=0xffff).__call__
@@ -132,7 +136,6 @@ port_number = RangeCheckedConversion(integer, min=1, max=0xffff).__call__
 def inet_address(s):
     # returns (host, port) tuple
     host = ''
-    port = None
     if ":" in s:
         host, s = s.split(":", 1)
         if not s:
@@ -202,7 +205,7 @@ class InetStreamSocketConfig(SocketConfig):
         self.url = 'tcp://%s:%d' % (self.host, self.port)
 
     def addr(self):
-        return (self.host, self.port)
+        return self.host, self.port
 
     def create_and_bind(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -220,7 +223,7 @@ class UnixStreamSocketConfig(SocketConfig):
 
     def __init__(self, path, **kwargs):
         self.path = path
-        self.url = 'unix://%s' % (path)
+        self.url = 'unix://%s' % path
         self.mode = kwargs.get('mode', None)
         self.owner = kwargs.get('owner', None)
 
@@ -251,17 +254,19 @@ class UnixStreamSocketConfig(SocketConfig):
         if self.mode is not None:
             try:
                 os.chmod(self.path, self.mode)
-            except Exception, e:
+            except Exception:
+                e = sys.exc_info()[1]
                 raise ValueError("Could not change permissions of socket "
-                                    + "file: %s" % (e))
+                                    + "file: %s" % e)
 
     def _chown(self):
         if self.owner is not None:
             try:
                 os.chown(self.path, self.owner[0], self.owner[1])
-            except Exception, e:
+            except Exception:
+                e = sys.exc_info()[1]
                 raise ValueError("Could not change ownership of socket file: "
-                                    + "%s" % (e))
+                                    + "%s" % e)
 
 
 def colon_separated_user_group(arg):
@@ -272,7 +277,7 @@ def colon_separated_user_group(arg):
             uid = name_to_uid(username)
             if uid is None:
                 raise ValueError('Invalid user name %s' % username)
-            return (uid, -1)
+            return uid, -1
         else:
             username = result[0]
             groupname = result[1]
@@ -282,16 +287,15 @@ def colon_separated_user_group(arg):
                 raise ValueError('Invalid user name %s' % username)
             if gid is None:
                 raise ValueError('Invalid group name %s' % groupname)
-            return (uid, gid)
-        return result
+            return uid, gid
     except:
-        raise ValueError, 'Invalid user.group definition %s' % arg
+        raise ValueError('Invalid user.group definition %s' % arg)
 
 def octal_type(arg):
     try:
         return int(arg, 8)
     except TypeError:
-        raise ValueError('%s is not convertable to an octal type' % arg)
+        raise ValueError('%s is not convertible to an octal type' % arg)
 
 def name_to_uid(name):
     if name is None:
@@ -307,7 +311,7 @@ def name_to_uid(name):
         uid = pwrec[2]
     else:
         try:
-            pwrec = pwd.getpwuid(uid)
+            pwd.getpwuid(uid)
         except KeyError:
             return None
     return uid
@@ -323,7 +327,7 @@ def name_to_gid(name):
         gid = pwrec[2]
     else:
         try:
-            pwrec = grp.getgrgid(gid)
+            grp.getgrgid(gid)
         except KeyError:
             return None
     return gid
@@ -348,12 +352,12 @@ def existing_dirpath(v):
         return nv
     if os.path.isdir(dir):
         return nv
-    raise ValueError, ('The directory named as part of the path %s '
+    raise ValueError('The directory named as part of the path %s '
                        'does not exist.' % v)
 
 def logging_level(value):
     s = str(value).lower()
-    level = getLevelNumByDescription(value)
+    level = getLevelNumByDescription(s)
     if level is None:
         raise ValueError('bad logging level name %r' % value)
     return level
@@ -382,7 +386,7 @@ class SuffixMultiplier:
 
 byte_size = SuffixMultiplier({'kb': 1024,
                               'mb': 1024*1024,
-                              'gb': 1024*1024*1024L,})
+                              'gb': 1024*1024*long(1024),})
 
 def url(value):
     # earlier Python 2.6 urlparse (2.6.4 and under) can't parse unix:// URLs,
@@ -394,16 +398,13 @@ def url(value):
     raise ValueError("value %s is not a URL" % value)
 
 def signal_number(value):
-    result = None
     try:
-        result = int(value)
+        return int(value)
     except (ValueError, TypeError):
-        result = getattr(signal, 'SIG'+value, None)
-    try:
-        result = int(result)
-        return result
-    except (ValueError, TypeError):
-        raise ValueError('value %s is not a signal name/number' % value)
+        try:
+            return int(getattr(signal, 'SIG'+value, None))
+        except (ValueError, TypeError):
+            raise ValueError('value %s is not a signal name/number' % value)
 
 class RestartWhenExitUnexpected:
     pass

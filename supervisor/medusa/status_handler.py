@@ -6,16 +6,16 @@ VERSION_STRING = "$Id: status_handler.py,v 1.7 2003/12/24 16:08:16 akuchling Exp
 # medusa status extension
 #
 
-import string
 import time
 import re
 from cgi import escape
 
-import asyncore_25 as asyncore
-import http_server
-import medusa_gif
-import producers
-from counter import counter
+from supervisor.py3compat import *
+import supervisor.medusa.asyncore_25 as asyncore
+import supervisor.medusa.http_server as http_server
+import supervisor.medusa.medusa_gif as medusa_gif
+import supervisor.medusa.producers as producers
+from supervisor.medusa.counter import counter
 
 START_TIME = long(time.time())
 
@@ -61,10 +61,10 @@ class status_extension:
     #   it open.
 
     def handle_request (self, request):
-        [path, params, query, fragment] = request.split_uri()
+        path = request.split_uri()[0]
         self.hit_counter.increment()
         if path == self.statusdir:          # and not a subdirectory
-            up_time = string.join (english_time (long(time.time()) - START_TIME))
+            up_time = ''.join (english_time (long(time.time()) - START_TIME))
             request['Content-Type'] = 'text/html'
             request.push (
                     '<html>'
@@ -77,8 +77,13 @@ class status_extension:
                 try:
                     request.push (self.objects[i].status())
                 except:
-                    import traceback, StringIO
-                    stream = StringIO.StringIO()
+                    import traceback
+                    if PY3:
+                        from io import StringIO
+                    else:
+                        #noinspection PyUnresolvedReferences
+                        from StringIO import StringIO
+                    stream = StringIO()
                     traceback.print_exc(None,stream)
                     request.push('<h2><font color="red">Error in Channel %3d: %s</font><pre>%s</pre>' % (i,escape(repr(self.objects[i])), escape(stream.getvalue())))
                 request.push ('<hr>\r\n')
@@ -154,7 +159,7 @@ class status_extension:
         else:
             m = self.hyper_regex.match (path)
             if m:
-                oid = string.atoi (m.group (1))
+                oid = int (m.group (1))
                 for object in self.hyper_objects:
                     if id (object) == oid:
                         if hasattr (object, 'hyper_respond'):
@@ -172,7 +177,7 @@ class status_extension:
         if not object in self.hyper_objects:
             self.hyper_objects.append (object)
 
-import logger
+import supervisor.medusa.logger as logger
 
 class logger_for_status (logger.tail_logger):
 
@@ -197,16 +202,13 @@ class lines_producer:
         if self.lines:
             chunk = self.lines[:50]
             self.lines = self.lines[50:]
-            return string.join (chunk, '\r\n') + '\r\n'
+            return '\r\n'.join(chunk) + '\r\n'
         else:
             return ''
 
 class channel_list_producer (lines_producer):
     def __init__ (self, statusdir):
-        channel_reprs = map (
-                lambda x: '&lt;' + repr(x)[1:-1] + '&gt;',
-                asyncore.socket_map.values()
-                )
+        channel_reprs = ['&lt;' + repr(x)[1:-1] + '&gt;' for x in asyncore.socket_map.values()]
         channel_reprs.sort()
         lines_producer.__init__ (
                 self,
@@ -227,10 +229,10 @@ def html_repr (object):
         return so
 
 def html_reprs (list, front='', back=''):
-    reprs = map (
+    reprs = list(map (
             lambda x,f=front,b=back: '%s%s%s' % (f,x,b),
-            map (lambda x: escape (html_repr(x)), list)
-            )
+            [escape (html_repr(x)) for x in list]
+            ))
     reprs.sort()
     return reprs
 

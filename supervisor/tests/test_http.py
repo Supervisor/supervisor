@@ -1,12 +1,14 @@
 import sys
 import os
-import socket
+import supervisor.medusa.text_socket as socket
 import tempfile
 import unittest
+from supervisor.py3compat import *
 
 try:
     from hashlib import sha1
 except ImportError:
+    #noinspection PyUnresolvedReferences
     from sha import new as sha1
 
 from supervisor.tests.base import DummySupervisor
@@ -129,16 +131,16 @@ class TailFProducerTests(unittest.TestCase):
         import tempfile
         from supervisor import http
         f = tempfile.NamedTemporaryFile()
-        f.write('a' * 80)
+        f.write(as_bytes('a' * 80))
         f.flush()
         t = f.name
         producer = self._makeOne(request, t, 80)
         result = producer.more()
-        self.assertEqual(result, 'a' * 80)
-        f.write('w' * 100)
+        self.assertEqual(result, as_bytes('a' * 80))
+        f.write(as_bytes('w' * 100))
         f.flush()
         result = producer.more()
-        self.assertEqual(result, 'w' * 100)
+        self.assertEqual(result, as_bytes('w' * 100))
         result = producer.more()
         self.assertEqual(result, http.NOT_DONE_YET)
         f.truncate(0)
@@ -276,12 +278,12 @@ class EncryptedDictionaryAuthorizedTests(unittest.TestCase):
         self.assertEqual(authorizer.authorize(('foo', 'password')), True)
     
     def test_authorize_gooduser_badpassword_sha(self):
-        password = '{SHA}' + sha1('password').hexdigest()
+        password = '{SHA}' + sha1(as_bytes('password')).hexdigest()
         authorizer = self._makeOne({'foo':password})
         self.assertEqual(authorizer.authorize(('foo', 'bar')), False)
 
     def test_authorize_gooduser_goodpassword_sha(self):
-        password = '{SHA}' + sha1('password').hexdigest()
+        password = '{SHA}' + sha1(as_bytes('password')).hexdigest()
         authorizer = self._makeOne({'foo':password})
         self.assertEqual(authorizer.authorize(('foo', 'password')), True)
 
@@ -323,7 +325,7 @@ class TopLevelFunctionTests(unittest.TestCase):
         socketfile = tempfile.mktemp()
         inet = {'family':socket.AF_INET, 'host':'localhost', 'port':17735,
                 'username':None, 'password':None, 'section':'inet_http_server'}
-        unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':0700,
+        unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':448, # 0700 in Py2, 0o700 in Py3
                 'chown':(-1, -1), 'username':None, 'password':None,
                 'section':'unix_http_server'}
         servers = self._make_http_servers([inet, unix])
@@ -351,7 +353,7 @@ class TopLevelFunctionTests(unittest.TestCase):
         inet = {'family':socket.AF_INET, 'host':'localhost', 'port':17736,
                 'username':'username', 'password':'password',
                 'section':'inet_http_server'}
-        unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':0700,
+        unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':448, # 0700 in Py2, 0o700 in Py3
                 'chown':(-1, -1), 'username':'username', 'password':'password',
                 'section':'unix_http_server'}
         servers = self._make_http_servers([inet, unix])
@@ -359,7 +361,7 @@ class TopLevelFunctionTests(unittest.TestCase):
         from supervisor.http import supervisor_auth_handler
         for config, server in servers:
             for handler in server.handlers:
-                self.failUnless(isinstance(handler, supervisor_auth_handler),
+                self.assertTrue(isinstance(handler, supervisor_auth_handler),
                                 handler)
 
 class DummyProducer:

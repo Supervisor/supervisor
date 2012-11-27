@@ -1,7 +1,6 @@
 # -*- Mode: Python -*-
 
-import socket
-import string
+import supervisor.medusa.text_socket as socket
 from supervisor.medusa import asyncore_25 as asyncore
 from supervisor.medusa import asynchat_25 as asynchat
 
@@ -26,20 +25,20 @@ class test_client (asynchat.async_chat):
         self.push (chain)
 
     def handle_connect (self):
-        test_client.concurrent = test_client.concurrent + 1
-        if (test_client.concurrent > test_client.max_concurrent):
+        test_client.concurrent += 1
+        if test_client.concurrent > test_client.max_concurrent:
             test_client.max_concurrent = test_client.concurrent
 
     def handle_expt (self):
-        print 'unexpected FD_EXPT thrown.  closing()'
+        print('unexpected FD_EXPT thrown.  closing()')
         self.close()
 
     def close (self):
-        test_client.concurrent = test_client.concurrent - 1
+        test_client.concurrent -= 1
         asynchat.async_chat.close(self)
 
     def collect_incoming_data (self, data):
-        test_client.total_in = test_client.total_in + len(data)
+        test_client.total_in += len(data)
 
     def found_terminator (self):
         pass
@@ -65,21 +64,18 @@ def build_request_chain (num, host, request_size):
                     request_size, host
                     )
             )
-    return string.join (sl, '')
+    return ''.join(sl)
 
 if __name__ == '__main__':
-    import string
     import sys
     if len(sys.argv) != 6:
-        print 'usage: %s <host> <port> <request-size> <num-requests> <num-connections>\n' % sys.argv[0]
+        print('usage: %s <host> <port> <request-size> <num-requests> <num-connections>\n' % sys.argv[0])
     else:
         host = sys.argv[1]
 
         ip = socket.gethostbyname (host)
 
-        [port, request_size, num_requests, num_conns] = map (
-                string.atoi, sys.argv[2:]
-                )
+        port, request_size, num_requests, num_conns = [int(i) for i in sys.argv[2:]]
 
         chain = build_request_chain (num_requests, host, request_size)
 
@@ -103,8 +99,5 @@ if __name__ == '__main__':
         sys.stderr.write ('max concurrent connections: %d\n' % test_client.max_concurrent)
 
         sys.stdout.write (
-                string.join (
-                        map (str, (num_conns, num_requests, request_size, throughput, trans_per_sec)),
-                        ','
-                        ) + '\n'
-                )
+            ','.join (str(i) for i in (num_conns, num_requests, request_size, throughput, trans_per_sec)) + '\n'
+        )

@@ -3,10 +3,16 @@
 import sys
 import os
 import unittest
-import socket
+import supervisor.medusa.text_socket as socket
 import tempfile
 from mock import Mock, patch, sentinel
 from supervisor import datatypes
+from supervisor.py3compat import *
+if PY3:
+    maxint = sys.maxsize
+else:
+    #noinspection PyUnresolvedReferences
+    maxint = sys.maxint
 
 class DatatypesTest(unittest.TestCase):
     def test_boolean_returns_true_for_truthy_values(self):
@@ -17,7 +23,7 @@ class DatatypesTest(unittest.TestCase):
     def test_boolean_returns_true_for_upper_truthy_values(self):
         for s in map(str.upper, datatypes.TRUTHY_STRINGS):
             actual = datatypes.boolean(s)
-            self.assert_(actual, True)
+            self.assertTrue(actual)
 
     def test_boolean_returns_false_for_falsy_values(self):
         for s in datatypes.FALSY_STRINGS:
@@ -181,7 +187,7 @@ class DatatypesTest(unittest.TestCase):
         from supervisor.datatypes import integer
         self.assertRaises(ValueError, integer, 'abc')
         self.assertEqual(integer('1'), 1)
-        self.assertEqual(integer(str(sys.maxint+1)), sys.maxint+1)
+        self.assertEqual(integer(str(maxint+1)), maxint+1)
 
     def test_url_accepts_urlparse_recognized_scheme_with_netloc(self):
         good_url = 'http://localhost:9001'
@@ -221,8 +227,7 @@ class InetStreamSocketConfigTests(unittest.TestCase):
     def test_repr(self):
         conf = self._makeOne('127.0.0.1', 8675)
         s = repr(conf)
-        self.assertTrue(s.startswith(
-            '<supervisor.datatypes.InetStreamSocketConfig at'), s)
+        self.assertTrue('supervisor.datatypes.InetStreamSocketConfig' in s)
         self.assertTrue(s.endswith('for tcp://127.0.0.1:8675>'), s)
 
     def test_addr(self):
@@ -240,7 +245,7 @@ class InetStreamSocketConfigTests(unittest.TestCase):
         sock = conf.create_and_bind()
         reuse = sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
         self.assertTrue(reuse)
-        self.assertEquals(conf.addr(), sock.getsockname()) #verifies that bind was called
+        self.assertEqual(conf.addr(), sock.getsockname()) #verifies that bind was called
         sock.close()
 
     def test_same_urls_are_equal(self):
@@ -279,8 +284,7 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
     def test_repr(self):
         conf = self._makeOne('/tmp/foo.sock')
         s = repr(conf)
-        self.assertTrue(s.startswith(
-            '<supervisor.datatypes.UnixStreamSocketConfig at'), s)
+        self.assertTrue('supervisor.datatypes.UnixStreamSocketConfig' in s)
         self.assertTrue(s.endswith('for unix:///tmp/foo.sock>'), s)
 
     def test_get_addr(self):
@@ -306,24 +310,24 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
 
         sock = call_create_and_bind(conf)
         self.assertTrue(os.path.exists(tf_name))
-        self.assertEquals(conf.addr(), sock.getsockname()) #verifies that bind was called
+        self.assertEqual(conf.addr(), sock.getsockname()) #verifies that bind was called
         sock.close()
         self.assertTrue(os.path.exists(tf_name))
         os.unlink(tf_name)
         #Verify that os.chown was called with correct args
-        self.assertEquals(1, chown_mock.call_count)
+        self.assertEqual(1, chown_mock.call_count)
         path_arg = chown_mock.call_args[0][0]
         uid_arg = chown_mock.call_args[0][1]
         gid_arg = chown_mock.call_args[0][2]
-        self.assertEquals(tf_name, path_arg)
-        self.assertEquals(owner[0], uid_arg)
-        self.assertEquals(owner[1], gid_arg)
+        self.assertEqual(tf_name, path_arg)
+        self.assertEqual(owner[0], uid_arg)
+        self.assertEqual(owner[1], gid_arg)
         #Verify that os.chmod was called with correct args
-        self.assertEquals(1, chmod_mock.call_count)
+        self.assertEqual(1, chmod_mock.call_count)
         path_arg = chmod_mock.call_args[0][0]
         mode_arg = chmod_mock.call_args[0][1]
-        self.assertEquals(tf_name, path_arg)
-        self.assertEquals(mode, mode_arg)
+        self.assertEqual(tf_name, path_arg)
+        self.assertEqual(mode, mode_arg)
 
     def test_same_paths_are_equal(self):
         conf1 = self._makeOne('/tmp/foo.sock')
@@ -393,13 +397,11 @@ class TestSocketAddress(unittest.TestCase):
         return self._getTargetClass()(s)
 
     def test_unix_socket(self):
-        import socket
         addr = self._makeOne('/foo/bar')
         self.assertEqual(addr.family, socket.AF_UNIX)
         self.assertEqual(addr.address, '/foo/bar')
 
     def test_inet_socket(self):
-        import socket
         addr = self._makeOne('localhost:8080')
         self.assertEqual(addr.family, socket.AF_INET)
         self.assertEqual(addr.address, ('localhost', 8080))

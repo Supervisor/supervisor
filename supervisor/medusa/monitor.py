@@ -4,22 +4,24 @@
 #
 # python REPL channel.
 #
-
 RCS_ID = '$Id: monitor.py,v 1.5 2002/03/23 15:08:06 amk Exp $'
 
-import md5
-import socket
-import string
+try:
+    from md5 import md5
+except ImportError:
+    from hashlib import md5
+import supervisor.medusa.text_socket as socket
 import sys
 import time
 
-VERSION = string.split(RCS_ID)[2]
+VERSION = RCS_ID.split()[2]
 
-import asyncore_25 as asyncore
-import asynchat_25 as asynchat
+import supervisor.medusa.asyncore_25 as asyncore
+import supervisor.medusa.asynchat_25 as asynchat
 
-from counter import counter
-import producers
+from supervisor.medusa.counter import counter
+import supervisor.medusa.producers as producers
+from supervisor.py3compat import *
 
 class monitor_channel (asynchat.async_chat):
     try_linemode = 1
@@ -93,7 +95,7 @@ class monitor_channel (asynchat.async_chat):
                     result = eval (co, self.local_env)
                     method = 'eval'
                     if result is not None:
-                        print repr(result)
+                        print(repr(result))
                     self.local_env['_'] = result
                 except SyntaxError:
                     try:
@@ -104,21 +106,22 @@ class monitor_channel (asynchat.async_chat):
                                 return
                             else:
                                 self.multi_line.append (line)
-                                line =  string.join (self.multi_line, '\n')
+                                line =  '\n'.join (self.multi_line)
                                 co = compile (line, repr(self), 'exec')
                                 self.multi_line = []
                         else:
                             co = compile (line, repr(self), 'exec')
-                    except SyntaxError, why:
-                        if why[0] == 'unexpected EOF while parsing':
+                    except SyntaxError:
+                        why = sys.exc_info()[1]
+                        if why.args[0] == 'unexpected EOF while parsing':
                             self.push ('... ')
                             self.multi_line.append (line)
                             return
                         else:
                             t,v,tb = sys.exc_info()
                             del tb
-                            raise t,v
-                    exec co in self.local_env
+                            raise t(v)
+                    exec(co in self.local_env)
                     method = 'exec'
             except:
                 method = 'exception'
@@ -151,7 +154,7 @@ class monitor_channel (asynchat.async_chat):
                     chars = chars[:-1]
                 else:
                     chars.append (ch)
-        return string.join (chars, '')
+        return ''.join (chars)
 
 class monitor_server (asyncore.dispatcher):
 
@@ -178,6 +181,7 @@ class monitor_server (asyncore.dispatcher):
 
     def handle_accept (self):
         conn, addr = self.accept()
+        #noinspection PyStringFormat
         self.log_info('Incoming monitor connection from %s:%d' % addr)
         self.channel_class (self, conn, addr)
         self.total_sessions.increment()
@@ -192,12 +196,9 @@ class monitor_server (asyncore.dispatcher):
                 )
 
 def hex_digest (s):
-    m = md5.md5()
-    m.update (s)
-    return string.joinfields (
-            map (lambda x: hex (ord (x))[2:], map (None, m.digest())),
-            '',
-            )
+    m = md5()
+    m.update(s)
+    return ''.join([hex (ord (x))[2:] for x in list(m.digest())])
 
 class secure_monitor_channel (monitor_channel):
     authorized = 0
@@ -222,7 +223,7 @@ class secure_monitor_channel (monitor_channel):
         if not self.authorized:
             if hex_digest ('%s%s' % (self.timestamp, self.server.password)) != self.data:
                 self.log_info ('%s: failed authorization' % self, 'warning')
-                self.server.failed_auths = self.server.failed_auths + 1
+                self.server.failed_auths += 1
                 self.close()
             else:
                 self.authorized = 1
@@ -235,7 +236,7 @@ class secure_monitor_channel (monitor_channel):
             monitor_channel.found_terminator (self)
 
 class secure_encrypted_monitor_channel (secure_monitor_channel):
-    "Wrap send() and recv() with a stream cipher"
+    """Wrap send() and recv() with a stream cipher"""
 
     def __init__ (self, server, conn, addr):
         key = server.password
@@ -266,7 +267,7 @@ class secure_monitor_server (monitor_server):
     def status (self):
         p = monitor_server.status (self)
         # kludge
-        p.data = p.data + ('<br><b>Failed Authorizations:</b> %d' % self.failed_auths)
+        p.data += '<br><b>Failed Authorizations:</b> %d' % self.failed_auths
         return p
 
 # don't try to print from within any of the methods
@@ -285,9 +286,9 @@ class output_producer:
             self.channel.close()
 
     def write (self, data):
-        lines = string.splitfields (data, '\n')
-        data = string.join (lines, '\r\n')
-        self.data = self.data + data
+        lines = data.split('\n')
+        data = '\r\n'.join(lines)
+        self.data += data
         self.check_data()
 
     def writeline (self, line):
@@ -295,10 +296,7 @@ class output_producer:
         self.check_data()
 
     def writelines (self, lines):
-        self.data = self.data + string.joinfields (
-                lines,
-                '\r\n'
-                ) + '\r\n'
+        self.data = self.data + '\r\n'.join(lines) + '\r\n'
         self.check_data()
 
     def flush (self):
@@ -318,7 +316,7 @@ class output_producer:
 if __name__ == '__main__':
     if '-s' in sys.argv:
         sys.argv.remove ('-s')
-        print 'Enter password: ',
+        print_function('Enter password: ', end='')
         password = raw_input()
     else:
         password = None
@@ -330,7 +328,7 @@ if __name__ == '__main__':
         encrypt = 0
 
     if len(sys.argv) > 1:
-        port = string.atoi (sys.argv[1])
+        port = int(sys.argv[1])
     else:
         port = 8023
 
@@ -338,6 +336,7 @@ if __name__ == '__main__':
         s = secure_monitor_server (password, '', port)
         if encrypt:
             s.channel_class = secure_encrypted_monitor_channel
+            #noinspection PyUnresolvedReferences
             import sapphire
             s.cipher = sapphire
     else:

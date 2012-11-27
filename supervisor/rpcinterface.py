@@ -2,6 +2,7 @@ import os
 import time
 import datetime
 import errno
+import sys
 
 from supervisor.options import readFile
 from supervisor.options import tailFile
@@ -24,6 +25,7 @@ from supervisor.states import getSupervisorStateDescription
 from supervisor.states import ProcessStates
 from supervisor.states import getProcessStateDescription
 from supervisor.states import RUNNING_STATES
+from supervisor.py3compat import *
 
 API_VERSION  = '3.0'
 
@@ -33,7 +35,7 @@ class SupervisorNamespaceRPCInterface:
 
     def _update(self, text):
         self.update_text = text # for unit tests, mainly
-        if self.supervisord.options.mood < SupervisorStates.RUNNING:
+        if isinstance(self.supervisord.options.mood, int) and self.supervisord.options.mood < SupervisorStates.RUNNING:
             raise RPCError(Faults.SHUTDOWN_STATE)
 
     # RPC API methods
@@ -57,7 +59,7 @@ class SupervisorNamespaceRPCInterface:
         return VERSION
 
     def getIdentification(self):
-        """ Return identifiying string of supervisord
+        """ Return identifying string of supervisord
 
         @return string identifier identifying string
         """
@@ -102,8 +104,9 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.NO_FILE, logfile)
 
         try:
-            return readFile(logfile, int(offset), int(length))
-        except ValueError, inst:
+            return as_string(readFile(logfile, int(offset), int(length)))
+        except ValueError:
+            inst = sys.exc_info()[1]
             why = inst.args[0]
             raise RPCError(getattr(Faults, why))
 
@@ -160,7 +163,8 @@ class SupervisorNamespaceRPCInterface:
         self._update('reloadConfig')
         try:
             self.supervisord.options.process_config_file(do_usage=False)
-        except ValueError, msg:
+        except ValueError:
+            msg = sys.exc_info()[1]
             raise RPCError(Faults.CANT_REREAD, msg)
 
         added, changed, removed = self.supervisord.diff_to_active()
@@ -190,7 +194,7 @@ class SupervisorNamespaceRPCInterface:
         """ Remove a stopped process from the active configuration.
 
         @param string name         name of process group to remove
-        @return boolean result     Indicates wether the removal was successful
+        @return boolean result     Indicates whether the removal was successful
         """
         self._update('removeProcessGroup')
         if name not in self.supervisord.process_groups:
@@ -207,21 +211,21 @@ class SupervisorNamespaceRPCInterface:
         all_processes = []
 
         if lexical:
-            group_names = self.supervisord.process_groups.keys()
+            group_names = list(self.supervisord.process_groups.keys())
             group_names.sort()
             for group_name in group_names:
                 group = self.supervisord.process_groups[group_name]
-                process_names = group.processes.keys()
+                process_names = list(group.processes.keys())
                 process_names.sort()
                 for process_name in process_names:
                     process = group.processes[process_name]
                     all_processes.append((group, process))
         else:
-            groups = self.supervisord.process_groups.values()
+            groups = list(self.supervisord.process_groups.values())
             groups.sort() # asc by priority
 
             for group in groups:
-                processes = group.processes.values()
+                processes = list(group.processes.values())
                 processes.sort() # asc by priority
                 for process in processes:
                     all_processes.append((group, process))
@@ -263,9 +267,11 @@ class SupervisorNamespaceRPCInterface:
         # eventually fail
         try:
             filename, argv = process.get_execv_args()
-        except NotFound, why:
+        except NotFound:
+            why = sys.exc_info()[1]
             raise RPCError(Faults.NO_FILE, why.args[0])
-        except (NotExecutable, NoPermission), why:
+        except (NotExecutable, NoPermission):
+            why = sys.exc_info()[1]
             raise RPCError(Faults.NOT_EXECUTABLE, why.args[0])
 
         started = []
@@ -326,7 +332,7 @@ class SupervisorNamespaceRPCInterface:
         if group is None:
             raise RPCError(Faults.BAD_NAME, name)
 
-        processes = group.processes.values()
+        processes = list(group.processes.values())
         processes.sort()
         processes = [ (group, process) for process in processes ]
 
@@ -413,7 +419,7 @@ class SupervisorNamespaceRPCInterface:
         if group is None:
             raise RPCError(Faults.BAD_NAME, name)
 
-        processes = group.processes.values()
+        processes = list(group.processes.values())
         processes.sort()
         processes = [ (group, process) for process in processes ]
 
@@ -442,7 +448,7 @@ class SupervisorNamespaceRPCInterface:
         return killall # deferred
 
     def getAllConfigInfo(self):
-        """ Get info about all availible process configurations. Each record
+        """ Get info about all available process configurations. Each record
         represents a single process (i.e. groups get flattened).
 
         @return array result  An array of process config info records
@@ -461,7 +467,7 @@ class SupervisorNamespaceRPCInterface:
                       'group_prio': gconfig.priority,
                       'process_prio': pconfig.priority })
 
-        configinfo.sort()
+        configinfo.sort(key=lambda r: r['name'])
         return configinfo
 
     def _interpretProcessInfo(self, info):
@@ -557,8 +563,9 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.NO_FILE, logfile)
 
         try:
-            return readFile(logfile, int(offset), int(length))
-        except ValueError, inst:
+            return as_string(readFile(logfile, int(offset), int(length)))
+        except ValueError:
+            inst = sys.exc_info()[1]
             why = inst.args[0]
             raise RPCError(getattr(Faults, why))
 
@@ -685,7 +692,8 @@ class SupervisorNamespaceRPCInterface:
             name = make_namespec(group.config.name, process.config.name)
             try:
                 callback(name)
-            except RPCError, e:
+            except RPCError:
+                e = sys.exc_info()[1]
                 results.append(
                     {'name':process.config.name,
                      'group':group.config.name,
@@ -739,8 +747,9 @@ class SupervisorNamespaceRPCInterface:
 
         try:
             process.write(chars)
-        except OSError, why:
-            if why[0] == errno.EPIPE:
+        except OSError:
+            why = sys.exc_info()[1]
+            if why.args[0] == errno.EPIPE:
                 raise RPCError(Faults.NO_FILE, name)
             else:
                 raise
@@ -784,7 +793,8 @@ def make_allfunc(processes, predicate, func, **extra_kwargs):
                     try:
                         callback = func(name, **extra_kwargs)
                         callbacks.append((group, process, callback))
-                    except RPCError, e:
+                    except RPCError:
+                        e = sys.exc_info()[1]
                         results.append({'name':process.config.name,
                                         'group':group.config.name,
                                         'status':e.code,
@@ -798,7 +808,8 @@ def make_allfunc(processes, predicate, func, **extra_kwargs):
 
         try:
             value = callback()
-        except RPCError, e:
+        except RPCError:
+            e = sys.exc_info()[1]
             results.append(
                 {'name':process.config.name,
                  'group':group.config.name,

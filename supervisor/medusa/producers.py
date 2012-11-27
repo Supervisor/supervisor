@@ -11,11 +11,10 @@ For example, you can feed dynamically-produced output into the compressing
 producer, then wrap this with the 'chunked' transfer-encoding producer.
 """
 
-import string
 from asynchat import find_prefix_at_end
 
 class simple_producer:
-    "producer for a string"
+    """producer for a string"""
     def __init__ (self, data, buffer_size=1024):
         self.data = data
         self.buffer_size = buffer_size
@@ -31,7 +30,7 @@ class simple_producer:
             return result
 
 class scanning_producer:
-    "like simple_producer, but more efficient for large strings"
+    """like simple_producer, but more efficient for large strings"""
     def __init__ (self, data, buffer_size=1024):
         self.data = data
         self.buffer_size = buffer_size
@@ -45,13 +44,13 @@ class scanning_producer:
                     self.pos + self.buffer_size
                     )
             result = self.data[lp:rp]
-            self.pos = self.pos + len(result)
+            self.pos += len(result)
             return result
         else:
             return ''
 
 class lines_producer:
-    "producer for a list of lines"
+    """producer for a list of lines"""
 
     def __init__ (self, lines):
         self.lines = lines
@@ -60,12 +59,12 @@ class lines_producer:
         if self.lines:
             chunk = self.lines[:50]
             self.lines = self.lines[50:]
-            return string.join (chunk, '\r\n') + '\r\n'
+            return '\r\n'.join(chunk) + '\r\n'
         else:
             return ''
 
 class buffer_list_producer:
-    "producer for a list of strings"
+    """producer for a list of strings"""
 
     # i.e., data == string.join (buffers, '')
 
@@ -79,11 +78,11 @@ class buffer_list_producer:
             return ''
         else:
             data = self.buffers[self.index]
-            self.index = self.index + 1
+            self.index += 1
             return data
 
 class file_producer:
-    "producer wrapper for file[-like] objects"
+    """producer wrapper for file[-like] objects"""
 
     # match http_channel's outgoing buffer size
     out_buffer_size = 1<<16
@@ -113,23 +112,20 @@ class file_producer:
 # of this object.
 
 class output_producer:
-    "Acts like an output file; suitable for capturing sys.stdout"
+    """Acts like an output file; suitable for capturing sys.stdout"""
     def __init__ (self):
         self.data = ''
 
     def write (self, data):
-        lines = string.splitfields (data, '\n')
-        data = string.join (lines, '\r\n')
-        self.data = self.data + data
+        lines = data.split('\n')
+        data = '\r\n'.join(lines)
+        self.data += data
 
     def writeline (self, line):
         self.data = self.data + line + '\r\n'
 
     def writelines (self, lines):
-        self.data = self.data + string.joinfields (
-                lines,
-                '\r\n'
-                ) + '\r\n'
+        self.data = self.data + '\r\n'.join(lines) + '\r\n'
 
     def flush (self):
         pass
@@ -146,7 +142,7 @@ class output_producer:
             return ''
 
 class composite_producer:
-    "combine a fifo of producers into one"
+    """combine a fifo of producers into one"""
     def __init__ (self, producers):
         self.producers = producers
 
@@ -205,7 +201,7 @@ class hooked_producer:
                 self.producer = None
                 self.function (self.bytes)
             else:
-                self.bytes = self.bytes + len(result)
+                self.bytes += len(result)
             return result
         else:
             return ''
@@ -240,10 +236,7 @@ class chunked_producer:
             else:
                 self.producer = None
                 if self.footers:
-                    return string.join (
-                            ['0'] + self.footers,
-                            '\r\n'
-                            ) + '\r\n\r\n'
+                    return '\r\n'.join(['0'] + self.footers) + '\r\n\r\n'
                 else:
                     return '0\r\n\r\n'
         else:
@@ -288,8 +281,8 @@ class compressed_producer:
 
 class escaping_producer:
 
-    "A producer that escapes a sequence of characters"
-    " Common usage: escaping the CRLF.CRLF sequence in SMTP, NNTP, etc..."
+    """A producer that escapes a sequence of characters"""
+    # Common usage: escaping the CRLF.CRLF sequence in SMTP, NNTP, etc...
 
     def __init__ (self, producer, esc_from='\r\n.', esc_to='\r\n..'):
         self.producer = producer
@@ -305,7 +298,7 @@ class escaping_producer:
         buffer = self.buffer + self.producer.more()
 
         if buffer:
-            buffer = string.replace (buffer, esc_from, esc_to)
+            buffer = buffer.replace(esc_from, esc_to)
             i = self.find_prefix_at_end (buffer, esc_from)
             if i:
                 # we found a prefix

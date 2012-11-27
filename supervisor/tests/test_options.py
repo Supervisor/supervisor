@@ -3,12 +3,19 @@
 import os
 import sys
 import tempfile
-import socket
+import supervisor.medusa.text_socket as socket
 import unittest
 import signal
 import shutil
 import errno
 from mock import Mock, patch, sentinel
+from supervisor.py3compat import *
+from supervisor import read_file
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import DummyLogger
@@ -21,7 +28,6 @@ from supervisor.tests.base import lstrip
 class OptionTests(unittest.TestCase):
 
     def _makeOptions(self, read_error=False):
-        from cStringIO import StringIO
         from supervisor.options import Options
         from supervisor.datatypes import integer
 
@@ -53,28 +59,28 @@ class OptionTests(unittest.TestCase):
         # Only config file exists
         options = self._makeOptions()
         options.realize([])
-        self.assertEquals(options.anoption, 'default')
-        self.assertEquals(options.other, 41)
+        self.assertEqual(options.anoption, 'default')
+        self.assertEqual(options.other, 41)
 
         # Env should trump config
         options = self._makeOptions()
         os.environ['OTHER'] = '42'
         options.realize([])
-        self.assertEquals(options.other, 42)
+        self.assertEqual(options.other, 42)
 
         # Opt should trump both env (still set) and config
         options = self._makeOptions()
         options.realize(['-p', '43'])
-        self.assertEquals(options.other, 43)
+        self.assertEqual(options.other, 43)
         del os.environ['OTHER']
 
     def test_config_reload(self):
         options = self._makeOptions()
         options.realize([])
-        self.assertEquals(options.other, 41)
+        self.assertEqual(options.other, 41)
         options.master['other'] = 42
         options.process_config_file()
-        self.assertEquals(options.other, 42)
+        self.assertEqual(options.other, 42)
 
     def test_config_reload_do_usage_false(self):
         options = self._makeOptions(read_error='error')
@@ -83,7 +89,6 @@ class OptionTests(unittest.TestCase):
 
     def test_config_reload_do_usage_true(self):
         options = self._makeOptions(read_error='error')
-        from StringIO import StringIO
         L = []
         def exit(num):
             L.append(num)
@@ -98,16 +103,16 @@ class OptionTests(unittest.TestCase):
         from supervisor.options import Options
         options = Options()
         options._set('foo', 'bar', 0)
-        self.assertEquals(options.foo, 'bar')
-        self.assertEquals(options.attr_priorities['foo'], 0)
+        self.assertEqual(options.foo, 'bar')
+        self.assertEqual(options.attr_priorities['foo'], 0)
         options._set('foo', 'baz', 1)
-        self.assertEquals(options.foo, 'baz')
-        self.assertEquals(options.attr_priorities['foo'], 1)
+        self.assertEqual(options.foo, 'baz')
+        self.assertEqual(options.attr_priorities['foo'], 1)
         options._set('foo', 'gazonk', 0)
-        self.assertEquals(options.foo, 'baz')
-        self.assertEquals(options.attr_priorities['foo'], 1)
+        self.assertEqual(options.foo, 'baz')
+        self.assertEqual(options.attr_priorities['foo'], 1)
         options._set('foo', 'gazonk', 1)
-        self.assertEquals(options.foo, 'gazonk')
+        self.assertEqual(options.foo, 'gazonk')
 
 class ClientOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -127,7 +132,6 @@ class ClientOptionsTests(unittest.TestCase):
         history_file=%s/sc_history
         """ % tempdir)
 
-        from StringIO import StringIO
         fp = StringIO(s)
         instance = self._makeOne()
         instance.configfile = fp
@@ -143,7 +147,6 @@ class ClientOptionsTests(unittest.TestCase):
         self.assertEqual(options.history_file, history_file)
 
     def test_options_unixsocket_cli(self):
-        from StringIO import StringIO
         fp = StringIO('[supervisorctl]')
         instance = self._makeOne()
         instance.configfile = fp
@@ -161,7 +164,6 @@ class ServerOptionsTests(unittest.TestCase):
     def test_version(self):
         from supervisor.options import VERSION
         options = self._makeOne()
-        from StringIO import StringIO
         options.stdout = StringIO()
         self.assertRaises(SystemExit, options.version, None)
         self.assertEqual(options.stdout.getvalue(), VERSION + '\n')
@@ -231,14 +233,13 @@ class ServerOptionsTests(unittest.TestCase):
 
         from supervisor import datatypes
 
-        from StringIO import StringIO
         fp = StringIO(s)
         instance = self._makeOne()
         instance.configfile = fp
         instance.realize(args=[])
         options = instance.configroot.supervisord
         self.assertEqual(options.directory, tempfile.gettempdir())
-        self.assertEqual(options.umask, 022)
+        self.assertEqual(options.umask, 18) # 022 in Py2, 0o22 in Py3
         self.assertEqual(options.logfile, 'supervisord.log')
         self.assertEqual(options.logfile_maxbytes, 1000 * 1024 * 1024)
         self.assertEqual(options.logfile_backups, 5)
@@ -284,7 +285,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.stdout_logfile_backups, 10)
         self.assertEqual(proc1.exitcodes, [0,2])
         self.assertEqual(proc1.directory, '/tmp')
-        self.assertEqual(proc1.umask, 002)
+        self.assertEqual(proc1.umask, 2)
         self.assertEqual(proc1.environment, dict(FAKE_ENV_VAR='/some/path'))
 
         cat2 = options.process_group_configs[1]
@@ -372,7 +373,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.uid, 0)
         self.assertEqual(instance.gid, 0)
         self.assertEqual(instance.directory, tempfile.gettempdir())
-        self.assertEqual(instance.umask, 022)
+        self.assertEqual(instance.umask, 18) # 022 in Py2, 0o22 in Py3
         self.assertEqual(instance.logfile, os.path.join(here,'supervisord.log'))
         self.assertEqual(instance.logfile_maxbytes, 1000 * 1024 * 1024)
         self.assertEqual(instance.logfile_backups, 5)
@@ -395,7 +396,6 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.minprocs, 300)
 
     def test_reload(self):
-        from cStringIO import StringIO
         text = lstrip("""\
         [supervisord]
         user=root
@@ -468,7 +468,6 @@ class ServerOptionsTests(unittest.TestCase):
         old_warning = "Warning from a prior config read"
         instance.parse_warnings = [old_warning]
 
-        from cStringIO import StringIO
         text = lstrip("""\
         [supervisord]
         user=root
@@ -484,7 +483,8 @@ class ServerOptionsTests(unittest.TestCase):
         from supervisor.options import readFile
         try:
             readFile('/notthere', 0, 10)
-        except ValueError, inst:
+        except ValueError:
+            inst = sys.exc_info()[1]
             self.assertEqual(inst.args[0], 'FAILED')
         else:
             raise AssertionError("Didn't raise")
@@ -536,7 +536,7 @@ class ServerOptionsTests(unittest.TestCase):
                                  Server())]
         instance.pidfile = ''
         instance.cleanup()
-        self.failIf(os.path.exists(fn))
+        self.assertFalse(os.path.exists(fn))
 
     def test_cleanup_afunix_nounlink(self):
         fn = tempfile.mktemp()
@@ -555,7 +555,7 @@ class ServerOptionsTests(unittest.TestCase):
             instance.pidfile = ''
             instance.unlink_socketfiles = False
             instance.cleanup()
-            self.failUnless(os.path.exists(fn))
+            self.assertTrue(os.path.exists(fn))
         finally:
             try:
                 os.unlink(fn)
@@ -587,11 +587,11 @@ class ServerOptionsTests(unittest.TestCase):
             instance.logger = DummyLogger()
             instance.pidfile = fn
             instance.write_pidfile()
-            self.failUnless(os.path.exists(fn))
-            pid = int(open(fn, 'r').read()[:-1])
+            self.assertTrue(os.path.exists(fn))
+            pid = int(read_file(fn)[:-1])
             self.assertEqual(pid, os.getpid())
             msg = instance.logger.data[0]
-            self.failUnless(msg.startswith('supervisord started with pid'))
+            self.assertTrue(msg.startswith('supervisord started with pid'))
         finally:
             try:
                 os.unlink(fn)
@@ -605,17 +605,17 @@ class ServerOptionsTests(unittest.TestCase):
         instance.pidfile = fn
         instance.write_pidfile()
         msg = instance.logger.data[0]
-        self.failUnless(msg.startswith('could not write pidfile'))
+        self.assertTrue(msg.startswith('could not write pidfile'))
 
     def test_close_fd(self):
         instance = self._makeOne()
         innie, outie = os.pipe()
         os.read(innie, 0) # we can read it while its open
-        os.write(outie, 'foo') # we can write to it while its open
+        os.write(outie, as_bytes('foo')) # we can write to it while its open
         instance.close_fd(innie)
         self.assertRaises(OSError, os.read, innie, 0)
         instance.close_fd(outie)
-        self.assertRaises(OSError, os.write, outie, 'foo')
+        self.assertRaises(OSError, os.write, outie, as_bytes('foo'))
 
     def test_processes_from_section(self):
         instance = self._makeOne()
@@ -972,7 +972,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(gconf_foo.socket_config.url,
                                 'unix:///tmp/foo.sock')
         self.assertEqual(exp_owner, gconf_foo.socket_config.get_owner())
-        self.assertEqual(0666, gconf_foo.socket_config.get_mode())
+        self.assertEqual(438, gconf_foo.socket_config.get_mode()) # 0666 in Py2, 0o666 in Py3
         self.assertEqual(len(gconf_foo.process_configs), 2)
         pconfig_foo = gconf_foo.process_configs[0]
         self.assertEqual(pconfig_foo.__class__, FastCGIProcessConfig)
@@ -983,7 +983,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(gconf_bar.socket_config.url,
                          'unix:///tmp/bar.sock')
         self.assertEqual(exp_owner, gconf_bar.socket_config.get_owner())
-        self.assertEqual(0700, gconf_bar.socket_config.get_mode())
+        self.assertEqual(448, gconf_bar.socket_config.get_mode()) # 0700 in Py2, 0o700 in Py3
         self.assertEqual(len(gconf_bar.process_configs), 3)
 
         gconf_cub = gconfigs[2]
@@ -997,7 +997,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(gconf_flub.socket_config.url,
                          'unix:///tmp/flub.sock')
         self.assertEqual(None, gconf_flub.socket_config.get_owner())
-        self.assertEqual(0700, gconf_flub.socket_config.get_mode())
+        self.assertEqual(448, gconf_flub.socket_config.get_mode()) # 0700 in Py2, 0o700 in Py3
         self.assertEqual(len(gconf_flub.process_configs), 1)
 
 
@@ -1260,12 +1260,14 @@ class ServerOptionsTests(unittest.TestCase):
             logfn = instance.get_autochildlog_name('foo', sid,'stdout')
             first = logfn + '.1'
             second = logfn + '.2'
-            open(first, 'w')
-            open(second, 'w')
+            f1 = open(first, 'w')
+            f2 = open(second, 'w')
             instance.clear_autochildlogdir()
-            self.failIf(os.path.exists(logfn))
-            self.failIf(os.path.exists(first))
-            self.failIf(os.path.exists(second))
+            self.assertFalse(os.path.exists(logfn))
+            self.assertFalse(os.path.exists(first))
+            self.assertFalse(os.path.exists(second))
+            f1.close()
+            f2.close()
         finally:
             shutil.rmtree(dn)
 
@@ -1567,48 +1569,48 @@ class SignalReceiverTests(unittest.TestCase):
     def test_returns_None_initially(self):
         from supervisor.options import SignalReceiver
         sr = SignalReceiver()
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), None)
 
     def test_returns_signals_in_order_received(self):
         from supervisor.options import SignalReceiver
         sr = SignalReceiver()
         sr.receive(signal.SIGTERM, 'frame')
         sr.receive(signal.SIGCHLD, 'frame')
-        self.assertEquals(sr.get_signal(), signal.SIGTERM)
-        self.assertEquals(sr.get_signal(), signal.SIGCHLD)
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), signal.SIGTERM)
+        self.assertEqual(sr.get_signal(), signal.SIGCHLD)
+        self.assertEqual(sr.get_signal(), None)
 
     def test_does_not_queue_duplicate_signals(self):
         from supervisor.options import SignalReceiver
         sr = SignalReceiver()
         sr.receive(signal.SIGTERM, 'frame')
         sr.receive(signal.SIGTERM, 'frame')
-        self.assertEquals(sr.get_signal(), signal.SIGTERM)
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), signal.SIGTERM)
+        self.assertEqual(sr.get_signal(), None)
 
     def test_queues_again_after_being_emptied(self):
         from supervisor.options import SignalReceiver
         sr = SignalReceiver()
         sr.receive(signal.SIGTERM, 'frame')
-        self.assertEquals(sr.get_signal(), signal.SIGTERM)
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), signal.SIGTERM)
+        self.assertEqual(sr.get_signal(), None)
         sr.receive(signal.SIGCHLD, 'frame')
-        self.assertEquals(sr.get_signal(), signal.SIGCHLD)
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), signal.SIGCHLD)
+        self.assertEqual(sr.get_signal(), None)
 
 class UtilFunctionsTests(unittest.TestCase):
     def test_make_namespec(self):
         from supervisor.options import make_namespec
-        self.assertEquals(make_namespec('group', 'process'), 'group:process')
-        self.assertEquals(make_namespec('process', 'process'), 'process')
+        self.assertEqual(make_namespec('group', 'process'), 'group:process')
+        self.assertEqual(make_namespec('process', 'process'), 'process')
 
     def test_split_namespec(self):
         from supervisor.options import split_namespec
         s = split_namespec
-        self.assertEquals(s('process:group'), ('process', 'group'))
-        self.assertEquals(s('process'), ('process', 'process'))
-        self.assertEquals(s('group:'), ('group', None))
-        self.assertEquals(s('group:*'), ('group', None))
+        self.assertEqual(s('process:group'), ('process', 'group'))
+        self.assertEqual(s('process'), ('process', 'process'))
+        self.assertEqual(s('group:'), ('group', None))
+        self.assertEqual(s('group:*'), ('group', None))
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

@@ -1,18 +1,27 @@
 import os
 import re
-import cgi
 import time
 import traceback
 import urllib
 import datetime
-import StringIO
+
+from supervisor.py3compat import *
+if PY3:
+    from io import StringIO
+    import urllib.parse as urllib
+    from urllib.parse import parse_qs, parse_qsl
+else:
+    #noinspection PyUnresolvedReferences
+    from StringIO import StringIO
+    import urllib
+    from cgi import parse_qs, parse_qsl
 
 from supervisor.medusa import producers
 from supervisor.medusa.http_server import http_date
 from supervisor.medusa.http_server import get_header
 from supervisor.medusa.xmlrpc_handler import collector
 
-import meld3
+import supervisor.meld3 as meld3
 
 from supervisor.process import ProcessStates
 from supervisor.http import NOT_DONE_YET
@@ -50,7 +59,7 @@ class DeferredWebProducer:
             return self.sendresponse(response)
 
         except:
-            io = StringIO.StringIO()
+            io = StringIO()
             traceback.print_exc(file=io)
             # this should go to the main supervisor log file
             self.request.channel.server.logger.log('Web interface error',
@@ -64,7 +73,7 @@ class DeferredWebProducer:
         for header in headers:
             self.request[header] = headers[header]
 
-        if not self.request.has_key('Content-Type'):
+        if 'Content-Type' not in self.request:
             self.request['Content-Type'] = 'text/plain'
 
         if headers.get('Location'):
@@ -93,8 +102,8 @@ class DeferredWebProducer:
         elif self.request.version == '1.1':
             if connection == 'close':
                 close_it = 1
-            elif not self.request.has_key ('Content-Length'):
-                if self.request.has_key ('Transfer-Encoding'):
+            elif 'Content-Length' not in self.request:
+                if 'Transfer-Encoding' in self.request:
                     if not self.request['Transfer-Encoding'] == 'chunked':
                         close_it = 1
                 elif self.request.use_chunked:
@@ -174,6 +183,9 @@ class MeldView:
         response['body'] = body
         return response
 
+    def render(self):
+        pass
+
     def clone(self):
         return self.root.clone()
 
@@ -194,7 +206,8 @@ class TailView(MeldView):
                 rpcinterface = SupervisorNamespaceRPCInterface(supervisord)
                 try:
                     tail = rpcinterface.readProcessLog(processname, -1024, 0)
-                except RPCError, e:
+                except RPCError:
+                    e = sys.exc_info()[1]
                     if e.code == Faults.NO_FILE:
                         tail = 'No file for %s' % processname
                     else:
@@ -209,6 +222,7 @@ class TailView(MeldView):
 
         refresh_anchor = root.findmeld('refresh_anchor')
         if processname is not None:
+            #noinspection PyUnresolvedReferences
             refresh_anchor.attributes(href='tail.html?processname=%s' %
                                       urllib.quote(processname))
         else:
@@ -219,6 +233,7 @@ class TailView(MeldView):
 class StatusView(MeldView):
     def actions_for_process(self, process):
         state = process.get_state()
+        #noinspection PyUnresolvedReferences
         processname = urllib.quote(make_namespec(process.group.config.name,
                                                  process.config.name))
         start = {
@@ -264,7 +279,6 @@ class StatusView(MeldView):
             return 'statusnominal'
 
     def make_callback(self, namespec, action):
-        message = None
         supervisord = self.context.supervisord
 
         # the rpc interface code is already written to deal properly in a
@@ -347,7 +361,8 @@ class StatusView(MeldView):
                     try:
                         callback = rpcinterface.supervisor.startProcess(
                             namespec)
-                    except RPCError, e:
+                    except RPCError:
+                        e = sys.exc_info()[1]
                         if e.code == Faults.SPAWN_ERROR:
                             def spawnerr():
                                 return 'Process %s spawn error' % namespec
@@ -388,6 +403,7 @@ class StatusView(MeldView):
                     return NOT_DONE_YET
                 if message is not None:
                     server_url = form['SERVER_URL']
+                    #noinspection PyUnresolvedReferences
                     location = server_url + '?message=%s' % urllib.quote(
                         message)
                     response['headers']['Location'] = location
@@ -399,10 +415,8 @@ class StatusView(MeldView):
             )
 
         processnames = []
-        groups = supervisord.process_groups.values()
-        for group in groups:
-            gprocnames = group.processes.keys()
-            for gprocname in gprocnames:
+        for group in supervisord.process_groups.values():
+            for gprocname in group.processes.keys():
                 processnames.append((group.config.name, gprocname))
 
         processnames.sort()
@@ -529,14 +543,14 @@ class supervisor_ui_handler:
         form = {}
         cgi_env = request.cgi_environment()
         form.update(cgi_env)
-        if not form.has_key('QUERY_STRING'):
+        if 'QUERY_STRING' not in form:
             form['QUERY_STRING'] = ''
 
         query = form['QUERY_STRING']
 
         # we only handle x-www-form-urlencoded values from POSTs
-        form_urlencoded = cgi.parse_qsl(data)
-        query_data = cgi.parse_qs(query)
+        form_urlencoded = parse_qsl(data)
+        query_data = parse_qs(query)
 
         for k, v in query_data.items():
             # ignore dupes
@@ -560,8 +574,7 @@ class supervisor_ui_handler:
             # this should never happen if our match method works
             return
 
-        response = {}
-        response['headers'] = {}
+        response = {'headers': {}}
 
         viewclass = viewinfo['view']
         viewtemplate = viewinfo['template']

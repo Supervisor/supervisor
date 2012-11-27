@@ -25,10 +25,16 @@ actions.
 import cmd
 import sys
 import getpass
-import xmlrpclib
-import socket
+from supervisor.py3compat import *
+try:
+    import xmlrpclib
+    import urlparse
+except ImportError:
+    import xmlrpc.client as xmlrpclib
+    import urllib.parse as urlparse
+
+import supervisor.medusa.text_socket as socket
 import errno
-import urlparse
 import threading
 
 from supervisor.medusa import asyncore_25 as asyncore
@@ -46,7 +52,7 @@ class fgthread(threading.Thread):
   
     def __init__(self, program, ctl):
         threading.Thread.__init__(self)
-        import http_client
+        import supervisor.http_client as http_client
         self.killed = False
         self.program = program
         self.ctl = ctl
@@ -142,7 +148,8 @@ class Controller(cmd.Cmd):
             try:
                 try:
                     return do_func(arg)
-                except xmlrpclib.ProtocolError, e:
+                except xmlrpclib.ProtocolError:
+                    e = sys.exc_info()[1]
                     if e.errcode == 401:
                         if self.options.interactive:
                             self.output('Server requires authentication')
@@ -159,7 +166,7 @@ class Controller(cmd.Cmd):
                 do_func(arg)
             except SystemExit:
                 raise
-            except Exception, e:
+            except Exception:
                 (file, fun, line), t, v, tbinfo = asyncore.compact_traceback()
                 error = 'error: %s, %s: file: %s line: %s' % (t, v, file, line)
                 self.output(error)
@@ -180,6 +187,7 @@ class Controller(cmd.Cmd):
         if stuff is not None:
             if isinstance(stuff, unicode):
                 stuff = stuff.encode('utf-8')
+            #noinspection PyTypeChecker
             self.stdout.write(stuff + '\n')
     
     def get_supervisor(self):
@@ -203,7 +211,8 @@ class Controller(cmd.Cmd):
                     'talk to a server with API version %s, but the '
                     'remote version is %s.' % (rpcinterface.API_VERSION, api))
                 return False
-        except xmlrpclib.Fault, e:
+        except xmlrpclib.Fault:
+            e = sys.exc_info()[1]
             if e.faultCode == xmlrpc.Faults.UNKNOWN_METHOD:
                 self.output(
                     'Sorry, supervisord responded but did not recognize '
@@ -213,11 +222,12 @@ class Controller(cmd.Cmd):
                     'configuration file (see sample.conf).')
                 return False
             raise 
-        except socket.error, why:
-            if why[0] == errno.ECONNREFUSED:
+        except socket.error:
+            why = sys.exc_info()[1]
+            if why.args[0] == errno.ECONNREFUSED:
                 self.output('%s refused connection' % self.options.serverurl)
                 return False
-            elif why[0] == errno.ENOENT:
+            elif why.args[0] == errno.ENOENT:
                 self.output('%s no such file' % self.options.serverurl)
                 return False
             raise
@@ -261,6 +271,7 @@ class Controller(cmd.Cmd):
 
     def complete(self,text,state):
         try:
+            #noinspection PyUnresolvedReferences
             import readline
         except ImportError:
             return None
@@ -382,6 +393,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
         username = self.ctl.options.username
         password = self.ctl.options.password
+        handler = None
         try:
             # Python's urllib2 (at least as of Python 2.4.2) isn't up
             # to this task; it doesn't actually implement a proper
@@ -389,7 +401,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             # always sends a Connection: close header).  We use a
             # homegrown client based on asyncore instead.  This makes
             # me sad.
-            import http_client
+            import supervisor.http_client as http_client
             if self.listener is None:
                 listener = http_client.Listener()
             else:
@@ -398,7 +410,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
             handler.get(self.ctl.options.serverurl, path)
             asyncore.loop()
         except KeyboardInterrupt:
-            handler.close()
+            if handler:
+                handler.close()
             self.ctl.output('')
             return
 
@@ -463,7 +476,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 else: # if channel is 'stderr'
                     output = supervisor.readProcessStderrLog(name,
                                                              -bytes, 0)
-            except xmlrpclib.Fault, e:
+            except xmlrpclib.Fault:
+                e = sys.exc_info()[1]
                 template = '%s: ERROR (%s)'
                 if e.faultCode == xmlrpc.Faults.NO_FILE:
                     self.ctl.output(template % (name, 'no log file'))
@@ -521,7 +535,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
         try:
             output = supervisor.readLog(-bytes, 0)
-        except xmlrpclib.Fault, e:
+        except xmlrpclib.Fault:
+            e = sys.exc_info()[1]
             template = '%s: ERROR (%s)'
             if e.faultCode == xmlrpc.Faults.NO_FILE:
                 self.ctl.output(template % ('supervisord', 'no log file'))
@@ -572,7 +587,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
             for name in names:
                 try:
                     info = supervisor.getProcessInfo(name)
-                except xmlrpclib.Fault, e:
+                except xmlrpclib.Fault:
+                    e = sys.exc_info()[1]
                     if e.faultCode == xmlrpc.Faults.BAD_NAME:
                         self.ctl.output('No such process %s' % name)
                     else:
@@ -605,7 +621,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
             for name in names:
                 try:
                     info = supervisor.getProcessInfo(name)
-                except xmlrpclib.Fault, e:
+                except xmlrpclib.Fault:
+                    e = sys.exc_info()[1]
                     if e.faultCode == xmlrpc.Faults.BAD_NAME:
                         self.ctl.output('No such process %s' % name)
                     else:
@@ -669,8 +686,9 @@ class DefaultControllerPlugin(ControllerPluginBase):
                         self.ctl.output(result)
                 else:
                     try:
-                        result = supervisor.startProcess(name)
-                    except xmlrpclib.Fault, e:
+                        supervisor.startProcess(name)
+                    except xmlrpclib.Fault:
+                        e = sys.exc_info()[1]
                         error = self._startresult({'status':e.faultCode,
                                                    'name':name,
                                                    'description':e.faultString})
@@ -729,8 +747,9 @@ class DefaultControllerPlugin(ControllerPluginBase):
                         self.ctl.output(result)
                 else:
                     try:
-                        result = supervisor.stopProcess(name)
-                    except xmlrpclib.Fault, e:
+                        supervisor.stopProcess(name)
+                    except xmlrpclib.Fault:
+                        e = sys.exc_info()[1]
                         error = self._stopresult({'status':e.faultCode,
                                                   'name':name,
                                                   'description':e.faultString})
@@ -779,16 +798,18 @@ class DefaultControllerPlugin(ControllerPluginBase):
             supervisor = self.ctl.get_supervisor()
             try:
                 supervisor.shutdown()
-            except xmlrpclib.Fault, e:
+            except xmlrpclib.Fault:
+                e = sys.exc_info()[1]
                 if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                     self.ctl.output('ERROR: already shutting down')
                 else:
                     raise
-            except socket.error, e:
-                if e[0] == errno.ECONNREFUSED:
+            except socket.error:
+                e = sys.exc_info()[1]
+                if e.args[0] == errno.ECONNREFUSED:
                     msg = 'ERROR: %s refused connection (already shut down?)'
                     self.ctl.output(msg % self.ctl.options.serverurl)
-                elif e[0] == errno.ENOENT:
+                elif e.args[0] == errno.ENOENT:
                     msg = 'ERROR: %s no such file (already shut down?)'
                     self.ctl.output(msg % self.ctl.options.serverurl)
                 else:
@@ -810,7 +831,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
             supervisor = self.ctl.get_supervisor()
             try:
                 supervisor.restart()
-            except xmlrpclib.Fault, e:
+            except xmlrpclib.Fault:
+                e = sys.exc_info()[1]
                 if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                     self.ctl.output('ERROR: already shutting down')
             else:
@@ -819,7 +841,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def help_reload(self):
         self.ctl.output("reload \t\tRestart the remote supervisord.")
 
-    def _formatChanges(self, (added, changed, dropped)):
+    def _formatChanges(self, added_changed_dropped_tuple):
+        added, changed, dropped = added_changed_dropped_tuple
         changedict = {}
         for n, t in [(added, 'available'),
                      (changed, 'changed'),
@@ -827,7 +850,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             changedict.update(dict(zip(n, [t] * len(n))))
 
         if changedict:
-            names = changedict.keys()
+            names = list(changedict.keys())
             names.sort()
             for name in names:
                 self.ctl.output("%s: %s" % (name, changedict[name]))
@@ -858,7 +881,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
         try:
             configinfo = supervisor.getAllConfigInfo()
-        except xmlrpclib.Fault, e:
+        except xmlrpclib.Fault:
+            e = sys.exc_info()[1]
             if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                 self.ctl.output('ERROR: supervisor shutting down')
         else:
@@ -872,7 +896,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
         try:
             result = supervisor.reloadConfig()
-        except xmlrpclib.Fault, e:
+        except xmlrpclib.Fault:
+            e = sys.exc_info()[1]
             if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                 self.ctl.output('ERROR: supervisor shutting down')
             elif e.faultCode == xmlrpc.Faults.CANT_REREAD:
@@ -892,7 +917,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
         for name in names:
             try:
                 supervisor.addProcessGroup(name)
-            except xmlrpclib.Fault, e:
+            except xmlrpclib.Fault:
+                e = sys.exc_info()[1]
                 if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                     self.ctl.output('ERROR: shutting down')
                 elif e.faultCode == xmlrpc.Faults.ALREADY_ADDED:
@@ -915,8 +941,9 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
         for name in names:
             try:
-                result = supervisor.removeProcessGroup(name)
-            except xmlrpclib.Fault, e:
+                supervisor.removeProcessGroup(name)
+            except xmlrpclib.Fault:
+                e = sys.exc_info()[1]
                 if e.faultCode == xmlrpc.Faults.STILL_RUNNING:
                     self.ctl.output('ERROR: process/group still running: %s'
                                     % name)
@@ -939,7 +966,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
         try:
             result = supervisor.reloadConfig()
-        except xmlrpclib.Fault, e:
+        except xmlrpclib.Fault:
+            e = sys.exc_info()[1]
             if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                 self.ctl.output('ERROR: already shutting down')
                 return
@@ -961,7 +989,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             log(gname, "removed process group")
 
         for gname in changed:
-            results = supervisor.stopProcessGroup(gname)
+            supervisor.stopProcessGroup(gname)
             log(gname, "stopped")
 
             supervisor.removeProcessGroup(gname)
@@ -1010,8 +1038,9 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
             for name in names:
                 try:
-                    result = supervisor.clearProcessLogs(name)
-                except xmlrpclib.Fault, e:
+                    supervisor.clearProcessLogs(name)
+                except xmlrpclib.Fault:
+                    e = sys.exc_info()[1]
                     error = self._clearresult({'status':e.faultCode,
                                                'name':name,
                                                'description':e.faultString})
@@ -1064,7 +1093,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
         try:
             info = supervisor.getProcessInfo(program)
-        except xmlrpclib.Fault, msg:
+        except xmlrpclib.Fault:
+            msg = sys.exc_info()[1]
             if msg.faultCode == xmlrpc.Faults.BAD_NAME:
                 self.ctl.output('Error: bad process name supplied')
                 return
@@ -1075,6 +1105,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             self.ctl.output('Error: process not running')
             return
         # everything good; continue
+        a = None
         try:
             a = fgthread(program,self.ctl)
             # this thread takes care of
@@ -1085,7 +1116,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 inp = raw_input() + '\n'
                 try:
                     supervisor.sendProcessStdin(program, inp)
-                except xmlrpclib.Fault, msg:
+                except xmlrpclib.Fault:
+                    msg = sys.exc_info()[1]
                     if msg.faultCode == xmlrpc.Faults.NOT_RUNNING:
                         self.ctl.output('Process got killed')
                         self.ctl.output('Exiting foreground')
@@ -1099,7 +1131,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     return
                 continue
         except (KeyboardInterrupt, EOFError):
-            a.kill()
+            if a:
+                a.kill()
             self.ctl.output('Exiting foreground')
         return
 
@@ -1116,6 +1149,7 @@ def main(args=None, options=None):
         c.onecmd(" ".join(options.args))
     if options.interactive:
         try:
+            #noinspection PyUnresolvedReferences
             import readline
             if options.history_file:
                 try:
@@ -1127,6 +1161,8 @@ def main(args=None, options=None):
                         readline.write_history_file(options.history_file)
                     except IOError:
                         pass
+
+                #noinspection PyUnresolvedReferences
                 import atexit
                 atexit.register(save)
         except ImportError:

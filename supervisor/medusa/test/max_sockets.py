@@ -1,6 +1,6 @@
 # -*- Mode: Python -*-
 
-import socket
+import supervisor.medusa.text_socket as socket
 import select
 
 # several factors here we might want to test:

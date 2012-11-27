@@ -12,8 +12,10 @@
 # method, the use of long arithmetic is a reminder that the counter
 # will overflow.
 
+from supervisor.py3compat import *
+
 class counter:
-    "general-purpose counter"
+    """general-purpose counter"""
 
     def __init__ (self, initial_value=0):
         self.value = initial_value
@@ -39,6 +41,8 @@ class counter:
 
     def __nonzero__ (self):
         return self.value != 0
+
+    __bool__ = __nonzero__
 
     def __repr__ (self):
         return '<counter value=%s at %x>' % (self.value, id(self))

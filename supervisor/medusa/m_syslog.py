@@ -134,7 +134,7 @@ facility_names = {
         "local7":       LOG_LOCAL7,
         }
 
-import socket
+import supervisor.medusa.text_socket as socket
 
 class syslog_client:
     def __init__ (self, address='/dev/log'):

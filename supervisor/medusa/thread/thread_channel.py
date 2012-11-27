@@ -10,15 +10,17 @@ VERSION_STRING = "$Id: thread_channel.py,v 1.3 2002/03/19 22:49:40 amk Exp $"
 # May be possible to do it on Win32, using TCP localhost sockets.
 # [does winsock support 'socketpair'?]
 
-import asyncore_25 as asyncore
-import asynchat_25 as asynchat
+import supervisor.medusa.asyncore_25 as asyncore
+import supervisor.medusa.asynchat_25 as asynchat
 
 import fcntl
-import FCNTL
 import os
-import socket
-import string
-import thread
+import supervisor.medusa.text_socket as socket
+try:
+    import _thread as thread
+except ImportError:
+    #noinspection PyUnresolvedReferences
+    import thread
 
 # this channel slaves off of another one.  it starts a thread which
 # pumps its output through the 'write' side of the pipe.  The 'read'
@@ -42,8 +44,8 @@ class thread_channel (asyncore.file_dispatcher):
         # The read side of the pipe is set to non-blocking I/O; it is
         # 'owned' by medusa.
 
-        flags = fcntl.fcntl (rfd, FCNTL.F_GETFL, 0)
-        fcntl.fcntl (rfd, FCNTL.F_SETFL, flags | FCNTL.O_NDELAY)
+        flags = fcntl.fcntl (rfd, fcntl.F_GETFL, 0)
+        fcntl.fcntl (rfd, fcntl.F_SETFL, flags | os.O_NDELAY)
 
         # The write side of the pipe is left in blocking mode; it is
         # 'owned' by the thread.  However, we wrap it up as a file object.
@@ -79,14 +81,14 @@ if __name__ == '__main__':
     import time
 
     def thread_function (output_file, i, n):
-        print 'entering thread_function'
+        print('entering thread_function')
         while n:
             time.sleep (5)
             output_file.write ('%2d.%2d %s\r\n' % (i, n, output_file))
             output_file.flush()
-            n = n - 1
+            n -= 1
         output_file.close()
-        print 'exiting thread_function'
+        print('exiting thread_function')
 
     class thread_parent (asynchat.async_chat):
 
@@ -102,9 +104,9 @@ if __name__ == '__main__':
 
         def found_terminator (self):
             data, self.buffer = self.buffer, ''
-            n = string.atoi (string.split (data)[0])
+            n = int(data.split()[0])
             tc = thread_channel (self, thread_function, self.count, n)
-            self.count = self.count + 1
+            self.count += 1
             tc.start()
 
     class thread_server (asyncore.dispatcher):
