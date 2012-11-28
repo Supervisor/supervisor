@@ -47,12 +47,6 @@ Delegation
   by emitting "stop", "start", and "restart" commands from a simple
   shell or web UI.
 
-Distributed Control
-
-  Users often need to control processes on many machines.  Supervisor
-  provides a simple, secure, and uniform mechanism for interactively
-  and automatically controlling processes on groups of machines.
-
 Process Groups
 
   Processes often need to be started and stopped in groups, sometimes
