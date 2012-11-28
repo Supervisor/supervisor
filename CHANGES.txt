@@ -1,6 +1,8 @@
 Next release
 ------------
 
+- Fixed a bug where parsing ``command=`` could cause supervisord to crash if
+  shlex.split() fails, such as a bad quoting.  Patch by Scott Wilson.
 
 3.0b1 (2012-09-10)
 ------------------
