@@ -19,6 +19,7 @@ from supervisor.tests.base import DummyFCGIProcessGroup
 from supervisor.tests.base import DummySocketManager
 
 from supervisor.process import Subprocess
+from supervisor.options import BadCommand
 
 class SubprocessTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -97,6 +98,12 @@ class SubprocessTests(unittest.TestCase):
         instance.drain()
         self.assertTrue(instance.dispatchers[0].read_event_handled)
         self.assertTrue(instance.dispatchers[1].write_event_handled)
+
+    def test_get_execv_args_bad_command(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'extraquote', 'extraquote"')
+        instance = self._makeOne(config)
+        self.assertRaises(BadCommand, instance.get_execv_args)
         
     def test_get_execv_args_abs_missing(self):
         options = DummyOptions()

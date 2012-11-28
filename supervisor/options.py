@@ -1957,6 +1957,9 @@ def split_namespec(namespec):
 class ProcessException(Exception):
     """ Specialized exceptions used when attempting to start a process """
 
+class BadCommand(ProcessException):
+    """ Indicates the command could not be parsed properly. """
+
 class NotExecutable(ProcessException):
     """ Indicates that the filespec cannot be executed because its path
     resolves to a file which is not executable, or which is a directory. """
