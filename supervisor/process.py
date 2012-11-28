@@ -16,7 +16,7 @@ from supervisor.states import STOPPED_STATES
 
 from supervisor.options import decode_wait_status
 from supervisor.options import signame
-from supervisor.options import ProcessException
+from supervisor.options import ProcessException, BadCommand
 
 from supervisor.dispatchers import EventListenerStates
 
@@ -100,7 +100,11 @@ class Subprocess:
         """Internal: turn a program name into a file name, using $PATH,
         make sure it exists / is executable, raising a ProcessException
         if not """
-        commandargs = shlex.split(self.config.command)
+        try:
+            commandargs = shlex.split(self.config.command)
+        except ValueError, e:
+            raise BadCommand("can't parse command %r: %s" % \
+                (self.config.command, str(e)))
 
         program = commandargs[0]
 
