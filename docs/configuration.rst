@@ -1268,7 +1268,7 @@ above constraints and additions.
    command=/bin/eventlistener
    process_name=%(program_name)s_%(process_num)02d
    numprocs=5
-   events=PROCESS_STATE_CHANGE
+   events=PROCESS_STATE
    buffer_size=10
    priority=-1
    autostart=true
