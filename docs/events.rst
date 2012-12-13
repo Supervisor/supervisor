@@ -87,7 +87,7 @@ follows.
 
    [eventlistener:mylistener]
    command=my_custom_listener.py
-   events=PROCESS_STATE_CHANGE,TICK_60
+   events=PROCESS_STATE,TICK_60
 
 .. note::
 
