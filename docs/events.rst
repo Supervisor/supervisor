@@ -774,6 +774,12 @@ it will never be sent directly.  Subscribing to this event type will
 cause a subscriber to receive event notifications for all subtypes of
 ``TICK``.
 
+Note that the only ``TICK`` events available are the ones listed below.
+You cannot subscribe to an arbitrary ``TICK`` interval. If you need an
+interval not provided below, you can subscribe to one of the shorter
+intervals given below and keep track of the time between runs in your
+event listener.
+
 *Name*: ``TICK``
 
 *Subtype Of*: ``EVENT``
