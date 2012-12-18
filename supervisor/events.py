@@ -151,17 +151,17 @@ class ProcessStateStoppedEvent(ProcessStateEvent):
     def get_extra_values(self):
         return [('pid', self.process.pid)]
 
-class ProcessGroupAddedEvent(Event):
+class ProcessGroupEvent(Event):
     def __init__(self, group):
         self.group = group
     def __str__(self):
-        return self.group
+        return 'groupname:%s\n' % self.group
 
-class ProcessGroupRemovedEvent(Event):
-    def __init__(self, group):
-        self.group = group
-    def __str__(self):
-        return self.group
+class ProcessGroupAddedEvent(ProcessGroupEvent):
+    pass
+
+class ProcessGroupRemovedEvent(ProcessGroupEvent):
+    pass
 
 class TickEvent(Event):
     """ Abstract """
@@ -208,6 +208,7 @@ class EventTypes:
     TICK_5 = Tick5Event
     TICK_60 = Tick60Event
     TICK_3600 = Tick3600Event
+    PROCESS_GROUP = ProcessGroupEvent # abstract
     PROCESS_GROUP_ADDED = ProcessGroupAddedEvent
     PROCESS_GROUP_REMOVED = ProcessGroupRemovedEvent
 

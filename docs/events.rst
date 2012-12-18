@@ -203,7 +203,7 @@ notification is as follows.
 
 .. code-block:: text
 
-   process_name:foo group_name:bar pid:123
+   processname:foo groupname:bar pid:123
    This is the data that was sent between the tags
 
 The payload structure of any given event is determined only by the

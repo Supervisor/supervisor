@@ -242,6 +242,16 @@ class TestEventTypes(unittest.TestCase):
         inst = klass(1, 2)
         self.assertEqual(inst.when, 1)
         self.assertEqual(inst.supervisord, 2)
+
+    def test_ProcessGroupAddedEvent_attributes(self):
+        from supervisor.events import ProcessGroupAddedEvent
+        inst = ProcessGroupAddedEvent('myprocess')
+        self.assertEqual(inst.group, 'myprocess')
+
+    def test_ProcessGroupRemovedEvent_attributes(self):
+        from supervisor.events import ProcessGroupRemovedEvent
+        inst = ProcessGroupRemovedEvent('myprocess')
+        self.assertEqual(inst.group, 'myprocess')
         
 class TestSerializations(unittest.TestCase):
     def _deserialize(self, serialization):
@@ -341,6 +351,20 @@ class TestSerializations(unittest.TestCase):
         headers, payload = self._deserialize(str(event))
         self.assertEqual(headers['type'], 'foo', headers)
         self.assertEqual(payload, 'bar')
+
+    def test_process_group_added_event(self):
+        from supervisor.events import ProcessGroupAddedEvent
+        event = ProcessGroupAddedEvent('foo')
+        headers, payload = self._deserialize(str(event))
+        self.assertEqual(headers['groupname'], 'foo')
+        self.assertEqual(payload, '')
+
+    def test_process_group_removed_event(self):
+        from supervisor.events import ProcessGroupRemovedEvent
+        event = ProcessGroupRemovedEvent('foo')
+        headers, payload = self._deserialize(str(event))
+        self.assertEqual(headers['groupname'], 'foo')
+        self.assertEqual(payload, '')
 
     def test_process_state_events_without_extra_values(self):
         from supervisor.states import ProcessStates
