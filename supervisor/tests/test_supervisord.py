@@ -323,6 +323,24 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(group, supervisord.process_groups['foo'])
         self.assertTrue(not result)
 
+    def test_add_process_group_event(self):
+        from supervisor import events
+        L = []
+        def callback(event):
+            L.append(1)
+        events.subscribe(events.ProcessGroupAddedEvent, callback)
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
+        gconfig = DummyPGroupConfig(options,'foo', pconfigs=[pconfig])
+        options.process_group_configs = [gconfig]
+        supervisord = self._makeOne(options)
+
+        supervisord.add_process_group(gconfig)
+
+        options.test = True
+        supervisord.runforever()
+        self.assertEqual(L, [1])
+
     def test_remove_process_group(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
@@ -341,6 +359,26 @@ class SupervisordTests(unittest.TestCase):
         result = supervisord.remove_process_group('foo')
         self.assertEqual(supervisord.process_groups.keys(), ['foo'])
         self.assertTrue(not result)
+
+    def test_remove_process_group_event(self):
+        from supervisor import events
+        L = []
+        def callback(event):
+            L.append(1)
+        events.subscribe(events.ProcessGroupRemovedEvent, callback)
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
+        gconfig = DummyPGroupConfig(options,'foo', pconfigs=[pconfig])
+        options.process_group_configs = [gconfig]
+        supervisord = self._makeOne(options)
+
+        supervisord.add_process_group(gconfig)
+        supervisord.process_groups['foo'].stopped_processes = [DummyProcess(None)]
+        supervisord.remove_process_group('foo')
+        options.test = True
+        supervisord.runforever()
+
+        self.assertEqual(L, [1])
 
     def test_runforever_emits_generic_startup_event(self):
         from supervisor import events

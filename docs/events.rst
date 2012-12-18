@@ -203,7 +203,7 @@ notification is as follows.
 
 .. code-block:: text
 
-   process_name:foo group_name:bar pid:123
+   processname:foo groupname:bar pid:123
    This is the data that was sent between the tags
 
 The payload structure of any given event is determined only by the
@@ -845,4 +845,49 @@ indicates the epoch time for which the tick was sent.
 .. code-block:: text
 
    when:1201063880
+
+``PROCESS_GROUP`` Event Type
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An event type raised when a process group is added to or removed from
+Supervisor.  This type is abstract, it will never be sent
+directly.  Subscribing to this event type will cause a subscriber to
+receive event notifications of all the subtypes of
+``PROCESS_GROUP``.
+
+*Name*: ``PROCESS_GROUP``
+
+*Subtype Of*: ``EVENT``
+
+*Body Description*: N/A
+
+``PROCESS_GROUP_ADDED`` Event Type
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Indicates that a process group has been added to Supervisor's configuration. 
+
+*Name*: ``PROCESS_GROUP_ADDED``
+
+*Subtype Of*: ``PROCESS_GROUP``
+
+*Body Description*: This body is a token set with just a groupname key/value.
+
+.. code-block:: text
+
+   groupname:cat
+
+``PROCESS_GROUP_REMOVED`` Event Type
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Indicates that a process group has been removed from Supervisor's configuration. 
+
+*Name*: ``PROCESS_GROUP_REMOVED``
+
+*Subtype Of*: ``PROCESS_GROUP``
+
+*Body Description*: This body is a token set with just a groupname key/value.
+
+.. code-block:: text
+
+   groupname:cat
 
