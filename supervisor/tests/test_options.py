@@ -435,7 +435,7 @@ class ServerOptionsTests(unittest.TestCase):
         try:
             instance.realize()
         except DummyException, e:
-            print "Caught expected exception: %s" % e
+            # Caught expected exception
             import traceback
             self.assertEquals(e.exitcode, 2,
                               "Wrong exitcode for: %s" % traceback.format_exc(e))
