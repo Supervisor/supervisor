@@ -8,6 +8,13 @@ import unittest
 import signal
 import shutil
 import errno
+try:
+    # Python < 3
+    from StringIO import StringIO
+except ImportError:
+    # Python >= 3
+    from io import StringIO
+
 from mock import Mock, patch, sentinel
 
 from supervisor.tests.base import DummySupervisor
@@ -431,6 +438,9 @@ class ServerOptionsTests(unittest.TestCase):
             # Important default exitcode=2 like sys.exit.
             raise DummyException(exitcode)
         instance.exit = dummy_exit
+
+        # Making sure we capture stdout and stderr
+        instance.stderr = StringIO()
 
         try:
             instance.realize()
