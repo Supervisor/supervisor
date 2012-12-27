@@ -1,4 +1,5 @@
 # Configuration for Travis CI
+# !!! When making changes, make sure to also edit tox.ini !!!
 
 language: python
 python:
