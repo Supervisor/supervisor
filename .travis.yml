@@ -1,0 +1,14 @@
+# Configuration for Travis CI
+# !!! When making changes, make sure to also edit tox.ini !!!
+
+language: python
+python:
+  - "2.5"
+  - "2.6"
+  - "2.7"
+# command to install dependencies
+install:
+  - pip install -r test_requirements.txt --use-mirrors
+# command to run tests
+script:
+  - python setup.py test -q
