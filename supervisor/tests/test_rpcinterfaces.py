@@ -1435,7 +1435,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         pgroup = DummyProcessGroup(None)
         pgroup.processes = {'foo': process}
         process.error_at_clear = True
-        processes = {'foo': process}
         supervisord = DummySupervisor(process_groups={'foo':pgroup})
         interface = self._makeOne(supervisord)
         self.assertRaises(xmlrpc.RPCError, interface.clearProcessLogs, 'foo')
