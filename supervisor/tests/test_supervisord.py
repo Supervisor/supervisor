@@ -321,7 +321,6 @@ class SupervisordTests(unittest.TestCase):
         self.assertTrue(not result)
 
     def test_remove_process_group(self):
-        from supervisor.states import ProcessStates
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
         gconfig = DummyPGroupConfig(options, 'foo', pconfigs=[pconfig])
