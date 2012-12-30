@@ -474,11 +474,6 @@ class TestUtilityFunctions(unittest.TestCase):
         for name, value in events.EventTypes.__dict__.items():
             self.assertEqual(events.getEventNameByType(value), name)
 
-    def _assertStateChange(self, old, new, expected):
-        from supervisor.events import getProcessStateChangeEventType
-        klass = getProcessStateChangeEventType(old, new)
-        self.assertEqual(expected, klass)
-
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
