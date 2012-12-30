@@ -28,10 +28,10 @@ You can also view the `Supervisor version control repository
 Contributing
 ------------
 
-If you'd like to contribute to supervisor, please contact us through
-the mailing list and we'll attempt to arrange for you to have direct
-access to the version control repository.  You may be required to sign
-a contributor's agreement before you can be provided with access.
+Supervisor development is discussed on the mailing list.  We'll review
+contributions from the community in both
+[pull requests](https://help.github.com/articles/using-pull-requests)
+on GitHub (preferred) and patches sent to the list.
 
 Sponsoring
 ----------

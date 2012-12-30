@@ -1,5 +1,49 @@
+.. _xml_rpc:
+
 XML-RPC API Documentation
 =========================
+
+To use the XML-RPC interface, connect to supervisor's HTTP port
+with any XML-RPC client library and run commands against it.  An
+example of doing this using Python's ``xmlrpclib`` client library
+is as follows.
+
+.. code-block:: python
+
+    import xmlrpclib
+    server = xmlrpclib.Server('http://localhost:9001/RPC2')
+
+You may call methods against :program:`supervisord` and its
+subprocesses by using the ``supervisor`` namespace.  An example is
+provided below.
+
+.. code-block:: python
+
+    server.supervisor.getState()
+
+You can get a list of methods supported by the
+:program:`supervisord` XML-RPC interface by using the XML-RPC
+``system.listMethods`` API:
+
+.. code-block:: python
+
+    server.system.listMethods()
+
+You can see help on a method by using the ``system.methodHelp`` API
+against the method:
+
+.. code-block:: python
+
+    server.system.methodHelp('supervisor.shutdown')
+
+The :program:`supervisord` XML-RPC interface also supports the
+`XML-RPC multicall API
+<http://web.archive.org/web/20060824100531/http://www.xmlrpc.com/discuss/msgReader$1208>`_.
+
+You can extend :program:`supervisord` functionality with new XML-RPC
+API methods by adding new top-level RPC interfaces as necessary.
+See :ref:`rpcinterface_factories`.
+
 
 .. automodule:: supervisor.rpcinterface
 
@@ -37,7 +81,7 @@ Status and Control
         The identification is a string that must be set in Supervisor’s
         configuration file. This method simply returns that value back to the
         client.
-        
+
     .. automethod:: getState
 
         This is an internal value maintained by Supervisor that determines what
@@ -53,14 +97,14 @@ Status and Control
         methods it intends to call will be permitted.
 
         The return value is a struct:
-                                
+
         .. code-block:: python
 
-            {'statecode': 1, 
+            {'statecode': 1,
              'statename': 'RUNNING'}
 
         The possible return values are:
-        
+
         +---------+----------+----------------------------------------------+
         |statecode|statename |Description                                   |
         +=========+==========+==============================================+
@@ -71,7 +115,7 @@ Status and Control
         | 0       |RESTARTING|Supervisor is in the process of restarting.   |
         +---------+----------+----------------------------------------------+
         | -1      |SHUTDOWN  |Supervisor is in the process of shutting down.|
-        +---------+----------+----------------------------------------------+                  
+        +---------+----------+----------------------------------------------+
 
         The ``FATAL`` state reports unrecoverable errors, such as internal
         errors inside Supervisor or system runaway conditions. Once set to
@@ -86,13 +130,13 @@ Status and Control
         ignored and their possible return values are undefined.
 
     .. automethod:: getPID
-    
+
     .. automethod:: readLog
 
         It can either return the entire log, a number of characters from the
         tail of the log, or a slice of the log specified by the offset and
         length parameters:
-        
+
         +--------+---------+------------------------------------------------+
         | Offset | Length  | Behavior of ``readProcessLog``                 |
         +========+=========+================================================+
@@ -105,15 +149,15 @@ Status and Control
         |        |         | = 0, then the last four characters will be     |
         |        |         | returned from the end of the log.              |
         +--------+---------+------------------------------------------------+
-        |Zero or |Negative | Bad arguments. This will raise the fault       |     
+        |Zero or |Negative | Bad arguments. This will raise the fault       |
         |Positive|         | ``BAD_ARGUMENTS``.                             |
         +--------+---------+------------------------------------------------+
-        |Zero or |Zero     | All characters will be returned from the       | 
+        |Zero or |Zero     | All characters will be returned from the       |
         |Positive|         | ``offset`` specified.                          |
         +--------+---------+------------------------------------------------+
-        |Zero or |Positive | A number of characters length will be returned | 
+        |Zero or |Positive | A number of characters length will be returned |
         |Positive|         | from the ``offset``.                           |
-        +--------+---------+------------------------------------------------+                                    
+        +--------+---------+------------------------------------------------+
 
         If the log is empty and the entire log is requested, an empty string
         is returned.
@@ -132,13 +176,13 @@ Status and Control
           readMainLog() is deprecated and support will be dropped from
           Supervisor in a future version.
 
-    
+
     .. automethod:: clearLog
 
         If the log cannot be cleared because the log file does not exist, the
         fault ``NO_FILE`` will be raised. If the log cannot be cleared for any
         other reason, the fault ``FAILED`` will be raised.
-    
+
     .. automethod:: shutdown
 
         This method shuts down the Supervisor daemon. If any processes are running,
@@ -146,7 +190,7 @@ Status and Control
 
         Unlike most other methods, if Supervisor is in the ``FATAL`` state,
         this method will still function.
-    
+
     .. automethod:: restart
 
         This method soft restarts the Supervisor daemon. If any processes are
@@ -158,7 +202,7 @@ Status and Control
         Unlike most other methods, if Supervisor is in the ``FATAL`` state,
         this method will still function.
 
-  
+
 Process Control
 ---------------
 
@@ -167,12 +211,12 @@ Process Control
     .. automethod:: getProcessInfo
 
         The return value is a struct:
-        
+
         .. code-block:: python
 
-            {'name':           'process name',          
-             'group':          'group name',            
-             'start':          1200361776,              
+            {'name':           'process name',
+             'group':          'group name',
+             'start':          1200361776,
              'stop':           0,
              'now':            1200361812,
              'state':          1,
@@ -182,47 +226,47 @@ Process Control
              'stdout_logfile': '/path/to/stdout-log',
              'stderr_logfile': '/path/to/stderr-log',
              'pid':            1}
-        
+
         .. describe:: name
 
             Name of the process
-        
+
         .. describe:: group
-              
+
             Name of the process' group
-        
+
         .. describe:: start
-        
+
             UNIX timestamp of when the process was started
-           
+
         .. describe:: stop
-        
+
             UNIX timestamp of when the process ended, or 0 if the process is
             still running.
 
         .. describe:: now
-        
+
             UNIX timestamp of the current time, which can be used to calculate
             process up-time.
-        
+
         .. describe:: state
-            
+
             State code, see table below.
-        
+
         .. describe:: statename
-        
+
             String description of `state`, see table below.
-            
+
         .. describe:: stdout_logfile
-        
+
             Absolute path and filename to the STDOUT logfile
 
         .. describe:: stderr_logfile
-        
+
             Absolute path and filename to the STDOUT logfile
 
         .. describe:: spawnerr
-        
+
             Description of error that occurred during spawn, or empty string
             if none.
 
@@ -236,27 +280,27 @@ Process Control
             UNIX process ID (PID) of the process, or 0 if the process is not
             running.
 
-    
+
     .. automethod:: getAllProcessInfo
 
         Each element contains a struct, and this struct contains the exact
         same elements as the struct returned by ``getProcess``. If the process
         table is empty, an empty array is returned.
-    
+
     .. automethod:: startProcess
-    
+
     .. automethod:: startAllProcesses
-    
+
     .. automethod:: startProcessGroup
-    
+
     .. automethod:: stopProcessGroup
-    
+
     .. automethod:: sendProcessStdin
-    
+
     .. automethod:: sendRemoteCommEvent
-    
+
     .. automethod:: addProcessGroup
-    
+
     .. automethod:: removeProcessGroup
 
 Process Logging
@@ -291,4 +335,4 @@ System Methods
     .. automethod:: methodSignature
 
     .. automethod:: multicall
-                    
+

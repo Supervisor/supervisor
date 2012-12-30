@@ -85,10 +85,12 @@ configuration values are as follows.
 ``password``
 
   The password required for authentication to this HTTP server.  This
-  can be a cleartext password, or can be specified as a SHA hash if
+  can be a cleartext password, or can be specified as a SHA-1 hash if
   prefixed by the string ``{SHA}``.  For example,
   ``{SHA}82ab876d1387bfafe46cc1c8a2ef074eae50cb1d`` is the SHA-stored
   version of the password "thepassword".
+
+  Note that hashed password must be in hex format.
 
   *Default*:  No password required.
 
@@ -148,10 +150,12 @@ configuration values are as follows.
 ``password``
 
   The password required for authentication to this HTTP server.  This
-  can be a cleartext password, or can be specified as a SHA hash if
+  can be a cleartext password, or can be specified as a SHA-1 hash if
   prefixed by the string ``{SHA}``.  For example,
   ``{SHA}82ab876d1387bfafe46cc1c8a2ef074eae50cb1d`` is the SHA-stored
   version of the password "thepassword".
+
+  Note that hashed password must be in hex format.
 
   *Default*:  No password required.
 
@@ -208,8 +212,7 @@ follows.
 ``logfile_backups``
 
   The number of backups to keep around resulting from activity log
-  file rotation.  Set this to 0 to indicate an unlimited number of
-  backups.
+  file rotation.  If set to 0, no backups will be kept.
 
   *Default*:  10
 
@@ -534,7 +537,7 @@ where specified.
    logfile names, all environment strings, and the command of programs
    can also contain similar Python string expressions, to pass
    slightly different parameters to each process.
- 
+
 ``[program:x]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -552,9 +555,9 @@ where specified.
   e.g. ``/path/to/programname --port=80%(process_num)02d`` might
   expand to ``/path/to/programname --port=8000`` at runtime.  String
   expressions are evaluated against a dictionary containing the keys
-  ``group_name``, ``host_node_name``, ``process_num``, ``program_name``, 
+  ``group_name``, ``host_node_name``, ``process_num``, ``program_name``,
   ``here`` (the directory of the supervisord config file), and all
-  supervisord's environment variables prefixed with ``ENV_``.  Controlled 
+  supervisord's environment variables prefixed with ``ENV_``.  Controlled
   programs should themselves not be daemons, as supervisord assumes it is
   responsible for daemonizing its subprocesses (see
   :ref:`nondaemonizing_of_subprocesses`).
@@ -571,7 +574,7 @@ where specified.
   process name for this process.  You usually don't need to worry
   about setting this unless you change ``numprocs``.  The string
   expression is evaluated against a dictionary that includes
-  ``group_name``, ``host_node_name``, ``process_num``, ``program_name``, 
+  ``group_name``, ``host_node_name``, ``process_num``, ``program_name``,
   and ``here`` (the directory of the supervisord config file).
 
   *Default*: ``%(program_name)s``
@@ -716,7 +719,7 @@ where specified.
 ``stopasgroup``
 
   If true, the flag causes supervisor to send the stop signal to the
-  whole process group and implies ``killasgroup``=true.  This is useful 
+  whole process group and implies ``killasgroup``=true.  This is useful
   for programs, such as Flask in debug mode, that do not propagate
   stop signals to their children, leaving them orphaned.
 
@@ -724,7 +727,7 @@ where specified.
 
   *Required*:  No.
 
-  *Introduced*: 3.0a13
+  *Introduced*: 3.0b1
 
 ``killasgroup``
 
@@ -773,8 +776,8 @@ where specified.
   no log file.  ``AUTO`` log files and their backups will be deleted
   when :program:`supervisord` restarts.  The ``stdout_logfile`` value
   can contain Python string expressions that will evaluated against a
-  dictionary that contains the keys ``group_name``, ``host_node_name``, 
-  ``process_num``, ``program_name``, and ``here`` (the directory of the 
+  dictionary that contains the keys ``group_name``, ``host_node_name``,
+  ``process_num``, ``program_name``, and ``here`` (the directory of the
   supervisord config file).
 
   *Default*: ``AUTO``
@@ -799,8 +802,8 @@ where specified.
 ``stdout_logfile_backups``
 
   The number of ``stdout_logfile`` backups to keep around resulting
-  from process stdout log file rotation.  Set this to 0 to indicate an
-  unlimited number of backups.
+  from process stdout log file rotation.  If set to 0, no backups
+  will be kept.
 
   *Default*: 10
 
@@ -861,8 +864,7 @@ where specified.
 ``stderr_logfile_backups``
 
   The number of backups to keep around resulting from process stderr
-  log file rotation.  Set this to 0 to indicate an unlimited number of
-  backups.
+  log file rotation.  If set to 0, no backups will be kept.
 
   *Default*: 10
 
@@ -901,9 +903,9 @@ where specified.
   A list of key/value pairs in the form ``KEY=val,KEY2=val2`` that
   will be placed in the child process' environment.  The environment
   string may contain Python string expressions that will be evaluated
-  against a dictionary containing ``group_name``, ``host_node_name``, 
-  ``process_num``, ``program_name``, and ``here`` (the directory of the 
-  supervisord config file).  Values containing non-alphanumeric characters 
+  against a dictionary containing ``group_name``, ``host_node_name``,
+  ``process_num``, ``program_name``, and ``here`` (the directory of the
+  supervisord config file).  Values containing non-alphanumeric characters
   should be placed in quotes (e.g. ``KEY="val:123",KEY2="val,456"``) **Note**
   that the subprocess will inherit the environment variables of the
   shell used to start "supervisord" except for the ones overridden
@@ -1123,7 +1125,7 @@ parent process while any of the child processes are being restarted.
 Finally, shared sockets are more fault tolerant because if a given
 process fails, other processes can continue to serve inbound
 connections.
-		
+
 With integrated FastCGI spawning support, Supervisor gives you the
 best of both worlds.  You get full-featured process management with
 groups of FastCGI processes sharing sockets without being tied to a
@@ -1153,29 +1155,29 @@ sections do not have.
   *Required*:  Yes.
 
   *Introduced*: 3.0
-  
+
 ``socket_owner``
-  
+
   For UNIX domain sockets, this parameter can be used to specify the user
-  and group for the FastCGI socket. May be a UNIX username (e.g. chrism) 
+  and group for the FastCGI socket. May be a UNIX username (e.g. chrism)
   or a UNIX username and group separated by a colon (e.g. chrism:wheel).
 
   *Default*: Uses the user and group set for the fcgi-program
 
   *Required*:  No.
 
-  *Introduced*: 3.0 
+  *Introduced*: 3.0
 
 ``socket_mode``
 
-  For UNIX domain sockets, this parameter can be used to specify the 
+  For UNIX domain sockets, this parameter can be used to specify the
   permission mode.
 
   *Default*: 0700
 
   *Required*:  No.
 
-  *Introduced*: 3.0 
+  *Introduced*: 3.0
 
 Consult :ref:`programx_section` for other allowable keys, delta the
 above constraints and additions.
@@ -1223,7 +1225,7 @@ respected by eventlistener sections *except* for
 ``stdout_capture_maxbytes`` and ``stderr_capture_maxbytes`` (event
 listeners cannot emit process communication events, see
 :ref:`capture_mode`).
-      
+
 ``[eventlistener:x]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1264,7 +1266,7 @@ above constraints and additions.
    command=/bin/eventlistener
    process_name=%(program_name)s_%(process_num)02d
    numprocs=5
-   events=PROCESS_STATE_CHANGE
+   events=PROCESS_STATE
    buffer_size=10
    priority=-1
    autostart=true
@@ -1304,7 +1306,7 @@ The ``[rpcinterface:supervisor]`` section *must* remain in the
 configuration for the standard setup of supervisor to work properly.
 If you don't want supervisor to do anything it doesn't already do out
 of the box, this is all you need to know about this type of section.
-      
+
 However, if you wish to add rpc interface namespaces in order to
 customize supervisor, you may add additional ``[rpcinterface:foo]``
 sections, where "foo" represents the namespace of the interface (from

@@ -105,7 +105,7 @@ being written to is named :file:`supervisord.log`, when it exceeds
 :file:`supervisord.log.2`, :file:`supervisord.log.3` etc.
 respectively.  If ``logfile_maxbytes`` is 0, the logfile is never
 rotated (and thus backups are never made).  If ``logfile_backups`` is
-0, an unlimited number of backups is created.
+0, no backups will be kept.
 
 Child Process Logs
 ------------------

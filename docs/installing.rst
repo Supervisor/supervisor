@@ -25,7 +25,7 @@ the system has internet access, you can download and install
 supervisor in one step using ``easy_install``.
 
 .. code-block:: bash
-      
+
    easy_install supervisor
 
 Depending on the permissions of your system's Python, you might need
@@ -51,7 +51,7 @@ finally install Supervisor itself.
 
 Installing To A System Without Internet Access
 ----------------------------------------------
-    
+
 If the system that you want to install Supervisor to does not have
 Internet access, you'll need to perform installation slightly
 differently.  Since both ``easy_install`` and ``python setup.py
@@ -69,7 +69,7 @@ which is internet-connected:
 
 - elementtree (latest) from `http://effbot.org/downloads#elementtree
   <http://effbot.org/downloads#elementtree>`_.
-    
+
 Copy these files to removable media and put them on the target
 machine.  Install each onto the target machine as per its
 instructions.  This typically just means unpacking each file and
@@ -77,10 +77,30 @@ invoking ``python setup.py install`` in the unpacked directory.
 Finally, run supervisor's ``python setup.py install``.
 
 .. note::
-    
+
    Depending on the permissions of your system's Python, you might
    need to be the root user to invoke ``python setup.py install``
    sucessfully for each package.
+
+Installing a Distribution Package
+---------------------------------
+
+Some Linux distributions offer a version of Supervisor that is installable
+through the system package manager.  These packages may include
+distribution-specific changes to Supervisor.
+
+.. note::
+
+    Some of these packages can lag considerably behind the official
+    release version.  For example, Ubuntu 12.04 (released April 2012)
+    offers a package based on Supervisor 3.0a8 (released January 2010).
+
+Use the package management tools of your distribution to check availability;
+e.g. on Ubuntu you can run ``apt-cache show supervisor``, and on CentOS
+you can run ``yum info supervisor``.
+
+Packaged Supervisor will normally already be integrated into the service
+management infrastructure of your distribution.
 
 Creating a Configuration File
 -----------------------------

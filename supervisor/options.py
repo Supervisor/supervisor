@@ -281,7 +281,7 @@ class Options:
                     self._set(name, value, 1)
 
         if self.configfile is None:
-            if os.getuid() == 0: # pragma: no cover
+            if os.getuid() == 0 and self.progname.find("supervisord") > -1: # pragma: no cover
                 self.warnings.warn(
                     'Supervisord is running as root and it is searching '
                     'for its configuration file in default locations '
@@ -1956,6 +1956,9 @@ def split_namespec(namespec):
 
 class ProcessException(Exception):
     """ Specialized exceptions used when attempting to start a process """
+
+class BadCommand(ProcessException):
+    """ Indicates the command could not be parsed properly. """
 
 class NotExecutable(ProcessException):
     """ Indicates that the filespec cannot be executed because its path

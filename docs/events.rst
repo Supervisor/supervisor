@@ -87,7 +87,7 @@ follows.
 
    [eventlistener:mylistener]
    command=my_custom_listener.py
-   events=PROCESS_STATE_CHANGE,TICK_60
+   events=PROCESS_STATE,TICK_60
 
 .. note::
 
@@ -773,6 +773,12 @@ An event type that may be subscribed to for event listeners to receive
 it will never be sent directly.  Subscribing to this event type will
 cause a subscriber to receive event notifications for all subtypes of
 ``TICK``.
+
+Note that the only ``TICK`` events available are the ones listed below.
+You cannot subscribe to an arbitrary ``TICK`` interval. If you need an
+interval not provided below, you can subscribe to one of the shorter
+intervals given below and keep track of the time between runs in your
+event listener.
 
 *Name*: ``TICK``
 

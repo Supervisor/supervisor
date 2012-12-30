@@ -242,3 +242,17 @@ users and that all files installed by the supervisor package have
 your ``PYTHONPATH`` is sane and that all Python standard
 library files have adequate file permission protections.
 
+Running :program:`supervisord` automatically on startup
+--------------------------------------------------------
+
+If you are using a distribution-packaged version of Supervisor, it should
+already be integrated into the service management infrastructure of your
+distribution.
+
+There are user-contributed scripts for various operating systems at:
+https://github.com/Supervisor/initscripts
+
+There are some answers at Serverfault in case you get stuck:
+`How to automatically start supervisord on Linux (Ubuntu)`__
+
+.. __: http://serverfault.com/questions/96499/how-to-automatically-start-supervisord-on-linux-ubuntu

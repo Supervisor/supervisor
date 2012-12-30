@@ -9,7 +9,7 @@ See README.rst for information on how to contribute to this list.
 Obviously, you can always also send an e-mail to the supervisor mailing
 list to inform about missing plugins or libraries for/using supervisor.
 
-3rd Party Applications/Plugins/Libraries for supervisor
+3rd Party Applications/Plugins/Libraries for Supervisor
 =======================================================
 
 These are applications/plugins/libraries that add functionality or
@@ -24,7 +24,7 @@ listeners.
     processes to the number of cores on the supervisor host.
 `supervisor-wildcards <https://github.com/aleszoulek/supervisor-wildcards>`_
     Implemenents start/stop/restart commands with wildcard support for
-    Supervisor.
+    Supervisor.  These commands run in parallel and can be much faster than the built-in start/stop/restart commands.
 `mr.laforge <https://github.com/fschulze/mr.laforge>`_
     Lets you easily make sure that ``supervisord`` and specific
     processes controlled by it are running from within shell and
@@ -40,8 +40,8 @@ listeners.
     configuration and state to be manipulated in ways that are not
     normally possible at runtime.
 
-Libraries that integrates 3rd Party Applications with supervisor
-================================================================
+Libraries that integrate 3rd Party Applications with Supervisor
+===============================================================
 
 These are libraries and plugins that makes it easier to use supervisor
 with 3rd party applications:
@@ -66,3 +66,5 @@ with 3rd party applications:
     Lists for supervisord events and raises them.
 `ruby-supervisor <https://github.com/schmurfy/ruby-supervisor>`_
     Ruby client library for Supervisor's XML-RPC interface.
+`Sulphite <https://github.com/jib/sulphite>`_
+    Sends supervisord events to `Graphite <https://github.com/graphite-project/graphite-web>`_.
