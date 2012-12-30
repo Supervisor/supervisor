@@ -351,7 +351,6 @@ def existing_dirpath(v):
                        'does not exist.' % v)
 
 def logging_level(value):
-    s = str(value).lower()
     level = getLevelNumByDescription(value)
     if level is None:
         raise ValueError('bad logging level name %r' % value)
