@@ -1128,7 +1128,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                              interface.readProcessStderrLog,
                              'process1', offset=0, length=1)
 
-    def test_readProcessStdoutLog_badargs(self):
+    def test_readProcessStderrLog_badargs(self):
         from supervisor import xmlrpc
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'process1', '/bin/process1', priority=1,
