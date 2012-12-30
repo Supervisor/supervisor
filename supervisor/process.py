@@ -789,7 +789,7 @@ class EventListenerPool(ProcessGroupBase):
                 process.listener_state = EventListenerStates.BUSY
                 process.event = event
                 self.config.options.logger.debug(
-do                     'event %s sent to listener %s' % (
+                    'event %s sent to listener %s' % (
                     event.serial, process.config.name))
                 return True
 
