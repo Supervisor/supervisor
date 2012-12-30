@@ -1,7 +1,6 @@
 import grp
 import os
 import pwd
-import re
 import signal
 import sys
 import socket
