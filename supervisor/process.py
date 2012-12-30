@@ -742,7 +742,8 @@ class EventListenerPool(ProcessGroupBase):
 
     def _acceptEvent(self, event, head=False):
         # events are required to be instances
-        event_type = event.__class__
+        # this has a side effect to fail with an attribute error on 'old style' classes
+        event_type = event.__class__ 
         if not hasattr(event, 'serial'):
             event.serial = new_serial(GlobalSerial)
         if not hasattr(event, 'pool_serials'):
@@ -788,7 +789,7 @@ class EventListenerPool(ProcessGroupBase):
                 process.listener_state = EventListenerStates.BUSY
                 process.event = event
                 self.config.options.logger.debug(
-                    'event %s sent to listener %s' % (
+do                     'event %s sent to listener %s' % (
                     event.serial, process.config.name))
                 return True
 
