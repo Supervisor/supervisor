@@ -157,7 +157,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
         logfile = supervisord.options.logfile
-        import os
         try:
             f = open(logfile, 'w+')
             f.write('x' * 2048)
@@ -188,7 +187,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         options.remove_error = 1
         supervisord = DummySupervisor(options)
         interface = self._makeOne(supervisord)
-        logfile = supervisord.options.logfile
         self.assertRaises(xmlrpc.RPCError, interface.clearLog)
         self.assertEqual(interface.update_text, 'clearLog')
 
@@ -390,7 +388,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         self.assertEqual(process.spawned, True)
         self.assertEqual(interface.update_text, 'startProcess')
-        from supervisor.process import ProcessStates
         process.state = ProcessStates.RUNNING
         time.sleep(.02)
         result = callback()
@@ -437,7 +434,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         self.assertEqual(process.spawned, True)
         self.assertEqual(interface.update_text, 'startProcess')
-        from supervisor.process import ProcessStates
         process.state = ProcessStates.BACKOFF
 
         time.sleep(.1)
@@ -460,7 +456,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         self.assertEqual(process.spawned, True)
         self.assertEqual(interface.update_text, 'startProcess')
-        from supervisor.process import ProcessStates
         process.state = ProcessStates.STARTING
 
         time.sleep(.2)
@@ -686,7 +681,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(process.killing, 0)
         from supervisor import http
         self.assertEqual(callback(), http.NOT_DONE_YET)
-        from supervisor.process import ProcessStates
         self.assertEqual(process.state, ProcessStates.STOPPED)
         self.assertEqual(callback(), True)
         self.assertEqual(len(supervisord.process_groups['foo'].processes), 1)
@@ -1066,7 +1060,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                               stdout_logfile='/tmp/process1.log')
         supervisord = PopulatedDummySupervisor(options, 'process1', pconfig)
         interface = self._makeOne(supervisord)
-        import os
         process = supervisord.process_groups['process1'].processes['process1']
         logfile = process.config.stdout_logfile
 
@@ -1091,7 +1084,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stdout_logfile
-        import os
         try:
             f = open(logfile, 'w+')
             f.write('x' * 2048)
@@ -1135,7 +1127,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                               stderr_logfile='/tmp/process1.log')
         supervisord = PopulatedDummySupervisor(options, 'process1', pconfig)
         interface = self._makeOne(supervisord)
-        import os
         process = supervisord.process_groups['process1'].processes['process1']
         logfile = process.config.stderr_logfile
 
@@ -1160,7 +1151,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stderr_logfile
-        import os
         try:
             f = open(logfile, 'w+')
             f.write('x' * 2048)
@@ -1195,7 +1185,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stdout_logfile
-        import os
         try:
             f = open(logfile, 'w+')
             f.write(letters)
@@ -1221,7 +1210,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stdout_logfile
-        import os
         try:
             f = open(logfile, 'w+')
             f.write(letters)
@@ -1257,7 +1245,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stdout_logfile
-        import os
         try:
             f = open(logfile, 'w+')
             f.write(letters)
@@ -1279,8 +1266,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                                stdout_logfile='/tmp/fooooooo')
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
         interface = self._makeOne(supervisord)
-        process = supervisord.process_groups['foo'].processes['foo']
-        logfile = process.config.stdout_logfile
                 
         data, offset, overflow = interface.tailProcessStdoutLog('foo', 
                                                     offset=0, length=100)
@@ -1314,7 +1299,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stderr_logfile
-        import os
         try:
             f = open(logfile, 'w+')
             f.write(letters)
@@ -1340,7 +1324,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stderr_logfile
-        import os
         try:
             f = open(logfile, 'w+')
             f.write(letters)
@@ -1376,7 +1359,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stderr_logfile
-        import os
         try:
             f = open(logfile, 'w+')
             f.write(letters)
@@ -1398,8 +1380,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                                stderr_logfile='/tmp/fooooooo')
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
         interface = self._makeOne(supervisord)
-        process = supervisord.process_groups['foo'].processes['foo']
-        logfile = process.config.stderr_logfile
                 
         data, offset, overflow = interface.tailProcessStderrLog('foo', 
                                                     offset=0, length=100)
