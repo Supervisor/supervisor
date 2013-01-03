@@ -430,6 +430,8 @@ class ServerOptions(Options):
     def realize(self, *arg, **kw):
         Options.realize(self, *arg, **kw)
         section = self.configroot.supervisord
+        expansions = {'here':self.here}
+        expansions.update(environ_expansions())
 
         # Additional checking of user option; set uid and gid
         if self.user is not None:
@@ -443,7 +445,7 @@ class ServerOptions(Options):
             self.loglevel = section.loglevel
 
         if self.logfile:
-            logfile = self.logfile
+            logfile = expand(self.logfile, expansions, 'logfile')
         else:
             logfile = section.logfile
 
@@ -498,6 +500,9 @@ class ServerOptions(Options):
         self.parse_warnings = []
 
         section = self.configroot.supervisord
+
+        expansions = {'here':self.here}
+        expansions.update(environ_expansions())
         if not hasattr(fp, 'read'):
             try:
                 fp = open(fp, 'r')
@@ -542,23 +547,24 @@ class ServerOptions(Options):
         else:
             section.directory = existing_directory(directory)
 
-        section.user = get('user', None)
+        user = get('user', None)
+        if user:
+            user = expand(user,expansions,'user')
+        section.user = user
         section.umask = octal_type(get('umask', '022'))
-        section.logfile = existing_dirpath(get('logfile', 'supervisord.log'))
+        section.logfile = existing_dirpath(expand(get('logfile', 'supervisord.log'),expansions, 'logfile'))
         section.logfile_maxbytes = byte_size(get('logfile_maxbytes', '50MB'))
         section.logfile_backups = integer(get('logfile_backups', 10))
         section.loglevel = logging_level(get('loglevel', 'info'))
-        section.pidfile = existing_dirpath(get('pidfile', 'supervisord.pid'))
+        section.pidfile = existing_dirpath(expand(get('pidfile', 'supervisord.pid'),expansions,'pidfile'))
         section.identifier = get('identifier', 'supervisor')
         section.nodaemon = boolean(get('nodaemon', 'false'))
 
         tempdir = tempfile.gettempdir()
-        section.childlogdir = existing_directory(get('childlogdir', tempdir))
+        section.childlogdir = existing_directory(expand(get('childlogdir', tempdir), expansions, 'chidlogdir'))
         section.nocleanup = boolean(get('nocleanup', 'false'))
         section.strip_ansi = boolean(get('strip_ansi', 'false'))
 
-        expansions = {'here':self.here}
-        expansions.update(environ_expansions())
         environ_str = get('environment', '')
         environ_str = expand(environ_str, expansions, 'environment')
         section.environment = dict_of_key_value_pairs(environ_str)
@@ -778,7 +784,6 @@ class ServerOptions(Options):
         serverurl = get(section, 'serverurl', None)
         if serverurl and serverurl.strip().upper() == 'AUTO':
             serverurl = None
-
         umask = get(section, 'umask', None)
         if umask is not None:
             umask = octal_type(umask)
@@ -795,7 +800,7 @@ class ServerOptions(Options):
                 raise ValueError(
                     '%(process_num) must be present within process_name when '
                     'numprocs > 1')
-                    
+
         if stopasgroup and not killasgroup:
             raise ValueError("Cannot set stopasgroup=true and killasgroup=false")
 
@@ -898,6 +903,9 @@ class ServerOptions(Options):
 
     def server_configs_from_parser(self, parser):
         configs = []
+        expansions = {}
+        expansions.update(environ_expansions())
+
         inet_serverdefs = self._parse_servernames(parser, 'inet_http_server')
         for name, section in inet_serverdefs:
             config = {}
@@ -921,7 +929,7 @@ class ServerOptions(Options):
             sfile = get(section, 'file', None)
             if sfile is None:
                 raise ValueError('section [%s] has no file value' % section)
-            sfile = sfile.strip()
+            sfile = expand(sfile.strip(), expansions,'file')
             config['name'] = name
             config['family'] = socket.AF_UNIX
             sfile = expand(sfile, {'here':self.here}, 'socket file')
@@ -1167,7 +1175,7 @@ class ServerOptions(Options):
 
             # always put our primary gid first in this list, otherwise we can
             # lose group info since sometimes the first group in the setgroups
-            # list gets overwritten on the subsequent setgid call (at least on 
+            # list gets overwritten on the subsequent setgid call (at least on
             # freebsd 9 with python 2.7 - this will be safe though for all unix
             # /python version combos)
             groups.insert(0, gid)
@@ -1969,4 +1977,3 @@ class NoPermission(ProcessException):
     """ Indicates that the file cannot be executed because the supervisor
     process does not possess the appropriate UNIX filesystem permission
     to execute the file. """
-
