@@ -1474,7 +1474,11 @@ class ClientOptions(Options):
         sections = config.sections()
         if not 'supervisorctl' in sections:
             raise ValueError,'.ini file does not include supervisorctl section'
-        serverurl = config.getdefault('serverurl', 'http://localhost:9001')
+        expansions = {'here':self.here}
+        expansions.update(environ_expansions())
+
+        serverurl = expand(config.getdefault('serverurl', 'http://localhost:9001'), expansions, 'serverurl')
+
         if serverurl.startswith('unix://'):
             sf = serverurl[7:]
             path = expand(sf, {'here':self.here}, 'serverurl')
