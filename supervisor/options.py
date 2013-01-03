@@ -518,7 +518,7 @@ class ServerOptions(Options):
             if not parser.has_option('include', 'files'):
                 raise ValueError(".ini file has [include] section, but no "
                 "files setting")
-            files = parser.get('include', 'files')
+            files = expand(parser.get('include', 'files'), expansions, 'files')
             files = files.split()
             if hasattr(fp, 'name'):
                 base = os.path.dirname(os.path.abspath(fp.name))
