@@ -146,7 +146,7 @@ syslog service instead of being saved to files.
 ``stdout_capture_maxbytes`` or ``stderr_capture_maxbytes``,
 but otherwise they accept the same values.
 
-The configuration keys tht influence child process logging in the
+The configuration keys that influence child process logging in the
 ``[supervisord]`` config file section are these:
 ``childlogdir``, and ``nocleanup``.
 
