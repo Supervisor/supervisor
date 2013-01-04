@@ -74,3 +74,5 @@ with 3rd party applications:
     Ruby client library for Supervisor's XML-RPC interface.
 `Sulphite <https://github.com/jib/sulphite>`_
     Sends supervisord events to `Graphite <https://github.com/graphite-project/graphite-web>`_.
+`supervisord.tmbundle <https://github.com/countergram/supervisord.tmbundle>`_
+    `TextMate <http://macromates.com/>`_ bundle for supervisord.conf.
