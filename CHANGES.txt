@@ -4,6 +4,10 @@ Next release
 - Fixed a bug where parsing ``command=`` could cause supervisord to crash if
   shlex.split() fails, such as a bad quoting.  Patch by Scott Wilson.
 
+- It is now possible to use ``supervisorctl`` on a machine with no
+  ``supervisord.conf`` file by supplying the connection information in
+  command line options.  Patch by Jens Rantil.
+
 3.0b1 (2012-09-10)
 ------------------
 
