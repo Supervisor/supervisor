@@ -39,6 +39,8 @@ listeners.
     An RPC extension for Supervisor that allows Supervisor's
     configuration and state to be manipulated in ways that are not
     normally possible at runtime.
+`supervisor-stdout <https://github.com/coderanger/supervisor-stdout>`_
+    An event listener that sends process output to supervisord's stdout.
 
 Libraries that integrate 3rd Party Applications with Supervisor
 ===============================================================
