@@ -76,3 +76,5 @@ with 3rd party applications:
     Sends supervisord events to `Graphite <https://github.com/graphite-project/graphite-web>`_.
 `supervisord.tmbundle <https://github.com/countergram/supervisord.tmbundle>`_
     `TextMate <http://macromates.com/>`_ bundle for supervisord.conf.
+`capistrano-supervisord <https://github.com/yyuu/capistrano-supervisord>`_
+    A `Capistrano <https://github.com/capistrano/capistrano>`_ recipe to deploy supervisord based services.
