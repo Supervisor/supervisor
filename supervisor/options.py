@@ -79,7 +79,12 @@ class Options:
     # If you want positional arguments, set this to 1 in your subclass.
     positional_args_allowed = 0
 
-    def __init__(self):
+    def __init__(self, require_configfile=True):
+        """Constructor.
+
+        Params:
+        require_configfile -- whether we should fail on no config file.
+        """
         self.names_list = []
         self.short_options = []
         self.long_options = []
@@ -88,25 +93,28 @@ class Options:
         self.required_map = {}
         self.environ_map = {}
         self.attr_priorities = {}
+        self.require_configfile = require_configfile
         self.add(None, None, "h", "help", self.help)
         self.add("configfile", None, "c:", "configuration=")
 
-    def default_configfile(self):
-        """Return the name of the found config file or raise. """
         here = os.path.dirname(os.path.dirname(sys.argv[0]))
-        paths = [os.path.join(here, 'etc', 'supervisord.conf'),
-                 os.path.join(here, 'supervisord.conf'),
-                 'supervisord.conf', 'etc/supervisord.conf',
-                 '/etc/supervisord.conf']
+        searchpaths = [os.path.join(here, 'etc', 'supervisord.conf'),
+                       os.path.join(here, 'supervisord.conf'),
+                       'supervisord.conf', 'etc/supervisord.conf',
+                       '/etc/supervisord.conf']
+        self.searchpaths = searchpaths
+
+    def default_configfile(self):
+        """Return the name of the found config file or print usage/exit."""
         config = None
-        for path in paths:
+        for path in self.searchpaths:
             if os.path.exists(path):
                 config = path
                 break
-        if config is None:
+        if config is None and self.require_configfile:
             self.usage('No config file found at default paths (%s); '
                        'use the -c option to specify a config file '
-                       'at a different path' % ', '.join(paths))
+                       'at a different path' % ', '.join(self.searchpaths))
         return config
 
     def help(self, dummy):
@@ -293,22 +301,15 @@ class Options:
 
             self.configfile = self.default_configfile()
 
-        self.process_config_file()
+        self.process_config()
 
-    def process_config_file(self, do_usage=True):
-        """Process config file."""
-        if not hasattr(self.configfile, 'read'):
-            self.here = os.path.abspath(os.path.dirname(self.configfile))
-            set_here(self.here)
-        try:
-            self.read_config(self.configfile)
-        except ValueError, msg:
-            if do_usage:
-                # if this is not called from an RPC method, run usage and exit.
-                self.usage(str(msg))
-            else:
-                # if this is called from an RPC method, raise an error
-                raise ValueError(msg)
+    def process_config(self, do_usage=True):
+        """Process configuration data structure.
+        
+        This includes reading config file if necessary, setting defaults etc.
+        """
+        if self.configfile:
+            self.process_config_file(do_usage)
 
         # Copy config options to attributes of self.  This only fills
         # in options that aren't already set from the command line.
@@ -332,6 +333,21 @@ class Options:
         for name, message in self.required_map.items():
             if getattr(self, name) is None:
                 self.usage(message)
+
+    def process_config_file(self, do_usage):
+        # Process config file
+        if not hasattr(self.configfile, 'read'):
+            self.here = os.path.abspath(os.path.dirname(self.configfile))
+            set_here(self.here)
+        try:
+            self.read_config(self.configfile)
+        except ValueError, msg:
+            if do_usage:
+                # if this is not called from an RPC method, run usage and exit.
+                self.usage(str(msg))
+            else:
+                # if this is called from an RPC method, raise an error
+                raise ValueError(msg)
 
     def get_plugins(self, parser, factory_key, section_prefix):
         factories = []
@@ -486,8 +502,8 @@ class ServerOptions(Options):
 
         self.identifier = section.identifier
 
-    def process_config_file(self, do_usage=True):
-        Options.process_config_file(self, do_usage=do_usage)
+    def process_config(self, do_usage=True):
+        Options.process_config(self, do_usage=do_usage)
 
         new = self.configroot.supervisord.process_group_configs
         self.process_group_configs = new
@@ -1427,7 +1443,7 @@ class ClientOptions(Options):
     history_file = None
 
     def __init__(self):
-        Options.__init__(self)
+        Options.__init__(self, require_configfile=False)
         self.configroot = Dummy()
         self.configroot.supervisorctl = Dummy()
         self.configroot.supervisorctl.interactive = None
@@ -1437,6 +1453,11 @@ class ClientOptions(Options):
         self.configroot.supervisorctl.password = None
         self.configroot.supervisorctl.history_file = None
 
+        from supervisor.supervisorctl import DefaultControllerPlugin
+        default_factory = ('default', DefaultControllerPlugin, {})
+        # we always add the default factory. If you want to a supervisorctl
+        # without the default plugin, please write your own supervisorctl.
+        self.plugin_factories = [default_factory]
 
         self.add("interactive", "supervisorctl.interactive", "i",
                  "interactive", flag=1, default=0)
@@ -1489,16 +1510,11 @@ class ClientOptions(Options):
             section.history_file = None
             self.history_file = None
 
-        from supervisor.supervisorctl import DefaultControllerPlugin
-        self.plugin_factories = self.get_plugins(
+        self.plugin_factories += self.get_plugins(
             config,
             'supervisor.ctl_factory',
             'ctlplugin:'
             )
-        default_factory = ('default', DefaultControllerPlugin, {})
-        # if you want to a supervisorctl without the default plugin,
-        # please write your own supervisorctl.
-        self.plugin_factories.insert(0, default_factory)
 
         return section
 

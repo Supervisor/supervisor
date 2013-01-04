@@ -159,7 +159,7 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('reloadConfig')
         try:
-            self.supervisord.options.process_config_file(do_usage=False)
+            self.supervisord.options.process_config(do_usage=False)
         except ValueError, msg:
             raise RPCError(Faults.CANT_REREAD, msg)
 
