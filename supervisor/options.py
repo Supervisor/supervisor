@@ -935,7 +935,7 @@ class ServerOptions(Options):
             sfile = expand(sfile, {'here':self.here}, 'socket file')
             config['file'] = normalize_path(sfile)
             config.update(self._parse_username_and_password(parser, section))
-            chown = get(section, 'chown', None)
+            chown = expand(get(section, 'chown', None),expansions,'sockchown')
             if chown is not None:
                 try:
                     chown = colon_separated_user_group(chown)
