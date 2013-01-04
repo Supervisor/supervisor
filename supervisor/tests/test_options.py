@@ -8,6 +8,13 @@ import unittest
 import signal
 import shutil
 import errno
+try:
+    # Python < 3
+    from StringIO import StringIO
+except ImportError:
+    # Python >= 3
+    from io import StringIO
+
 from mock import Mock, patch, sentinel
 
 from supervisor.tests.base import DummySupervisor
@@ -49,6 +56,13 @@ class OptionTests(unittest.TestCase):
                     short='p:', long='other=', handler=integer)
         return options
 
+    def test_searchpaths(self):
+        options = self._makeOptions()
+        self.assertEquals(len(options.searchpaths), 5)
+        self.assertTrue('supervisord.conf' in options.searchpaths)
+        self.assertTrue('etc/supervisord.conf' in options.searchpaths)
+        self.assertTrue('/etc/supervisord.conf' in options.searchpaths)
+
     def test_options_and_args_order(self):
         # Only config file exists
         options = self._makeOptions()
@@ -73,12 +87,12 @@ class OptionTests(unittest.TestCase):
         options.realize([])
         self.assertEquals(options.other, 41)
         options.master['other'] = 42
-        options.process_config_file()
+        options.process_config()
         self.assertEquals(options.other, 42)
 
     def test_config_reload_do_usage_false(self):
         options = self._makeOptions(read_error='error')
-        self.assertRaises(ValueError, options.process_config_file,
+        self.assertRaises(ValueError, options.process_config,
                           False)
 
     def test_config_reload_do_usage_true(self):
@@ -91,7 +105,7 @@ class OptionTests(unittest.TestCase):
         options.exit = exit
         options.configroot.anoption = 1
         options.configroot.other = 1
-        options.process_config_file(True)
+        options.process_config(True)
         self.assertEqual(L, [2])
 
     def test__set(self):
@@ -116,6 +130,28 @@ class ClientOptionsTests(unittest.TestCase):
 
     def _makeOne(self):
         return self._getTargetClass()()
+
+    def test_no_config_file(self):
+        """Making sure config file is not required."""
+        instance = self._makeOne()
+
+        # No default config file search in case they would exist
+        self.assertTrue(len(instance.searchpaths) > 0)
+        instance.searchpaths = []
+
+        class DummyException(Exception):
+            pass
+        def dummy_exit(self, _exitcode=0):
+            raise DummyException()
+        instance.exit = dummy_exit
+
+        instance.realize(args=['-s', 'http://localhost:9001', '-u', 'chris',
+                               '-p', '123'])
+
+        self.assertEquals(instance.interactive, 1)
+        self.assertEqual(instance.serverurl, 'http://localhost:9001')
+        self.assertEqual(instance.username, 'chris')
+        self.assertEqual(instance.password, '123')
 
     def test_options(self):
         tempdir = tempfile.gettempdir()
@@ -394,6 +430,34 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.minfds, 2048)
         self.assertEqual(instance.minprocs, 300)
 
+    def test_no_config_file_exits(self):
+        instance = self._makeOne()
+
+        # No default config file search in case they would exist
+        self.assertTrue(len(instance.searchpaths) > 0)
+        instance.searchpaths = []
+
+        class DummyException(Exception):
+            def __init__(self, exitcode):
+                self.exitcode = exitcode
+        def dummy_exit(exitcode=2):
+            # Important default exitcode=2 like sys.exit.
+            raise DummyException(exitcode)
+        instance.exit = dummy_exit
+
+        # Making sure we capture stdout and stderr
+        instance.stderr = StringIO()
+
+        try:
+            instance.realize()
+        except DummyException, e:
+            # Caught expected exception
+            import traceback
+            self.assertEquals(e.exitcode, 2,
+                              "Wrong exitcode for: %s" % traceback.format_exc(e))
+        else:
+            self.fail("Did not get a DummyException.")
+
     def test_reload(self):
         from cStringIO import StringIO
         text = lstrip("""\
@@ -443,7 +507,7 @@ class ServerOptionsTests(unittest.TestCase):
         programs = three
         """)
         instance.configfile = StringIO(text)
-        instance.process_config_file()
+        instance.process_config()
 
         section = instance.configroot.supervisord
 
