@@ -49,7 +49,7 @@ class Subprocess:
     exitstatus = None # status attached to dead process by finsh()
     spawnerr = None # error message attached by spawn() if any
     group = None # ProcessGroup instance if process is in the group
-    
+
     def __init__(self, config):
         """Constructor.
 
@@ -80,7 +80,7 @@ class Subprocess:
                 dispatcher.handle_read_event()
             if dispatcher.writable():
                 dispatcher.handle_write_event()
-                
+
     def write(self, chars):
         if not self.pid or self.killing:
             raise OSError(errno.EPIPE, "Process already closed")
@@ -92,7 +92,7 @@ class Subprocess:
         dispatcher = self.dispatchers[stdin_fd]
         if dispatcher.closed:
             raise OSError(errno.EPIPE, "Process' stdin channel is closed")
-            
+
         dispatcher.input_buffer += chars
         dispatcher.flush() # this must raise EPIPE if the pipe is closed
 
@@ -106,7 +106,10 @@ class Subprocess:
             raise BadCommand("can't parse command %r: %s" % \
                 (self.config.command, str(e)))
 
-        program = commandargs[0]
+        if commandargs:
+            program = commandargs[0]
+        else:
+            raise BadCommand("command is empty")
 
         if "/" in program:
             filename = program
@@ -114,7 +117,7 @@ class Subprocess:
                 st = self.config.options.stat(filename)
             except OSError:
                 st = None
-            
+
         else:
             path = self.config.options.get_path()
             found = None
@@ -196,7 +199,7 @@ class Subprocess:
         self.exitstatus = None
         self.system_stop = 0
         self.administrative_stop = 0
-        
+
         self.laststart = time.time()
 
         self._assertInState(ProcessStates.EXITED, ProcessStates.FATAL,
@@ -225,7 +228,7 @@ class Subprocess:
             self._assertInState(ProcessStates.STARTING)
             self.change_state(ProcessStates.BACKOFF)
             return
-        
+
         try:
             pid = options.fork()
         except OSError, why:
@@ -246,7 +249,7 @@ class Subprocess:
 
         if pid != 0:
             return self._spawn_as_parent(pid)
-        
+
         else:
             return self._spawn_as_child(filename, argv)
 
@@ -270,7 +273,7 @@ class Subprocess:
         else:
             options.dup2(self.pipes['child_stderr'], 2)
         for i in range(3, options.minfds):
-            options.close_fd(i)        
+            options.close_fd(i)
 
     def _spawn_as_child(self, filename, argv):
         options = self.config.options
@@ -401,7 +404,7 @@ class Subprocess:
             self.killing = 0
             self.delay = 0
             return msg
-            
+
         return None
 
     def finish(self, pid, sts):
@@ -590,14 +593,14 @@ class FastCGISubprocess(Subprocess):
             #Remove object reference to decrement the reference count on error
             self.fcgi_sock = None
         return pid
-        
+
     def after_finish(self):
         """
         Releases reference to FastCGI socket when process is reaped
         """
         #Remove object reference to decrement the reference count
         self.fcgi_sock = None
-        
+
     def finish(self, pid, sts):
         """
         Overrides Subprocess.finish() so we can hook in after it happens
@@ -612,7 +615,7 @@ class FastCGISubprocess(Subprocess):
         The FastCGI socket needs to be set to file descriptor 0 in the child
         """
         sock_fd = self.fcgi_sock.fileno()
-        
+
         options = self.config.options
         options.dup2(sock_fd, 0)
         options.dup2(self.pipes['child_stdout'], 1)
@@ -622,14 +625,14 @@ class FastCGISubprocess(Subprocess):
             options.dup2(self.pipes['child_stderr'], 2)
         for i in range(3, options.minfds):
             options.close_fd(i)
-                
+
 class ProcessGroupBase:
     def __init__(self, config):
         self.config = config
         self.processes = {}
         for pconfig in self.config.process_configs:
             self.processes[pconfig.name] = pconfig.make_process(self)
-        
+
 
     def __cmp__(self, other):
         return cmp(self.config.priority, other.config.priority)
@@ -678,13 +681,13 @@ class ProcessGroup(ProcessGroupBase):
     def transition(self):
         for proc in self.processes.values():
             proc.transition()
-            
+
 class FastCGIProcessGroup(ProcessGroup):
 
     def __init__(self, config, **kwargs):
         ProcessGroup.__init__(self, config)
         sockManagerKlass = kwargs.get('socketManager', SocketManager)
-        self.socket_manager = sockManagerKlass(config.socket_config, 
+        self.socket_manager = sockManagerKlass(config.socket_config,
                                                logger=config.options.logger)
         #It's not required to call get_socket() here but we want
         #to fail early during start up if there is a config error
@@ -768,7 +771,7 @@ class EventListenerPool(ProcessGroupBase):
 
     def _dispatchEvent(self, event):
         pool_serial = event.pool_serials[self.config.name]
-            
+
         for process in self.processes.values():
             if process.state != ProcessStates.RUNNING:
                 continue
@@ -784,7 +787,7 @@ class EventListenerPool(ProcessGroupBase):
                     if why[0] != errno.EPIPE:
                         raise
                     continue
-                
+
                 process.listener_state = EventListenerStates.BUSY
                 process.event = event
                 self.config.options.logger.debug(
@@ -823,5 +826,5 @@ def new_serial(inst):
     inst.serial += 1
     return inst.serial
 
-            
-    
+
+
