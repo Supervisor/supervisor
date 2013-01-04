@@ -56,7 +56,9 @@ with 3rd party applications:
     An nginx module providing API to communicate with supervisord and
     manage (start/stop) backends on-demand.
 `Supervisord-Nagios-Plugin <https://github.com/Level-Up/Supervisord-Nagios-Plugin>`_
-    A Nagios/icinga plugin to monitor individual supervisord processes.
+    A Nagios/Icinga plugin written in Python to monitor individual supervisord processes.
+`nagios-supervisord-processes <https://github.com/blablacar/nagios-supervisord-processes>`_
+    A Nagios/Icinga plugin written in PHP to monitor individual supervisord processes.
 `php-supervisor-event <https://github.com/mtdowling/php-supervisor-event>`_
     PHP classes for interacting with Supervisor event notifications.
 `sd-supervisord <https://github.com/robcowie/sd-supervisord>`_
