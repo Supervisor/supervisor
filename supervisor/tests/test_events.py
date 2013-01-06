@@ -305,21 +305,6 @@ class TestSerializations(unittest.TestCase):
         self.assertEqual(headers['pid'], '1', headers)
         self.assertEqual(payload, 'yo')
             
-    def test_pcomm_stdout_event(self):
-        options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
-        process1 = DummyProcess(pconfig1)
-        from supervisor.events import ProcessCommunicationStdoutEvent
-        class DummyGroup:
-            config = pconfig1
-        process1.group = DummyGroup
-        event = ProcessCommunicationStdoutEvent(process1, 1, 'yo')
-        headers, payload = self._deserialize(str(event))
-        self.assertEqual(headers['processname'], 'process1', headers)
-        self.assertEqual(headers['groupname'], 'process1', headers)
-        self.assertEqual(headers['pid'], '1', headers)
-        self.assertEqual(payload, 'yo')
-            
     def test_pcomm_stderr_event(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
@@ -488,11 +473,6 @@ class TestUtilityFunctions(unittest.TestCase):
         from supervisor import events
         for name, value in events.EventTypes.__dict__.items():
             self.assertEqual(events.getEventNameByType(value), name)
-
-    def _assertStateChange(self, old, new, expected):
-        from supervisor.events import getProcessStateChangeEventType
-        klass = getProcessStateChangeEventType(old, new)
-        self.assertEqual(expected, klass)
 
 
 def test_suite():

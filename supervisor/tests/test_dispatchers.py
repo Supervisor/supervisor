@@ -82,7 +82,6 @@ class POutputDispatcherTests(unittest.TestCase):
             'uncaptured python exception, closing channel'),result)
 
     def test_toggle_capturemode_sends_event(self):
-        executable = '/bin/cat'
         options = DummyOptions()
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile='/tmp/foo',

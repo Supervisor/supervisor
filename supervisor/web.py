@@ -264,7 +264,6 @@ class StatusView(MeldView):
             return 'statusnominal'
 
     def make_callback(self, namespec, action):
-        message = None
         supervisord = self.context.supervisord
 
         # the rpc interface code is already written to deal properly in a

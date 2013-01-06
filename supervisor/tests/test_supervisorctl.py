@@ -751,7 +751,6 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_update_changed_procs(self):
         from supervisor import xmlrpc
-        import xmlrpclib
 
         plugin = self._makeOne()
         supervisor = plugin.ctl.options._server.supervisor
