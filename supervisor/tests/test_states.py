@@ -2,7 +2,6 @@
 
 import sys
 import unittest
-from StringIO import StringIO
 from supervisor import states
 
 class TopLevelProcessStateTests(unittest.TestCase):

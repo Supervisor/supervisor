@@ -213,7 +213,6 @@ class SystemNamespaceRPCInterface:
         @return array result  The result.
         """
         methods = self._listMethods()
-        L = []
         for method in methods:
             if method == name:
                 rtype = None
