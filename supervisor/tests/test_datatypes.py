@@ -177,6 +177,14 @@ class DatatypesTest(unittest.TestCase):
         finally:
             datatypes.existing_dirpath = func
 
+    def test_logging_level_returns_level_from_name_case_insensitive(self):
+        from supervisor.loggers import LevelsByName
+        self.assertEqual(datatypes.logging_level("wArN"), LevelsByName.WARN)
+
+    def test_logging_level_raises_for_bad_level_name(self):
+        self.assertRaises(ValueError,
+                          datatypes.logging_level, "foo")
+
     def test_integer(self):
         from supervisor.datatypes import integer
         self.assertRaises(ValueError, integer, 'abc')
