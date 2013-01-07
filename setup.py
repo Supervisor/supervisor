@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (c) 2006-2012 Agendaless Consulting and Contributors.
+# Copyright (c) 2006-2013 Agendaless Consulting and Contributors.
 # All Rights Reserved.
 #
 # This software is subject to the provisions of the BSD-like license at
