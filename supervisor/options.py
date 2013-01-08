@@ -758,6 +758,8 @@ class ServerOptions(Options):
             klass = ProcessConfig
         programs = []
         get = parser.saneget
+        expansions = {}
+        expansions.update(environ_expansions())
         program_name = section.split(':', 1)[1]
 
         priority = integer(get(section, 'priority', 999))
@@ -765,7 +767,10 @@ class ServerOptions(Options):
         autorestart = auto_restart(get(section, 'autorestart', 'unexpected'))
         startsecs = integer(get(section, 'startsecs', 1))
         startretries = integer(get(section, 'startretries', 3))
-        uid = name_to_uid(get(section, 'user', None))
+        user_name = get(section, 'user', None)
+        if user_name:
+            user_name = expand(user_name, expansions,'user')
+        uid = name_to_uid(user_name)
         stopsignal = signal_number(get(section, 'stopsignal', 'TERM'))
         stopwaitsecs = integer(get(section, 'stopwaitsecs', 10))
         stopasgroup = boolean(get(section, 'stopasgroup', 'false'))
