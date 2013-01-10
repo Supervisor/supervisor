@@ -780,6 +780,12 @@ where specified.
   ``process_num``, ``program_name``, and ``here`` (the directory of the
   supervisord config file).
 
+  .. note::
+
+     It is not possible for two processes to share a single log file
+     (``stdout_logfile``) when rotation (``stdout_logfile_maxbytes``)
+     is enabled.  This will result in the file being corrupted.
+
   *Default*: ``AUTO``
 
   *Required*:  No.
@@ -842,6 +848,12 @@ where specified.
   Put process stderr output in this file unless ``redirect_stderr`` is
   true.  Accepts the same value types as ``stdout_logfile`` and may
   contain the same Python string expressions.
+
+  .. note::
+
+     It is not possible for two processes to share a single log file
+     (``stderr_logfile``) when rotation (``stderr_logfile_maxbytes``)
+     is enabled.  This will result in the file being corrupted.
 
   *Default*: ``AUTO``
 
