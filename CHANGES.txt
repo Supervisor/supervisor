@@ -17,6 +17,9 @@ Next release
   support, it was decided to remove this feature.  A warning was added to the
   documentation that two processes may not log to the same file.
 
+- Fixed a bug where supervisord would crash if the syslog handler was used
+  and supervisord received SIGUSR2 (log reopen request).
+
 3.0b1 (2012-09-10)
 ------------------
 

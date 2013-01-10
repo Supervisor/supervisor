@@ -303,6 +303,9 @@ class SyslogHandler(Handler):
     def close(self):
         pass
 
+    def reopen(self):
+        pass
+
     def emit(self, record):
         try:
             params = record.asdict()

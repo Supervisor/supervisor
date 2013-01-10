@@ -319,6 +319,16 @@ class SyslogHandlerTests(HandlerTests, unittest.TestCase):
         syslog.syslog.assert_called_with('hello!')
 
     @mock.patch('syslog.syslog', MockSysLog())
+    def test_close(self):
+        handler = self._makeOne()
+        handler.close()  # no-op for syslog
+
+    @mock.patch('syslog.syslog', MockSysLog())
+    def test_reopen(self):
+        handler = self._makeOne()
+        handler.reopen()  # no-op for syslog
+
+    @mock.patch('syslog.syslog', MockSysLog())
     def test_emit_unicode_noerror(self):
         handler = self._makeOne()
         record = self._makeLogRecord(u'fi\xed')
