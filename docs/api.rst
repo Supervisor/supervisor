@@ -44,6 +44,12 @@ You can extend :program:`supervisord` functionality with new XML-RPC
 API methods by adding new top-level RPC interfaces as necessary.
 See :ref:`rpcinterface_factories`.
 
+.. note::
+
+  Any XML-RPC method call may result in a fault response.  This includes errors caused
+  by the client such as bad arguments, and any errors that make :program:`supervisord`
+  unable to fulfill the request.  Many XML-RPC client programs will raise an exception
+  when a fault response is encountered.
 
 .. automodule:: supervisor.rpcinterface
 
@@ -294,6 +300,8 @@ Process Control
     .. automethod:: startProcessGroup
 
     .. automethod:: stopProcessGroup
+
+    .. automethod:: stopAllProcesses
 
     .. automethod:: sendProcessStdin
 
