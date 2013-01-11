@@ -315,9 +315,9 @@ class SupervisorNamespaceRPCInterface:
     def startProcessGroup(self, name, wait=True):
         """ Start all processes in the group named 'name'
 
-        @param string name        The group name
-        @param boolean wait       Wait for each process to be fully started
-        @return struct result     A structure containing start statuses
+        @param string name     The group name
+        @param boolean wait    Wait for each process to be fully started
+        @return array result   An array of process status info structs
         """
         self._update('startProcessGroup')
 
@@ -340,8 +340,8 @@ class SupervisorNamespaceRPCInterface:
     def startAllProcesses(self, wait=True):
         """ Start all processes listed in the configuration file
 
-        @param boolean wait Wait for each process to be fully started
-        @return struct result     A structure containing start statuses
+        @param boolean wait    Wait for each process to be fully started
+        @return array result   An array of process status info structs
         """
         self._update('startAllProcesses')
 
@@ -402,9 +402,9 @@ class SupervisorNamespaceRPCInterface:
     def stopProcessGroup(self, name, wait=True):
         """ Stop all processes in the process group named 'name'
 
-        @param string name  The group name
+        @param string name     The group name
         @param boolean wait    Wait for each process to be fully stopped
-        @return boolean result Always return true unless error.
+        @return array result   An array of process status info structs
         """
         self._update('stopProcessGroup')
 
@@ -427,8 +427,8 @@ class SupervisorNamespaceRPCInterface:
     def stopAllProcesses(self, wait=True):
         """ Stop all processes in the process list
 
-        @param boolean wait    Wait for each process to be fully stopped
-        @return boolean result Always return true unless error.
+        @param  boolean wait   Wait for each process to be fully stopped
+        @return array result   An array of process status info structs
         """
         self._update('stopAllProcesses')
 
@@ -442,10 +442,10 @@ class SupervisorNamespaceRPCInterface:
         return killall # deferred
 
     def getAllConfigInfo(self):
-        """ Get info about all availible process configurations. Each record
+        """ Get info about all available process configurations. Each struct
         represents a single process (i.e. groups get flattened).
 
-        @return array result  An array of process config info records
+        @return array result  An array of process config info structs
         """
         self._update('getAllConfigInfo')
 
