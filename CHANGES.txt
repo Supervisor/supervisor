@@ -20,6 +20,9 @@ Next release
 - Fixed a bug where supervisord would crash if the syslog handler was used
   and supervisord received SIGUSR2 (log reopen request).
 
+- Python 2.4 is no longer supported.  The last version that supported Python
+  2.4 is Supervisor 3.0b1.
+
 3.0b1 (2012-09-10)
 ------------------
 
