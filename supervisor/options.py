@@ -555,11 +555,14 @@ class ServerOptions(Options):
             if need_close:
                 fp.close()
 
+        expansions = {'here':self.here}
+        expansions.update(environ_expansions())
         if parser.has_section('include'):
             if not parser.has_option('include', 'files'):
                 raise ValueError(".ini file has [include] section, but no "
                 "files setting")
             files = parser.get('include', 'files')
+            files = expand(files, expansions, 'include.files')
             files = files.split()
             if hasattr(fp, 'name'):
                 base = os.path.dirname(os.path.abspath(fp.name))
@@ -608,8 +611,6 @@ class ServerOptions(Options):
         section.nocleanup = boolean(get('nocleanup', 'false'))
         section.strip_ansi = boolean(get('strip_ansi', 'false'))
 
-        expansions = {'here':self.here}
-        expansions.update(environ_expansions())
         environ_str = get('environment', '')
         environ_str = expand(environ_str, expansions, 'environment')
         section.environment = dict_of_key_value_pairs(environ_str)
@@ -741,7 +742,7 @@ class ServerOptions(Options):
                     raise ValueError('Invalid socket_mode value %s'
                                                                 % socket_mode)
 
-            socket = get(section, 'socket', None)
+            socket = get(section, 'socket', None, do_expand=False)
             if not socket:
                 raise ValueError('[%s] section requires a "socket" line' %
                                  section)
@@ -803,8 +804,18 @@ class ServerOptions(Options):
         if klass is None:
             klass = ProcessConfig
         programs = []
-        get = parser.saneget
         program_name = process_or_group_name(section.split(':', 1)[1])
+        host_node_name = platform.node()
+        common_expansions = {'here':self.here,
+                      'program_name':program_name,
+                      'host_node_name':host_node_name,
+                      'group_name':group_name}
+        def get(opt, *args, **kwargs):
+            expansions = kwargs.get('expansions', {})
+            expansions.update(common_expansions)
+            kwargs['expansions'] = expansions
+            return parser.saneget(opt, *args, **kwargs)
+
         priority = integer(get(section, 'priority', 999))
         autostart = boolean(get(section, 'autostart', 'true'))
         autorestart = auto_restart(get(section, 'autorestart', 'unexpected'))
@@ -818,7 +829,9 @@ class ServerOptions(Options):
         redirect_stderr = boolean(get(section, 'redirect_stderr','false'))
         numprocs = integer(get(section, 'numprocs', 1))
         numprocs_start = integer(get(section, 'numprocs_start', 0))
-        environment_str = get(section, 'environment', '')
+        process_name = get(section, 'process_name', '%(program_name)s', 
+                            do_expand=False)
+        environment_str = get(section, 'environment', '', do_expand=False)
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
         stdout_events = boolean(get(section, 'stdout_events_enabled','false'))
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
@@ -859,13 +872,9 @@ class ServerOptions(Options):
                 "Cannot set stopasgroup=true and killasgroup=false"
                 )
 
-        host_node_name = platform.node()
         for process_num in range(numprocs_start, numprocs + numprocs_start):
-            expansions = {'here':self.here,
-                          'process_num':process_num,
-                          'program_name':program_name,
-                          'host_node_name':host_node_name,
-                          'group_name':group_name}
+            expansions = common_expansions
+            expansions.update({'process_num': process_num})
             expansions.update(environ_expansions())
 
             environment = dict_of_key_value_pairs(
@@ -1620,23 +1629,26 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
         except AttributeError:
             return self.readfp(s)
 
-    def getdefault(self, option, default=_marker):
+    def saneget(self, section, option, default=_marker, do_expand=True, 
+                expansions={}):
+        expansions.update(environ_expansions())
         try:
-            return self.get(self.mysection, option)
+            optval = self.get(section, option)
+            if isinstance(optval, basestring) and do_expand:
+                return expand(optval, 
+                              expansions, 
+                              "%s.%s" % (section, option))
+            return optval
         except ConfigParser.NoOptionError:
             if default is _marker:
                 raise
             else:
                 return default
 
-    def saneget(self, section, option, default=_marker):
-        try:
-            return self.get(section, option)
-        except ConfigParser.NoOptionError:
-            if default is _marker:
-                raise
-            else:
-                return default
+    def getdefault(self, option, default=_marker, expansions={}, **kwargs):
+        return self.saneget(self.mysection, option, default=default, 
+                            expansions=expansions, **kwargs)
+
 
 class Config(object):
     def __ne__(self, other):
