@@ -774,8 +774,11 @@ class ServerOptions(Options):
                       'program_name':program_name,
                       'host_node_name':host_node_name,
                       'group_name':group_name}
-        get = lambda opt, *args, **kwargs: \
-            parser.saneget(opt, *args, expansions=common_expansions, **kwargs)
+        def get(opt, *args, **kwargs):
+            expansions = kwargs.get('expansions', {})
+            expansions.update(common_expansions)
+            kwargs['expansions'] = expansions
+            return parser.saneget(opt, *args, **kwargs)
 
         priority = integer(get(section, 'priority', 999))
         autostart = boolean(get(section, 'autostart', 'true'))
