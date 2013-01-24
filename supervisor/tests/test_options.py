@@ -24,6 +24,7 @@ from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import lstrip
+from supervisor.loggers import LevelsByName
 
 class OptionTests(unittest.TestCase):
 
@@ -177,6 +178,35 @@ class ClientOptionsTests(unittest.TestCase):
         self.assertEqual(options.password, '123')
         self.assertEqual(options.history_file, history_file)
 
+    @patch.dict('os.environ', { 'HOME': tempfile.gettempdir(),
+                                'USER': 'johndoe',
+                                'SERVER_PORT': '9210',
+                                'CLIENT_USER': 'someuser',
+                                'CLIENT_PASS': 'passwordhere',
+                                'CLIENT_PROMPT': 'xsupervisor',
+                                'CLIENT_HIST_EXT': '.hist',
+                                })
+    def test_options_with_enviroment_expansions(self):
+        s = lstrip("""[supervisorctl]
+        serverurl=http://localhost:%(ENV_SERVER_PORT)s
+        username=%(ENV_CLIENT_USER)s
+        password=%(ENV_CLIENT_PASS)s
+        prompt=%(ENV_CLIENT_PROMPT)s
+        history_file=/path/to/histdir/.supervisorctl%(ENV_CLIENT_HIST_EXT)s
+        """)
+
+        fp = StringIO(s)
+        instance = self._makeOne()
+        instance.configfile = fp
+        instance.realize(args=[])
+        self.assertEqual(instance.interactive, True)
+        options = instance.configroot.supervisorctl
+        self.assertEqual(options.prompt, 'xsupervisor')
+        self.assertEqual(options.serverurl, 'http://localhost:9210')
+        self.assertEqual(options.username, 'someuser')
+        self.assertEqual(options.password, 'passwordhere')
+        self.assertEqual(options.history_file, '/path/to/histdir/.supervisorctl.hist')
+
     def test_unreadable_config_file(self):
         # Quick and dirty way of coming up with a decent filename
         tempf = tempfile.NamedTemporaryFile()
@@ -224,6 +254,16 @@ class ClientOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         instance.configfile = fp
         instance.realize(args=['--serverurl', 'unix:///dev/null'])
+        self.assertEqual(instance.serverurl, 'unix:///dev/null')
+
+    def test_options_unixsocket_configfile(self):
+        s = lstrip("""[supervisorctl]
+        serverurl=unix:///dev/null
+        """)
+        fp = StringIO(s)
+        instance = self._makeOne()
+        instance.configfile = fp
+        instance.realize()
         self.assertEqual(instance.serverurl, 'unix:///dev/null')
 
 class ServerOptionsTests(unittest.TestCase):
@@ -703,6 +743,54 @@ class ServerOptionsTests(unittest.TestCase):
                           instance.check_execv_args, '/',
                           ['/'], os.stat('/'))
 
+    def test_options_afunix(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [unix_http_server]
+        file=/tmp/supvtest.sock
+        username=johndoe
+        password=passwordhere
+
+        [supervisord]
+        ; ...
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance.configfile = StringIO(text)
+        conf = instance.read_config(StringIO(text))
+        instance.realize(args=[])
+        # unix_http_server
+        options = instance.configroot.supervisord
+        self.assertEqual(options.server_configs[0]['family'], socket.AF_UNIX)
+        self.assertEqual(options.server_configs[0]['file'], '/tmp/supvtest.sock')
+        self.assertEqual(options.server_configs[0]['chmod'], 448) # defaults
+        self.assertEqual(options.server_configs[0]['chown'], (-1,-1)) # defaults
+
+    def test_options_afunix_chxxx_values_valid(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [unix_http_server]
+        file=/tmp/supvtest.sock
+        username=johndoe
+        password=passwordhere
+        chmod=0755
+
+        [supervisord]
+        ; ...
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance.configfile = StringIO(text)
+        conf = instance.read_config(StringIO(text))
+        instance.realize(args=[])
+        # unix_http_server
+        options = instance.configroot.supervisord
+        self.assertEqual(options.server_configs[0]['family'], socket.AF_UNIX)
+        self.assertEqual(options.server_configs[0]['file'], '/tmp/supvtest.sock')
+        self.assertEqual(options.server_configs[0]['chmod'], 493)
+
     def test_cleanup_afunix_unlink(self):
         fn = tempfile.mktemp()
         f = open(fn, 'w')
@@ -876,6 +964,130 @@ class ServerOptionsTests(unittest.TestCase):
         expected = "/bin/foo --path='%s'" % os.environ['PATH']
         self.assertEqual(pconfigs[0].command, expected)
 
+    @patch.dict('os.environ', { 'HOME': tempfile.gettempdir(),
+                                'USER': 'johndoe',
+                                'HTSRV_PORT': '9210',
+                                'HTSRV_USER': 'someuser',
+                                'HTSRV_PASS': 'passwordhere',
+                                'SUPD_LOGFILE_MAXBYTES': '51MB',
+                                'SUPD_LOGFILE_BACKUPS': '10',
+                                'SUPD_LOGLEVEL': 'info',
+                                'SUPD_NODAEMON': 'false',
+                                'SUPD_MINFDS': '1024',
+                                'SUPD_MINPROCS': '200',
+                                'SUPD_UMASK': '002',
+                                'SUPD_NOCLEANUP': 'true',
+                                'SUPD_STRIP_ANSI': 'false',
+                                'CAT1_COMMAND': '/bin/customcat',
+                                'CAT1_COMMAND_LOGDIR': '/path/to/logs',
+                                'CAT1_PRIORITY': '3',
+                                'CAT1_AUTOSTART': 'true',
+                                'CAT1_USER': 'root', # resolved to uid
+                                'CAT1_STDOUT_LOGFILE': '/tmp/cat.log',
+                                'CAT1_STDOUT_LOGFILE_MAXBYTES': '78KB',
+                                'CAT1_STDOUT_LOGFILE_BACKUPS': '2',
+                                'CAT1_STOPSIGNAL': 'KILL',
+                                'CAT1_STOPWAIT': '5',
+                                'CAT1_STARTWAIT': '5',
+                                'CAT1_STARTRETRIES': '10',
+                                'CAT1_DIR': '/tmp',
+                                'CAT1_UMASK': '002',
+                                })
+    def test_options_with_environment_expansions(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [inet_http_server]
+        port=*:%(ENV_HTSRV_PORT)s
+        username=%(ENV_HTSRV_USER)s
+        password=%(ENV_HTSRV_PASS)s
+
+        [supervisord]
+        logfile = %(ENV_HOME)s/supervisord.log
+        logfile_maxbytes = %(ENV_SUPD_LOGFILE_MAXBYTES)s
+        logfile_backups = %(ENV_SUPD_LOGFILE_BACKUPS)s
+        loglevel = %(ENV_SUPD_LOGLEVEL)s
+        nodaemon = %(ENV_SUPD_NODAEMON)s
+        minfds = %(ENV_SUPD_MINFDS)s
+        minprocs = %(ENV_SUPD_MINPROCS)s
+        umask = %(ENV_SUPD_UMASK)s
+        identifier = supervisor_%(ENV_USER)s
+        nocleanup = %(ENV_SUPD_NOCLEANUP)s
+        childlogdir = %(ENV_HOME)s
+        strip_ansi = %(ENV_SUPD_STRIP_ANSI)s
+        environment = FAKE_ENV_VAR=/some/path
+
+        [program:cat1]
+        command=%(ENV_CAT1_COMMAND)s --logdir=%(ENV_CAT1_COMMAND_LOGDIR)s
+        priority=%(ENV_CAT1_PRIORITY)s
+        autostart=%(ENV_CAT1_AUTOSTART)s
+        user=%(ENV_CAT1_USER)s
+        stdout_logfile=%(ENV_CAT1_STDOUT_LOGFILE)s
+        stdout_logfile_maxbytes = %(ENV_CAT1_STDOUT_LOGFILE_MAXBYTES)s
+        stdout_logfile_backups = %(ENV_CAT1_STDOUT_LOGFILE_BACKUPS)s
+        stopsignal=%(ENV_CAT1_STOPSIGNAL)s
+        stopwaitsecs=%(ENV_CAT1_STOPWAIT)s
+        startsecs=%(ENV_CAT1_STARTWAIT)s
+        startretries=%(ENV_CAT1_STARTRETRIES)s
+        directory=%(ENV_CAT1_DIR)s
+        umask=%(ENV_CAT1_UMASK)s
+
+        """)
+        from supervisor import datatypes
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance.configfile = StringIO(text)
+        conf = instance.read_config(StringIO(text))
+        instance.realize(args=[])
+        # supervisord
+        self.assertEqual(instance.logfile,
+                         '%(HOME)s/supervisord.log' % os.environ)
+        self.assertEqual(instance.identifier,
+                         'supervisor_%(USER)s' % os.environ)
+        self.assertEqual(instance.logfile_maxbytes, 53477376)
+        self.assertEqual(instance.logfile_backups, 10)
+        self.assertEqual(instance.loglevel, LevelsByName.INFO)
+        self.assertEqual(instance.nodaemon, False)
+        self.assertEqual(instance.minfds, 1024)
+        self.assertEqual(instance.minprocs, 200)
+        self.assertEqual(instance.nocleanup, True)
+        self.assertEqual(instance.childlogdir, os.environ['HOME'])
+        self.assertEqual(instance.strip_ansi, False)
+        # inet_http_server
+        options = instance.configroot.supervisord
+        self.assertEqual(options.server_configs[0]['family'], socket.AF_INET)
+        self.assertEqual(options.server_configs[0]['host'], '')
+        self.assertEqual(options.server_configs[0]['port'], 9210)
+        self.assertEqual(options.server_configs[0]['username'], 'someuser')
+        self.assertEqual(options.server_configs[0]['password'], 'passwordhere')
+        # cat1
+        cat1 = options.process_group_configs[0]
+        self.assertEqual(cat1.name, 'cat1')
+        self.assertEqual(cat1.priority, 3)
+        self.assertEqual(len(cat1.process_configs), 1)
+        proc1 = cat1.process_configs[0]
+        self.assertEqual(proc1.name, 'cat1')
+        self.assertEqual(proc1.command,
+                         '/bin/customcat --logdir=/path/to/logs')
+        self.assertEqual(proc1.priority, 3)
+        self.assertEqual(proc1.autostart, True)
+        self.assertEqual(proc1.autorestart, datatypes.RestartWhenExitUnexpected)
+        self.assertEqual(proc1.startsecs, 5)
+        self.assertEqual(proc1.startretries, 10)
+        self.assertEqual(proc1.uid, 0)
+        self.assertEqual(proc1.stdout_logfile, '/tmp/cat.log')
+        self.assertEqual(proc1.stopsignal, signal.SIGKILL)
+        self.assertEqual(proc1.stopwaitsecs, 5)
+        self.assertEqual(proc1.stopasgroup, False)
+        self.assertEqual(proc1.killasgroup, False)
+        self.assertEqual(proc1.stdout_logfile_maxbytes,
+                         datatypes.byte_size('78KB'))
+        self.assertEqual(proc1.stdout_logfile_backups, 2)
+        self.assertEqual(proc1.exitcodes, [0,2])
+        self.assertEqual(proc1.directory, '/tmp')
+        self.assertEqual(proc1.umask, 2)
+        self.assertEqual(proc1.environment, dict(FAKE_ENV_VAR='/some/path'))
+
     def test_processes_from_section_bad_program_name_spaces(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -978,7 +1190,7 @@ class ServerOptionsTests(unittest.TestCase):
         pconfig = pconfigs[0]
         self.assertEqual(pconfig.stopasgroup, True)
         self.assertEqual(pconfig.killasgroup, True)
-    
+
     def test_processes_from_section_killasgroup_mismatch_w_stopasgroup(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -1082,6 +1294,57 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(gconfig1.priority, 1)
         self.assertEqual(gconfig1.result_handler, default_handler)
         self.assertEqual(len(gconfig1.process_configs), 2)
+
+    @patch.dict('os.environ', { 'HOME': tempfile.gettempdir(),
+                                'USER': 'johndoe',
+                                'EL1_PROCNAME': 'myeventlistener',
+                                'EL1_COMMAND': '/bin/dog',
+                                'EL1_NUMPROCS': '2',
+                                'EL1_PRIORITY': '1',
+                                })
+    def test_event_listener_pools_from_parser_with_environment_expansions(self):
+        text = lstrip("""\
+        [eventlistener:dog]
+        events=PROCESS_COMMUNICATION
+        process_name = %(ENV_EL1_PROCNAME)s_%(program_name)s_%(process_num)s
+        command = %(ENV_EL1_COMMAND)s
+        numprocs = %(ENV_EL1_NUMPROCS)s
+        priority = %(ENV_EL1_PRIORITY)s
+
+        [eventlistener:cat]
+        events=PROCESS_COMMUNICATION
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/cat
+        numprocs = 3
+
+        """)
+        from supervisor.options import UnhosedConfigParser
+        from supervisor.dispatchers import default_handler
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        gconfigs = instance.process_groups_from_parser(config)
+        self.assertEqual(len(gconfigs), 2)
+
+        gconfig0 = gconfigs[0]
+        self.assertEqual(gconfig0.name, 'cat')
+        self.assertEqual(gconfig0.priority, -1)
+        self.assertEqual(gconfig0.result_handler, default_handler)
+        self.assertEqual(len(gconfig0.process_configs), 3)
+
+        gconfig1 = gconfigs[1]
+        self.assertEqual(gconfig1.name, 'dog')
+        self.assertEqual(gconfig1.priority, 1)
+        self.assertEqual(gconfig1.result_handler, default_handler)
+        self.assertEqual(len(gconfig1.process_configs), 2)
+        dog0 = gconfig1.process_configs[0]
+        self.assertEqual(dog0.name, 'myeventlistener_dog_0')
+        self.assertEqual(dog0.command, '/bin/dog')
+        self.assertEqual(dog0.priority, 1)
+        dog1 = gconfig1.process_configs[1]
+        self.assertEqual(dog1.name, 'myeventlistener_dog_1')
+        self.assertEqual(dog1.command, '/bin/dog')
+        self.assertEqual(dog1.priority, 1)
 
     def test_event_listener_pool_with_event_results_handler(self):
         text = lstrip("""\
@@ -1218,6 +1481,65 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(len(gconf_flub.process_configs), 1)
 
 
+    @patch.dict('os.environ', { 'HOME': '/tmp',
+                                'SERVER_PORT': '9210',
+                                'FOO_SOCKET_EXT': '.usock',
+                                'FOO_SOCKET_USER': 'testuser',
+                                'FOO_SOCKET_MODE': '0666',
+                                'FOO_PROCESS_PREFIX': 'fcgi-',
+                                'FOO_COMMAND_ARG1': 'bar',
+                                'FOO_NUMPROCS': '2',
+                                'FOO_PRIORITY': '1',
+                                })
+    def test_fcgi_programs_from_parser_with_environment_expansions(self):
+        from supervisor.options import FastCGIGroupConfig
+        from supervisor.options import FastCGIProcessConfig
+        text = lstrip("""\
+        [fcgi-program:foo]
+        socket = unix:///tmp/%(program_name)s%(ENV_FOO_SOCKET_EXT)s
+        socket_owner = %(ENV_FOO_SOCKET_USER)s:testgroup
+        socket_mode = %(ENV_FOO_SOCKET_MODE)s
+        process_name = %(ENV_FOO_PROCESS_PREFIX)s_%(program_name)s_%(process_num)s
+        command = /bin/foo --arg1=%(ENV_FOO_COMMAND_ARG1)s
+        numprocs = %(ENV_FOO_NUMPROCS)s
+        priority = %(ENV_FOO_PRIORITY)s
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+
+        #Patch pwd and grp module functions to give us sentinel
+        #uid/gid values so that the test does not depend on
+        #any specific system users
+        pwd_mock = Mock()
+        pwd_mock.return_value = (None, None, sentinel.uid, sentinel.gid)
+        grp_mock = Mock()
+        grp_mock.return_value = (None, None, sentinel.gid)
+        @patch('pwd.getpwuid', pwd_mock)
+        @patch('pwd.getpwnam', pwd_mock)
+        @patch('grp.getgrnam', grp_mock)
+        def get_process_groups(instance, config):
+            return instance.process_groups_from_parser(config)
+
+        gconfigs = get_process_groups(instance, config)
+
+        exp_owner = (sentinel.uid, sentinel.gid)
+
+        self.assertEqual(len(gconfigs), 1)
+
+        gconf_foo = gconfigs[0]
+        self.assertEqual(gconf_foo.__class__, FastCGIGroupConfig)
+        self.assertEqual(gconf_foo.name, 'foo')
+        self.assertEqual(gconf_foo.priority, 1)
+        self.assertEqual(gconf_foo.socket_config.url,
+                                'unix:///tmp/foo.usock')
+        self.assertEqual(exp_owner, gconf_foo.socket_config.get_owner())
+        self.assertEqual(438, gconf_foo.socket_config.get_mode()) # 0666 in Py2, 0o666 in Py3
+        self.assertEqual(len(gconf_foo.process_configs), 2)
+        pconfig_foo = gconf_foo.process_configs[0]
+        self.assertEqual(pconfig_foo.__class__, FastCGIProcessConfig)
+        self.assertEqual(pconfig_foo.command, '/bin/foo --arg1=bar')
 
     def test_fcgi_program_no_socket(self):
         text = lstrip("""\
