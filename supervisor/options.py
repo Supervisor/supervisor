@@ -305,7 +305,7 @@ class Options:
 
     def process_config(self, do_usage=True):
         """Process configuration data structure.
-        
+
         This includes reading config file if necessary, setting defaults etc.
         """
         if self.configfile:
@@ -439,9 +439,9 @@ class ServerOptions(Options):
         self.exit(0)
 
     def getLogger(self, filename, level, fmt, rotating=False, maxbytes=0,
-                  backups=0, stdout=False):
+                  backups=0):
         return loggers.getLogger(filename, level, fmt, rotating, maxbytes,
-                                 backups, stdout)
+                                 backups)
 
     def realize(self, *arg, **kw):
         Options.realize(self, *arg, **kw)
@@ -811,7 +811,7 @@ class ServerOptions(Options):
                 raise ValueError(
                     '%(process_num) must be present within process_name when '
                     'numprocs > 1')
-                    
+
         if stopasgroup and not killasgroup:
             raise ValueError("Cannot set stopasgroup=true and killasgroup=false")
 
@@ -1183,7 +1183,7 @@ class ServerOptions(Options):
 
             # always put our primary gid first in this list, otherwise we can
             # lose group info since sometimes the first group in the setgroups
-            # list gets overwritten on the subsequent setgid call (at least on 
+            # list gets overwritten on the subsequent setgid call (at least on
             # freebsd 9 with python 2.7 - this will be safe though for all unix
             # /python version combos)
             groups.insert(0, gid)

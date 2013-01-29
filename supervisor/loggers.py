@@ -320,8 +320,7 @@ class SyslogHandler(Handler):
         except:
             self.handleError(record)
 
-def getLogger(filename, level, fmt, rotating=False, maxbytes=0, backups=0,
-              stdout=False):
+def getLogger(filename, level, fmt, rotating=False, maxbytes=0, backups=0):
 
     handlers = []
 
@@ -343,13 +342,9 @@ def getLogger(filename, level, fmt, rotating=False, maxbytes=0, backups=0,
         else:
             handlers.append(RotatingFileHandler(filename,'a',maxbytes,backups))
 
-    if stdout:
-        handlers.append(StreamHandler(sys.stdout))
-
     for handler in handlers:
         handler.setFormat(fmt)
         handler.setLevel(level)
         logger.addHandler(handler)
 
     return logger
-
