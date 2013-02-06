@@ -61,9 +61,15 @@ class PDispatcher:
         pass
 
 class POutputDispatcher(PDispatcher):
-    """ Output (stdout/stderr) dispatcher, capture output sent within
-    <!--XSUPERVISOR:BEGIN--><!--XSUPERVISOR:END--> tags and notify
-    with a ProcessCommunicationEvent """
+    """
+    A Process Output (stdout/stderr) dispatcher. Serves several purposes:
+
+    - capture output sent within <!--XSUPERVISOR:BEGIN--> and
+      <!--XSUPERVISOR:END--> tags and signal a ProcessCommunicationEvent
+      by calling notify(event).
+    - route the output to the appropriate log handlers as specified in the
+      config.
+    """
 
     process = None # process which "owns" this dispatcher
     channel = None # 'stderr' or 'stdout'
@@ -74,6 +80,12 @@ class POutputDispatcher(PDispatcher):
     output_buffer = '' # data waiting to be logged
 
     def __init__(self, process, event_type, fd):
+        """
+        Initialize the dispatcher.
+
+        `event_type` should be one of ProcessLogStdoutEvent or
+        ProcessLogStderrEvent
+        """
         self.process = process
         self.event_type = event_type
         self.fd = fd
