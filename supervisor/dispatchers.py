@@ -91,24 +91,10 @@ class POutputDispatcher(PDispatcher):
         self.fd = fd
         self.channel = channel = self.event_type.channel
 
-        logfile = getattr(process.config, '%s_logfile' % channel)
+        self._setup_logging(process.config, channel)
+
         capture_maxbytes = getattr(process.config,
                                    '%s_capture_maxbytes' % channel)
-
-        if logfile:
-            maxbytes = getattr(process.config, '%s_logfile_maxbytes' % channel)
-            backups = getattr(process.config, '%s_logfile_backups' % channel)
-            fmt = '%(message)s'
-            if logfile == 'syslog':
-                fmt = ' '.join((process.config.name, fmt))
-            self.mainlog = process.config.options.getLogger(
-                logfile,
-                loggers.LevelsByName.INFO,
-                fmt=fmt,
-                rotating=not not maxbytes, # optimization
-                maxbytes=maxbytes,
-                backups=backups)
-
         if capture_maxbytes:
             self.capturelog = self.process.config.options.getLogger(
                 None, # BoundIO
@@ -130,6 +116,29 @@ class POutputDispatcher(PDispatcher):
         self.log_to_mainlog = config.options.loglevel <= self.mainlog_level
         self.stdout_events_enabled = config.stdout_events_enabled
         self.stderr_events_enabled = config.stderr_events_enabled
+
+    def _setup_logging(self, config, channel):
+        """
+        Configure the main log according to the process' configuration and
+        channel. Sets `mainlog` on self. Returns nothing.
+        """
+
+        logfile = getattr(config, '%s_logfile' % channel)
+        if not logfile:
+            return
+
+        maxbytes = getattr(config, '%s_logfile_maxbytes' % channel)
+        backups = getattr(config, '%s_logfile_backups' % channel)
+        fmt = '%(message)s'
+        if logfile == 'syslog':
+            fmt = ' '.join((config.name, fmt))
+        self.mainlog = config.options.getLogger(
+            logfile,
+            loggers.LevelsByName.INFO,
+            fmt=fmt,
+            rotating=not not maxbytes, # optimization
+            maxbytes=maxbytes,
+            backups=backups)
 
     def removelogs(self):
         for log in (self.mainlog, self.capturelog):
