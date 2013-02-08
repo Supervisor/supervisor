@@ -904,6 +904,29 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.privsdropped, 1)
         self.assertEqual(msg, None)
 
+    def test_attach_cgroups(self):
+        cgroups = ["/tmp/test_cg1", "/tmp/test_cg2"]
+        for cg in cgroups:
+            if os.path.exists(cg):
+                os.rmdir(cg)
+            os.makedirs(cg)
+            open(os.path.join(cg, "tasks"), "w").close()
+
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test', cgroups=cgroups)
+        instance = self._makeOne(config)
+        msg = instance.attach_cgroups()
+        for cg in cgroups:
+            tasks_path = os.path.join(cg, "tasks")
+            tasks = open(tasks_path)
+            try:
+                self.assertEqual(tasks.read().strip(), str(os.getpid()))
+            finally:
+                tasks.close()
+            os.remove(tasks_path)
+            os.rmdir(cg)
+        self.assertEqual(msg, None)
+
     def test_cmp_bypriority(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'notthere', '/notthere',

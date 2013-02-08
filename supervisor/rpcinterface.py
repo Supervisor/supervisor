@@ -527,6 +527,7 @@ class SupervisorNamespaceRPCInterface:
             'stdout_logfile':stdout_logfile,
             'stderr_logfile':stderr_logfile,
             'pid':process.pid,
+            'has_cgroups':int(len(process.config.cgroups) > 0),
             }
 
         description = self._interpretProcessInfo(info)
