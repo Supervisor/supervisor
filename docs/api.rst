@@ -231,7 +231,8 @@ Process Control
              'exitstatus':     0,
              'stdout_logfile': '/path/to/stdout-log',
              'stderr_logfile': '/path/to/stderr-log',
-             'pid':            1}
+             'pid':            1,
+             'has_cgroups'     0}
 
         .. describe:: name
 
@@ -286,6 +287,10 @@ Process Control
             UNIX process ID (PID) of the process, or 0 if the process is not
             running.
 
+        .. describe:: has_cgroups
+
+            1 if the process was configured to attach to at least one control
+            group, or 0 if not.
 
     .. automethod:: getAllProcessInfo
 

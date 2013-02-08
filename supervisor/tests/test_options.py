@@ -263,6 +263,7 @@ class ServerOptionsTests(unittest.TestCase):
         numprocs = 2
         command = /bin/cat
         autorestart=unexpected
+        cgroups=/path/one,/path/two
         """ % {'tempdir':tempfile.gettempdir()})
 
         from supervisor import datatypes
@@ -322,6 +323,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.directory, '/tmp')
         self.assertEqual(proc1.umask, 002)
         self.assertEqual(proc1.environment, dict(FAKE_ENV_VAR='/some/path'))
+        self.assertEqual(proc1.cgroups, [])
 
         cat2 = options.process_group_configs[1]
         self.assertEqual(cat2.name, 'cat2')
@@ -343,6 +345,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc2.stdout_logfile_backups, 2)
         self.assertEqual(proc2.exitcodes, [0,2])
         self.assertEqual(proc2.directory, None)
+        self.assertEqual(proc2.cgroups, [])
 
         cat3 = options.process_group_configs[2]
         self.assertEqual(cat3.name, 'cat3')
@@ -364,6 +367,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc3.stopsignal, signal.SIGTERM)
         self.assertEqual(proc3.stopasgroup, True)
         self.assertEqual(proc3.killasgroup, True)
+        self.assertEqual(proc3.cgroups, [])
 
         cat4 = options.process_group_configs[3]
         self.assertEqual(cat4.name, 'cat4')
@@ -386,6 +390,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc4_a.stopsignal, signal.SIGTERM)
         self.assertEqual(proc4_a.stopasgroup, False)
         self.assertEqual(proc4_a.killasgroup, False)
+        self.assertEqual(proc4_a.cgroups, ["/path/one", "/path/two"])
 
         proc4_b = cat4.process_configs[1]
         self.assertEqual(proc4_b.name, 'fleeb_1')
@@ -403,6 +408,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc4_b.stopsignal, signal.SIGTERM)
         self.assertEqual(proc4_b.stopasgroup, False)
         self.assertEqual(proc4_b.killasgroup, False)
+        self.assertEqual(proc4_b.cgroups, ["/path/one", "/path/two"])
 
         here = os.path.abspath(os.getcwd())
         self.assertEqual(instance.uid, 0)
@@ -704,6 +710,7 @@ class ServerOptionsTests(unittest.TestCase):
         environment = KEY1=val1,KEY2=val2,KEY3=%(process_num)s
         numprocs = 2
         process_name = %(group_name)s_%(program_name)s_%(process_num)02d
+        cgroups = foo,bar
         """)
         from supervisor.options import UnhosedConfigParser
         config = UnhosedConfigParser()
@@ -730,6 +737,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(pconfig.redirect_stderr, False)
         self.assertEqual(pconfig.environment,
                          {'KEY1':'val1', 'KEY2':'val2', 'KEY3':'0'})
+        self.assertEqual(pconfig.cgroups, ["foo", "bar"])
 
     def test_processes_from_section_host_node_name_expansion(self):
         instance = self._makeOne()
@@ -1445,7 +1453,7 @@ class TestProcessConfig(unittest.TestCase):
                      'stderr_events_enabled',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup', 'exitcodes',
-                     'redirect_stderr', 'environment'):
+                     'redirect_stderr', 'environment', 'cgroups'):
             defaults[name] = name
         defaults.update(kw)
         return self._getTargetClass()(*arg, **defaults)
@@ -1519,7 +1527,7 @@ class FastCGIProcessConfigTest(unittest.TestCase):
                      'stderr_events_enabled',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup', 'exitcodes',
-                     'redirect_stderr', 'environment'):
+                     'redirect_stderr', 'environment', 'cgroups'):
             defaults[name] = name
         defaults.update(kw)
         return self._getTargetClass()(*arg, **defaults)
