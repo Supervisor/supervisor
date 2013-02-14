@@ -438,10 +438,12 @@ class ServerOptions(Options):
         self.stdout.write('%s\n' % VERSION)
         self.exit(0)
 
-    def getLogger(self, filename, level, fmt, rotating=False, maxbytes=0,
-                  backups=0):
-        return loggers.getLogger(filename, level, fmt, rotating, maxbytes,
-                                 backups)
+    def getLogger(self, *args, **kwargs):
+        """
+        A proxy to loggers.getLogger so the options might customize log setup.
+        Used by tests to mock log setup.
+        """
+        return loggers.getLogger(*args, **kwargs)
 
     def realize(self, *arg, **kw):
         Options.realize(self, *arg, **kw)
