@@ -249,6 +249,8 @@ class DummyOptions:
         self.umaskset = mask
 
 class DummyLogger:
+    level = None
+
     def __init__(self):
         self.reopened = False
         self.removed = False

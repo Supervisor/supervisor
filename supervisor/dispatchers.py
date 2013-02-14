@@ -96,11 +96,9 @@ class POutputDispatcher(PDispatcher):
         capture_maxbytes = getattr(process.config,
                                    '%s_capture_maxbytes' % channel)
         if capture_maxbytes:
-            self.capturelog = self.process.config.options.getLogger(
-                None, # BoundIO
-                loggers.LevelsByName.INFO,
-                '%(message)s',
-                rotating=False,
+            self.capturelog = loggers.handle_boundIO(
+                self.process.config.options.getLogger(),
+                fmt='%(message)s',
                 maxbytes=capture_maxbytes,
                 )
 
@@ -132,9 +130,9 @@ class POutputDispatcher(PDispatcher):
         fmt = '%(message)s'
         if logfile == 'syslog':
             fmt = ' '.join((config.name, fmt))
-        self.mainlog = config.options.getLogger(
-            logfile,
-            loggers.LevelsByName.INFO,
+        self.mainlog = loggers.handle_file(
+            config.options.getLogger(),
+            filename=logfile,
             fmt=fmt,
             rotating=not not maxbytes, # optimization
             maxbytes=maxbytes,
