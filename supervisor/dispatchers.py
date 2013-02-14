@@ -1,3 +1,4 @@
+import warnings
 import errno
 from supervisor.medusa.asyncore_25 import compact_traceback
 
@@ -129,6 +130,8 @@ class POutputDispatcher(PDispatcher):
         backups = getattr(config, '%s_logfile_backups' % channel)
         fmt = '%(message)s'
         if logfile == 'syslog':
+            warnings.warn("Specifying 'syslog' for filename is deprecated. "
+                "Use %s_syslog instead." % channel, DeprecationWarning)
             fmt = ' '.join((config.name, fmt))
         self.mainlog = loggers.handle_file(
             config.options.getLogger(),
@@ -137,6 +140,12 @@ class POutputDispatcher(PDispatcher):
             rotating=not not maxbytes, # optimization
             maxbytes=maxbytes,
             backups=backups)
+
+        if getattr(config, '%s_syslog' % channel, False):
+            handler = loggers.SysLogHandler()
+            handler.setFormat(config.name + ' %(message)s')
+            handler.setLevel(self.mainlog.level)
+            loggers.addHandler(handler)
 
     def removelogs(self):
         for log in (self.mainlog, self.capturelog):

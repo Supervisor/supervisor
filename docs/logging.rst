@@ -134,13 +134,10 @@ The configuration keys that influence child process logging in
 ``[program:x]`` and ``[fcgi-program:x]`` sections are these:
 
 ``redirect_stderr``, ``stdout_logfile``, ``stdout_logfile_maxbytes``,
-``stdout_logfile_backups``, ``stdout_capture_maxbytes``,
+``stdout_logfile_backups``, ``stdout_capture_maxbytes``, ``stdout_syslog``,
 ``stderr_logfile``, ``stderr_logfile_maxbytes``,
-``stderr_logfile_backups`` and ``stderr_capture_maxbytes``.
-
-One may set ``stdout_logfile`` or ``stderr_logfile`` to the
-special string "syslog". In this case, logs will be routed to the
-syslog service instead of being saved to files.
+``stderr_logfile_backups``, ``stderr_capture_maxbytes``, and
+``stderr_syslog``.
 
 ``[eventlistener:x]`` sections may not specify
 ``stdout_capture_maxbytes`` or ``stderr_capture_maxbytes``,
