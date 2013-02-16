@@ -758,6 +758,34 @@ class ServerOptionsTests(unittest.TestCase):
         expected = "/bin/foo --path='%s'" % os.environ['PATH']
         self.assertEqual(pconfigs[0].command, expected)
 
+    def test_all_options_environment_variables_expansions(self):
+        # we can only test "common" cross-platform env vars: HOME,USER
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+        logfile = %(ENV_HOME)s/supervisord.log
+        logfile_maxbytes = 50MB
+        logfile_backups=10
+        loglevel = info
+        nodaemon = false
+        minfds = 1024
+        minprocs = 200
+        umask = 002
+        identifier = supervisor_%(ENV_USER)s
+        nocleanup = true
+        childlogdir = %(ENV_HOME)s
+        strip_ansi = false
+        environment =
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance.configfile = StringIO(text)
+        conf = instance.read_config(StringIO(text))
+        instance.realize(args=[])
+        self.assertEqual(instance.logfile, '%(HOME)s/supervisord.log' % os.environ)
+        self.assertEqual(instance.identifier, 'supervisor_%(USER)s' % os.environ)
+
     def test_processes_from_section_no_procnum_in_processname(self):
         instance = self._makeOne()
         text = lstrip("""\
