@@ -67,6 +67,7 @@ dist = setup(
     author_email = "chrism@plope.com",
     maintainer = "Mike Naberezny",
     maintainer_email = "mike@naberezny.com",
+    setup_requires = ['setuptools-git >= 0.3'],
     packages = find_packages(),
     install_requires = requires,
     extras_require = {'iterparse':['cElementTree >= 1.0.2']},
