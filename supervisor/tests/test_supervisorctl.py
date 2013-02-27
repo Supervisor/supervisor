@@ -117,8 +117,8 @@ class ControllerTests(unittest.TestCase):
         for i in ['add','remove']:
             result = controller.completionmatches('',i+' ',1)
             self.assertEqual(result,['foo ','bar ','baz '])
-        result = controller.completionmatches('','fg baz:')
-        self.assertEqual(result,['baz_01 '])
+        result = controller.completionmatches('baz:','fg baz:')
+        self.assertEqual(result,['baz:baz_01 '])
 
     def test_nohelp(self):
         options = DummyClientOptions()
