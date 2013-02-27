@@ -228,22 +228,14 @@ class Controller(cmd.Cmd):
     def _get_process_list(self):
         if not self.process_cache:
             groups=[]
-            programs=[]
-            groupwiseprograms={}
+            total=[]
             info = self.get_supervisor().getAllProcessInfo()
             for i in info:
-                programs.append(i['name'])
+                if i['group'] == i['name']:
+                    total.append(i['name']+' ')
                 if i['group'] not in groups:
                     groups.append(i['group'])
-                    groupwiseprograms[i['group']]=[]
-                groupwiseprograms[i['group']].append(i['name'])
-            total=[]
-            for i in groups:
-                if i in programs:
-                    total.append(i+' ')
-                else:
-                    for n in groupwiseprograms[i]:
-                        total.append(i+':'+n+' ')
+                total.append(i['group']+':'+i['name']+' ')
             self.process_cache = { 'groups':groups,'total':total }
         return self.process_cache
 
