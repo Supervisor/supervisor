@@ -78,5 +78,5 @@ with 3rd party applications:
     `TextMate <http://macromates.com/>`_ bundle for supervisord.conf.
 `capistrano-supervisord <https://github.com/yyuu/capistrano-supervisord>`_
     `Capistrano <https://github.com/capistrano/capistrano>`_ recipe to deploy supervisord based services.
-`chef-supervisor <https://github.com/coderanger/chef-supervisor>`_
+`chef-supervisor <https://github.com/opscode-cookbooks/supervisor>`_
     `Chef <http://www.opscode.com/chef/>`_ cookbook install and configure supervisord.
