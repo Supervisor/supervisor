@@ -567,7 +567,7 @@ class ServerOptions(Options):
                     self.parse_warnings.append(
                         'No file matches via include "%s"' % pattern)
                     continue
-                for filename in filenames:
+                for filename in sorted(filenames):
                     self.parse_warnings.append(
                         'Included extra file "%s" during parsing' % filename)
                     try:
