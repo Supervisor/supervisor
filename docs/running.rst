@@ -65,7 +65,7 @@ restart the :program:`supervisord` process.  This file has several
 example program definitions.
 
 The :command:`supervisord` command accepts a number of command-line
-options.  Each of thsese command line options overrides any equivalent
+options.  Each of these command line options overrides any equivalent
 value in the configuration file.
 
 :command:`supervisord` Command-Line Options
