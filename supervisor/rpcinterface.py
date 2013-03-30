@@ -3,6 +3,7 @@ import time
 import datetime
 import errno
 import types
+import signal
 
 from supervisor.compat import as_string
 from supervisor.compat import unicode
@@ -463,6 +464,66 @@ class SupervisorNamespaceRPCInterface:
         killall.delay = 0.05
         killall.rpcinterface = self
         return killall # deferred
+
+
+    def sendProcessSignal(self, name, signal = signal.SIGHUP):
+        """ Send an arbitrary UNIX signal to the process named by name
+
+        @param string name The name of the process to signal (or 'group:name')
+        @param int signal the integer UNIX signal to send. SIGHUP by default.
+        @return boolean result
+        """
+
+        self._update('sendProcessSignal')
+
+        group, process = self._getGroupAndProcess(name)
+
+        if process is None:
+            group_name, process_name = split_namespec(name)
+            return self.sendGroupSignal(group_name, signal = signal)
+
+        if process.get_state() not in RUNNING_STATES:
+           raise RPCError(Faults.NOT_RUNNING)
+
+        msg = process.signal(signal)
+
+        if not msg is None:
+            raise RPCError(Faults.FAILED, msg)
+
+        cb = lambda: True
+        cb.delay = 0
+        cb.rpcinterface = self
+
+        return cb
+
+
+    def sendGroupSignal(self, name, signal = signal.SIGHUP):
+        """ Send a signal to all processes in the group named 'name'
+
+        @param string name  The group name
+        @param int signal   The signal to be sent. SIGHUP by default
+        @return array result
+        """
+
+        self._update('sendGroupSignal')
+
+        group = self.supervisord.process_groups.get(name)
+        
+        if group is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
+        processes = group.processes.values()
+        processes.sort()
+        processes = [(group, process) for process in processes]
+
+        sendall = make_allfunc(processes, isRunning, self.sendProcessSignal,
+                               signal = signal)
+        sendall.rpcinterface = self
+
+        sendall.delay = 0
+        sendall.rpcinterface = self
+        return sendall
+
 
     def getAllConfigInfo(self):
         """ Get info about all available process configurations. Each struct

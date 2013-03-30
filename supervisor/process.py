@@ -432,6 +432,45 @@ class Subprocess(object):
 
         return None
 
+    def signal(self, sig):
+        """Send a signal to the subprocess, without intending to kill it.
+
+        Return None if the signal was sent, or an error message string
+        if an error occurred or if the subprocess is not running.
+        """
+        options = self.config.options
+        if not self.pid:
+            msg = ("attempted to send %s sig %s but it wasn't running" %
+                   (self.config.name, signame(sig)))
+            options.logger.debug(msg)
+            return msg
+
+        options.logger.debug('sending %s (pid %s) sig %s'
+                             % (self.config.name,
+                                self.pid,
+                                signame(sig))
+                             )
+
+        self._assertInState(ProcessStates.RUNNING,ProcessStates.STARTING,
+                            ProcessStates.STOPPING)
+
+        try:
+            options.kill(self.pid, sig)
+        except Exception, e:
+            io = StringIO.StringIO()
+            traceback.print_exc(file=io)
+            tb = io.getvalue()
+            msg = 'unknown problem sending sig %s (%s):%s' % (
+                                self.config.name, self.pid, tb)
+            options.logger.critical(msg)
+            self.change_state(ProcessStates.UNKNOWN)
+            self.pid = 0
+            return msg
+
+        return None
+
+
+
     def finish(self, pid, sts):
         """ The process was reaped and we need to report and manage its state
         """
