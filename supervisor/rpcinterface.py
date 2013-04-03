@@ -503,6 +503,9 @@ class SupervisorNamespaceRPCInterface:
 
         group, process = self._getGroupAndProcess(name)
 
+        if process is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
         start = int(process.laststart)
         stop = int(process.laststop)
         now = int(time.time())
