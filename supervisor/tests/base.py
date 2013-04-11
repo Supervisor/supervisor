@@ -481,6 +481,7 @@ class DummyPConfig:
                  stdout_logfile_backups=0, stdout_logfile_maxbytes=0,
                  stderr_logfile=None, stderr_capture_maxbytes=0,
                  stderr_events_enabled=False,
+                 minfds=1024, minprocs=1024, stacksize=1024**2,
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
@@ -494,6 +495,9 @@ class DummyPConfig:
         self.startsecs = startsecs
         self.startretries = startretries
         self.uid = uid
+        self.minfds = minfds
+        self.minprocs = minprocs
+        self.stacksize = stacksize
         self.stdout_logfile = stdout_logfile
         self.stdout_capture_maxbytes = stdout_capture_maxbytes
         self.stdout_events_enabled = stdout_events_enabled

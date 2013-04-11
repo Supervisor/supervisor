@@ -252,6 +252,7 @@ class SupervisordTests(unittest.TestCase):
                 'directory': None, 'umask': None, 'priority': 999, 'autostart': True,
                 'autorestart': True, 'startsecs': 10, 'startretries': 999,
                 'uid': None, 'stdout_logfile': None, 'stdout_capture_maxbytes': 0,
+                'minprocs': 1024, 'minfds': 1024, 'stacksize': 1024**2,
                 'stdout_events_enabled': False,
                 'stdout_logfile_backups': 0, 'stdout_logfile_maxbytes': 0,
                 'stderr_logfile': None, 'stderr_capture_maxbytes': 0,

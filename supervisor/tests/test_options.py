@@ -1443,6 +1443,7 @@ class TestProcessConfig(unittest.TestCase):
                      'stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile', 'stderr_capture_maxbytes',
                      'stderr_events_enabled',
+                     'minprocs', 'minfds', 'stacksize',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup', 'exitcodes',
                      'redirect_stderr', 'environment'):
@@ -1517,6 +1518,7 @@ class FastCGIProcessConfigTest(unittest.TestCase):
                      'stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile', 'stderr_capture_maxbytes',
                      'stderr_events_enabled',
+                     'minprocs', 'minfds', 'stacksize',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup', 'exitcodes',
                      'redirect_stderr', 'environment'):
