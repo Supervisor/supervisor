@@ -785,6 +785,9 @@ class ServerOptions(Options):
         numprocs = integer(get(section, 'numprocs', 1))
         numprocs_start = integer(get(section, 'numprocs_start', 0))
         process_name = get(section, 'process_name', '%(program_name)s')
+        minprocs = integer(get(section, 'minprocs', 4096))
+        minfds = integer(get(section, 'minfds', 4096))
+        stacksize = integer(get(section, 'stacksize', 10 * 1024000))
         environment_str = get(section, 'environment', '')
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
         stdout_events = boolean(get(section, 'stdout_events_enabled','false'))
@@ -863,6 +866,9 @@ class ServerOptions(Options):
                 priority=priority,
                 autostart=autostart,
                 autorestart=autorestart,
+                stacksize=stacksize,
+                minprocs=minprocs,
+                minfds=minfds,
                 startsecs=startsecs,
                 startretries=startretries,
                 uid=uid,
