@@ -421,6 +421,10 @@ class ServerOptions(Options):
                  "a:", "minfds=", int, default=1024)
         self.add("minprocs", "supervisord.minprocs",
                  "", "minprocs=", int, default=200)
+
+        self.add("stacksize", "supervisord.stacksize",
+                 "", "stacksize=", int, default=10 *1024**2)
+
         self.add("nocleanup", "supervisord.nocleanup",
                  "k", "nocleanup", flag=1, default=0)
         self.add("strip_ansi", "supervisord.strip_ansi",
@@ -551,6 +555,8 @@ class ServerOptions(Options):
         get = parser.getdefault
         section.minfds = integer(get('minfds', 1024))
         section.minprocs = integer(get('minprocs', 200))
+        section.stacksize = integer(get('stacksize', 10 * 1024000))
+
 
         directory = get('directory', None)
         if directory is None:
@@ -1263,7 +1269,7 @@ class ServerOptions(Options):
                        'command-line argument or config file setting. '
                        'The current environment will only allow you '
                        'to allocate %(hard)s bytes for stack.'),
-                'min':self.config.stacksize,
+                'min':self.stacksize,
                 'resource':resource.RLIMIT_STACK,
                 'name':'RLIMIT_STACK',
                 })

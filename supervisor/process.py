@@ -28,7 +28,10 @@ from supervisor.datatypes import RestartUnconditionally
 from supervisor.socket_manager import SocketManager
 
 class ServerStub(ServerOptions):
-  def __init__(self, config): self.config = config
+  def __init__(self, config): 
+    self.minfds = config.minfds
+    self.minprocs = config.minprocs
+    self.stacksize = config.stacksize
 
 class Subprocess:
 
