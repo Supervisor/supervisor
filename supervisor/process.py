@@ -17,6 +17,7 @@ from supervisor.states import STOPPED_STATES
 from supervisor.options import decode_wait_status
 from supervisor.options import signame
 from supervisor.options import ProcessException, BadCommand
+from supervisor.options import ServerOptions
 
 from supervisor.dispatchers import EventListenerStates
 
@@ -25,6 +26,9 @@ from supervisor import events
 from supervisor.datatypes import RestartUnconditionally
 
 from supervisor.socket_manager import SocketManager
+
+class ServerStub(ServerOptions):
+  def __init__(self, config): self.config = config
 
 class Subprocess:
 
@@ -59,6 +63,9 @@ class Subprocess:
         self.dispatchers = {}
         self.pipes = {}
         self.state = ProcessStates.STOPPED
+
+    def set_rlimits(self):
+      return ServerStub(self.config).set_rlimits()
 
     def removelogs(self):
         for dispatcher in self.dispatchers.values():
@@ -287,6 +294,14 @@ class Subprocess:
             # Presumably it also prevents HUP, etc received by
             # supervisord from being sent to children.
             options.setpgrp()
+
+            msg = self.set_rlimits()
+            if msg:
+                uid = self.config.uid
+                s = 'supervisor: error trying to setrlimit to'
+                options.write(2, s)
+                options.write(2, "(%s)\n" % msg)
+
             self._prepare_child_fds()
             # sending to fd 2 will put this output in the stderr log
             msg = self.set_uid()
