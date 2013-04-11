@@ -1255,6 +1255,19 @@ class ServerOptions(Options):
                 'name':'RLIMIT_NPROC',
                 })
 
+        if hasattr(resource, 'RLIMIT_STACK'):
+            limits.append(
+                {
+                'msg':('The maximum stack size in bytes'
+                       'to run this program is %(min)s as per the "stacksize" '
+                       'command-line argument or config file setting. '
+                       'The current environment will only allow you '
+                       'to allocate %(hard)s bytes for stack.'),
+                'min':self.config.stacksize,
+                'resource':resource.RLIMIT_STACK,
+                'name':'RLIMIT_STACK',
+                })
+
         msgs = []
 
         for limit in limits:
@@ -1278,6 +1291,16 @@ class ServerOptions(Options):
                                 locals())
                 except (resource.error, ValueError):
                     self.usage(msg % locals())
+
+            if (soft > min) or (soft == -1): # -1 means unlimited 
+                try:
+                    resource.setrlimit(res, (min, min))
+                    msgs.append('Lowered %(name)s limit to %(min)s' %
+                                locals())
+                except (resource.error, ValueError):
+                    self.usage(msg % locals())
+  
+
         return msgs
 
     def make_logger(self, critical_messages, warn_messages, info_messages):
