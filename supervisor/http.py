@@ -4,9 +4,13 @@ import time
 import sys
 import socket
 import errno
-import pwd
 import weakref
 import traceback
+
+try:
+    import pwd
+except ImportError:  # Windows
+    import getpass as pwd
 
 from supervisor.compat import urllib
 from supervisor.compat import sha1
