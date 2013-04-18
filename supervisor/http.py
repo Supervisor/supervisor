@@ -4,12 +4,16 @@ import time
 import sys
 import socket
 import errno
-import pwd
 import urllib
 
 try:
+    import pwd
+except ImportError:  # Windows
+    import getpass as pwd
+
+try:
     from hashlib import sha1
-except ImportError:
+except ImportError:  # Python 2.4 or earlier
     from sha import new as sha1
 
 from supervisor.medusa import asyncore_25 as asyncore
