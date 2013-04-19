@@ -23,6 +23,7 @@ from supervisor.dispatchers import EventListenerStates
 from supervisor import events
 
 from supervisor.datatypes import RestartUnconditionally
+from supervisor.datatypes import signal_number
 
 from supervisor.socket_manager import SocketManager
 
@@ -287,6 +288,19 @@ class Subprocess:
             # Presumably it also prevents HUP, etc received by
             # supervisord from being sent to children.
             options.setpgrp()
+
+            # Send this process a kill signal if supervisor crashes.
+            # Uses system call prctl(PR_SET_PDEATHSIG, <signal>).
+            # This will only work on Linux.
+            try:
+                import ctypes
+                import ctypes.util
+                libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library('c'))
+                libc.prctl(1, signal.SIGKILL)
+            except Exception, e:
+                options.logger.debug("Could not set parent death signal. "
+                                     "This is expected if not running on Linux.")
+
             self._prepare_child_fds()
             # sending to fd 2 will put this output in the stderr log
             msg = self.set_uid()
