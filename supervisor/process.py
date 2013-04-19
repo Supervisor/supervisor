@@ -286,14 +286,14 @@ class Subprocess:
             # supervisord from being sent to children.
             options.setpgrp()
 
-            # Send this process a stop signal if supervisor crashes.
+            # Send this process a kill signal if supervisor crashes.
             # Uses system call prctl(PR_SET_PDEATHSIG, <signal>).
             # This will only work on Linux.
             try:
                 import ctypes
                 import ctypes.util
                 libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library('c'))
-                libc.prctl(1, signal_number(self.config.stopsignal))
+                libc.prctl(1, signal.SIGKILL)
             except Exception, e:
                 options.logger.debug("Could not set parent death signal. "
                                      "This is expected if not running on Linux.")
