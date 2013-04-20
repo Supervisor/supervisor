@@ -24,6 +24,14 @@ Next release
   name would cause a 500 Internal Server Error rather than the returning
   a BAD_NAME fault.
 
+- Added a favicon to the web interface.  Patch by Caio Ariede.
+
+- Fixed a test failure due to incorrect handling of daylight savings time
+  in the childutils tests.  Patch by Ildar Hizbulin.
+
+- Fixed a number of pyflakes warnings for unused variables, imports, and
+  dead code.  Patch by Philippe Ombredanne.
+
 3.0b1 (2012-09-10)
 ------------------
 
