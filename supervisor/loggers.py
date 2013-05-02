@@ -341,6 +341,12 @@ def handle_stdout(logger, fmt):
     handler.setLevel(logger.level)
     logger.addHandler(handler)
 
+def handle_syslog(logger, fmt):
+    handler = SyslogHandler()
+    handler.setFormat(fmt)
+    handler.setLevel(logger.level)
+    logger.addHandler(handler)
+
 def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
     if filename == 'syslog':
         handler = SyslogHandler()
