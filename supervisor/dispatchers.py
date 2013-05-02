@@ -292,13 +292,14 @@ class PEventListenerDispatcher(PDispatcher):
         if logfile:
             maxbytes = getattr(process.config, '%s_logfile_maxbytes' % channel)
             backups = getattr(process.config, '%s_logfile_backups' % channel)
-            self.childlog = process.config.options.getLogger(
+            self.childlog = loggers.handle_file(
+                process.config.options.getLogger(),
                 logfile,
-                loggers.LevelsByName.INFO,
                 '%(message)s',
                 rotating=not not maxbytes, # optimization
                 maxbytes=maxbytes,
-                backups=backups)
+                backups=backups,
+            )
 
     def removelogs(self):
         if self.childlog is not None:
