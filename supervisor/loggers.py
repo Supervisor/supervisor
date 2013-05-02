@@ -335,6 +335,12 @@ def handle_boundIO(logger, fmt, maxbytes=_2MB):
 
     return logger
 
+def handle_stdout(logger, fmt):
+    handler = StreamHandler(sys.stdout)
+    handler.setFormat(fmt)
+    handler.setLevel(logger.level)
+    logger.addHandler(handler)
+
 def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
     if filename == 'syslog':
         handler = SyslogHandler()
