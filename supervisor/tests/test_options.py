@@ -825,7 +825,7 @@ class ServerOptionsTests(unittest.TestCase):
         pconfig = pconfigs[0]
         self.assertEqual(pconfig.stopasgroup, True)
         self.assertEqual(pconfig.killasgroup, True)
-    
+
     def test_processes_from_section_killasgroup_mismatch_w_stopasgroup(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -1439,10 +1439,10 @@ class TestProcessConfig(unittest.TestCase):
                      'priority', 'autostart', 'autorestart',
                      'startsecs', 'startretries', 'uid',
                      'stdout_logfile', 'stdout_capture_maxbytes',
-                     'stdout_events_enabled',
+                     'stdout_events_enabled', 'stdout_syslog',
                      'stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile', 'stderr_capture_maxbytes',
-                     'stderr_events_enabled',
+                     'stderr_events_enabled', 'stderr_syslog',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup', 'exitcodes',
                      'redirect_stderr', 'environment'):
@@ -1513,10 +1513,10 @@ class FastCGIProcessConfigTest(unittest.TestCase):
                      'priority', 'autostart', 'autorestart',
                      'startsecs', 'startretries', 'uid',
                      'stdout_logfile', 'stdout_capture_maxbytes',
-                     'stdout_events_enabled',
+                     'stdout_events_enabled', 'stdout_syslog',
                      'stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile', 'stderr_capture_maxbytes',
-                     'stderr_events_enabled',
+                     'stderr_events_enabled', 'stderr_syslog',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup', 'exitcodes',
                      'redirect_stderr', 'environment'):

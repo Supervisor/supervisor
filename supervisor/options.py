@@ -1604,11 +1604,11 @@ class ProcessConfig(Config):
         'name', 'uid', 'command', 'directory', 'umask', 'priority',
         'autostart', 'autorestart', 'startsecs', 'startretries',
         'stdout_logfile', 'stdout_capture_maxbytes',
-        'stdout_events_enabled',
+        'stdout_events_enabled', 'stdout_syslog',
         'stdout_logfile_backups', 'stdout_logfile_maxbytes',
         'stderr_logfile', 'stderr_capture_maxbytes',
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
-        'stderr_events_enabled',
+        'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
         'exitcodes', 'redirect_stderr' ]
     optional_param_names = [ 'environment', 'serverurl' ]
