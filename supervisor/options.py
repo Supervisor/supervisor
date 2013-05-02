@@ -852,7 +852,7 @@ class ServerOptions(Options):
 
                 sy_key = '%s_syslog' % k
                 syslog = boolean(get(section, sy_key, False))
-                logfiles[syslog] = syslog
+                logfiles[sy_key] = syslog
 
                 if lf_val is Automatic and not maxbytes:
                     self.parse_warnings.append(
