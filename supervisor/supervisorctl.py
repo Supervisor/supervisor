@@ -644,7 +644,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def do_start(self, arg):
         if not self.ctl.upcheck():
             return
-
+        self.do_reload(arg)
         names = arg.strip().split()
         supervisor = self.ctl.get_supervisor()
 
