@@ -48,6 +48,7 @@ class DummyOptions:
         self.written = {}
         self.fds_closed = []
         self._exitcode = None
+        self.execve_called = False
         self.execv_args = None
         self.setuid_msg = None
         self.privsdropped = None
@@ -193,6 +194,7 @@ class DummyOptions:
         self._exitcode = code
 
     def execve(self, filename, argv, environment):
+        self.execve_called = True
         if self.execv_error:
             if self.execv_error == 1:
                 raise OSError(self.execv_error)

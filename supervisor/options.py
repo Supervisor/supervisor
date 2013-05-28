@@ -1160,8 +1160,8 @@ class ServerOptions(Options):
         # Drop root privileges if we have them
         if user is None:
             return "No user specified to setuid to!"
-        if os.getuid() != 0:
-            return "Can't drop privilege as nonroot user"
+
+        # get uid for user, which can be a number or username
         try:
             uid = int(user)
         except ValueError:
@@ -1175,6 +1175,19 @@ class ServerOptions(Options):
                 pwrec = pwd.getpwuid(uid)
             except KeyError:
                 return "Can't find uid %r" % uid
+
+        current_uid = os.getuid()
+
+        if current_uid == uid:
+            # do nothing and return successfully if the uid is already the
+            # current one.  this allows a supervisord running as an
+            # unprivileged user "foo" to start a process where the config
+            # has "user=foo" (same user) in it.
+            return
+
+        if current_uid != 0:
+            return "Can't drop privilege as nonroot user"
+
         gid = pwrec[3]
         if hasattr(os, 'setgroups'):
             user = pwrec[0]

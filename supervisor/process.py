@@ -287,14 +287,19 @@ class Subprocess:
             # Presumably it also prevents HUP, etc received by
             # supervisord from being sent to children.
             options.setpgrp()
+
             self._prepare_child_fds()
             # sending to fd 2 will put this output in the stderr log
-            msg = self.set_uid()
-            if msg:
+
+            # set user
+            setuid_msg = self.set_uid()
+            if setuid_msg:
                 uid = self.config.uid
-                s = 'supervisor: error trying to setuid to %s ' % uid
-                options.write(2, s)
-                options.write(2, "(%s)\n" % msg)
+                msg = "couldn't setuid to %s: %s\n" % (uid, setuid_msg)
+                options.write(2, "supervisor: " + msg)
+                return # finally clause will exit the child process
+
+            # set environment
             env = os.environ.copy()
             env['SUPERVISOR_ENABLED'] = '1'
             serverurl = self.config.serverurl
@@ -307,6 +312,8 @@ class Subprocess:
                 env['SUPERVISOR_GROUP_NAME'] = self.group.config.name
             if self.config.environment is not None:
                 env.update(self.config.environment)
+
+            # change directory
             try:
                 cwd = self.config.directory
                 if cwd is not None:
@@ -314,23 +321,30 @@ class Subprocess:
             except OSError, why:
                 code = errno.errorcode.get(why[0], why[0])
                 msg = "couldn't chdir to %s: %s\n" % (cwd, code)
-                options.write(2, msg)
-            else:
-                try:
-                    if self.config.umask is not None:
-                        options.setumask(self.config.umask)
-                    options.execve(filename, argv, env)
-                except OSError, why:
-                    code = errno.errorcode.get(why[0], why[0])
-                    msg = "couldn't exec %s: %s\n" % (argv[0], code)
-                    options.write(2, msg)
-                except:
-                    (file, fun, line), t,v,tbinfo = asyncore.compact_traceback()
-                    error = '%s, %s: file: %s line: %s' % (t, v, file, line)
-                    options.write(2, "couldn't exec %s: %s\n" % (filename,
-                                                                 error))
+                options.write(2, "supervisor: " + msg)
+                return # finally clause will exit the child process
+
+            # set umask, then execve
+            try:
+                if self.config.umask is not None:
+                    options.setumask(self.config.umask)
+                options.execve(filename, argv, env)
+            except OSError, why:
+                code = errno.errorcode.get(why[0], why[0])
+                msg = "couldn't exec %s: %s\n" % (argv[0], code)
+                options.write(2, "supervisor: " + msg)
+            except:
+                (file, fun, line), t,v,tbinfo = asyncore.compact_traceback()
+                error = '%s, %s: file: %s line: %s' % (t, v, file, line)
+                msg = "couldn't exec %s: %s\n" % (filename, error)
+                options.write(2, "supervisor: " + msg)
+
+            # this point should only be reached if execve failed.
+            # the finally clause will exit the child process.
+
         finally:
-            options._exit(127)
+            options.write(2, "supervisor: child process was not spawned\n")
+            options._exit(127) # exit process with code for spawn failure
 
     def stop(self):
         """ Administrative stop """

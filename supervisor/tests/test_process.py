@@ -324,16 +324,20 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.pgrp_set, True)
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
-        self.assertEqual(options.written, {})
         self.assertEqual(options.privsdropped, 1)
         self.assertEqual(options.execv_args,
                          ('/good/filename', ['/good/filename']) )
-        self.assertEqual(options._exitcode, 127)
+        self.assertEqual(options.execve_called, True)
+        # if the real execve() succeeds, the code that writes the
+        # "was not spawned" message won't be reached.  this assertion
+        # is to test that no other errors were written.
+        self.assertEqual(options.written,
+             {2: "supervisor: child process was not spawned\n"})
 
     def test_spawn_as_child_setuid_fail(self):
         options = DummyOptions()
         options.forkpid = 0
-        options.setuid_msg = 'screwed'
+        options.setuid_msg = 'failure reason'
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
         instance = self._makeOne(config)
         result = instance.spawn()
@@ -344,10 +348,10 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         self.assertEqual(options.written,
-             {2: 'supervisor: error trying to setuid to 1 (screwed)\n'})
+             {2: "supervisor: couldn't setuid to 1: failure reason\n"
+                 "supervisor: child process was not spawned\n"})
         self.assertEqual(options.privsdropped, None)
-        self.assertEqual(options.execv_args,
-                         ('/good/filename', ['/good/filename']) )
+        self.assertEqual(options.execve_called, False)
         self.assertEqual(options._exitcode, 127)
 
     def test_spawn_as_child_cwd_ok(self):
@@ -363,11 +367,15 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.pgrp_set, True)
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
-        self.assertEqual(options.written, {})
         self.assertEqual(options.execv_args,
                          ('/good/filename', ['/good/filename']) )
-        self.assertEqual(options._exitcode, 127)
         self.assertEqual(options.changed_directory, True)
+        self.assertEqual(options.execve_called, True)
+        # if the real execve() succeeds, the code that writes the
+        # "was not spawned" message won't be reached.  this assertion
+        # is to test that no other errors were written.
+        self.assertEqual(options.written,
+             {2: "supervisor: child process was not spawned\n"})
 
     def test_spawn_as_child_sets_umask(self):
         options = DummyOptions()
@@ -376,11 +384,15 @@ class SubprocessTests(unittest.TestCase):
         instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, None)
-        self.assertEqual(options.written, {})
         self.assertEqual(options.execv_args,
                          ('/good/filename', ['/good/filename']) )
-        self.assertEqual(options._exitcode, 127)
         self.assertEqual(options.umaskset, 002)
+        self.assertEqual(options.execve_called, True)
+        # if the real execve() succeeds, the code that writes the
+        # "was not spawned" message won't be reached.  this assertion
+        # is to test that no other errors were written.
+        self.assertEqual(options.written,
+             {2: "supervisor: child process was not spawned\n"})
 
     def test_spawn_as_child_cwd_fail(self):
         options = DummyOptions()
@@ -397,10 +409,12 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         self.assertEqual(options.execv_args, None)
-        self.assertEqual(options.written,
-                         {2: "couldn't chdir to /tmp: ENOENT\n"})
+        out = {2: "supervisor: couldn't chdir to /tmp: ENOENT\n"
+                  "supervisor: child process was not spawned\n"}
+        self.assertEqual(options.written, out)
         self.assertEqual(options._exitcode, 127)
         self.assertEqual(options.changed_directory, False)
+        self.assertEqual(options.execve_called, False)
 
     def test_spawn_as_child_execv_fail_oserror(self):
         options = DummyOptions()
@@ -415,8 +429,9 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.pgrp_set, True)
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
-        self.assertEqual(options.written,
-                         {2: "couldn't exec /good/filename: EPERM\n"})
+        out = {2: "supervisor: couldn't exec /good/filename: EPERM\n"
+                  "supervisor: child process was not spawned\n"}
+        self.assertEqual(options.written, out)
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options._exitcode, 127)
 
@@ -434,7 +449,8 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         msg = options.written[2] # dict, 2 is fd #
-        self.failUnless(msg.startswith("couldn't exec /good/filename:"))
+        head = "supervisor: couldn't exec /good/filename:"
+        self.failUnless(msg.startswith(head))
         self.failUnless("exceptions.RuntimeError" in msg)
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options._exitcode, 127)
@@ -485,11 +501,15 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.pgrp_set, True)
         self.assertEqual(len(options.duped), 2)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
-        self.assertEqual(options.written, {})
         self.assertEqual(options.privsdropped, 1)
         self.assertEqual(options.execv_args,
                          ('/good/filename', ['/good/filename']) )
-        self.assertEqual(options._exitcode, 127)
+        self.assertEqual(options.execve_called, True)
+        # if the real execve() succeeds, the code that writes the
+        # "was not spawned" message won't be reached.  this assertion
+        # is to test that no other errors were written.
+        self.assertEqual(options.written,
+             {2: "supervisor: child process was not spawned\n"})
 
     def test_spawn_as_parent(self):
         options = DummyOptions()
