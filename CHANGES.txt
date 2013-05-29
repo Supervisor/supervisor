@@ -1,5 +1,5 @@
-Next release
-------------
+3.0b2 (2013-05-28)
+------------------
 
 - The behavior of the program option ``user`` has changed.  In all previous
   versions, if ``supervisord`` failed to switch to the user, a warning would
