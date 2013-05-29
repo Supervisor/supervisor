@@ -745,9 +745,8 @@ where specified.
 ``user``
 
   If :program:`supervisord` runs as root, this UNIX user account will
-  be used as the account which runs the program.  If
-  :program:`supervisord` is not running as root, this option has no
-  effect.
+  be used as the account which runs the program.  If :program:`supervisord`
+  can't switch to the specified user, the program will not be started.
 
   *Default*: Do not switch users
 
