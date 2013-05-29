@@ -211,6 +211,69 @@ class DatatypesTest(unittest.TestCase):
         bad_url = "unix://"
         self.assertRaises(ValueError, datatypes.url, bad_url)
 
+    @patch("pwd.getpwnam", Mock(return_value=[0,0,42]))
+    def test_name_to_uid_gets_uid_from_username(self):
+        uid = datatypes.name_to_uid("foo")
+        self.assertEquals(uid, 42)
+
+    @patch("pwd.getpwuid", Mock(return_value=[0,0,42]))
+    def test_name_to_uid_gets_uid_from_user_id(self):
+        uid = datatypes.name_to_uid("42")
+        self.assertEquals(uid, 42)
+
+    @patch("pwd.getpwnam", Mock(side_effect=KeyError("bad username")))
+    def test_name_to_uid_raises_for_bad_username(self):
+        self.assertRaises(ValueError, datatypes.name_to_uid, "foo")
+
+    @patch("pwd.getpwuid", Mock(side_effect=KeyError("bad user id")))
+    def test_name_to_uid_raises_for_bad_user_id(self):
+        self.assertRaises(ValueError, datatypes.name_to_uid, "42")
+
+    @patch("grp.getgrnam", Mock(return_value=[0,0,42]))
+    def test_name_to_gid_gets_gid_from_group_name(self):
+        gid = datatypes.name_to_gid("foo")
+        self.assertEquals(gid, 42)
+
+    @patch("grp.getgrgid", Mock(return_value=[0,0,42]))
+    def test_name_to_gid_gets_gid_from_group_id(self):
+        gid = datatypes.name_to_gid("42")
+        self.assertEquals(gid, 42)
+
+    @patch("grp.getgrnam", Mock(side_effect=KeyError("bad group name")))
+    def test_name_to_gid_raises_for_bad_group_name(self):
+        self.assertRaises(ValueError, datatypes.name_to_gid, "foo")
+
+    @patch("grp.getgrgid", Mock(side_effect=KeyError("bad group id")))
+    def test_name_to_gid_raises_for_bad_group_name(self):
+        self.assertRaises(ValueError, datatypes.name_to_gid, "42")
+
+    def test_colon_separated_user_group_returns_both(self):
+        name_to_uid = Mock(return_value=12)
+        name_to_gid = Mock(return_value=34)
+
+        @patch("supervisor.datatypes.name_to_uid", name_to_uid)
+        @patch("supervisor.datatypes.name_to_gid", name_to_gid)
+        def colon_separated():
+            return datatypes.colon_separated_user_group("foo:bar")
+
+        uid, gid = colon_separated()
+        name_to_uid.assert_called_with("foo")
+        self.assertEquals(12, uid)
+        name_to_gid.assert_called_with("bar")
+        self.assertEquals(34, gid)
+
+    def test_colon_separated_user_group_returns_user_only(self):
+        name_to_uid = Mock(return_value=42)
+
+        @patch("supervisor.datatypes.name_to_uid", name_to_uid)
+        def colon_separated():
+            return datatypes.colon_separated_user_group("foo")
+
+        uid, gid = colon_separated()
+        name_to_uid.assert_called_with("foo")
+        self.assertEquals(42, uid)
+        self.assertEquals(-1, gid)
+
 class InetStreamSocketConfigTests(unittest.TestCase):
     def _getTargetClass(self):
         return datatypes.InetStreamSocketConfig

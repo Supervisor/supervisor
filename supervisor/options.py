@@ -449,9 +449,10 @@ class ServerOptions(Options):
 
         # Additional checking of user option; set uid and gid
         if self.user is not None:
-            uid = name_to_uid(self.user)
-            if uid is None:
-                self.usage("No such user %s" % self.user)
+            try:
+                uid = name_to_uid(self.user)
+            except ValueError, msg:
+                self.usage(msg) # invalid user
             self.uid = uid
             self.gid = gid_for_uid(uid)
 
@@ -683,7 +684,12 @@ class ServerOptions(Options):
             program_name = section.split(':', 1)[1]
             priority = integer(get(section, 'priority', 999))
 
-            proc_uid = name_to_uid(get(section, 'user', None))
+            # find proc_uid from "user" option
+            proc_user = get(section, 'user', None)
+            if proc_user is None:
+                proc_uid = None
+            else:
+                proc_uid = name_to_uid(proc_user)
 
             socket_owner = get(section, 'socket_owner', None)
             if socket_owner is not None:
@@ -769,13 +775,11 @@ class ServerOptions(Options):
         programs = []
         get = parser.saneget
         program_name = section.split(':', 1)[1]
-
         priority = integer(get(section, 'priority', 999))
         autostart = boolean(get(section, 'autostart', 'true'))
         autorestart = auto_restart(get(section, 'autorestart', 'unexpected'))
         startsecs = integer(get(section, 'startsecs', 1))
         startretries = integer(get(section, 'startretries', 3))
-        uid = name_to_uid(get(section, 'user', None))
         stopsignal = signal_number(get(section, 'stopsignal', 'TERM'))
         stopwaitsecs = integer(get(section, 'stopwaitsecs', 10))
         stopasgroup = boolean(get(section, 'stopasgroup', 'false'))
@@ -794,6 +798,13 @@ class ServerOptions(Options):
         serverurl = get(section, 'serverurl', None)
         if serverurl and serverurl.strip().upper() == 'AUTO':
             serverurl = None
+
+        # find uid from "user" option
+        user = get(section, 'user', None)
+        if user is None:
+            uid = None
+        else:
+            uid = name_to_uid(user)
 
         umask = get(section, 'umask', None)
         if umask is not None:
