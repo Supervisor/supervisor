@@ -1,12 +1,16 @@
 Next release
 ------------
 
-- Fixed a bug where parsing ``command=`` could cause supervisord to crash if
-  shlex.split() fails, such as a bad quoting.  Patch by Scott Wilson.
+- The behavior of the program option ``user`` has changed.  In all previous
+  versions, if ``supervisord`` failed to switch to the user, a warning would
+  be sent to the stderr log but the child process would still be spawned.
+  This means that a mistake in the config file could result in a child
+  process being unintentionally spawned as root.  Now, ``supervisord`` will
+  not spawn the child unless it was able to successfully switch to the user.
+  Thanks to Igor Partola for reporting this issue.
 
-- It is now possible to use ``supervisorctl`` on a machine with no
-  ``supervisord.conf`` file by supplying the connection information in
-  command line options.  Patch by Jens Rantil.
+- If a user specified in the config file does not exist on the system,
+  ``supervisord`` will now print an error and refuse to start.
 
 - Reverted a change to logging introduced in 3.0b1 that was intended to allow
   multiple processes to log to the same file with the rotating log handler.
@@ -16,6 +20,13 @@ Next release
   options for the same file).  Given this and that supervisord now has syslog
   support, it was decided to remove this feature.  A warning was added to the
   documentation that two processes may not log to the same file.
+
+- Fixed a bug where parsing ``command=`` could cause supervisord to crash if
+  shlex.split() fails, such as a bad quoting.  Patch by Scott Wilson.
+
+- It is now possible to use ``supervisorctl`` on a machine with no
+  ``supervisord.conf`` file by supplying the connection information in
+  command line options.  Patch by Jens Rantil.
 
 - Fixed a bug where supervisord would crash if the syslog handler was used
   and supervisord received SIGUSR2 (log reopen request).
