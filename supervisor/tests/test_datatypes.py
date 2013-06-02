@@ -143,6 +143,11 @@ class DatatypesTest(unittest.TestCase):
         self.assertRaises(ValueError,
                           datatypes.dict_of_key_value_pairs, kvp)
 
+    def test_dict_of_key_value_pairs_unicode(self):
+        actual = datatypes.dict_of_key_value_pairs(u'foo=bar,baz=qux')
+        expected = {'foo': 'bar', 'baz': 'qux'}
+        self.assertEqual(actual, expected)
+
     def test_logfile_name_returns_none_for_none_values(self):
         for thing in datatypes.LOGFILE_NONES:
             actual = datatypes.logfile_name(thing)
