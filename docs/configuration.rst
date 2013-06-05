@@ -363,15 +363,17 @@ follows.
 
 ``environment``
 
-  A list of key/value pairs in the form ``KEY=val,KEY2=val2`` that
+  A list of key/value pairs in the form ``KEY="val",KEY2="val2"`` that
   will be placed in the :program:`supervisord` process' environment
   (and as a result in all of its child process' environments).  This
   option can include the value ``%(here)s``, which expands to the
   directory in which the supervisord configuration file was found.
-  Note that subprocesses will inherit the environment variables of the
-  shell used to start :program:`supervisord` except for the ones
-  overridden here and within the program's ``environment``
-  configuration stanza.  See :ref:`subprocess_environment`.
+  Values containing non-alphanumeric characters should be quoted
+  (e.g. ``KEY="val:123",KEY2="val,456"``).  Otherwise, quoting the
+  values is optional but recommended.  **Note** that subprocesses will
+  inherit the environment variables of the shell used to start
+  :program:`supervisord` except for the ones overridden here and within
+  the program's ``environment`` option. See :ref:`subprocess_environment`.
 
   *Default*: no values
 
@@ -411,7 +413,7 @@ follows.
    nocleanup = true
    childlogdir = /tmp
    strip_ansi = false
-   environment = KEY1=value1,KEY2=value2
+   environment = KEY1="value1",KEY2="value2"
 
 ``[supervisorctl]`` Section Settings
 ------------------------------------
@@ -911,16 +913,17 @@ where specified.
 
 ``environment``
 
-  A list of key/value pairs in the form ``KEY=val,KEY2=val2`` that
+  A list of key/value pairs in the form ``KEY="val",KEY2="val2"`` that
   will be placed in the child process' environment.  The environment
   string may contain Python string expressions that will be evaluated
   against a dictionary containing ``group_name``, ``host_node_name``,
   ``process_num``, ``program_name``, and ``here`` (the directory of the
   supervisord config file).  Values containing non-alphanumeric characters
-  should be placed in quotes (e.g. ``KEY="val:123",KEY2="val,456"``) **Note**
-  that the subprocess will inherit the environment variables of the
-  shell used to start "supervisord" except for the ones overridden
-  here.  See :ref:`subprocess_environment`.
+  should be quoted (e.g. ``KEY="val:123",KEY2="val,456"``).  Otherwise,
+  quoting the values is optional but recommended.  **Note** that the
+  subprocess will inherit the environment variables of the shell used to
+  start "supervisord" except for the ones overridden here.  See
+  :ref:`subprocess_environment`.
 
   *Default*: No extra environment
 
@@ -996,7 +999,7 @@ where specified.
    stderr_logfile_maxbytes=1MB
    stderr_logfile_backups=10
    stderr_capture_maxbytes=1MB
-   environment=A=1,B=2
+   environment=A="1",B="2"
    serverurl=AUTO
 
 ``[include]`` Section Settings
@@ -1219,7 +1222,7 @@ above constraints and additions.
    stderr_logfile=/a/path
    stderr_logfile_maxbytes=1MB
    stderr_logfile_backups
-   environment=A=1,B=2
+   environment=A="1",B="2"
 
 ``[eventlistener:x]`` Section Settings
 --------------------------------------
@@ -1295,7 +1298,7 @@ above constraints and additions.
    stderr_logfile=/a/path
    stderr_logfile_maxbytes=1MB
    stderr_logfile_backups
-   environment=A=1,B=2
+   environment=A="1",B="2"
 
 ``[rpcinterface:x]`` Section Settings
 -------------------------------------
