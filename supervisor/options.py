@@ -17,6 +17,7 @@ import select
 import glob
 import platform
 import warnings
+import time
 
 from fcntl import fcntl
 from fcntl import F_SETFL, F_GETFL
@@ -391,6 +392,7 @@ class ServerOptions(Options):
 
     def __init__(self):
         Options.__init__(self)
+        self.iface_retries = 0
         self.configroot = Dummy()
         self.configroot.supervisord = Dummy()
 
@@ -1101,6 +1103,14 @@ class ServerOptions(Options):
                            'a port that one of our HTTP servers is '
                            'configured to use.  Shut this program '
                            'down first before starting supervisord.')
+            elif why[0] == errno.EADDRNOTAVAIL:
+                self.iface_retries += 1
+                time.sleep(5)
+                if self.iface_retries < 60:
+                    self.openhttpservers(supervisord)
+                else:
+                    self.usage('The interface that you want to bind '
+                               'supervisor is not available.')
             else:
                 help = 'Cannot open an HTTP server: socket.error reported'
                 errorname = errno.errorcode.get(why[0])
