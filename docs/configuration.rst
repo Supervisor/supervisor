@@ -721,7 +721,7 @@ where specified.
 ``stopasgroup``
 
   If true, the flag causes supervisor to send the stop signal to the
-  whole process group and implies ``killasgroup``=true.  This is useful
+  whole process group and implies ``killasgroup`` is true.  This is useful
   for programs, such as Flask in debug mode, that do not propagate
   stop signals to their children, leaving them orphaned.
 

@@ -243,7 +243,7 @@ your ``PYTHONPATH`` is sane and that all Python standard
 library files have adequate file permission protections.
 
 Running :program:`supervisord` automatically on startup
---------------------------------------------------------
+-------------------------------------------------------
 
 If you are using a distribution-packaged version of Supervisor, it should
 already be integrated into the service management infrastructure of your
