@@ -1,6 +1,9 @@
 3.0b3-dev (Next Release)
 ------------------------
 
+- Parsing the config file will now fail with an error message if a process
+  or group name contains characters that are not compatible with the
+  eventlistener protocol.
 
 3.0b2 (2013-05-28)
 ------------------

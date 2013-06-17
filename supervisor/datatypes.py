@@ -21,6 +21,14 @@ def set_here(v):
     global here
     here = v
 
+def process_or_group_name(name):
+    """Ensures that a process or group name is not created with
+       characters that break the eventlistener protocol"""
+    s = str(name).strip()
+    if ' ' in s or ':' in s:
+        raise ValueError("Invalid name: " + repr(name))
+    return s
+
 def integer(value):
     try:
         return int(value)

@@ -143,6 +143,18 @@ class DatatypesTest(unittest.TestCase):
         self.assertRaises(ValueError,
                           datatypes.dict_of_key_value_pairs, kvp)
 
+    def test_process_or_group_name_strips_surrounding_whitespace(self):
+        name = " foo\t"
+        self.assertEqual("foo", datatypes.process_or_group_name(name))
+
+    def test_process_or_group_name_disallows_inner_spaces(self):
+        name = "foo bar"
+        self.assertRaises(ValueError, datatypes.process_or_group_name, name)
+
+    def test_process_or_group_name_disallows_colons(self):
+        name = "foo:bar"
+        self.assertRaises(ValueError, datatypes.process_or_group_name, name)
+
     def test_logfile_name_returns_none_for_none_values(self):
         for thing in datatypes.LOGFILE_NONES:
             actual = datatypes.logfile_name(thing)
