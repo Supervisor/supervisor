@@ -7,6 +7,7 @@ import re
 from cStringIO import StringIO
 import traceback
 import sys
+import base64
 
 from supervisor.medusa.http_server import get_header
 from supervisor.medusa.xmlrpc_handler import xmlrpc_handler
@@ -451,8 +452,7 @@ class SupervisorTransport(xmlrpclib.Transport):
             # basic auth
             if self.username is not None and self.password is not None:
                 unencoded = "%s:%s" % (self.username, self.password)
-                encoded = unencoded.encode('base64')
-                encoded = encoded.replace('\012', '')
+                encoded = base64.encodestring(unencoded).replace('\n', '')
                 self.headers["Authorization"] = "Basic %s" % encoded
                 
         self.headers["Content-Length"] = str(len(request_body))

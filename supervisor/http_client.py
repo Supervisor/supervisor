@@ -117,9 +117,9 @@ class HTTPHandler(object, asynchat.async_chat):
         self.header('Accept', '*/*')
         self.header('User-agent', self.user_agent)
         if self.password:
-            auth = '%s:%s' % (self.username, self.password)
-            auth = base64.encodestring(auth).strip()
-            self.header('Authorization', 'Basic %s' % auth)
+            unencoded = '%s:%s' % (self.username, self.password)
+            encoded = base64.encodestring(unencoded).replace('\n', '')
+            self.header('Authorization', 'Basic %s' % encoded)
         self.push(CRLF)
         self.push(CRLF)
 
