@@ -8,6 +8,10 @@
 - Fixed a bug where the ``tail -f`` command in ``supervisorctl`` would fail
   if the combined length of the username and password was over 56 characters.
 
+- Reading the config file now gives a separate error message when the config
+  file exists but can't be read.  Previously, any error reading the file 
+  would be reported as "could not find config file".  Patch by Jens Rantil.
+
 3.0b2 (2013-05-28)
 ------------------
 
