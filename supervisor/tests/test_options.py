@@ -186,6 +186,8 @@ class ClientOptionsTests(unittest.TestCase):
         self.assertFalse(os.path.exists(fname))
 
         instance = self._makeOne()
+        instance.stderr = StringIO()
+
         class DummyException(Exception):
             def __init__(self, exitcode):
                 self.exitcode = exitcode
@@ -591,6 +593,8 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertFalse(os.path.exists(fname))
 
         instance = self._makeOne()
+        instance.stderr = StringIO()
+
         class DummyException(Exception):
             def __init__(self, exitcode):
                 self.exitcode = exitcode
