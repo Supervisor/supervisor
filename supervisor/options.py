@@ -123,10 +123,10 @@ class Options:
 
         Occurrences of "%s" in are replaced by self.progname.
         """
-        help = self.doc
+        help = self.doc + "\n"
         if help.find("%s") > 0:
             help = help.replace("%s", self.progname)
-        print help,
+        self.stdout.write(help)
         self.exit(0)
 
     def usage(self, msg):
