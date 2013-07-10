@@ -680,17 +680,23 @@ class DefaultControllerPlugin(ControllerPluginBase):
             for name in names:
                 group_name, process_name = split_namespec(name)
                 if process_name is None:
-                    results = supervisor.startProcessGroup(group_name)
-                    for result in results:
-                        result = self._startresult(result)
-                        self.ctl.output(result)
+                    try:
+                        results = supervisor.startProcessGroup(group_name)
+                        for result in results:
+                            result = self._startresult(result)
+                            self.ctl.output(result)
+                    except xmlrpclib.Fault, e:
+                        error = self._startresult({'status': e.faultCode,
+                                                   'name': name,
+                                                   'description': e.faultString})
+                        self.ctl.output(error)
                 else:
                     try:
                         result = supervisor.startProcess(name)
                     except xmlrpclib.Fault, e:
-                        error = self._startresult({'status':e.faultCode,
-                                                   'name':name,
-                                                   'description':e.faultString})
+                        error = self._startresult({'status': e.faultCode,
+                                                   'name': name,
+                                                   'description': e.faultString})
                         self.ctl.output(error)
                     else:
                         self.ctl.output('%s: started' % name)
