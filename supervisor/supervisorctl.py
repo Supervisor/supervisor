@@ -101,6 +101,7 @@ class Controller(cmd.Cmd):
         self.options = options
         self.prompt = self.options.prompt + '> '
         self.options.plugins = []
+        self.supervisor_proxy = None
         self.vocab = ['add','exit','maintail','pid','reload',
                       'restart','start','stop','version','clear',
                       'fg','open','quit','remove','shutdown','status',
@@ -183,7 +184,9 @@ class Controller(cmd.Cmd):
             self.stdout.write(stuff + '\n')
     
     def get_supervisor(self):
-        return self.get_server_proxy('supervisor')
+        if self.supervisor_proxy is None:
+            self.supervisor_proxy = self.get_server_proxy('supervisor')
+        return self.supervisor_proxy
 
     def get_server_proxy(self, namespace=None):
         proxy = self.options.getServerProxy()
