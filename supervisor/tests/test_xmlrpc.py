@@ -19,7 +19,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.xmlrpc import supervisor_xmlrpc_handler
         return supervisor_xmlrpc_handler
-    
+
     def _makeOne(self, supervisord, subinterfaces):
         return self._getTargetClass()(supervisord, subinterfaces)
 
@@ -320,7 +320,12 @@ class IterparseLoadsTests(unittest.TestCase):
         </struct>
         </param>
         <param>
-        <array><data><value><i4>12</i4></value></data></array>
+        <array>
+          <data>
+            <value><i4>12</i4></value>
+            <value><i4>34</i4></value>
+          </data>
+        </array>
         </param>
         <param>
         <struct>
@@ -348,7 +353,7 @@ class IterparseLoadsTests(unittest.TestCase):
         self.assertEqual(params[5], datetime.datetime(1998, 7, 17, 14, 8, 55))
         self.assertEqual(params[6], "you can't read this!")
         self.assertEqual(params[7], {'k': 5})
-        self.assertEqual(params[8], [12])
+        self.assertEqual(params[8], [12, 34])
         self.assertEqual(params[9], {'k': [1]})
 
 class DummyResponse:
@@ -367,7 +372,7 @@ class DummyConnection:
 
     def getresponse(self):
         return self.response
-        
+
     def request(self, *arg, **kw):
         self.requestargs = arg
         self.requestkw = kw
