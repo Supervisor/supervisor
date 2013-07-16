@@ -9,8 +9,11 @@
   if the combined length of the username and password was over 56 characters.
 
 - Reading the config file now gives a separate error message when the config
-  file exists but can't be read.  Previously, any error reading the file 
+  file exists but can't be read.  Previously, any error reading the file
   would be reported as "could not find config file".  Patch by Jens Rantil.
+
+- Fixed an XML-RPC bug where array elements after the first would be ignored
+  when using the ElementTree-based XML parser.  Patch by Zev Benjamin.
 
 3.0b2 (2013-05-28)
 ------------------
