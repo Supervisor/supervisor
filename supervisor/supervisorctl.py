@@ -102,7 +102,8 @@ class Controller(cmd.Cmd):
         self.prompt = self.options.prompt + '> '
         self.options.plugins = []
         self.vocab = ['add','exit','maintail','pid','reload',
-                      'restart','start','stop','version','clear',
+                      'restart', 'seriallrestart', 'start','stop',
+                      'version','clear',
                       'fg','open','quit','remove','shutdown','status',
                       'tail','help']
         cmd.Cmd.__init__(self, completekey, stdin, stdout)
@@ -270,7 +271,7 @@ class Controller(cmd.Cmd):
             return results[state]
         else:
             exp = line.split()[0]
-            if exp in ['start','stop','restart','clear','status','tail','fg','pid']:
+            if exp in ['start','stop','restart','seriallrestart','clear','status','tail','fg','pid']:
                 if not line.endswith(' ') and len(line.split()) == 1:
                     return [text + ' ', None][state]
                 if exp == 'fg':
@@ -743,6 +744,53 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output("stop <gname>:*\t\tStop all processes in a group")
         self.ctl.output("stop <name> <name>\tStop multiple processes or groups")
         self.ctl.output("stop all\t\tStop all processes")
+
+    def do_seriallrestart(self, arg):
+        if not self.ctl.upcheck():
+            return
+
+        names = arg.strip().split()
+        supervisor = self.ctl.get_supervisor()
+
+        if not names:
+            self.ctl.output('Error: seriallrestart requires a process name')
+            self.help_seriallrestart()
+            return
+
+        # first get all process to handle
+        processes = []
+        template = '%(name)s'
+        if 'all' in names:
+            for info in supervisor.getAllProcessInfo():
+                processes.append(self._procrepr(info, template))
+        else:
+            for name in names:
+                try:
+                    info = supervisor.getProcessInfo(name)
+                except xmlrpclib.Fault, e:
+                    if e.faultCode == xmlrpc.Faults.BAD_NAME:
+                        self.ctl.output('No such process %s' % name)
+                    else:
+                        raise
+                    continue
+                processes.append(self._procrepr(info, template))
+
+        # do restart for each of them
+        for process in processes:
+            self.do_restart(process)
+
+
+
+    def help_seriallrestart(self):
+        self.ctl.output("seriallrestart <name>\t\tRestart a process")
+        self.ctl.output("seriallrestart <gname>:*\tRestart all processes in a group")
+        self.ctl.output("seriallrestart <name> <name>\tRestart multiple processes or "
+                     "groups")
+        self.ctl.output("seriallrestart all\t\tRestart all processes")
+        self.ctl.output("Note: seriallrestart does restart on process after another, "
+                        "instead of restart, which stops all process and then starts them.")
+        self.ctl.output("Note: seriallrestart does not reread config files. For that,"
+                        " see reread and update.")
 
     def do_restart(self, arg):
         if not self.ctl.upcheck():
