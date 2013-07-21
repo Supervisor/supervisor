@@ -17,6 +17,7 @@ import meld3
 from supervisor.process import ProcessStates
 from supervisor.http import NOT_DONE_YET
 
+from supervisor.options import VERSION
 from supervisor.options import make_namespec
 from supervisor.options import split_namespec
 
@@ -45,7 +46,7 @@ class DeferredWebProducer:
             response = self.callback()
             if response is NOT_DONE_YET:
                 return NOT_DONE_YET
-                
+
             self.finished = True
             return self.sendresponse(response)
 
@@ -74,7 +75,7 @@ class DeferredWebProducer:
 
         body = response.get('body', '')
         self.request['Content-Length'] = len(body)
-            
+
         self.request.push(body)
 
         connection = get_header(self.CONNECTION, self.request.header)
@@ -358,7 +359,7 @@ class StatusView(MeldView):
                         return 'Process %s started' % namespec
                     startprocess.delay = 0.05
                     return startprocess
-                
+
                 elif action == 'clearlog':
                     callback = rpcinterface.supervisor.clearProcessLog(
                         namespec)
@@ -368,7 +369,7 @@ class StatusView(MeldView):
                     return clearlog
 
         raise ValueError(action)
-    
+
     def render(self):
         form = self.context.form
         response = self.context.response
@@ -420,7 +421,7 @@ class StatusView(MeldView):
                 'state':info['state'],
                 'description':info['description'],
                 })
-        
+
         root = self.clone()
 
         if message is not None:
@@ -449,24 +450,25 @@ class StatusView(MeldView):
 
                 actions = item['actions']
                 actionitem_td = tr_element.findmeld('actionitem_td')
-                
+
                 for li_element, actionitem in actionitem_td.repeat(actions):
                     anchor = li_element.findmeld('actionitem_anchor')
                     if actionitem is None:
                         anchor.attrib['class'] = 'hidden'
                     else:
-                        anchor.attributes(href=actionitem['href'], 
+                        anchor.attributes(href=actionitem['href'],
                                           name=actionitem['name'])
                         anchor.content(actionitem['name'])
                         if actionitem['target']:
                             anchor.attributes(target=actionitem['target'])
-                if shaded_tr: 
+                if shaded_tr:
                     tr_element.attrib['class'] = 'shade'
                 shaded_tr = not shaded_tr
         else:
             table = root.findmeld('statustable')
             table.replace('No programs to manage')
 
+        root.findmeld('supervisor_version').content(VERSION)
         copyright_year = str(datetime.date.today().year)
         root.findmeld('copyright_date').content(copyright_year)
 
@@ -476,7 +478,7 @@ class OKView:
     delay = 0
     def __init__(self, context):
         self.context = context
-        
+
     def __call__(self):
         return {'body':'OK'}
 
@@ -513,7 +515,7 @@ class supervisor_ui_handler:
 
         if not path:
             path = 'index.html'
-            
+
         for viewname in VIEWS.keys():
             if viewname == path:
                 return True
