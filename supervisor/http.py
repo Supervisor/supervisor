@@ -345,8 +345,10 @@ class deferring_http_channel(http_server.http_channel):
     # order to spew tail -f output faster (speculative)
     ac_out_buffer_size = 4096
 
-    delay = False
-    writable_check = time.time()
+    def __init__(self, *args, **kwargs):
+        self.delay = False
+        self.writable_check = time.time()
+        http_server.http_channel.__init__(self, *args, **kwargs)
 
     def writable(self, t=time.time):
         now = t()
