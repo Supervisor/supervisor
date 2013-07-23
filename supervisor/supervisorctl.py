@@ -551,20 +551,19 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def help_exit(self):
         self.ctl.output("exit\tExit the supervisor shell.")
 
-    def _procrepr(self, info):
-        template = '%(name)-32s %(state)-10s %(desc)s'
+    def _procrepr(self, info, template='%(name)-32s %(state)-10s %(desc)s'):
         if info['name'] == info['group']:
             name = info['name']
         else:
             name = '%s:%s' % (info['group'], info['name'])
-                    
+
         return template % {'name':name, 'state':info['statename'],
                            'desc':info['description']}
 
     def do_status(self, arg):
         if not self.ctl.upcheck():
             return
-        
+
         supervisor = self.ctl.get_supervisor()
 
         names = arg.strip().split()
