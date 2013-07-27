@@ -5,7 +5,7 @@
 Usage: %s [options] [action [arguments]]
 
 Options:
--c/--configuration -- configuration file path (default /etc/supervisor.conf)
+-c/--configuration -- configuration file path (default /etc/supervisord.conf)
 -h/--help -- print usage message and exit
 -i/--interactive -- start an interactive shell after executing commands
 -s/--serverurl URL -- URL on which supervisord server is listening
