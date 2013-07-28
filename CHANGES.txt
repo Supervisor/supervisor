@@ -15,6 +15,9 @@
 - Fixed an XML-RPC bug where array elements after the first would be ignored
   when using the ElementTree-based XML parser.  Patch by Zev Benjamin.
 
+- Fixed the usage message output by ``supervisorctl`` to show the correct
+  default config file path.  Patch by Alek Storm.
+
 3.0b2 (2013-05-28)
 ------------------
 
