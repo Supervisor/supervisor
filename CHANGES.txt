@@ -1,5 +1,5 @@
-3.0b3-dev (Next Release)
-------------------------
+3.0 (2013-07-30)
+----------------
 
 - Parsing the config file will now fail with an error message if a process
   or group name contains characters that are not compatible with the
