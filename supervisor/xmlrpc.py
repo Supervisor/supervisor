@@ -483,7 +483,47 @@ class UnixStreamHTTPConnection(httplib.HTTPConnection):
 def gettags(comment):
     """ Parse documentation strings into JavaDoc-like tokens """
 
-    tags = []
+    tags = {}
+    lineno = 0
+    match = None
+
+    for line in comment.split('\n'):
+        line = line.strip()
+        lineno = lineno + 1
+
+        if not line:
+            continue
+
+        if tags and not line.startswith(':'):
+            tags[match['name']]['tag_text'].append(line)
+            continue
+
+        match = re.match(r':param (?P<name>[a-zA-Z0-9_]+): (?P<tag_text>.*)',
+                         line)
+        if match:
+            match = match.groupdict()
+            match.update({'tag': 'param', 'tag_lineno': lineno})
+            tags[match['name']] = match
+            continue
+
+        match = re.match(r':type (?P<name>[a-zA-Z0-9_]+): (?P<datatype>.*)',
+                         line)
+        if match:
+            match = match.groupdict()
+            tags[match['name']]['datatype'] = match['datatype']
+            continue
+
+        if line.startswith(':return:'):
+            tags['return'] = {'tag': 'return', 'tag_lineno': lineno,
+                              'name': 'return', 'tag_text': line[9:]}
+            continue
+
+        if line.startswith(':rtype:'):
+            tags['return']['datatype'] = line[8:]
+            continue
+
+    tags = sorted([(val['tag_lineno'], val['tag'], val['datatype'],
+                    val['name'], val['tag_text']) for val in tags.values()])
 
     tag = None
     datatype = None
