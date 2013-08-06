@@ -185,7 +185,8 @@ class SystemNamespaceRPCInterface:
     def listMethods(self):
         """ Return an array listing the available method names
 
-        @return array result  An array of method names available (strings).
+        :return:  An array of method names available (strings).
+        :rtype: array
         """
         methods = self._listMethods()
         keys = methods.keys()
@@ -195,8 +196,10 @@ class SystemNamespaceRPCInterface:
     def methodHelp(self, name):
         """ Return a string showing the method's documentation
 
-        @param string name   The name of the method.
-        @return string result The documentation for the method name.
+        :param name: The name of the method.
+        :type name: string
+        :return: The documentation for the method name.
+        :rtype: string
         """
         methods = self._listMethods()
         for methodname in methods.keys():
@@ -210,8 +213,10 @@ class SystemNamespaceRPCInterface:
         of the method, and ptypes are the parameter data types that the
         method accepts in method argument order.
 
-        @param string name  The name of the method.
-        @return array result  The result.
+        :param name: The name of the method.
+        :type name: string
+        :return: The result.
+        :rtype: array
         """
         methods = self._listMethods()
         for method in methods:
@@ -238,8 +243,10 @@ class SystemNamespaceRPCInterface:
         useful when you need to make lots of small calls without lots
         of round trips.
 
-        @param array calls  An array of call requests
-        @return array result  An array of results
+        :param calls: An array of call requests
+        :type calls: array
+        :return: An array of results
+        :rtype: array
         """
         producers = []
 
