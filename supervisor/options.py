@@ -1516,6 +1516,25 @@ class ClientOptions(Options):
         config.mysection = 'supervisorctl'
         config.readfp(fp)
         sections = config.sections()
+
+        if 'include' in sections:
+            if not config.has_option('include', 'files'):
+                raise ValueError(".ini file has [include] section, but no "
+                "files setting")
+            files = config.get('include', 'files')
+            files = files.split()
+            if hasattr(fp, 'name'):
+                base = os.path.dirname(os.path.abspath(fp.name))
+            else:
+                base = '.'
+            for pattern in files:
+                pattern = os.path.join(base, pattern)
+                for filename in glob.glob(pattern):
+                    try:
+                        config.read(filename)
+                    except ConfigParser.ParsingError, why:
+                        raise ValueError(str(why))
+
         if not 'supervisorctl' in sections:
             raise ValueError,'.ini file does not include supervisorctl section'
         serverurl = config.getdefault('serverurl', 'http://localhost:9001')
