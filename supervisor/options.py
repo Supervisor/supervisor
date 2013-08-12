@@ -796,7 +796,6 @@ class ServerOptions(Options):
         stdout_events = boolean(get(section, 'stdout_events_enabled','false'))
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
         stderr_events = boolean(get(section, 'stderr_events_enabled','false'))
-        directory = get(section, 'directory', None)
         serverurl = get(section, 'serverurl', None)
         if serverurl and serverurl.strip().upper() == 'AUTO':
             serverurl = None
@@ -843,6 +842,7 @@ class ServerOptions(Options):
             environment = dict_of_key_value_pairs(
                 expand(environment_str, expansions, 'environment'))
 
+            directory = get(section, 'directory', None)
             if directory:
                 directory = expand(directory, expansions, 'directory')
 
