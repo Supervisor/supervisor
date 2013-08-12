@@ -304,6 +304,14 @@ class ServerOptionsTests(unittest.TestCase):
         numprocs = 2
         command = /bin/cat
         autorestart=unexpected
+
+        [program:cat5]
+        priority=5
+        process_name = foo_%%(process_num)02d
+        numprocs = 2
+        numprocs_start = 1
+        command = /bin/cat
+        directory = /some/path/foo_%%(process_num)02d
         """ % {'tempdir':tempfile.gettempdir()})
 
         from supervisor import datatypes
@@ -334,7 +342,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(options.minfds, 2048)
         self.assertEqual(options.minprocs, 300)
         self.assertEqual(options.nocleanup, True)
-        self.assertEqual(len(options.process_group_configs), 4)
+        self.assertEqual(len(options.process_group_configs), 5)
         self.assertEqual(options.environment, dict(FAKE_ENV_VAR='/some/path'))
 
         cat1 = options.process_group_configs[0]
@@ -427,6 +435,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc4_a.stopsignal, signal.SIGTERM)
         self.assertEqual(proc4_a.stopasgroup, False)
         self.assertEqual(proc4_a.killasgroup, False)
+        self.assertEqual(proc4_a.directory, None)
 
         proc4_b = cat4.process_configs[1]
         self.assertEqual(proc4_b.name, 'fleeb_1')
@@ -444,6 +453,20 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc4_b.stopsignal, signal.SIGTERM)
         self.assertEqual(proc4_b.stopasgroup, False)
         self.assertEqual(proc4_b.killasgroup, False)
+        self.assertEqual(proc4_b.directory, None)
+
+        cat5 = options.process_group_configs[4]
+        self.assertEqual(cat5.name, 'cat5')
+        self.assertEqual(cat5.priority, 5)
+        self.assertEqual(len(cat5.process_configs), 2)
+
+        proc5_a = cat5.process_configs[0]
+        self.assertEqual(proc5_a.name, 'foo_01')
+        self.assertEqual(proc5_a.directory, '/some/path/foo_01')
+
+        proc5_b = cat5.process_configs[1]
+        self.assertEqual(proc5_b.name, 'foo_02')
+        self.assertEqual(proc5_b.directory, '/some/path/foo_02')
 
         here = os.path.abspath(os.getcwd())
         self.assertEqual(instance.uid, 0)
