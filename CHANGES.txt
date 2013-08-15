@@ -1,6 +1,14 @@
 3.1a1 (Next Release)
 --------------------
 
+- Stopping a process in the backoff state now changes it to the stopped
+  state.  Previously, an attempt to stop a process in backoff would be
+  ignored.  Patch by Pascal Varet.
+
+- The ``directory`` option is now expanded separately for each process in
+  a homogeneous process group.  This allows each process to have it own
+  working directory.  Patch by Perttu Ranta-aho.
+
 3.0 (2013-07-30)
 ----------------
 
