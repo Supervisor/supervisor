@@ -188,13 +188,15 @@ class TailView(MeldView):
             processname = None
         else:
             processname = form['processname']
-
+            offset = 0
+            limit = form.get('limit', '1024')
+            limit = min(-1024, int(limit)*-1 if limit.isdigit() else -1024)
             if not processname:
                 tail = 'No process name found'
             else:
                 rpcinterface = SupervisorNamespaceRPCInterface(supervisord)
                 try:
-                    tail = rpcinterface.readProcessLog(processname, -1024, 0)
+                    tail = rpcinterface.readProcessLog(processname, limit, offset)
                 except RPCError, e:
                     if e.code == Faults.NO_FILE:
                         tail = 'No file for %s' % processname
@@ -210,8 +212,11 @@ class TailView(MeldView):
 
         refresh_anchor = root.findmeld('refresh_anchor')
         if processname is not None:
-            refresh_anchor.attributes(href='tail.html?processname=%s' %
-                                      urllib.quote(processname))
+            refresh_anchor.attributes(
+                href='tail.html?processname=%s&limit=%s' % (
+                    urllib.quote(processname), urllib.quote(str(abs(limit)))
+                    )
+            )
         else:
             refresh_anchor.deparent()
 
