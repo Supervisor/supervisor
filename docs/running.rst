@@ -164,6 +164,46 @@ value in the configuration file.
 
    The minimum number of OS process slots that must be available to
    the supervisord process before it will start successfully.
+   
+
+:command:`supervisorctl` Command-Line Options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-c, --configuration
+   
+   Configuration file path (default /etc/supervisord.conf)
+   
+-h, --help
+   
+   Print usage message and exit
+   
+-i, --interactive 
+   
+   Start an interactive shell after executing commands
+   
+-s, --serverurl URL 
+   
+   URL on which supervisord server is listening (default "http://localhost:9001").
+
+-u, --username 
+
+   Username to use for authentication with server
+   
+-p, --password 
+   
+   Password to use for authentication with server
+   
+-r, --history-file 
+
+   Keep a readline history (if readline is available)
+
+`action [arguments]`
+
+Actions are commands like "tail" or "stop".  If -i is specified or no action is
+specified on the command line, a "shell" interpreting actions typed
+interactively is started.  Use the action "help" to find out about available
+actions.
+
 
 Running :program:`supervisorctl`
 --------------------------------
