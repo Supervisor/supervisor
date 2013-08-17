@@ -39,11 +39,11 @@ configuration options which aren't shown here.  See
 
 Running :program:`supervisord`
 ------------------------------
-    
+
 To start :program:`supervisord`, run :file:`$BINDIR/supervisord`.  The
 resulting process will daemonize itself and detach from the terminal.
 It keeps an operations log at :file:`$CWD/supervisor.log` by default.
-      
+
 You may start the :command:`supervisord` executable in the foreground
 by passing the ``-n`` flag on its command line.  This is useful to
 debug startup problems.
@@ -160,40 +160,40 @@ value in the configuration file.
    following: ``cumulative``, ``calls``, ``callers``.
    E.g. ``cumulative,callers``.
 
---minprocs=NUM 
+--minprocs=NUM
 
    The minimum number of OS process slots that must be available to
    the supervisord process before it will start successfully.
-   
+
 
 :command:`supervisorctl` Command-Line Options
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -c, --configuration
-   
+
    Configuration file path (default /etc/supervisord.conf)
-   
+
 -h, --help
-   
+
    Print usage message and exit
-   
--i, --interactive 
-   
+
+-i, --interactive
+
    Start an interactive shell after executing commands
-   
--s, --serverurl URL 
-   
+
+-s, --serverurl URL
+
    URL on which supervisord server is listening (default "http://localhost:9001").
 
--u, --username 
+-u, --username
 
    Username to use for authentication with server
-   
--p, --password 
-   
+
+-p, --password
+
    Password to use for authentication with server
-   
--r, --history-file 
+
+-r, --history-file
 
    Keep a readline history (if readline is available)
 
