@@ -1,3 +1,4 @@
+import warnings
 import errno
 from supervisor.medusa.asyncore_25 import compact_traceback
 
@@ -61,9 +62,15 @@ class PDispatcher:
         pass
 
 class POutputDispatcher(PDispatcher):
-    """ Output (stdout/stderr) dispatcher, capture output sent within
-    <!--XSUPERVISOR:BEGIN--><!--XSUPERVISOR:END--> tags and notify
-    with a ProcessCommunicationEvent """
+    """
+    A Process Output (stdout/stderr) dispatcher. Serves several purposes:
+
+    - capture output sent within <!--XSUPERVISOR:BEGIN--> and
+      <!--XSUPERVISOR:END--> tags and signal a ProcessCommunicationEvent
+      by calling notify(event).
+    - route the output to the appropriate log handlers as specified in the
+      config.
+    """
 
     process = None # process which "owns" this dispatcher
     channel = None # 'stderr' or 'stdout'
@@ -74,35 +81,25 @@ class POutputDispatcher(PDispatcher):
     output_buffer = '' # data waiting to be logged
 
     def __init__(self, process, event_type, fd):
+        """
+        Initialize the dispatcher.
+
+        `event_type` should be one of ProcessLogStdoutEvent or
+        ProcessLogStderrEvent
+        """
         self.process = process
         self.event_type = event_type
         self.fd = fd
         self.channel = channel = self.event_type.channel
 
-        logfile = getattr(process.config, '%s_logfile' % channel)
+        self._setup_logging(process.config, channel)
+
         capture_maxbytes = getattr(process.config,
                                    '%s_capture_maxbytes' % channel)
-
-        if logfile:
-            maxbytes = getattr(process.config, '%s_logfile_maxbytes' % channel)
-            backups = getattr(process.config, '%s_logfile_backups' % channel)
-            fmt = '%(message)s'
-            if logfile == 'syslog':
-                fmt = ' '.join((process.config.name, fmt))
-            self.mainlog = process.config.options.getLogger(
-                logfile,
-                loggers.LevelsByName.INFO,
-                fmt=fmt,
-                rotating=not not maxbytes, # optimization
-                maxbytes=maxbytes,
-                backups=backups)
-
         if capture_maxbytes:
-            self.capturelog = self.process.config.options.getLogger(
-                None, # BoundIO
-                loggers.LevelsByName.INFO,
-                '%(message)s',
-                rotating=False,
+            self.capturelog = loggers.handle_boundIO(
+                self.process.config.options.getLogger(),
+                fmt='%(message)s',
                 maxbytes=capture_maxbytes,
                 )
 
@@ -118,6 +115,35 @@ class POutputDispatcher(PDispatcher):
         self.log_to_mainlog = config.options.loglevel <= self.mainlog_level
         self.stdout_events_enabled = config.stdout_events_enabled
         self.stderr_events_enabled = config.stderr_events_enabled
+
+    def _setup_logging(self, config, channel):
+        """
+        Configure the main log according to the process' configuration and
+        channel. Sets `mainlog` on self. Returns nothing.
+        """
+
+        logfile = getattr(config, '%s_logfile' % channel)
+        if not logfile:
+            return
+
+        maxbytes = getattr(config, '%s_logfile_maxbytes' % channel)
+        backups = getattr(config, '%s_logfile_backups' % channel)
+        fmt = '%(message)s'
+        if logfile == 'syslog':
+            warnings.warn("Specifying 'syslog' for filename is deprecated. "
+                "Use %s_syslog instead." % channel, DeprecationWarning)
+            fmt = ' '.join((config.name, fmt))
+        self.mainlog = loggers.handle_file(
+            config.options.getLogger(),
+            filename=logfile,
+            fmt=fmt,
+            rotating=not not maxbytes, # optimization
+            maxbytes=maxbytes,
+            backups=backups)
+
+        if getattr(config, '%s_syslog' % channel, False):
+            fmt = config.name + ' %(message)s'
+            loggers.handle_syslog(self.mainlog, fmt)
 
     def removelogs(self):
         for log in (self.mainlog, self.capturelog):
@@ -264,13 +290,14 @@ class PEventListenerDispatcher(PDispatcher):
         if logfile:
             maxbytes = getattr(process.config, '%s_logfile_maxbytes' % channel)
             backups = getattr(process.config, '%s_logfile_backups' % channel)
-            self.childlog = process.config.options.getLogger(
+            self.childlog = loggers.handle_file(
+                process.config.options.getLogger(),
                 logfile,
-                loggers.LevelsByName.INFO,
                 '%(message)s',
                 rotating=not not maxbytes, # optimization
                 maxbytes=maxbytes,
-                backups=backups)
+                backups=backups,
+            )
 
     def removelogs(self):
         if self.childlog is not None:

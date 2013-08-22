@@ -320,36 +320,45 @@ class SyslogHandler(Handler):
         except:
             self.handleError(record)
 
-def getLogger(filename, level, fmt, rotating=False, maxbytes=0, backups=0,
-              stdout=False):
+def getLogger(level=None):
+    return Logger(level)
 
-    handlers = []
+_2MB = 1<<21
 
-    logger = Logger(level)
-
-    if filename is None:
-        if not maxbytes:
-            maxbytes = 1<<21 #2MB
-        io = BoundIO(maxbytes)
-        handlers.append(StreamHandler(io))
-        logger.getvalue = io.getvalue
-
-    elif filename == 'syslog':
-        handlers.append(SyslogHandler())
-
-    else:
-        if rotating is False:
-            handlers.append(FileHandler(filename))
-        else:
-            handlers.append(RotatingFileHandler(filename,'a',maxbytes,backups))
-
-    if stdout:
-        handlers.append(StreamHandler(sys.stdout))
-
-    for handler in handlers:
-        handler.setFormat(fmt)
-        handler.setLevel(level)
-        logger.addHandler(handler)
+def handle_boundIO(logger, fmt, maxbytes=_2MB):
+    io = BoundIO(maxbytes)
+    handler = StreamHandler(io)
+    handler.setLevel(logger.level)
+    handler.setFormat(fmt)
+    logger.addHandler(handler)
+    logger.getvalue = io.getvalue
 
     return logger
 
+def handle_stdout(logger, fmt):
+    handler = StreamHandler(sys.stdout)
+    handler.setFormat(fmt)
+    handler.setLevel(logger.level)
+    logger.addHandler(handler)
+
+def handle_syslog(logger, fmt):
+    handler = SyslogHandler()
+    handler.setFormat(fmt)
+    handler.setLevel(logger.level)
+    logger.addHandler(handler)
+
+def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
+    if filename == 'syslog':
+        handler = SyslogHandler()
+
+    else:
+        if rotating is False:
+            handler = FileHandler(filename)
+        else:
+            handler = RotatingFileHandler(filename, 'a', maxbytes, backups)
+
+    handler.setFormat(fmt)
+    handler.setLevel(logger.level)
+    logger.addHandler(handler)
+
+    return logger
