@@ -852,7 +852,7 @@ where specified.
 
   *Required*:  No.
 
-  *Introduced*: 3.0b3
+  *Introduced*: 3.1a1
 
 ``stderr_logfile``
 
@@ -929,7 +929,7 @@ where specified.
 
   *Required*:  No.
 
-  *Introduced*: 3.0b3
+  *Introduced*: 3.1a1
 
 ``environment``
 
