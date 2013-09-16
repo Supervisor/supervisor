@@ -323,6 +323,16 @@ class Logger:
     def getvalue(self):
         raise NotImplementedError
 
+
+level_to_syslog = {
+    LevelsByName.CRIT: syslog.LOG_CRIT,
+    LevelsByName.ERRO: syslog.LOG_ERR,
+    LevelsByName.WARN: syslog.LOG_WARNING,
+    LevelsByName.INFO: syslog.LOG_NOTICE,
+    LevelsByName.DEBG: syslog.LOG_DEBUG,
+}
+
+
 class SyslogHandler(Handler):
     def __init__(self, tag=None, pid=False):
         self.tag = tag or "supervisord"
@@ -335,22 +345,23 @@ class SyslogHandler(Handler):
     def reopen(self):
         pass
 
-    def _syslog(self, msg): # pragma: no cover
+    def _syslog(self, priority, msg): # pragma: no cover
         # this exists only for unit test stubbing
-        syslog.syslog(msg)
+        syslog.syslog(priority, msg)
 
     def emit(self, record):
         try:
             params = record.asdict()
+            priority = level_to_syslog.get(record.level, syslog.LOG_WARNING)
             message = params['message']
             syslog.openlog(self.tag, self.options)
             for line in message.rstrip('\n').split('\n'):
                 params['message'] = line
                 msg = self.fmt % params
                 try:
-                    self._syslog(msg)
+                    self._syslog(priority, msg)
                 except UnicodeError:
-                    self._syslog(msg.encode("UTF-8"))
+                    self._syslog(priority, msg.encode("UTF-8"))
         except:
             self.handleError()
 

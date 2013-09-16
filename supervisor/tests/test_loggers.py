@@ -520,7 +520,8 @@ class SyslogHandlerTests(HandlerTests, unittest.TestCase):
         handler = self._makeOne()
         record = self._makeLogRecord('hello!')
         handler.emit(record)
-        syslog.syslog.assert_called_with('hello!')
+        from supervisor.loggers import LevelsByName
+        syslog.syslog.assert_called_with(LevelsByName.TRAC, 'hello!')
 
     @mock.patch('syslog.syslog', MockSysLog())
     def test_close(self):
@@ -535,40 +536,47 @@ class SyslogHandlerTests(HandlerTests, unittest.TestCase):
     if PY3:
         @mock.patch('syslog.syslog', MockSysLog())
         def test_emit_unicode_noerror(self):
+            from supervisor.loggers import LevelsByName
             handler = self._makeOne()
             record = self._makeLogRecord('fií')
             handler.emit(record)
-            syslog.syslog.assert_called_with('fií')
+            syslog.syslog.assert_called_with(LevelsByName.TRAC, 'fií')
         def test_emit_unicode_witherror(self):
+            from supervisor.loggers import LevelsByName
             handler = self._makeOne()
             called = []
-            def fake_syslog(msg):
+            def fake_syslog(pri, msg):
                 if not called:
-                    called.append(msg)
+                    called.append((pri, msg))
                     raise UnicodeError
             handler._syslog = fake_syslog
             record = self._makeLogRecord('fií')
             handler.emit(record)
-            self.assertEqual(called, ['fií'])
+            self.assertEqual(called, [(LevelsByName.TRAC, 'fií')])
     else:
         @mock.patch('syslog.syslog', MockSysLog())
         def test_emit_unicode_noerror(self):
+            from supervisor.loggers import LevelsByName
             handler = self._makeOne()
             inp = as_string('fií')
             record = self._makeLogRecord(inp)
             handler.emit(record)
-            syslog.syslog.assert_called_with('fi\xc3\xad')
+            syslog.syslog.assert_called_with(LevelsByName.TRAC, 'fi\xc3\xad')
         def test_emit_unicode_witherror(self):
+            from supervisor.loggers import LevelsByName
             handler = self._makeOne()
             called = []
-            def fake_syslog(msg):
+            def fake_syslog(pri, msg):
                 if not called:
-                    called.append(msg)
+                    called.append((pri, msg))
                     raise UnicodeError
             handler._syslog = fake_syslog
             record = self._makeLogRecord(as_string('fií'))
             handler.emit(record)
-            self.assertEqual(called, [as_string('fi\xc3\xad')])
+            self.assertEqual(
+                called, [(LevelsByName.TRAC, as_string('fi\xc3\xad'))],
+            )
+
 
 class DummyHandler:
     close = False
