@@ -405,6 +405,7 @@ class ServerOptions(Options):
     sockchmod = None
     logfile = None
     loglevel = None
+    syslog = None
     pidfile = None
     passwdfile = None
     nodaemon = None
@@ -428,6 +429,8 @@ class ServerOptions(Options):
                  existing_directory)
         self.add("logfile", "supervisord.logfile", "l:", "logfile=",
                  existing_dirpath, default="supervisord.log")
+        self.add("syslog", "supervisord.syslog", "L", "syslog",
+                 flag=1, default=0)
         self.add("logfile_maxbytes", "supervisord.logfile_maxbytes",
                  "y:", "logfile_maxbytes=", byte_size,
                  default=50 * 1024 * 1024) # 50MB
@@ -488,7 +491,11 @@ class ServerOptions(Options):
         else:
             logfile = section.logfile
 
-        self.logfile = normalize_path(logfile)
+        if self.syslog or logfile == 'syslog':
+            self.logfile = "syslog"
+            self.syslog = True
+        else:
+            self.logfile = normalize_path(logfile)
 
         if self.pidfile:
             pidfile = self.pidfile
@@ -614,6 +621,7 @@ class ServerOptions(Options):
 
         section.user = get('user', None)
         section.umask = octal_type(get('umask', '022'))
+        section.syslog = boolean(get('syslog', "false"))
         section.logfile = existing_dirpath(get('logfile', 'supervisord.log'))
         section.logfile_maxbytes = byte_size(get('logfile_maxbytes', '50MB'))
         section.logfile_backups = integer(get('logfile_backups', 10))

@@ -413,6 +413,7 @@ class ServerOptionsTests(unittest.TestCase):
         backofflimit=10
         user=root
         umask=022
+        syslog=false
         logfile=supervisord.log
         logfile_maxbytes=1000MB
         logfile_backups=5
@@ -662,6 +663,39 @@ class ServerOptionsTests(unittest.TestCase):
         instance.realize(args=[])
         options = instance.configroot.supervisord
         self.assertEqual(options.identifier, 'foo')
+
+    def test_syslog_options(self):
+        s = lstrip("""
+        [supervisord]
+        syslog=true
+        logfile_maxbytes=1000MB
+        logfile_backups=5
+        loglevel=error
+
+        [program:cat1]
+        command=/bin/cat
+        stdout_logfile=/tmp/cat.log
+
+        [program:cat2syslog]
+        command=/bin/cat""")
+
+        fp = StringIO(s)
+        instance = self._makeOne()
+        instance.configfile = fp
+        instance.realize(args=[])
+        options = instance.configroot.supervisord
+        self.assertTrue(options.syslog)
+        self.assertEqual(instance.logfile, 'syslog')
+
+        s = s.replace("syslog=true", "logfile=syslog")
+
+        instance = self._makeOne()
+        instance.configfile = fp
+        fp.seek(0)
+        instance.realize(args=[])
+        options = instance.configroot.supervisord
+        self.assertTrue(options.syslog)
+        self.assertEqual(instance.logfile, 'syslog')
 
     def test_reload(self):
         text = lstrip("""\
