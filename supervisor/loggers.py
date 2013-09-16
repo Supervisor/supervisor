@@ -324,9 +324,10 @@ class Logger:
         raise NotImplementedError
 
 class SyslogHandler(Handler):
-    def __init__(self):
-        Handler.__init__(self)
-        assert syslog is not None, "Syslog module not present"
+    def __init__(self, tag=None, pid=False):
+        self.tag = tag or "supervisord"
+        self.options = syslog.LOG_PID if pid else 0
+        assert 'syslog' in globals(), "Syslog module not present"
 
     def close(self):
         pass
@@ -342,6 +343,7 @@ class SyslogHandler(Handler):
         try:
             params = record.asdict()
             message = params['message']
+            syslog.openlog(self.tag, self.options)
             for line in message.rstrip('\n').split('\n'):
                 params['message'] = line
                 msg = self.fmt % params
@@ -373,8 +375,8 @@ def handle_stdout(logger, fmt):
     handler.setLevel(logger.level)
     logger.addHandler(handler)
 
-def handle_syslog(logger, fmt):
-    handler = SyslogHandler()
+def handle_syslog(logger, fmt, tag=None, show_pid=None):
+    handler = SyslogHandler(tag, show_pid)
     handler.setFormat(fmt)
     handler.setLevel(logger.level)
     logger.addHandler(handler)

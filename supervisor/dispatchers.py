@@ -146,8 +146,8 @@ class POutputDispatcher(PDispatcher):
             backups=backups)
 
         if getattr(config, '%s_syslog' % channel, False):
-            fmt = config.name + ' %(message)s'
-            loggers.handle_syslog(self.mainlog, fmt)
+            fmt = channel + ": %(message)s"
+            loggers.handle_syslog(self.mainlog, fmt, tag=config.name)
 
     def removelogs(self):
         for log in (self.mainlog, self.capturelog):
