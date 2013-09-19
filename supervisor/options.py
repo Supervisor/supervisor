@@ -1407,7 +1407,8 @@ class ServerOptions(Options):
             loggers.handle_stdout(self.logger, format)
         if self.syslog or self.logfile == "syslog":
             loggers.handle_syslog(self.logger, '%(message)s',
-                                  tag="supervisord", show_pid=True)
+                                  tag="supervisord", show_pid=True,
+                                  facility="daemon")
         else:
             loggers.handle_file(
                 self.logger,

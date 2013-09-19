@@ -334,8 +334,13 @@ level_to_syslog = {
 
 
 class SyslogHandler(Handler):
-    def __init__(self, tag=None, pid=False):
+    def __init__(self, tag=None, pid=False, facility="daemon", priority=None):
         self.tag = tag or "supervisord"
+        self.facility = (getattr(syslog, "LOG_" + facility.upper(), None),)
+        self.priority = (
+            priority if priority is None or isinstance(priority, int) else
+            getattr(syslog, "LOG_" + priority.upper(), None)
+        )
         self.options = syslog.LOG_PID if pid else 0
         assert 'syslog' in globals(), "Syslog module not present"
 
@@ -352,9 +357,11 @@ class SyslogHandler(Handler):
     def emit(self, record):
         try:
             params = record.asdict()
-            priority = level_to_syslog.get(record.level, syslog.LOG_WARNING)
+            priority = self.priority or level_to_syslog.get(
+                record.level, syslog.LOG_WARNING
+            )
             message = params['message']
-            syslog.openlog(self.tag, self.options)
+            syslog.openlog(self.tag, self.options, *self.facility)
             for line in message.rstrip('\n').split('\n'):
                 params['message'] = line
                 msg = self.fmt % params
@@ -386,8 +393,9 @@ def handle_stdout(logger, fmt):
     handler.setLevel(logger.level)
     logger.addHandler(handler)
 
-def handle_syslog(logger, fmt, tag=None, show_pid=None):
-    handler = SyslogHandler(tag, show_pid)
+def handle_syslog(logger, fmt, tag=None, show_pid=None, facility=None,
+                  priority=None):
+    handler = SyslogHandler(tag, show_pid, facility, priority)
     handler.setFormat(fmt)
     handler.setLevel(logger.level)
     logger.addHandler(handler)

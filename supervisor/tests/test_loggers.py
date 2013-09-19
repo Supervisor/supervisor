@@ -500,8 +500,8 @@ class SyslogHandlerTests(HandlerTests, unittest.TestCase):
     def _getTargetClass(self):
         return __import__('supervisor.loggers').loggers.SyslogHandler
 
-    def _makeOne(self):
-        return self._getTargetClass()()
+    def _makeOne(self, *args, **kwargs):
+        return self._getTargetClass()(*args, **kwargs)
 
     def test_emit_record_asdict_raises(self):
         class Record(object):
@@ -516,12 +516,24 @@ class SyslogHandlerTests(HandlerTests, unittest.TestCase):
 
 
     @mock.patch('syslog.syslog', MockSysLog())
+    @mock.patch('syslog.openlog', MockSysLog())
     def test_emit_ascii_noerror(self):
-        handler = self._makeOne()
+        handler = self._makeOne(pid=True)
         record = self._makeLogRecord('hello!')
         handler.emit(record)
         from supervisor.loggers import LevelsByName
+        syslog.openlog.assert_called_with('supervisord', syslog.LOG_PID, syslog.LOG_DAEMON)
         syslog.syslog.assert_called_with(LevelsByName.TRAC, 'hello!')
+
+    @mock.patch('syslog.syslog', MockSysLog())
+    @mock.patch('syslog.openlog', MockSysLog())
+    def test_emit_process_log(self):
+        handler = self._makeOne("cat", None, "local0", "info")
+        record = self._makeLogRecord('cat!')
+        handler.emit(record)
+        from supervisor.loggers import LevelsByName
+        syslog.openlog.assert_called_with('cat', 0, syslog.LOG_LOCAL0)
+        syslog.syslog.assert_called_with(syslog.LOG_INFO, 'cat!')
 
     @mock.patch('syslog.syslog', MockSysLog())
     def test_close(self):

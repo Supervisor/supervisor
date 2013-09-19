@@ -207,8 +207,8 @@ follows.
 ``syslog``
 
   If true, then supervisor will send all of its messages to syslog.
-  Messages are currently sent with the default facility (user) and a
-  range of priorities, with a tag of "supervisord" and a process ID.
+  Messages are currently sent with the facility 'daemon' and a
+  range of priorities, a tag of "supervisord" and a process ID.
 
   *Default*:  false
 
@@ -877,8 +877,9 @@ where specified.
 ``stdout_syslog``
 
   If true, stdout will be directed to syslog along with the process name.
-  Messages are sent with a user priority, a tag of the process name
-  without PID, and an additional prefix of ``stdout:``
+  Messages are sent with 'user' facility and priority 'info', and with
+  the tag set to the process name, currently without the PID of the
+  subprocess included.
 
   *Default*: False
 
@@ -955,9 +956,10 @@ where specified.
 
 ``stderr_syslog``
 
-  If true, stderr will be directed to syslog along with the process name.
-  Messages are sent with a user priority, a tag of the process name
-  without PID, and an additional prefix of ``stderr``
+  If true, stderr will be directed to syslog along with the process
+  name.  Messages are sent with 'user' facility and priority 'notice',
+  and with the tag set to the process name, currently without the PID
+  of the subprocess included.
 
   *Default*: False
 
