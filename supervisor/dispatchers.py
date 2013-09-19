@@ -147,10 +147,13 @@ class POutputDispatcher(PDispatcher):
 
         if getattr(config, '%s_syslog' % channel, False):
             fmt = "%(message)s"
-            #facility = getattr(config, '%s_syslog_facility', 'user')
             priority = "notice" if channel == "stderr" else "info"
+            facility = getattr(config, '%s_syslog_facility' % channel, 'user')
+            priority = getattr(
+                config, '%s_syslog_priority' % channel, priority
+            )
             loggers.handle_syslog(self.mainlog, fmt, tag=config.name,
-                                  facility="user", priority=priority)
+                                  facility=facility, priority=priority)
 
     def removelogs(self):
         for log in (self.mainlog, self.capturelog):

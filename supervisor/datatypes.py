@@ -43,6 +43,39 @@ def boolean(s):
     else:
         raise ValueError("not a valid boolean value: " + repr(s))
 
+def syslog_target(s):
+    """Convert a syslog facility or facility & priority specification to
+    a 2-member tuple of the facility and the severity"""
+    try:
+        if s is None:
+            return None, None
+        elif s.find(".") >= 0:
+            facility, severity = s.split(".")
+        else:
+            facility, severity = s, None
+
+        import syslog
+        try:
+            # allow numeric channels b/c syslog is missing some
+            facility = int(facility) << 3
+        except ValueError:
+            try:
+                facility = getattr(syslog, "LOG_" + facility.upper())
+            except AttributeError:
+                raise ValueError
+        if facility & 7 or (facility >> 3) > 24:
+            raise ValueError
+        if severity is not None:
+            try:
+                severity = getattr(syslog, "LOG_" + severity.upper())
+            except AttributeError:
+                raise ValueError
+            if severity < 0 or severity > 7:
+                raise ValueError
+    except ValueError:
+        raise ValueError("not a valid syslog target: " + repr(s))
+    return facility, severity
+
 def list_of_strings(arg):
     if not arg:
         return []

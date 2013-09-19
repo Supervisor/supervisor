@@ -251,6 +251,18 @@ class RangeCheckedConversionTests(unittest.TestCase):
         conversion = self._makeOne(lambda *arg: 1, 0, 0)
         self.assertRaises(ValueError, conversion, None)
 
+    def test_syslog_returns_values(self):
+        for x, y in {
+            None: (None, None),
+            "daemon": ("daemon", None),
+            "user.err": ("daemon", "err"),
+        }.items():
+            self.assert_(datatypes.syslog_target(x), y)
+
+    def test_url_accepts_urlparse_recognized_scheme_with_netloc(self):
+        good_url = 'http://localhost:9001'
+        self.assertEqual(datatypes.url(good_url), good_url)
+
     def test_passes(self):
         conversion = self._makeOne(lambda *arg: 0, 0, 0)
         self.assertEqual(conversion(0), 0)

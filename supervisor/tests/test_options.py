@@ -7,7 +7,14 @@ import socket
 import unittest
 import signal
 import shutil
+import syslog
 import errno
+try:
+    # Python < 3
+    from StringIO import StringIO
+except ImportError:
+    # Python >= 3
+    from io import StringIO
 
 from supervisor.compat import StringIO
 from supervisor.compat import as_bytes
@@ -677,7 +684,13 @@ class ServerOptionsTests(unittest.TestCase):
         stdout_logfile=syslog
 
         [program:cat2syslog]
-        command=/bin/cat""")
+        command=/bin/cat
+
+        [program:cat3syslog]
+        command=/bin/cat
+        stdout_syslog=local0.info
+        stderr_syslog=cron.crit
+        """)
 
         fp = StringIO(s)
         instance = self._makeOne()
@@ -685,26 +698,51 @@ class ServerOptionsTests(unittest.TestCase):
         instance.realize(args=[])
         options = instance.configroot.supervisord
         self.assertTrue(options.syslog)
+        self.assertEqual(options.syslog_facility, syslog.LOG_DAEMON)
+        self.assertEqual(options.syslog_priority, None)
         self.assertEqual(instance.logfile, 'syslog')
 
         cat1 = options.process_group_configs[0]
         proc1 = cat1.process_configs[0]
         self.assertEqual(proc1.stdout_logfile, 'syslog')
         self.assertEqual(proc1.stdout_syslog, True)
+        self.assertEqual(proc1.stdout_syslog_facility, syslog.LOG_USER)
+        self.assertEqual(proc1.stdout_syslog_priority, syslog.LOG_INFO)
+        self.assertEqual(proc1.stderr_syslog_facility, syslog.LOG_USER)
+        self.assertEqual(proc1.stderr_syslog_priority, syslog.LOG_NOTICE)
 
         cat2 = options.process_group_configs[1]
         proc2 = cat2.process_configs[0]
         self.assertEqual(proc2.stdout_syslog, False)
 
+        cat3 = options.process_group_configs[2]
+        proc3 = cat3.process_configs[0]
+        self.assertEqual(proc3.stdout_syslog, True)
+        self.assertEqual(proc3.stdout_syslog_facility, syslog.LOG_LOCAL0)
+        self.assertEqual(proc3.stdout_syslog_priority, syslog.LOG_INFO)
+        self.assertEqual(proc3.stderr_syslog, True)
+        self.assertEqual(proc3.stderr_syslog_facility, syslog.LOG_CRON)
+        self.assertEqual(proc3.stderr_syslog_priority, syslog.LOG_CRIT)
+
         s = s.replace("syslog=true", "logfile=syslog")
 
         instance = self._makeOne()
-        instance.configfile = fp
-        fp.seek(0)
+        instance.configfile = StringIO(s)
         instance.realize(args=[])
         options = instance.configroot.supervisord
         self.assertTrue(options.syslog)
         self.assertEqual(instance.logfile, 'syslog')
+
+        s = s.replace("logfile=syslog", "syslog=local4.notice")
+
+        instance = self._makeOne()
+        instance.configfile = StringIO(s)
+        instance.realize(args=[])
+        options = instance.configroot.supervisord
+        self.assertTrue(options.syslog)
+        self.assertEqual(instance.logfile, 'syslog')
+        self.assertEqual(options.syslog_facility, syslog.LOG_LOCAL4)
+        self.assertEqual(options.syslog_priority, syslog.LOG_NOTICE)
 
     def test_reload(self):
         text = lstrip("""\
