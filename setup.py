@@ -22,7 +22,7 @@ if sys.version_info[:2] < (2, 4) or sys.version_info[0] > 2:
     sys.stderr.write(msg)
     sys.exit(1)
 
-requires = ['setuptools', 'meld3 >= 0.6.5']
+requires = ['meld3 >= 0.6.5']
 
 if sys.version_info[:2] < (2, 5):
     # for meld3 (it's a distutils package)

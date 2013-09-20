@@ -15,6 +15,9 @@
   same time.  Specifying a log filename of ``syslog`` is still supported
   but deprecated.  Patch by Jason R. Coombs.
 
+- Removed ``setuptools`` from the ``requires`` list in ``setup.py`` because
+  it caused installation issues on some systems.
+
 3.0 (2013-07-30)
 ----------------
 
