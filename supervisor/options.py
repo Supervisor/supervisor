@@ -541,7 +541,14 @@ class ServerOptions(Options):
                 base = os.path.dirname(os.path.abspath(fp.name))
             else:
                 base = '.'
+
+            host_node_name = platform.node()
+            expansions = {'here':self.here,
+                          'host_node_name':host_node_name}
+            expansions.update(environ_expansions())
+
             for pattern in files:
+                pattern = expand(pattern, expansions, 'include')
                 pattern = os.path.join(base, pattern)
                 for filename in glob.glob(pattern):
                     self.parse_warnings.append(
