@@ -63,6 +63,10 @@ with 3rd party applications:
     A Nagios/Icinga plugin written in PHP to monitor individual supervisord processes.
 `php-supervisor-event <https://github.com/mtdowling/php-supervisor-event>`_
     PHP classes for interacting with Supervisor event notifications.
+`PHP5 Supervisor wrapper <https://github.com/yzalis/Supervisor>`_
+    PHP 5 library to manage Supervisor instances as object.
+`Symfony2 SupervisorBundle <https://github.com/yzalis/SupervisorBundle>`_
+    Provide full integration of Supervisor multiple servers management into Symfony2 project. 
 `supervisord-php-client <https://github.com/mondalaci/supervisord-php-client>`_
     PHP client for the supervisord XML-RPC interface.
 `sd-supervisord <https://github.com/robcowie/sd-supervisord>`_
