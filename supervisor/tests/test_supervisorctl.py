@@ -468,6 +468,34 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                           'foo: started\nfoo2: started\n'
                           'failed: ERROR (spawn error)\n'))
 
+    def test_seriallrestart_fail(self):
+        plugin = self._makeOne()
+        result = plugin.do_seriallrestart('')
+        self.assertEqual(result, None)
+
+        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0],
+         'Error: seriallrestart requires a process name')
+
+    def test_seriallrestart_one(self):
+        plugin = self._makeOne()
+        result = plugin.do_seriallrestart('foo')
+        self.assertEqual(result, None)
+
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: stopped\nfoo: started\n')
+
+    def test_seriallrestart_all(self):
+        plugin = self._makeOne()
+        result = plugin.do_seriallrestart('all')
+        self.assertEqual(result, None)
+
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         ('foo: stopped\nfoo: started\n'
+                          'bar: stopped\nbar: started\n'
+                          'baz:baz_01: stopped\n'
+                          'baz:baz_01: started\n'))
+
+
     def test_clear_fail(self):
         plugin = self._makeOne()
         result = plugin.do_clear('')
