@@ -41,6 +41,9 @@ listeners.
     normally possible at runtime.
 `supervisor-stdout <https://github.com/coderanger/supervisor-stdout>`_
     An event listener that sends process output to supervisord's stdout.
+`supervisor-serialrestart <https://github.com/native2k/supervisor-serialrestart>`_
+    Adds a ``serialrestart`` command to ``supervisorctl`` that restarts
+    processes one after another rather than all at once.
 
 Libraries that integrate 3rd Party Applications with Supervisor
 ===============================================================
