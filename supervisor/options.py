@@ -749,7 +749,7 @@ class ServerOptions(Options):
             if socket_owner is None:
                 uid = os.getuid()
                 if proc_uid is not None and proc_uid != uid:
-                    socket_owner = (proc_uid, self.get_gid_for_uid(proc_uid))
+                    socket_owner = (proc_uid, gid_for_uid(proc_uid))
 
             if socket_mode is None:
                 socket_mode = 0700
@@ -768,10 +768,6 @@ class ServerOptions(Options):
             return InetStreamSocketConfig(host, port)
 
         raise ValueError("Bad socket format %s", sock)
-
-    def get_gid_for_uid(self, uid):
-        pwrec = pwd.getpwuid(uid)
-        return pwrec[3]
 
     def processes_from_section(self, parser, section, group_name,
                                klass=None):
