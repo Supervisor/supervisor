@@ -1498,7 +1498,7 @@ class ClientOptions(Options):
                  "interactive", flag=1, default=0)
         self.add("prompt", "supervisorctl.prompt", default="supervisor")
         self.add("serverurl", "supervisorctl.serverurl", "s:", "serverurl=",
-                 url, default="http://localhost:9001")
+                 url, default=(os.environ.get('SUPERVISOR_SERVER_URL', 'http://localhost:9001')))
         self.add("username", "supervisorctl.username", "u:", "username=")
         self.add("password", "supervisorctl.password", "p:", "password=")
         self.add("history", "supervisorctl.history_file", "r:", "history_file=")
@@ -1524,7 +1524,7 @@ class ClientOptions(Options):
         sections = config.sections()
         if not 'supervisorctl' in sections:
             raise ValueError,'.ini file does not include supervisorctl section'
-        serverurl = config.getdefault('serverurl', 'http://localhost:9001')
+        serverurl = config.getdefault('serverurl', os.environ.get('SUPERVISOR_SERVER_URL','http://localhost:9001'))
         if serverurl.startswith('unix://'):
             sf = serverurl[7:]
             path = expand(sf, {'here':self.here}, 'serverurl')
