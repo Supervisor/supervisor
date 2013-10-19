@@ -30,7 +30,7 @@ Contributing
 
 Supervisor development is discussed on the mailing list.  We'll review
 contributions from the community in both
-[pull requests](https://help.github.com/articles/using-pull-requests)
+`pull requests <https://help.github.com/articles/using-pull-requests>`_
 on GitHub (preferred) and patches sent to the list.
 
 Sponsoring
