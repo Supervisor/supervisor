@@ -56,6 +56,14 @@ mydir = os.path.abspath(os.path.dirname(__file__))
 version_txt = os.path.join(mydir, 'version.txt')
 VERSION = open(version_txt).read().strip()
 
+# A list of valid sections in the config
+VALID_SECTIONS = ['unix_http_server', 'inet_http_server', 'supervisord',
+                  'supervisorctl', 'include']
+# A list of valid section prefixes in the config
+VALID_SECTION_PREFIXES = ['program:', 'group:', 'fcgi-program:',
+                          'eventlistener', 'rpcinterface:']
+
+
 def normalize_path(v):
     return os.path.normpath(os.path.abspath(os.path.expanduser(v)))
 
@@ -546,10 +554,23 @@ class ServerOptions(Options):
                 for filename in glob.glob(pattern):
                     self.parse_warnings.append(
                         'Included extra file "%s" during parsing' % filename)
+
+                    file_parser = UnhosedConfigParser()
+
+                    # file_parser.read is also wrapped in try / except because
+                    # there is a potential for a race between those two reads.
+
                     try:
                         parser.read(filename)
+                        file_parser.read(filename)
                     except ConfigParser.ParsingError, why:
                         raise ValueError(str(why))
+
+                    if not file_parser.has_validation_section():
+                        msg = ('Included file "%s" is missing a valid section'
+                               % (filename))
+                        self.parse_warnings.append(msg)
+                    sections = file_parser.sections()
 
         sections = parser.sections()
         if not 'supervisord' in sections:
@@ -1593,6 +1614,23 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
                 raise
             else:
                 return default
+
+    def has_validation_section(self):
+        """
+        Return True if the parser has at least one valid section.
+        """
+        sections = self.sections()
+
+        for section in sections:
+            if section in VALID_SECTIONS:
+                return True
+
+            for valid_prefix in VALID_SECTION_PREFIXES:
+                if section.startswith(valid_prefix):
+                    return True
+
+        return False
+
 
 class Config(object):
     def __ne__(self, other):

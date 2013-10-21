@@ -5,6 +5,9 @@ import sys
 import os
 import tempfile
 import shutil
+import StringIO
+
+from supervisor.supervisord import main
 
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
@@ -13,27 +16,49 @@ from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummyProcessGroup
 from supervisor.tests.base import DummyDispatcher
 
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+
 class EntryPointTests(unittest.TestCase):
+
+    def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
+
+        self.log_path = os.path.join(self.tempdir, 'log')
+        self.pid_path = os.path.join(self.tempdir, 'pid')
+        self.fixtures_path = os.path.join(BASE_DIR, 'fixtures')
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
     def test_main_noprofile(self):
-        from supervisor.supervisord import main
-        conf = os.path.join(
-            os.path.abspath(os.path.dirname(__file__)), 'fixtures',
-            'donothing.conf')
-        import StringIO
+        conf = os.path.join(self.fixtures_path, 'donothing.conf')
         new_stdout = StringIO.StringIO()
         old_stdout = sys.stdout
         try:
-            tempdir = tempfile.mkdtemp()
-            log = os.path.join(tempdir, 'log')
-            pid = os.path.join(tempdir, 'pid')
             sys.stdout = new_stdout
-            main(args=['-c', conf, '-l', log, '-j', pid, '-n'],
+            main(args=['-c', conf, '-l', self.log_path, '-j', self.pid_path,
+                       '-n'],
                  test=True)
         finally:
             sys.stdout = old_stdout
-            shutil.rmtree(tempdir)
         output = new_stdout.getvalue()
         self.failUnless(output.find('supervisord started') != 1, output)
+        self.assertTrue(output.find('is missing a valid section') == -1)
+
+    def test_include_config_missing_valid_section(self):
+        conf = os.path.join(self.fixtures_path, 'config-include.conf')
+        new_stdout = StringIO.StringIO()
+        old_stdout = sys.stdout
+        try:
+            sys.stdout = new_stdout
+            main(args=['-c', conf, '-l', self.log_path, '-j', self.pid_path,
+                       '-n'],
+                 test=True)
+        finally:
+            sys.stdout = old_stdout
+        output = new_stdout.getvalue()
+        self.assertTrue(output.find('is missing a valid section') != -1)
 
     if sys.version_info[:2] >= (2, 4):
         def test_main_profile(self):
