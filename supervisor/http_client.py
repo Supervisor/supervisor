@@ -5,7 +5,6 @@ import socket
 import base64
 from urlparse import urlparse
 
-from supervisor.medusa import asyncore_25 as aysncore
 from supervisor.medusa import asynchat_25 as asynchat
 
 CR="\x0d"
@@ -213,15 +212,3 @@ class HTTPHandler(object, asynchat.async_chat):
         if line==CRLF:
             self.done()
             self.close()
-
-if __name__ == '__main__':
-    url = sys.argv[1]
-    listener = Listener()
-    handler = HTTPHandler(listener)
-    try:
-        handler.get(url)
-    except Exception, e:
-        listener.error(url, "Error connecting '%s'" % e)
-
-    asyncore.loop()
-
