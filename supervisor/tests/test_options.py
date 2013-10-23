@@ -705,7 +705,7 @@ class ServerOptionsTests(unittest.TestCase):
                                  Server())]
         instance.pidfile = ''
         instance.cleanup()
-        self.failIf(os.path.exists(fn))
+        self.assertFalse(os.path.exists(fn))
 
     def test_cleanup_afunix_nounlink(self):
         fn = tempfile.mktemp()
@@ -724,7 +724,7 @@ class ServerOptionsTests(unittest.TestCase):
             instance.pidfile = ''
             instance.unlink_socketfiles = False
             instance.cleanup()
-            self.failUnless(os.path.exists(fn))
+            self.assertTrue(os.path.exists(fn))
         finally:
             try:
                 os.unlink(fn)
@@ -756,11 +756,11 @@ class ServerOptionsTests(unittest.TestCase):
             instance.logger = DummyLogger()
             instance.pidfile = fn
             instance.write_pidfile()
-            self.failUnless(os.path.exists(fn))
+            self.assertTrue(os.path.exists(fn))
             pid = int(open(fn, 'r').read()[:-1])
             self.assertEqual(pid, os.getpid())
             msg = instance.logger.data[0]
-            self.failUnless(msg.startswith('supervisord started with pid'))
+            self.assertTrue(msg.startswith('supervisord started with pid'))
         finally:
             try:
                 os.unlink(fn)
@@ -774,7 +774,7 @@ class ServerOptionsTests(unittest.TestCase):
         instance.pidfile = fn
         instance.write_pidfile()
         msg = instance.logger.data[0]
-        self.failUnless(msg.startswith('could not write pidfile'))
+        self.assertTrue(msg.startswith('could not write pidfile'))
 
     def test_close_fd(self):
         instance = self._makeOne()
@@ -1467,9 +1467,9 @@ class ServerOptionsTests(unittest.TestCase):
             open(first, 'w')
             open(second, 'w')
             instance.clear_autochildlogdir()
-            self.failIf(os.path.exists(logfn))
-            self.failIf(os.path.exists(first))
-            self.failIf(os.path.exists(second))
+            self.assertFalse(os.path.exists(logfn))
+            self.assertFalse(os.path.exists(first))
+            self.assertFalse(os.path.exists(second))
         finally:
             shutil.rmtree(dn)
 

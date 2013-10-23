@@ -17,7 +17,7 @@ class DatatypesTest(unittest.TestCase):
     def test_boolean_returns_true_for_upper_truthy_values(self):
         for s in map(str.upper, datatypes.TRUTHY_STRINGS):
             actual = datatypes.boolean(s)
-            self.assert_(actual, True)
+            self.assertEqual(actual, True)
 
     def test_boolean_returns_false_for_falsy_values(self):
         for s in datatypes.FALSY_STRINGS:

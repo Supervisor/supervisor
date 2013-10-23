@@ -161,8 +161,8 @@ class XMLRPCHandlerTests(unittest.TestCase):
         self.assertEqual(len(logdata), expected)
         self.assertEqual(logdata[-2],
                u'XML-RPC method called: supervisor.raiseError()')
-        self.failUnless(logdata[-1].startswith('Traceback'))
-        self.failUnless(logdata[-1].endswith('ValueError: error\n'))
+        self.assertTrue(logdata[-1].startswith('Traceback'))
+        self.assertTrue(logdata[-1].endswith('ValueError: error\n'))
         self.assertEqual(len(request.producers), 0)
         self.assertEqual(request._error, 500)
 
@@ -202,7 +202,7 @@ class SupervisorTransportTests(unittest.TestCase):
         from supervisor import xmlrpc
         transport = self._makeOne('user', 'pass', 'unix:///foo/bar')
         conn = transport._get_connection()
-        self.failUnless(isinstance(conn, xmlrpc.UnixStreamHTTPConnection))
+        self.assertTrue(isinstance(conn, xmlrpc.UnixStreamHTTPConnection))
         self.assertEqual(conn.host, 'localhost')
         self.assertEqual(conn.socketfile, '/foo/bar')
 
@@ -210,7 +210,7 @@ class SupervisorTransportTests(unittest.TestCase):
         import httplib
         transport = self._makeOne('user', 'pass', 'http://127.0.0.1:9001/')
         conn = transport._get_connection()
-        self.failUnless(isinstance(conn, httplib.HTTPConnection))
+        self.assertTrue(isinstance(conn, httplib.HTTPConnection))
         self.assertEqual(conn.host, '127.0.0.1')
         self.assertEqual(conn.port, 9001)
 
@@ -218,7 +218,7 @@ class SupervisorTransportTests(unittest.TestCase):
         import httplib
         transport = self._makeOne('user', 'pass', 'http://127.0.0.1/')
         conn = transport._get_connection()
-        self.failUnless(isinstance(conn, httplib.HTTPConnection))
+        self.assertTrue(isinstance(conn, httplib.HTTPConnection))
         self.assertEqual(conn.host, '127.0.0.1')
         self.assertEqual(conn.port, 80)
 

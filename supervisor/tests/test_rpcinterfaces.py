@@ -956,7 +956,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(data['statename'], 'RUNNING')
         self.assertEqual(data['exitstatus'], 0)
         self.assertEqual(data['spawnerr'], '')
-        self.failUnless(data['description'].startswith('pid 111'))
+        self.assertTrue(data['description'].startswith('pid 111'))
 
     def test_getProcessInfo_logfile_NONE(self):
         options = DummyOptions()
@@ -1034,7 +1034,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(p1info['exitstatus'], 0)
         self.assertEqual(p1info['spawnerr'], '')
         self.assertEqual(p1info['group'], 'gname')
-        self.failUnless(p1info['description'].startswith('pid 111'))
+        self.assertTrue(p1info['description'].startswith('pid 111'))
 
         p2info = info[1]
         process2 = supervisord.process_groups['gname'].processes['process2']
@@ -1636,8 +1636,8 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_ctor(self):
         interface = self._makeOne()
-        self.failUnless(interface.namespaces['supervisor'])
-        self.failUnless(interface.namespaces['system'])
+        self.assertTrue(interface.namespaces['supervisor'])
+        self.assertTrue(interface.namespaces['system'])
 
     def test_listMethods(self):
         interface = self._makeOne()
@@ -1716,12 +1716,12 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
                                        '(%s args, %s doc params) in %s'
                                        % (len(argnames), len(pnames), k))
             for docline in plines:
-                self.failUnless(type(docline) == int, (docline,
+                self.assertTrue(type(docline) == int, (docline,
                                                        type(docline),
                                                        k,
                                                        parsed))
             for doctype in ptypes:
-                self.failUnless(doctype in _RPCTYPES, doctype)
+                self.assertTrue(doctype in _RPCTYPES, doctype)
             for x in range(len(pnames)):
                 if pnames[x] != argnames[x]:
                     msg = 'Name wrong: (%s vs. %s in %s)\n%s' % (pnames[x],
@@ -1730,7 +1730,7 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
                                                                  parsed)
                     raise AssertionError, msg
             for doctext in ptexts:
-                self.failUnless(type(doctext) == type(''), doctext)
+                self.assertTrue(type(doctext) == type(''), doctext)
 
             # result tokens
 
@@ -1738,16 +1738,16 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
                 raise AssertionError(
                     'Duplicate @return values in docs for %s' % k)
             for docline in rlines:
-                self.failUnless(type(docline) == int, (docline,
+                self.assertTrue(type(docline) == int, (docline,
                                                        type(docline), k))
             for doctype in rtypes:
-                self.failUnless(doctype in _RPCTYPES, doctype)
+                self.assertTrue(doctype in _RPCTYPES, doctype)
             for docname in rnames:
-                self.failUnless(type(docname) == type(''), (docname,
+                self.assertTrue(type(docname) == type(''), (docname,
                                                             type(docname),
                                                             k))
             for doctext in rtexts:
-                self.failUnless(type(doctext) == type(''), (doctext,
+                self.assertTrue(type(doctext) == type(''), (doctext,
                                                             type(doctext), k))
 
     def test_multicall_simplevals(self):

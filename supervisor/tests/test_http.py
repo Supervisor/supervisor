@@ -114,7 +114,7 @@ class MainLogTailHandlerTests(HandlerTests, unittest.TestCase):
         self.assertEqual(request.headers['Content-Type'], 'text/plain')
         self.assertEqual(len(request.producers), 1)
         self.assertEqual(request._done, True)
-    
+
 
 class TailFProducerTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -266,7 +266,7 @@ class EncryptedDictionaryAuthorizedTests(unittest.TestCase):
     def test_authorize_baduser(self):
         authorizer = self._makeOne({})
         self.assertEqual(authorizer.authorize(('foo', 'bar')), False)
-        
+
     def test_authorize_gooduser_badpassword(self):
         authorizer = self._makeOne({'foo':'password'})
         self.assertEqual(authorizer.authorize(('foo', 'bar')), False)
@@ -274,7 +274,7 @@ class EncryptedDictionaryAuthorizedTests(unittest.TestCase):
     def test_authorize_gooduser_goodpassword(self):
         authorizer = self._makeOne({'foo':'password'})
         self.assertEqual(authorizer.authorize(('foo', 'password')), True)
-    
+
     def test_authorize_gooduser_badpassword_sha(self):
         password = '{SHA}' + sha1('password').hexdigest()
         authorizer = self._makeOne({'foo':password})
@@ -298,7 +298,7 @@ class SupervisorAuthHandlerTests(unittest.TestCase):
         from supervisor.http import encrypted_dictionary_authorizer
         self.assertEqual(handler.authorizer.__class__,
                          encrypted_dictionary_authorizer)
-    
+
 
 class TopLevelFunctionTests(unittest.TestCase):
     def _make_http_servers(self, sconfigs):
@@ -318,7 +318,7 @@ class TopLevelFunctionTests(unittest.TestCase):
             from asyncore import socket_map
             socket_map.clear()
         return servers
-        
+
     def test_make_http_servers_noauth(self):
         socketfile = tempfile.mktemp()
         inet = {'family':socket.AF_INET, 'host':'localhost', 'port':17735,
@@ -359,7 +359,7 @@ class TopLevelFunctionTests(unittest.TestCase):
         from supervisor.http import supervisor_auth_handler
         for config, server in servers:
             for handler in server.handlers:
-                self.failUnless(isinstance(handler, supervisor_auth_handler),
+                self.assertTrue(isinstance(handler, supervisor_auth_handler),
                                 handler)
 
 class DummyProducer:

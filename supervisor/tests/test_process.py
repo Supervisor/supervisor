@@ -198,8 +198,8 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr, 'bad filename')
         self.assertEqual(options.logger.data[0], "spawnerr: bad filename")
-        self.failUnless(instance.delay)
-        self.failUnless(instance.backoff)
+        self.assertTrue(instance.delay)
+        self.assertTrue(instance.backoff)
         from supervisor.states import ProcessStates
         self.assertEqual(instance.state, ProcessStates.BACKOFF)
         self.assertEqual(len(L), 2)
@@ -225,8 +225,8 @@ class SubprocessTests(unittest.TestCase):
                          "too many open files to spawn 'good'")
         self.assertEqual(options.logger.data[0],
                          "spawnerr: too many open files to spawn 'good'")
-        self.failUnless(instance.delay)
-        self.failUnless(instance.backoff)
+        self.assertTrue(instance.delay)
+        self.assertTrue(instance.backoff)
         from supervisor.states import ProcessStates
         self.assertEqual(instance.state, ProcessStates.BACKOFF)
         self.assertEqual(len(L), 2)
@@ -249,8 +249,8 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
         self.assertEqual(options.logger.data[0],
                          "spawnerr: unknown error: EPERM")
-        self.failUnless(instance.delay)
-        self.failUnless(instance.backoff)
+        self.assertTrue(instance.delay)
+        self.assertTrue(instance.backoff)
         from supervisor.states import ProcessStates
         self.assertEqual(instance.state, ProcessStates.BACKOFF)
         self.assertEqual(len(L), 2)
@@ -277,8 +277,8 @@ class SubprocessTests(unittest.TestCase):
              "spawnerr: Too many processes in process table to spawn 'good'")
         self.assertEqual(len(options.parent_pipes_closed), 6)
         self.assertEqual(len(options.child_pipes_closed), 6)
-        self.failUnless(instance.delay)
-        self.failUnless(instance.backoff)
+        self.assertTrue(instance.delay)
+        self.assertTrue(instance.backoff)
         from supervisor.states import ProcessStates
         self.assertEqual(instance.state, ProcessStates.BACKOFF)
         self.assertEqual(len(L), 2)
@@ -303,8 +303,8 @@ class SubprocessTests(unittest.TestCase):
                          "spawnerr: unknown error: EPERM")
         self.assertEqual(len(options.parent_pipes_closed), 6)
         self.assertEqual(len(options.child_pipes_closed), 6)
-        self.failUnless(instance.delay)
-        self.failUnless(instance.backoff)
+        self.assertTrue(instance.delay)
+        self.assertTrue(instance.backoff)
         from supervisor.states import ProcessStates
         self.assertEqual(instance.state, ProcessStates.BACKOFF)
         self.assertEqual(len(L), 2)
@@ -450,8 +450,8 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         msg = options.written[2] # dict, 2 is fd #
         head = "supervisor: couldn't exec /good/filename:"
-        self.failUnless(msg.startswith(head))
-        self.failUnless("exceptions.RuntimeError" in msg)
+        self.assertTrue(msg.startswith(head))
+        self.assertTrue("exceptions.RuntimeError" in msg)
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options._exitcode, 127)
 
@@ -528,7 +528,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.child_pipes_closed), 6)
         self.assertEqual(options.logger.data[0], "spawned: 'good' with pid 10")
         self.assertEqual(instance.spawnerr, None)
-        self.failUnless(instance.delay)
+        self.assertTrue(instance.delay)
         self.assertEqual(instance.config.options.pidhistory[10], instance)
         from supervisor.states import ProcessStates
         self.assertEqual(instance.state, ProcessStates.STARTING)
@@ -602,10 +602,10 @@ class SubprocessTests(unittest.TestCase):
             instance = self._makeOne(config)
             result = instance.spawn()
             msg = options.logger.data[0]
-            self.failUnless(msg.startswith("spawned: 'spew' with pid"))
+            self.assertTrue(msg.startswith("spawned: 'spew' with pid"))
             self.assertEqual(len(instance.pipes), 6)
-            self.failUnless(instance.pid)
-            self.failUnlessEqual(instance.pid, result)
+            self.assertTrue(instance.pid)
+            self.assertTrueEqual(instance.pid, result)
             origpid = instance.pid
             import errno
             while 1:
@@ -617,7 +617,7 @@ class SubprocessTests(unittest.TestCase):
                         raise
                         # try again ;-)
             time.sleep(0.1) # arbitrary, race condition possible
-            self.failUnless(data.find(`origpid`) != -1 )
+            self.assertTrue(data.find(`origpid`) != -1 )
             msg = instance.kill(signal.SIGTERM)
             time.sleep(0.1) # arbitrary, race condition possible
             self.assertEqual(msg, None)
@@ -642,7 +642,7 @@ class SubprocessTests(unittest.TestCase):
         instance.state = ProcessStates.RUNNING
         instance.stop()
         self.assertEqual(instance.administrative_stop, 1)
-        self.failUnless(instance.delay)
+        self.assertTrue(instance.delay)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
                          'signal SIGTERM')
         self.assertEqual(instance.killing, 1)
@@ -690,7 +690,7 @@ class SubprocessTests(unittest.TestCase):
         instance.kill(signal.SIGTERM)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
                          'signal SIGTERM')
-        self.failUnless(options.logger.data[1].startswith(
+        self.assertTrue(options.logger.data[1].startswith(
             'unknown problem killing test'))
         self.assertEqual(instance.killing, 0)
         self.assertEqual(len(L), 2)
@@ -1248,7 +1248,7 @@ class SubprocessTests(unittest.TestCase):
         instance.state = 10
         instance.change_state(ProcessStates.BACKOFF)
         self.assertEqual(instance.backoff, 1)
-        self.failUnless(instance.delay > 0)
+        self.assertTrue(instance.delay > 0)
 
 class FastCGISubprocessTests(unittest.TestCase):
     def _getTargetClass(self):

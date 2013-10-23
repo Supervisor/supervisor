@@ -33,7 +33,7 @@ class EntryPointTests(unittest.TestCase):
             sys.stdout = old_stdout
             shutil.rmtree(tempdir)
         output = new_stdout.getvalue()
-        self.failUnless(output.find('supervisord started') != 1, output)
+        self.assertTrue(output.find('supervisord started') != 1, output)
 
     if sys.version_info[:2] >= (2, 4):
         def test_main_profile(self):
@@ -55,7 +55,7 @@ class EntryPointTests(unittest.TestCase):
                 sys.stdout = old_stdout
                 shutil.rmtree(tempdir)
             output = new_stdout.getvalue()
-            self.failUnless(output.find('cumulative time, call count') != -1,
+            self.assertTrue(output.find('cumulative time, call count') != -1,
                             output)
 
 class SupervisordTests(unittest.TestCase):
@@ -106,7 +106,7 @@ class SupervisordTests(unittest.TestCase):
         supervisord.main()
         self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.fds_cleaned_up, True)
-        self.failIf(hasattr(options, 'rlimits_set'))
+        self.assertFalse(hasattr(options, 'rlimits_set'))
         self.assertEqual(options.make_logger_messages,
                          (['setuid_called'], [], []))
         self.assertEqual(options.autochildlogdir_cleared, True)

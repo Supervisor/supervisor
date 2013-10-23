@@ -57,7 +57,7 @@ class ControllerTests(unittest.TestCase):
         options = DummyClientOptions()
         import socket
         import errno
-        def raise_fault(*arg, **kw):     
+        def raise_fault(*arg, **kw):
             raise socket.error(errno.ECONNREFUSED, 'nobody home')
         options._server.supervisor.getVersion = raise_fault
 
@@ -67,14 +67,14 @@ class ControllerTests(unittest.TestCase):
         result = controller.upcheck()
         self.assertEqual(result, False)
 
-        output = controller.stdout.getvalue() 
+        output = controller.stdout.getvalue()
         self.assertTrue('refused connection' in output)
 
     def test__upcheck_catches_socket_error_ENOENT(self):
         options = DummyClientOptions()
         import socket
         import errno
-        def raise_fault(*arg, **kw):     
+        def raise_fault(*arg, **kw):
             raise socket.error(errno.ENOENT, 'nobody home')
         options._server.supervisor.getVersion = raise_fault
 
@@ -84,7 +84,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.upcheck()
         self.assertEqual(result, False)
 
-        output = controller.stdout.getvalue() 
+        output = controller.stdout.getvalue()
         self.assertTrue('no such file' in output)
 
     def test_onecmd(self):
@@ -124,7 +124,7 @@ class ControllerTests(unittest.TestCase):
         options = DummyClientOptions()
         controller = self._makeOne(options)
         self.assertEqual(controller.nohelp, '*** No help on %s')
-        
+
     def test_do_help(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
@@ -191,7 +191,7 @@ class TestControllerPluginBase(unittest.TestCase):
         topics = plugin.ctl.topics_printed[0]
         self.assertEqual(topics[0], 'unnamed commands (type help <topic>):')
         self.assertEqual(topics[1], [])
-        self.assertEqual(topics[2], 15) 
+        self.assertEqual(topics[2], 15)
         self.assertEqual(topics[3], 80)
         self.assertEqual(results, None)
 
@@ -200,7 +200,7 @@ class TestControllerPluginBase(unittest.TestCase):
         results = plugin.do_help('foo')
         self.assertEqual(plugin.ctl.stdout.getvalue(), 'no help on foo\n')
         self.assertEqual(len(plugin.ctl.topics_printed), 0)
-        
+
 class TestDefaultControllerPlugin(unittest.TestCase):
 
     def _getTargetClass(self):
@@ -301,7 +301,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         value = plugin.ctl.stdout.getvalue().strip()
         self.assertEqual(value.split(None, 2),
                          ['foo', 'RUNNING', 'foo description'])
-                         
+
 
     def test_status_allprocesses(self):
         plugin = self._makeOne()
@@ -534,7 +534,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         result = plugin.do_reload('')
         self.assertEqual(result, None)
         self.assertEqual(options._server.supervisor._restarted, False)
-        
+
     def test_reload(self):
         plugin = self._makeOne()
         options = plugin.ctl.options
@@ -548,39 +548,39 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         result = plugin.do_shutdown('')
         self.assertEqual(result, None)
         self.assertEqual(options._server.supervisor._shutdown, True)
-        
+
     def test_shutdown_catches_xmlrpc_fault_shutdown_state(self):
         plugin = self._makeOne()
         from supervisor import xmlrpc
         import xmlrpclib
-        
-        def raise_fault(*arg, **kw):     
+
+        def raise_fault(*arg, **kw):
             raise xmlrpclib.Fault(xmlrpc.Faults.SHUTDOWN_STATE, 'bye')
         plugin.ctl.options._server.supervisor.shutdown = raise_fault
 
         result = plugin.do_shutdown('')
         self.assertEqual(result, None)
-        self.assertEqual(plugin.ctl.stdout.getvalue(), 
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ERROR: already shutting down\n')
 
     def test_shutdown_reraises_other_xmlrpc_faults(self):
         plugin = self._makeOne()
         from supervisor import xmlrpc
         import xmlrpclib
-        
-        def raise_fault(*arg, **kw):     
+
+        def raise_fault(*arg, **kw):
             raise xmlrpclib.Fault(xmlrpc.Faults.CANT_REREAD, 'ouch')
         plugin.ctl.options._server.supervisor.shutdown = raise_fault
 
-        self.assertRaises(xmlrpclib.Fault, 
+        self.assertRaises(xmlrpclib.Fault,
                           plugin.do_shutdown, '')
 
     def test_shutdown_catches_socket_error_ECONNREFUSED(self):
         plugin = self._makeOne()
         import socket
         import errno
-        
-        def raise_fault(*arg, **kw):     
+
+        def raise_fault(*arg, **kw):
             raise socket.error(errno.ECONNREFUSED, 'nobody home')
         plugin.ctl.options._server.supervisor.shutdown = raise_fault
 
@@ -594,27 +594,27 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin = self._makeOne()
         import socket
         import errno
-        
-        def raise_fault(*arg, **kw):     
+
+        def raise_fault(*arg, **kw):
             raise socket.error(errno.ENOENT, 'no file')
         plugin.ctl.options._server.supervisor.shutdown = raise_fault
 
         result = plugin.do_shutdown('')
         self.assertEqual(result, None)
-        
-        output = plugin.ctl.stdout.getvalue() 
-        self.assertTrue('no such file (already shut down?)' in output)        
+
+        output = plugin.ctl.stdout.getvalue()
+        self.assertTrue('no such file (already shut down?)' in output)
 
     def test_shutdown_reraises_other_socket_errors(self):
         plugin = self._makeOne()
         import socket
         import errno
 
-        def raise_fault(*arg, **kw):     
+        def raise_fault(*arg, **kw):
             raise socket.error(errno.EPERM, 'denied')
         plugin.ctl.options._server.supervisor.shutdown = raise_fault
 
-        self.assertRaises(socket.error, 
+        self.assertRaises(socket.error,
                           plugin.do_shutdown, '')
 
     def test__formatChanges(self):
@@ -875,19 +875,19 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin = self._makeOne()
         result = plugin.do_maintail('foo bar')
         val = plugin.ctl.stdout.getvalue()
-        self.failUnless(val.startswith('Error: too many'), val)
+        self.assertTrue(val.startswith('Error: too many'), val)
 
     def test_maintail_minus_string_fails(self):
         plugin = self._makeOne()
         result = plugin.do_maintail('-wrong')
         val = plugin.ctl.stdout.getvalue()
-        self.failUnless(val.startswith('Error: bad argument -wrong'), val)
+        self.assertTrue(val.startswith('Error: bad argument -wrong'), val)
 
     def test_maintail_wrong(self):
         plugin = self._makeOne()
         result = plugin.do_maintail('wrong')
         val = plugin.ctl.stdout.getvalue()
-        self.failUnless(val.startswith('Error: bad argument wrong'), val)
+        self.assertTrue(val.startswith('Error: bad argument wrong'), val)
 
     def test_maintail_dashf(self):
         plugin = self._makeOne()
@@ -999,7 +999,7 @@ class DummyController:
         self.options = options
         self.topics_printed = []
         self.stdout = StringIO()
-        
+
     def upcheck(self):
         return True
 
@@ -1022,7 +1022,7 @@ class DummyController:
 class DummyPlugin:
     def __init__(self, controller=None):
         self.ctl = controller
-        
+
     def do_help(self, arg):
         self.helped = True
 
