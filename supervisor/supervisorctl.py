@@ -9,7 +9,7 @@ Options:
 -h/--help -- print usage message and exit
 -i/--interactive -- start an interactive shell after executing commands
 -s/--serverurl URL -- URL on which supervisord server is listening
-     (default "http://localhost:9001").  
+     (default "http://localhost:9001").
 -u/--username -- username to use for authentication with server
 -p/--password -- password to use for authentication with server
 -r/--history-file -- keep a readline history (if readline is available)
@@ -43,7 +43,7 @@ class fgthread(threading.Thread):
     To be used for foreground output/error streaming.
     http://mail.python.org/pipermail/python-list/2004-May/260937.html
     """
-  
+
     def __init__(self, program, ctl):
         threading.Thread.__init__(self)
         import http_client
@@ -159,7 +159,7 @@ class Controller(cmd.Cmd):
                 do_func(arg)
             except SystemExit:
                 raise
-            except Exception, e:
+            except Exception:
                 (file, fun, line), t, v, tbinfo = asyncore.compact_traceback()
                 error = 'error: %s, %s: file: %s line: %s' % (t, v, file, line)
                 self.output(error)
@@ -181,7 +181,7 @@ class Controller(cmd.Cmd):
             if isinstance(stuff, unicode):
                 stuff = stuff.encode('utf-8')
             self.stdout.write(stuff + '\n')
-    
+
     def get_supervisor(self):
         return self.get_server_proxy('supervisor')
 
@@ -212,12 +212,12 @@ class Controller(cmd.Cmd):
                     '[rpcinterface:supervisor] section is enabled in the '
                     'configuration file (see sample.conf).')
                 return False
-            raise 
+            raise
         except socket.error, why:
-            if why[0] == errno.ECONNREFUSED:
+            if why.args[0] == errno.ECONNREFUSED:
                 self.output('%s refused connection' % self.options.serverurl)
                 return False
-            elif why[0] == errno.ENOENT:
+            elif why.args[0] == errno.ENOENT:
                 self.output('%s no such file' % self.options.serverurl)
                 return False
             raise
@@ -405,7 +405,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def do_tail(self, arg):
         if not self.ctl.upcheck():
             return
-        
+
         args = arg.strip().split()
 
         if len(args) < 1:
@@ -489,7 +489,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def do_maintail(self, arg):
         if not self.ctl.upcheck():
             return
-        
+
         args = arg.strip().split()
 
         if len(args) > 1:
@@ -513,7 +513,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             else:
                 self.ctl.output('Error: bad argument %s' % args[0])
                 return
-            
+
         else:
             bytes = 1600
 
@@ -556,14 +556,14 @@ class DefaultControllerPlugin(ControllerPluginBase):
             name = info['name']
         else:
             name = '%s:%s' % (info['group'], info['name'])
-                    
+
         return template % {'name':name, 'state':info['statename'],
                            'desc':info['description']}
 
     def do_status(self, arg):
         if not self.ctl.upcheck():
             return
-        
+
         supervisor = self.ctl.get_supervisor()
 
         names = arg.strip().split()
@@ -614,7 +614,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 self.ctl.output(str(info['pid']))
 
     def help_pid(self):
-        self.ctl.output("pid\t\t\tGet the PID of supervisord.")    
+        self.ctl.output("pid\t\t\tGet the PID of supervisord.")
         self.ctl.output("pid <name>\t\tGet the PID of a single "
             "child process by name.")
         self.ctl.output("pid all\t\t\tGet the PID of every child "
@@ -658,7 +658,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             for result in results:
                 result = self._startresult(result)
                 self.ctl.output(result)
-                
+
         else:
             for name in names:
                 group_name, process_name = split_namespec(name)
@@ -785,10 +785,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 else:
                     raise
             except socket.error, e:
-                if e[0] == errno.ECONNREFUSED:
+                if e.args[0] == errno.ECONNREFUSED:
                     msg = 'ERROR: %s refused connection (already shut down?)'
                     self.ctl.output(msg % self.ctl.options.serverurl)
-                elif e[0] == errno.ENOENT:
+                elif e.args[0] == errno.ENOENT:
                     msg = 'ERROR: %s no such file (already shut down?)'
                     self.ctl.output(msg % self.ctl.options.serverurl)
                 else:

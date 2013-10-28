@@ -218,7 +218,7 @@ class Supervisor:
                 r, w, x = self.options.select(r, w, x, timeout)
             except select.error, err:
                 r = w = x = []
-                if err[0] == errno.EINTR:
+                if err.args[0] == errno.EINTR:
                     self.options.logger.blather('EINTR encountered in select')
                 else:
                     raise

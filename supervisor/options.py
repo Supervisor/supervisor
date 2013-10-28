@@ -1105,22 +1105,22 @@ class ServerOptions(Options):
         try:
             self.httpservers = self.make_http_servers(supervisord)
         except socket.error, why:
-            if why[0] == errno.EADDRINUSE:
+            if why.args[0] == errno.EADDRINUSE:
                 self.usage('Another program is already listening on '
                            'a port that one of our HTTP servers is '
                            'configured to use.  Shut this program '
                            'down first before starting supervisord.')
             else:
                 help = 'Cannot open an HTTP server: socket.error reported'
-                errorname = errno.errorcode.get(why[0])
+                errorname = errno.errorcode.get(why.args[0])
                 if errorname is None:
-                    self.usage('%s %s' % (help, why[0]))
+                    self.usage('%s %s' % (help, why.args[0]))
                 else:
                     self.usage('%s errno.%s (%d)' %
-                               (help, errorname, why[0]))
+                               (help, errorname, why.args[0]))
             self.unlink_socketfiles = False
         except ValueError, why:
-            self.usage(why[0])
+            self.usage(why.args[0])
 
     def get_autochildlog_name(self, name, identifier, channel):
         prefix='%s-%s---%s-' % (name, channel, identifier)
@@ -1238,7 +1238,7 @@ class ServerOptions(Options):
         try:
             pid, sts = os.waitpid(-1, os.WNOHANG)
         except OSError, why:
-            err = why[0]
+            err = why.args[0]
             if err not in (errno.ECHILD, errno.EINTR):
                 self.logger.critical(
                     'waitpid error; a process may not be cleaned up properly')
@@ -1412,7 +1412,7 @@ class ServerOptions(Options):
         try:
             data = os.read(fd, 2 << 16) # 128K
         except OSError, why:
-            if why[0] not in (errno.EWOULDBLOCK, errno.EBADF, errno.EINTR):
+            if why.args[0] not in (errno.EWOULDBLOCK, errno.EBADF, errno.EINTR):
                 raise
             data = ''
         return data

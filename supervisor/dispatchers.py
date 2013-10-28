@@ -480,7 +480,7 @@ class PInputDispatcher(PDispatcher):
             try:
                 self.flush()
             except OSError, why:
-                if why[0] == errno.EPIPE:
+                if why.args[0] == errno.EPIPE:
                     self.input_buffer = ''
                     self.close()
                 else:

@@ -110,7 +110,7 @@ class monitor_channel (asynchat.async_chat):
                         else:
                             co = compile (line, repr(self), 'exec')
                     except SyntaxError, why:
-                        if why[0] == 'unexpected EOF while parsing':
+                        if why.args[0] == 'unexpected EOF while parsing':
                             self.push ('... ')
                             self.multi_line.append (line)
                             return

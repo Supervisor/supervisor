@@ -218,7 +218,7 @@ class Subprocess:
         try:
             self.dispatchers, self.pipes = self.config.make_dispatchers(self)
         except OSError, why:
-            code = why[0]
+            code = why.args[0]
             if code == errno.EMFILE:
                 # too many file descriptors open
                 msg = 'too many open files to spawn %r' % self.config.name
@@ -232,7 +232,7 @@ class Subprocess:
         try:
             pid = options.fork()
         except OSError, why:
-            code = why[0]
+            code = why.args[0]
             if code == errno.EAGAIN:
                 # process table full
                 msg  = ('Too many processes in process table to spawn %r' %
@@ -319,7 +319,7 @@ class Subprocess:
                 if cwd is not None:
                     options.chdir(cwd)
             except OSError, why:
-                code = errno.errorcode.get(why[0], why[0])
+                code = errno.errorcode.get(why.args[0], why.args[0])
                 msg = "couldn't chdir to %s: %s\n" % (cwd, code)
                 options.write(2, "supervisor: " + msg)
                 return # finally clause will exit the child process
@@ -330,7 +330,7 @@ class Subprocess:
                     options.setumask(self.config.umask)
                 options.execve(filename, argv, env)
             except OSError, why:
-                code = errno.errorcode.get(why[0], why[0])
+                code = errno.errorcode.get(why.args[0], why.args[0])
                 msg = "couldn't exec %s: %s\n" % (argv[0], code)
                 options.write(2, "supervisor: " + msg)
             except:
@@ -808,7 +808,7 @@ class EventListenerPool(ProcessGroupBase):
                                                    pool_serial, payload)
                     process.write(envelope)
                 except OSError, why:
-                    if why[0] != errno.EPIPE:
+                    if why.args[0] != errno.EPIPE:
                         raise
                     continue
 

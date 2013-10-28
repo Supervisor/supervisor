@@ -283,7 +283,7 @@ class ftp_channel (asynchat.async_chat):
                 cdc.bind (('', self.server.port - 1))
             try:
                 cdc.connect ((ip, port))
-            except socket.error, why:
+            except socket.error:
                 self.respond ("425 Can't build data connection")
         self.client_dc = cdc
 
@@ -310,7 +310,7 @@ class ftp_channel (asynchat.async_chat):
             cdc.create_socket (socket.AF_INET, socket.SOCK_STREAM)
             try:
                 cdc.connect ((ip, port))
-            except socket.error, why:
+            except socket.error:
                 self.respond ("425 Can't build data connection")
         self.client_dc = cdc
 
