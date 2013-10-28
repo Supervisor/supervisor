@@ -226,12 +226,12 @@ class DatatypesTest(unittest.TestCase):
     @patch("pwd.getpwnam", Mock(return_value=[0,0,42]))
     def test_name_to_uid_gets_uid_from_username(self):
         uid = datatypes.name_to_uid("foo")
-        self.assertEquals(uid, 42)
+        self.assertEqual(uid, 42)
 
     @patch("pwd.getpwuid", Mock(return_value=[0,0,42]))
     def test_name_to_uid_gets_uid_from_user_id(self):
         uid = datatypes.name_to_uid("42")
-        self.assertEquals(uid, 42)
+        self.assertEqual(uid, 42)
 
     @patch("pwd.getpwnam", Mock(side_effect=KeyError("bad username")))
     def test_name_to_uid_raises_for_bad_username(self):
@@ -244,12 +244,12 @@ class DatatypesTest(unittest.TestCase):
     @patch("grp.getgrnam", Mock(return_value=[0,0,42]))
     def test_name_to_gid_gets_gid_from_group_name(self):
         gid = datatypes.name_to_gid("foo")
-        self.assertEquals(gid, 42)
+        self.assertEqual(gid, 42)
 
     @patch("grp.getgrgid", Mock(return_value=[0,0,42]))
     def test_name_to_gid_gets_gid_from_group_id(self):
         gid = datatypes.name_to_gid("42")
-        self.assertEquals(gid, 42)
+        self.assertEqual(gid, 42)
 
     @patch("grp.getgrnam", Mock(side_effect=KeyError("bad group name")))
     def test_name_to_gid_raises_for_bad_group_name(self):
@@ -296,7 +296,7 @@ class InetStreamSocketConfigTests(unittest.TestCase):
         sock = conf.create_and_bind()
         reuse = sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
         self.assertTrue(reuse)
-        self.assertEquals(conf.addr(), sock.getsockname()) #verifies that bind was called
+        self.assertEqual(conf.addr(), sock.getsockname()) #verifies that bind was called
         sock.close()
 
     def test_same_urls_are_equal(self):
@@ -362,24 +362,24 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
 
         sock = call_create_and_bind(conf)
         self.assertTrue(os.path.exists(tf_name))
-        self.assertEquals(conf.addr(), sock.getsockname()) #verifies that bind was called
+        self.assertEqual(conf.addr(), sock.getsockname()) #verifies that bind was called
         sock.close()
         self.assertTrue(os.path.exists(tf_name))
         os.unlink(tf_name)
         #Verify that os.chown was called with correct args
-        self.assertEquals(1, chown_mock.call_count)
+        self.assertEqual(1, chown_mock.call_count)
         path_arg = chown_mock.call_args[0][0]
         uid_arg = chown_mock.call_args[0][1]
         gid_arg = chown_mock.call_args[0][2]
-        self.assertEquals(tf_name, path_arg)
-        self.assertEquals(owner[0], uid_arg)
-        self.assertEquals(owner[1], gid_arg)
+        self.assertEqual(tf_name, path_arg)
+        self.assertEqual(owner[0], uid_arg)
+        self.assertEqual(owner[1], gid_arg)
         #Verify that os.chmod was called with correct args
-        self.assertEquals(1, chmod_mock.call_count)
+        self.assertEqual(1, chmod_mock.call_count)
         path_arg = chmod_mock.call_args[0][0]
         mode_arg = chmod_mock.call_args[0][1]
-        self.assertEquals(tf_name, path_arg)
-        self.assertEquals(mode, mode_arg)
+        self.assertEqual(tf_name, path_arg)
+        self.assertEqual(mode, mode_arg)
 
     def test_same_paths_are_equal(self):
         conf1 = self._makeOne('/tmp/foo.sock')
@@ -487,9 +487,9 @@ class TestColonSeparatedUserGroup(unittest.TestCase):
 
         uid, gid = colon_separated("foo:bar")
         name_to_uid.assert_called_with("foo")
-        self.assertEquals(12, uid)
+        self.assertEqual(12, uid)
         name_to_gid.assert_called_with("bar")
-        self.assertEquals(34, gid)
+        self.assertEqual(34, gid)
 
     def test_separated_user_group_returns_user_only(self):
         name_to_uid = Mock(return_value=42)
@@ -500,8 +500,8 @@ class TestColonSeparatedUserGroup(unittest.TestCase):
 
         uid, gid = colon_separated("foo")
         name_to_uid.assert_called_with("foo")
-        self.assertEquals(42, uid)
-        self.assertEquals(-1, gid)
+        self.assertEqual(42, uid)
+        self.assertEqual(-1, gid)
 
 class TestOctalType(unittest.TestCase):
     def _callFUT(self, arg):

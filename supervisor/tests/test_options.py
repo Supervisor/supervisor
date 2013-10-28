@@ -58,7 +58,7 @@ class OptionTests(unittest.TestCase):
 
     def test_searchpaths(self):
         options = self._makeOptions()
-        self.assertEquals(len(options.searchpaths), 5)
+        self.assertEqual(len(options.searchpaths), 5)
         self.assertTrue('supervisord.conf' in options.searchpaths)
         self.assertTrue('etc/supervisord.conf' in options.searchpaths)
         self.assertTrue('/etc/supervisord.conf' in options.searchpaths)
@@ -67,28 +67,28 @@ class OptionTests(unittest.TestCase):
         # Only config file exists
         options = self._makeOptions()
         options.realize([])
-        self.assertEquals(options.anoption, 'default')
-        self.assertEquals(options.other, 41)
+        self.assertEqual(options.anoption, 'default')
+        self.assertEqual(options.other, 41)
 
         # Env should trump config
         options = self._makeOptions()
         os.environ['OTHER'] = '42'
         options.realize([])
-        self.assertEquals(options.other, 42)
+        self.assertEqual(options.other, 42)
 
         # Opt should trump both env (still set) and config
         options = self._makeOptions()
         options.realize(['-p', '43'])
-        self.assertEquals(options.other, 43)
+        self.assertEqual(options.other, 43)
         del os.environ['OTHER']
 
     def test_config_reload(self):
         options = self._makeOptions()
         options.realize([])
-        self.assertEquals(options.other, 41)
+        self.assertEqual(options.other, 41)
         options.master['other'] = 42
         options.process_config()
-        self.assertEquals(options.other, 42)
+        self.assertEqual(options.other, 42)
 
     def test_config_reload_do_usage_false(self):
         options = self._makeOptions(read_error='error')
@@ -112,16 +112,16 @@ class OptionTests(unittest.TestCase):
         from supervisor.options import Options
         options = Options()
         options._set('foo', 'bar', 0)
-        self.assertEquals(options.foo, 'bar')
-        self.assertEquals(options.attr_priorities['foo'], 0)
+        self.assertEqual(options.foo, 'bar')
+        self.assertEqual(options.attr_priorities['foo'], 0)
         options._set('foo', 'baz', 1)
-        self.assertEquals(options.foo, 'baz')
-        self.assertEquals(options.attr_priorities['foo'], 1)
+        self.assertEqual(options.foo, 'baz')
+        self.assertEqual(options.attr_priorities['foo'], 1)
         options._set('foo', 'gazonk', 0)
-        self.assertEquals(options.foo, 'baz')
-        self.assertEquals(options.attr_priorities['foo'], 1)
+        self.assertEqual(options.foo, 'baz')
+        self.assertEqual(options.attr_priorities['foo'], 1)
         options._set('foo', 'gazonk', 1)
-        self.assertEquals(options.foo, 'gazonk')
+        self.assertEqual(options.foo, 'gazonk')
 
 class ClientOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -148,7 +148,7 @@ class ClientOptionsTests(unittest.TestCase):
         instance.realize(args=['-s', 'http://localhost:9001', '-u', 'chris',
                                '-p', '123'])
 
-        self.assertEquals(instance.interactive, 1)
+        self.assertEqual(instance.interactive, 1)
         self.assertEqual(instance.serverurl, 'http://localhost:9001')
         self.assertEqual(instance.username, 'chris')
         self.assertEqual(instance.password, '123')
@@ -198,7 +198,7 @@ class ClientOptionsTests(unittest.TestCase):
         try:
             instance.realize(args=['-c', fname])
         except DummyException, e:
-            self.assertEquals(e.exitcode, 2)
+            self.assertEqual(e.exitcode, 2)
         else:
             self.fail("expected exception")
 
@@ -517,7 +517,7 @@ class ServerOptionsTests(unittest.TestCase):
         except DummyException, e:
             # Caught expected exception
             import traceback
-            self.assertEquals(e.exitcode, 2,
+            self.assertEqual(e.exitcode, 2,
                               "Wrong exitcode for: %s" % traceback.format_exc(e))
         else:
             self.fail("Did not get a DummyException.")
@@ -628,7 +628,7 @@ class ServerOptionsTests(unittest.TestCase):
         try:
             instance.realize(args=['-c', fname])
         except DummyException, e:
-            self.assertEquals(e.exitcode, 2)
+            self.assertEqual(e.exitcode, 2)
         else:
             self.fail("expected exception")
 
@@ -1789,48 +1789,48 @@ class SignalReceiverTests(unittest.TestCase):
     def test_returns_None_initially(self):
         from supervisor.options import SignalReceiver
         sr = SignalReceiver()
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), None)
 
     def test_returns_signals_in_order_received(self):
         from supervisor.options import SignalReceiver
         sr = SignalReceiver()
         sr.receive(signal.SIGTERM, 'frame')
         sr.receive(signal.SIGCHLD, 'frame')
-        self.assertEquals(sr.get_signal(), signal.SIGTERM)
-        self.assertEquals(sr.get_signal(), signal.SIGCHLD)
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), signal.SIGTERM)
+        self.assertEqual(sr.get_signal(), signal.SIGCHLD)
+        self.assertEqual(sr.get_signal(), None)
 
     def test_does_not_queue_duplicate_signals(self):
         from supervisor.options import SignalReceiver
         sr = SignalReceiver()
         sr.receive(signal.SIGTERM, 'frame')
         sr.receive(signal.SIGTERM, 'frame')
-        self.assertEquals(sr.get_signal(), signal.SIGTERM)
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), signal.SIGTERM)
+        self.assertEqual(sr.get_signal(), None)
 
     def test_queues_again_after_being_emptied(self):
         from supervisor.options import SignalReceiver
         sr = SignalReceiver()
         sr.receive(signal.SIGTERM, 'frame')
-        self.assertEquals(sr.get_signal(), signal.SIGTERM)
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), signal.SIGTERM)
+        self.assertEqual(sr.get_signal(), None)
         sr.receive(signal.SIGCHLD, 'frame')
-        self.assertEquals(sr.get_signal(), signal.SIGCHLD)
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), signal.SIGCHLD)
+        self.assertEqual(sr.get_signal(), None)
 
 class UtilFunctionsTests(unittest.TestCase):
     def test_make_namespec(self):
         from supervisor.options import make_namespec
-        self.assertEquals(make_namespec('group', 'process'), 'group:process')
-        self.assertEquals(make_namespec('process', 'process'), 'process')
+        self.assertEqual(make_namespec('group', 'process'), 'group:process')
+        self.assertEqual(make_namespec('process', 'process'), 'process')
 
     def test_split_namespec(self):
         from supervisor.options import split_namespec
         s = split_namespec
-        self.assertEquals(s('process:group'), ('process', 'group'))
-        self.assertEquals(s('process'), ('process', 'process'))
-        self.assertEquals(s('group:'), ('group', None))
-        self.assertEquals(s('group:*'), ('group', None))
+        self.assertEqual(s('process:group'), ('process', 'group'))
+        self.assertEqual(s('process'), ('process', 'process'))
+        self.assertEqual(s('group:'), ('group', None))
+        self.assertEqual(s('group:*'), ('group', None))
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
