@@ -169,41 +169,41 @@ class Options:
         """
         if flag is not None:
             if handler is not None:
-                raise ValueError, "use at most one of flag= and handler="
+                raise ValueError("use at most one of flag= and handler=")
             if not long and not short:
-                raise ValueError, "flag= requires a command line flag"
+                raise ValueError("flag= requires a command line flag")
             if short and short.endswith(":"):
-                raise ValueError, "flag= requires a command line flag"
+                raise ValueError("flag= requires a command line flag")
             if long and long.endswith("="):
-                raise ValueError, "flag= requires a command line flag"
+                raise ValueError("flag= requires a command line flag")
             handler = lambda arg, flag=flag: flag
 
         if short and long:
             if short.endswith(":") != long.endswith("="):
-                raise ValueError, "inconsistent short/long options: %r %r" % (
-                    short, long)
+                raise ValueError("inconsistent short/long options: %r %r" % (
+                    short, long))
 
         if short:
             if short[0] == "-":
-                raise ValueError, "short option should not start with '-'"
+                raise ValueError("short option should not start with '-'")
             key, rest = short[:1], short[1:]
             if rest not in ("", ":"):
-                raise ValueError, "short option should be 'x' or 'x:'"
+                raise ValueError("short option should be 'x' or 'x:'")
             key = "-" + key
             if self.options_map.has_key(key):
-                raise ValueError, "duplicate short option key '%s'" % key
+                raise ValueError("duplicate short option key '%s'" % key)
             self.options_map[key] = (name, handler)
             self.short_options.append(short)
 
         if long:
             if long[0] == "-":
-                raise ValueError, "long option should not start with '-'"
+                raise ValueError("long option should not start with '-'")
             key = long
             if key[-1] == "=":
                 key = key[:-1]
             key = "--" + key
             if self.options_map.has_key(key):
-                raise ValueError, "duplicate long option key '%s'" % key
+                raise ValueError("duplicate long option key '%s'" % key)
             self.options_map[key] = (name, handler)
             self.long_options.append(long)
 
@@ -553,7 +553,7 @@ class ServerOptions(Options):
 
         sections = parser.sections()
         if not 'supervisord' in sections:
-            raise ValueError, '.ini file does not include supervisord section'
+            raise ValueError('.ini file does not include supervisord section')
         get = parser.getdefault
         section.minfds = integer(get('minfds', 1024))
         section.minprocs = integer(get('minprocs', 200))
@@ -811,7 +811,7 @@ class ServerOptions(Options):
 
         command = get(section, 'command', None)
         if command is None:
-            raise ValueError, (
+            raise ValueError(
                 'program section %s does not specify a command' % section)
 
         process_name = process_or_group_name(
@@ -1523,7 +1523,7 @@ class ClientOptions(Options):
         config.readfp(fp)
         sections = config.sections()
         if not 'supervisorctl' in sections:
-            raise ValueError,'.ini file does not include supervisorctl section'
+            raise ValueError('.ini file does not include supervisorctl section')
         serverurl = config.getdefault('serverurl', 'http://localhost:9001')
         if serverurl.startswith('unix://'):
             sf = serverurl[7:]

@@ -117,7 +117,7 @@ class monitor_channel (asynchat.async_chat):
                         else:
                             t,v,tb = sys.exc_info()
                             del tb
-                            raise t,v
+                            raise t(v)
                     exec co in self.local_env
                     method = 'exec'
             except:

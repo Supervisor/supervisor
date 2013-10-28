@@ -92,7 +92,7 @@ def dict_of_key_value_pairs(arg):
     while i < tokens_len:
         k_eq_v = tokens[i:i+3]
         if len(k_eq_v) != 3 or k_eq_v[1] != '=':
-            raise ValueError, "Unexpected end of key/value pairs"
+            raise ValueError("Unexpected end of key/value pairs")
         D[k_eq_v[0]] = k_eq_v[2].strip('\'"')
         i += 4
     return D
@@ -285,7 +285,7 @@ def colon_separated_user_group(arg):
             gid = name_to_gid(parts[1])
         return (uid, gid)
     except:
-        raise ValueError, 'Invalid user:group definition %s' % arg
+        raise ValueError('Invalid user:group definition %s' % arg)
 
 def name_to_uid(name):
     """ Find a user ID from a string containing a user name or ID.
@@ -351,8 +351,8 @@ def existing_dirpath(v):
         return nv
     if os.path.isdir(dir):
         return nv
-    raise ValueError, ('The directory named as part of the path %s '
-                       'does not exist.' % v)
+    raise ValueError('The directory named as part of the path %s '
+                     'does not exist.' % v)
 
 def logging_level(value):
     s = str(value).lower()

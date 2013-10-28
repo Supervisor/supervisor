@@ -79,7 +79,7 @@ if os.name == 'posix':
                 for fd in self._fds:
                     os.close(fd)
                 self._fds = []
- 
+
         def __repr__ (self):
             return '<select-trigger (pipe) at %x>' % id(self)
 
@@ -156,7 +156,7 @@ else:
                 else:
                     break
             else:
-                raise RuntimeError, 'Cannot bind trigger!'
+                raise RuntimeError('Cannot bind trigger!')
 
             a.listen(1)
             w.setblocking(0)

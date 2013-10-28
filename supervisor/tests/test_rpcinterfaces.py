@@ -1670,8 +1670,8 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
             try:
                 interface.methodSignature(k)
             except xmlrpc.RPCError:
-                raise AssertionError, ('methodSignature for %s raises '
-                                       'RPCError (missing @return doc?)' % k)
+                raise AssertionError('methodSignature for %s raises '
+                                     'RPCError (missing @return doc?)' % k)
 
             # we want to test that the number of arguments implemented in
             # the function is the same as the number of arguments implied by
@@ -1712,9 +1712,9 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
             # param tokens
 
             if len(argnames) != len(pnames):
-                raise AssertionError, ('Incorrect documentation '
-                                       '(%s args, %s doc params) in %s'
-                                       % (len(argnames), len(pnames), k))
+                raise AssertionError('Incorrect documentation '
+                                     '(%s args, %s doc params) in %s'
+                                     % (len(argnames), len(pnames), k))
             for docline in plines:
                 self.assertTrue(type(docline) == int, (docline,
                                                        type(docline),
@@ -1728,7 +1728,7 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
                                                                  argnames[x],
                                                                  k,
                                                                  parsed)
-                    raise AssertionError, msg
+                    raise AssertionError(msg)
             for doctext in ptexts:
                 self.assertTrue(type(doctext) == type(''), doctext)
 

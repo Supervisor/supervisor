@@ -143,7 +143,7 @@ class rpc_proxy:
                 print 'RPC: <== proxy(%08x)' % (value)
             return rpc_proxy (self.conn, value)
         elif kind == 1:
-            raise RPC_Error, value
+            raise RPC_Error(value)
         else:
             if self.DEBUG:
                 print 'RPC: <== %s' % (repr(value))
@@ -209,7 +209,7 @@ class fastrpc_proxy:
         if error is None:
             return result
         else:
-            raise RPC_Error, error
+            raise RPC_Error(error)
 
     def __repr__ (self):
         return '<remote-method-%s at %x>' % (string.join (self.path, '.'), id (self))

@@ -19,7 +19,7 @@ class virtual_handler:
         try:
             self.ip = socket.gethostbyname (hostname)
         except socket.error:
-            raise ValueError, "Virtual Hostname %s does not appear to be registered in the DNS" % hostname
+            raise ValueError("Virtual Hostname %s does not appear to be registered in the DNS" % hostname)
 
     def match (self, request):
         if (request.channel.addr[0] == self.ip):
