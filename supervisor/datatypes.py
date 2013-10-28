@@ -128,10 +128,10 @@ class RangeCheckedConversion:
         v = self._conversion(value)
         if self._min is not None and v < self._min:
             raise ValueError("%s is below lower bound (%s)"
-                             % (`v`, `self._min`))
+                             % (repr(v), repr(self._min)))
         if self._max is not None and v > self._max:
             raise ValueError("%s is above upper bound (%s)"
-                             % (`v`, `self._max`))
+                             % (repr(v), repr(self._max)))
         return v
 
 port_number = RangeCheckedConversion(integer, min=1, max=0xffff).__call__

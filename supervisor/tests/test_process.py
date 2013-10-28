@@ -617,7 +617,7 @@ class SubprocessTests(unittest.TestCase):
                         raise
                         # try again ;-)
             time.sleep(0.1) # arbitrary, race condition possible
-            self.assertTrue(data.find(`origpid`) != -1 )
+            self.assertTrue(data.find(repr(origpid)) != -1 )
             msg = instance.kill(signal.SIGTERM)
             time.sleep(0.1) # arbitrary, race condition possible
             self.assertEqual(msg, None)
