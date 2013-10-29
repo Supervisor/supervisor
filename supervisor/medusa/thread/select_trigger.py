@@ -240,13 +240,8 @@ class trigger_file:
     def writeline (self, line):
         self.write (line+'\r\n')
 
-    def writelines (self, lines):
-        self.write (
-                string.joinfields (
-                        lines,
-                        '\r\n'
-                        ) + '\r\n'
-                )
+    def writelines(self, lines):
+        self.write('\r\n'.join(lines) + '\r\n')
 
     def flush (self):
         if self.buffer:
@@ -302,7 +297,7 @@ if __name__ == '__main__':
                 asyncore.close_all()
                 print "done"
                 return
-            n = string.atoi (string.split (data)[0])
+            n = int(data.split()[0])
             tf = trigger_file (self)
             self.count = self.count + 1
             thread.start_new_thread (thread_function, (tf, self.count, n))

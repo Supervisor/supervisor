@@ -64,7 +64,7 @@ class status_extension:
         [path, params, query, fragment] = request.split_uri()
         self.hit_counter.increment()
         if path == self.statusdir:          # and not a subdirectory
-            up_time = string.join (english_time (long(time.time()) - START_TIME))
+            up_time = ''.join(english_time(long(time.time()) - START_TIME))
             request['Content-Type'] = 'text/html'
             request.push (
                     '<html>'
@@ -154,7 +154,7 @@ class status_extension:
         else:
             m = self.hyper_regex.match (path)
             if m:
-                oid = string.atoi (m.group (1))
+                oid = int(m.group(1))
                 for object in self.hyper_objects:
                     if id (object) == oid:
                         if hasattr (object, 'hyper_respond'):
@@ -197,7 +197,7 @@ class lines_producer:
         if self.lines:
             chunk = self.lines[:50]
             self.lines = self.lines[50:]
-            return string.join (chunk, '\r\n') + '\r\n'
+            return '\r\n'.join(chunk) + '\r\n'
         else:
             return ''
 

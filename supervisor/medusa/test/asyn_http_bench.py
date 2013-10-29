@@ -66,9 +66,9 @@ if __name__ == '__main__':
         print 'usage: %s <host> <port> <uri> <hits> <num_clients>' % sys.argv[0]
     else:
         [host, port, uri, hits, num] = sys.argv[1:]
-        hits = string.atoi (hits)
-        num = string.atoi (num)
-        port = string.atoi (port)
+        hits = int(hits)
+        num = int(num)
+        port = int(port)
         t = timer()
         clients = map (lambda x: http_client (host, port, uri, hits-1), range(num))
         #import profile

@@ -32,4 +32,4 @@ if __name__ == '__main__':
     if len(sys.argv) < 3:
         print 'usage: %s <host> <port> <count>' % (sys.argv[0])
     else:
-        bench (sys.argv[1], string.atoi (sys.argv[2]), string.atoi (sys.argv[3]))
+        bench(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))

@@ -300,7 +300,8 @@ class POutputDispatcherTests(unittest.TestCase):
             events.append(event)
         subscribe(ProcessCommunicationEvent, doit)
         import string
-        letters = string.letters
+        # ascii_letters for python 3
+        letters = getattr(string, "letters", string.ascii_letters)
         digits = string.digits * 4
         BEGIN_TOKEN = ProcessCommunicationEvent.BEGIN_TOKEN
         END_TOKEN = ProcessCommunicationEvent.END_TOKEN

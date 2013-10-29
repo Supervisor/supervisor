@@ -55,7 +55,7 @@ header2env= {
 # convert keys to lower case for case-insensitive matching
 for (key,value) in header2env.items():
     del header2env[key]
-    key=string.lower(key)
+    key = key.lower()
     header2env[key]=value
 
 class thread_output_file (select_trigger.trigger_file):
@@ -79,11 +79,11 @@ class script_handler:
     def match (self, request):
         uri = request.uri
 
-        i = string.find(uri, "/", 1)
+        i = uri.find("/", 1)
         if i != -1:
             uri = uri[:i]
 
-        i = string.find(uri, "?", 1)
+        i = uri.find("?", 1)
         if i != -1:
             uri = uri[:i]
 
@@ -106,13 +106,13 @@ class script_handler:
         env = {}
 
         env['REQUEST_URI'] = "/" + path
-        env['REQUEST_METHOD']   = string.upper(request.command)
+        env['REQUEST_METHOD']   = request.command.upper()
         env['SERVER_PORT']       = str(request.channel.server.port)
         env['SERVER_NAME']       = request.channel.server.server_name
         env['SERVER_SOFTWARE'] = request['Server']
         env['DOCUMENT_ROOT']     = self.document_root
 
-        parts = string.split(path, "/")
+        parts = path.split("/")
 
         # are script_name and path_info ok?
 
@@ -124,30 +124,25 @@ class script_handler:
         env['QUERY_STRING']     = query
 
         try:
-            path_info = "/" + string.join(parts[1:], "/")
+            path_info = "/" + "/".join(parts[1:])
         except:
             path_info = ''
 
         env['PATH_INFO']                = path_info
-        env['GATEWAY_INTERFACE']='CGI/1.1'                                      # what should this really be?
-        env['REMOTE_ADDR']              =request.channel.addr[0]
-        env['REMOTE_HOST']              =request.channel.addr[0]        # TODO: connect to resolver
+        env['GATEWAY_INTERFACE']='CGI/1.1'                         # what should this really be?
+        env['REMOTE_ADDR']              = request.channel.addr[0]
+        env['REMOTE_HOST']              = request.channel.addr[0]  # TODO: connect to resolver
 
         for header in request.header:
-            [key,value]=string.split(header,": ",1)
-            key=string.lower(key)
+            key, value = header.split(": ", 1)
+            key = key.lower()
 
             if header2env.has_key(key):
                 if header2env[key]:
                     env[header2env[key]]=value
             else:
-                key = 'HTTP_' + string.upper(
-                        string.join(
-                                string.split (key,"-"),
-                                "_"
-                                )
-                        )
-                env[key]=value
+                key = 'HTTP_' + key.split("-").join("_").upper()
+                env[key] = value
 
         ## remove empty environment variables
         for key in env.keys():
@@ -156,7 +151,7 @@ class script_handler:
 
         try:
             httphost = env['HTTP_HOST']
-            parts = string.split(httphost,":")
+            parts = httphost.split(":")
             env['HTTP_HOST'] = parts[0]
         except KeyError:
             pass
@@ -207,7 +202,7 @@ class header_scanning_file:
             # to use a different HTTP reply code [like '302 Moved']
             #
             self.buffer = self.buffer + data
-            lines = string.split (self.buffer, '\n')
+            lines = self.buffer.split('\n')
             # ignore the last piece, it is either empty, or a partial line
             lines = lines[:-1]
             # look for something un-header-like
@@ -220,7 +215,7 @@ class header_scanning_file:
                     h = self.build_header (lines[:i])
                     self._write (h)
                     # rejoin the rest of the data
-                    d = string.join (lines[i:], '\n')
+                    d = '\n'.join(lines[i:])
                     self._write (d)
                     self.buffer = ''
                     break
@@ -232,7 +227,7 @@ class header_scanning_file:
         for line in lines:
             mo = hl.match (line)
             if mo is not None:
-                h = string.lower (mo.group(1))
+                h = mo.group(1).lower()
                 if h == 'status':
                     status = mo.group(2)
                 elif h == 'content-type':
@@ -243,14 +238,14 @@ class header_scanning_file:
         if not saw_content_type:
             lines.append ('Content-Type: text/html')
         lines.append ('Connection: close')
-        return string.join (lines, '\r\n')+'\r\n\r\n'
+        return '\r\n'.join(lines) + '\r\n\r\n'
 
     def _write (self, data):
         self.bytes_out.increment (len(data))
         self.file.write (data)
 
-    def writelines(self, list):
-        self.write (string.join (list, ''))
+    def writelines(self, lst):
+        self.write(''.join(lst))
 
     def flush(self):
         pass
@@ -287,7 +282,7 @@ class collector:
             request.error (411)
             return
         else:
-            self.cl = string.atoi(self.cl)
+            self.cl = int(self.cl)
 
     def collect_incoming_data (self, data):
         self.data.write (data)
@@ -329,7 +324,7 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print 'Usage: %s <worker_threads>' % sys.argv[0]
     else:
-        nthreads = string.atoi (sys.argv[1])
+        nthreads = int(sys.argv[1])
 
         import asyncore_25 as asyncore
         from supervisor.medusa import http_server

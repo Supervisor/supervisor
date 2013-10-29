@@ -65,7 +65,7 @@ def build_request_chain (num, host, request_size):
                     request_size, host
                     )
             )
-    return string.join (sl, '')
+    return ''.join(sl)
 
 if __name__ == '__main__':
     import string
@@ -77,9 +77,7 @@ if __name__ == '__main__':
 
         ip = socket.gethostbyname (host)
 
-        [port, request_size, num_requests, num_conns] = map (
-                string.atoi, sys.argv[2:]
-                )
+        [port, request_size, num_requests, num_conns] = map(int, sys.argv[2:])
 
         chain = build_request_chain (num_requests, host, request_size)
 
@@ -103,8 +101,7 @@ if __name__ == '__main__':
         sys.stderr.write ('max concurrent connections: %d\n' % test_client.max_concurrent)
 
         sys.stdout.write (
-                string.join (
-                        map (str, (num_conns, num_requests, request_size, throughput, trans_per_sec)),
-                        ','
+                ','.join(
+                        map(str, (num_conns, num_requests, request_size, throughput, trans_per_sec))
                         ) + '\n'
                 )

@@ -19,7 +19,7 @@ import sys
 import time
 from counter import counter
 
-VERSION = string.split(RCS_ID)[2]
+VERSION = RCS_ID.split()[2]
 
 # header
 #                                    1  1  1  1  1  1
@@ -57,11 +57,8 @@ def fast_address_request (host, id=0):
     return (
             '%c%c' % (chr((id>>8)&0xff),chr(id&0xff))
             + '\001\000\000\001\000\000\000\000\000\000%s\000\000\001\000\001' % (
-                    string.join (
-                            map (
-                                    lambda part: '%c%s' % (chr(len(part)),part),
-                                    string.split (host, '.')
-                                    ), ''
+                    ''.join(
+                            map(lambda part: '%c%s' % (chr(len(part)),part), host.split('.'))
                             )
                     )
             )
@@ -70,11 +67,8 @@ def fast_ptr_request (host, id=0):
     return (
             '%c%c' % (chr((id>>8)&0xff),chr(id&0xff))
             + '\001\000\000\001\000\000\000\000\000\000%s\000\000\014\000\001' % (
-                    string.join (
-                            map (
-                                    lambda part: '%c%s' % (chr(len(part)),part),
-                                    string.split (host, '.')
-                                    ), ''
+                    ''.join(
+                            map(lambda part: '%c%s' % (chr(len(part)),part), host.split('.'))
                             )
                     )
             )
@@ -92,7 +86,7 @@ def unpack_name (r,pos):
             pos = pos + 1
             n.append (r[pos:pos+ll])
             pos = pos + ll
-    return string.join (n,'.')
+    return '.'.join(n)
 
 def skip_name (r,pos):
     s = pos
@@ -249,9 +243,9 @@ class resolver (asyncore.dispatcher):
 
     def resolve_ptr (self, host, callback):
         self.reap()                                # first, get rid of old guys
-        ip = string.split (host, '.')
+        ip = host.split('.')
         ip.reverse()
-        ip = string.join (ip, '.') + '.in-addr.arpa'
+        ip = ip.join('.') + '.in-addr.arpa'
         self.socket.sendto (
                 fast_ptr_request (ip, self.get_id()),
                 (self.server, 53)
@@ -278,9 +272,9 @@ class resolver (asyncore.dispatcher):
 class rbl (resolver):
 
     def resolve_maps (self, host, callback):
-        ip = string.split (host, '.')
+        ip = host.split('.')
         ip.reverse()
-        ip = string.join (ip, '.') + '.rbl.maps.vix.com'
+        ip = ip.join('.') + '.rbl.maps.vix.com'
         self.socket.sendto (
                 fast_ptr_request (ip, self.get_id()),
                 (self.server, 53)

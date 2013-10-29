@@ -43,7 +43,7 @@ import asynchat_25 as asynchat
 from producers import scanning_producer
 from counter import counter
 
-MY_NAME = string.split (socket.gethostname(), '.')[0]
+MY_NAME = socket.gethostname().split('.')[0]
 
 # ===========================================================================
 #                                                         RPC server
@@ -105,10 +105,10 @@ class rpc_channel (asynchat.async_chat):
         self.buffer.append (data)
 
     def found_terminator (self):
-        self.buffer, data = [], string.join (self.buffer, '')
+        self.buffer, data = [], ''.join(self.buffer)
 
         if self.pstate is self.STATE_LENGTH:
-            packet_length = string.atoi (data, 16)
+            packet_length = int(data, 16)
             self.set_terminator (packet_length)
             self.pstate = self.STATE_PACKET
         else:
@@ -228,7 +228,7 @@ class fastrpc_channel (asynchat.async_chat):
     # same protocol used in both directions.
 
     # A request consists of (<path-tuple>, <args-tuple>)
-    # where <path-tuple> is a list of strings (eqv to string.split ('a.b.c', '.'))
+    # where <path-tuple> is a list of strings (eqv to 'a.b.c'.split('.'))
 
     STATE_LENGTH = 'length state'
     STATE_PACKET = 'packet state'
@@ -248,10 +248,10 @@ class fastrpc_channel (asynchat.async_chat):
         self.buffer.append (data)
 
     def found_terminator (self):
-        self.buffer, data = [], string.join (self.buffer, '')
+        self.buffer, data = [], ''.join(self.buffer)
 
         if self.pstate is self.STATE_LENGTH:
-            packet_length = string.atoi (data, 16)
+            packet_length = int(data, 16)
             self.set_terminator (packet_length)
             self.pstate = self.STATE_PACKET
         else:

@@ -48,7 +48,7 @@ class auth_handler:
         scheme = get_header (AUTHORIZATION, request.header)
 
         if scheme:
-            scheme = string.lower (scheme)
+            scheme = scheme.lower()
             if scheme == 'basic':
                 cookie = get_header (AUTHORIZATION, request.header, 2)
                 try:
@@ -57,7 +57,7 @@ class auth_handler:
                     print 'malformed authorization info <%s>' % cookie
                     request.error (400)
                     return
-                auth_info = string.split (decoded, ':')
+                auth_info = decoded.split(':')
                 if self.authorizer.authorize (auth_info):
                     self.pass_count.increment()
                     request.auth_info = auth_info
@@ -95,7 +95,7 @@ class auth_handler:
         if now[-1:] == 'L':
             now = now[:-1]
         private_key = str (id (self))
-        nonce = string.join ([ip, now, private_key], ':')
+        nonce = ':'.join([ip, now, private_key])
         return self.apply_hash (nonce)
 
     def apply_hash (self, s):

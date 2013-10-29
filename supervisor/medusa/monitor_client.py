@@ -22,7 +22,7 @@ class stdin_channel (asyncore.file_dispatcher):
             except:
                 pass
 
-        data = string.replace(data, '\n', '\r\n')
+        data = data.replace('\n', '\r\n')
         self.sock_channel.push (data)
 
     def writable (self):
@@ -84,9 +84,8 @@ class encrypted_monitor_client (monitor_client):
 def hex_digest (s):
     m = md5.md5()
     m.update (s)
-    return string.join (
-            map (lambda x: hex (ord (x))[2:], map (None, m.digest())),
-            '',
+    return ''.join(
+            map (lambda x: hex (ord (x))[2:], map (None, m.digest()))
             )
 
 if __name__ == '__main__':
@@ -111,11 +110,11 @@ if __name__ == '__main__':
     stdin = stdin_channel (0)
     if len(sys.argv) > 1:
         if encrypt:
-            client = encrypted_monitor_client (p, (sys.argv[1], string.atoi (sys.argv[2])))
+            client = encrypted_monitor_client(p, (sys.argv[1], int(sys.argv[2])))
             import sapphire
             client.init_cipher (sapphire, p)
         else:
-            client = monitor_client (p, (sys.argv[1], string.atoi (sys.argv[2])))
+            client = monitor_client(p, (sys.argv[1], int(sys.argv[2])))
     else:
         # default to local host, 'standard' port
         client = monitor_client (p)

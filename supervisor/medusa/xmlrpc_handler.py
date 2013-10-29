@@ -74,7 +74,7 @@ class collector:
         if not cl:
             request.error (411)
         else:
-            cl = string.atoi (cl)
+            cl = int(cl)
             # using a 'numeric' terminator
             self.request.channel.set_terminator (cl)
 

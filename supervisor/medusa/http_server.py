@@ -25,7 +25,7 @@ import producers
 import status_handler
 import logger
 
-VERSION_STRING = string.split(RCS_ID)[2]
+VERSION_STRING = RCS_ID.split()[2]
 
 from counter import counter
 from urllib import unquote, splitquery
@@ -86,12 +86,9 @@ class http_request:
         return self.reply_headers.has_key (key)
 
     def build_reply_header (self):
-        return string.join (
-                [self.response(self.reply_code)] + map (
-                        lambda x: '%s: %s' % x,
-                        self.reply_headers.items()
-                        ),
-                '\r\n'
+        return '\r\n'.join(
+                    [self.response(self.reply_code)] +
+                    map(lambda x: '%s: %s' % x, self.reply_headers.items())
                 ) + '\r\n\r\n'
 
     ####################################################
@@ -190,7 +187,7 @@ class http_request:
         headers = [self.response(self.reply_code)]
         headers += ["%s: %s" % h for h in header_tuples]
 
-        return string.join(headers, '\r\n') + '\r\n\r\n'
+        return '\r\n'.join(headers) + '\r\n\r\n'
 
     #---------------------------------------------------
     # This is the end of the new reply header
@@ -225,13 +222,13 @@ class http_request:
         return ''
 
     def get_header (self, header):
-        header = string.lower (header)
+        header = header.lower()
         hc = self._header_cache
         if not hc.has_key (header):
             h = header + ': '
             hl = len(h)
             for line in self.header:
-                if string.lower (line[:hl]) == h:
+                if line[:hl].lower() == h:
                     r = line[hl:]
                     hc[header] = r
                     return r
@@ -299,7 +296,7 @@ class http_request:
 
         #  --- BUCKLE UP! ----
 
-        connection = string.lower (get_header (CONNECTION, self.header))
+        connection = get_header(CONNECTION, self.header).lower()
 
         close_it = 0
         wrap_in_chunking = 0
@@ -439,8 +436,8 @@ class http_request:
             }
 
     # Default error message
-    DEFAULT_ERROR_MESSAGE = string.join (
-            ['<head>',
+    DEFAULT_ERROR_MESSAGE = '\r\n'.join(
+            ('<head>',
              '<title>Error response</title>',
              '</head>',
              '<body>',
@@ -449,8 +446,7 @@ class http_request:
              '<p>Message: %(message)s.',
              '</body>',
              ''
-             ],
-            '\r\n'
+             )
             )
 
 
@@ -558,7 +554,7 @@ class http_channel (asynchat.async_chat):
         else:
             header = self.in_buffer
             self.in_buffer = ''
-            lines = string.split (header, '\r\n')
+            lines = header.split('\r\n')
 
             # --------------------------------------------------
             # crack the request header
@@ -747,7 +743,7 @@ class http_server (asyncore.dispatcher):
 
     def status (self):
         def nice_bytes (n):
-            return string.join (status_handler.english_bytes (n))
+            return ''.join(status_handler.english_bytes(n))
 
         handler_stats = filter (None, map (maybe_status, self.handlers))
 
@@ -837,7 +833,7 @@ if __name__ == '__main__':
         ms = monitor.secure_monitor_server ('fnord', '127.0.0.1', 9999)
         fs = filesys.os_filesystem (sys.argv[1])
         dh = default_handler.default_handler (fs)
-        hs = http_server ('', string.atoi (sys.argv[2]), rs, lg)
+        hs = http_server('', int(sys.argv[2]), rs, lg)
         hs.install_handler (dh)
         ftp = ftp_server.ftp_server (
                 ftp_server.dummy_authorizer(sys.argv[1]),

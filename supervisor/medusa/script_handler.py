@@ -145,7 +145,7 @@ class persistent_script_handler:
 
     def match (self, request):
         [path, params, query, fragment] = request.split_uri()
-        parts = string.split (path, '/')
+        parts = path.split('/')
         if (len(parts)>1) and self.modules.has_key (parts[1]):
             module = self.modules[parts[1]]
             request.module = module

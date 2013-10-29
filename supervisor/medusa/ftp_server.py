@@ -50,7 +50,7 @@ from supervisor.medusa.producers import file_producer
 # 2) carefully control the effective uid around filesystem accessing
 #    methods, using try/finally. [this seems to work]
 
-VERSION = string.split(RCS_ID)[2]
+VERSION = RCS_ID.split()[2]
 
 from counter import counter
 import producers
@@ -126,18 +126,22 @@ class ftp_channel (asynchat.async_chat):
         if not len(line):
             return
 
-        sp = string.find (line, ' ')
+        sp = line.find(' ')
         if sp != -1:
             line = [line[:sp], line[sp+1:]]
         else:
             line = [line]
 
-        command = string.lower (line[0])
+        command = line[0].lower()
         # watch especially for 'urgent' abort commands.
-        if string.find (command, 'abor') != -1:
+        if command.find('abor') != -1:
+            # ascii_letters for python 3
+            letters = getattr(string, "letters", string.ascii_letters)
+
             # strip off telnet sync chars and the like...
-            while command and command[0] not in string.letters:
+            while command and command[0] not in letters:
                 command = command[1:]
+
         fun_name = 'cmd_%s' % command
         if command != 'pass':
             self.log ('<== %s' % repr(self.in_buffer)[1:-1])
@@ -335,11 +339,11 @@ class ftp_channel (asynchat.async_chat):
     def cmd_type (self, line):
         'specify data transfer type'
         # ascii, ebcdic, image, local <byte size>
-        t = string.lower (line[1])
+        t = line[1].lower()
         # no support for EBCDIC
         # if t not in ['a','e','i','l']:
         if t not in ['a','i','l']:
-            self.command_not_understood (string.join (line))
+            self.command_not_understood(line.join())
         elif t == 'l' and (len(line) > 2 and line[2] != '8'):
             self.respond ('504 Byte size must be 8')
         else:
@@ -354,9 +358,9 @@ class ftp_channel (asynchat.async_chat):
 
     def cmd_port (self, line):
         'specify data connection port'
-        info = string.split (line[1], ',')
-        ip = string.join (info[:4], '.')
-        port = string.atoi(info[4])*256 + string.atoi(info[5])
+        info = line[1].split(',')
+        ip = info[:4].join('.')
+        port = int(info[4])*256 + int(info[5])
         # how many data connections at a time?
         # I'm assuming one for now...
         # TODO: we should (optionally) verify that the
@@ -379,7 +383,7 @@ class ftp_channel (asynchat.async_chat):
         ip_addr = pc.control_channel.getsockname()[0]
         self.respond (
                 '227 Entering Passive Mode (%s,%d,%d)' % (
-                        string.replace(ip_addr, '.', ','),
+                        ip_addr.replace('.', ','),
                         port/256,
                         port%256
                         )
@@ -482,7 +486,7 @@ class ftp_channel (asynchat.async_chat):
     def cmd_retr (self, line):
         'retrieve a file'
         if len(line) < 2:
-            self.command_not_understood (string.join (line))
+            self.command_not_understood(line.join())
         else:
             file = line[1]
             if not self.filesystem.isfile (file):
@@ -522,7 +526,7 @@ class ftp_channel (asynchat.async_chat):
     def cmd_stor (self, line, mode='wb'):
         'store a file'
         if len (line) < 2:
-            self.command_not_understood (string.join (line))
+            self.command_not_understood(line.join())
         else:
             if self.restart_position:
                 restart_position = 0
@@ -555,7 +559,7 @@ class ftp_channel (asynchat.async_chat):
 
     def cmd_dele (self, line):
         if len (line) != 2:
-            self.command_not_understood (string.join (line))
+            self.command_not_understood(line.join())
         else:
             file = line[1]
             if self.filesystem.isfile (file):
@@ -569,7 +573,7 @@ class ftp_channel (asynchat.async_chat):
 
     def cmd_mkd (self, line):
         if len (line) != 2:
-            self.command_not_understood (string.join (line))
+            self.command_not_understood(line.join())
         else:
             path = line[1]
             try:
@@ -584,7 +588,7 @@ class ftp_channel (asynchat.async_chat):
             return
 
         if len(line)!=2:
-            self.command_not_understood (string.join (line))
+            self.command_not_understood(line.join())
         else:
             src = line[1]
             try:
@@ -601,7 +605,7 @@ class ftp_channel (asynchat.async_chat):
             return
 
         if len(line)!=2:
-            self.command_not_understood (string.join (line))
+            self.command_not_understood(line.join())
         else:
             dst = line[1]
             try:
@@ -617,7 +621,7 @@ class ftp_channel (asynchat.async_chat):
 
     def cmd_rmd (self, line):
         if len (line) != 2:
-            self.command_not_understood (string.join (line))
+            self.command_not_understood(line.join())
         else:
             path = line[1]
             try:
@@ -632,7 +636,7 @@ class ftp_channel (asynchat.async_chat):
             self.user = line[1]
             self.respond ('331 Password required.')
         else:
-            self.command_not_understood (string.join (line))
+            self.command_not_understood(line.join())
 
     def cmd_pass (self, line):
         'specify password'
@@ -652,9 +656,9 @@ class ftp_channel (asynchat.async_chat):
     def cmd_rest (self, line):
         'restart incomplete transfer'
         try:
-            pos = string.atoi (line[1])
+            pos = int(line[1])
         except ValueError:
-            self.command_not_understood (string.join (line))
+            self.command_not_understood(line.join())
         self.restart_position = pos
         self.respond (
                 '350 Restarting at %d. Send STORE or RETRIEVE to initiate transfer.' % pos
@@ -801,7 +805,7 @@ class ftp_server (asyncore.dispatcher):
     def status (self):
 
         def nice_bytes (n):
-            return string.join (status_handler.english_bytes (n))
+            return ''.join(status_handler.english_bytes(n))
 
         return producers.lines_producer (
                 ['<h2>%s</h2>'                          % self.SERVER_IDENT,
@@ -1042,7 +1046,7 @@ if os.name == 'posix':
             self.real_users = real_users
 
         def authorize (self, channel, username, password):
-            if string.lower(username) in ['anonymous', 'ftp']:
+            if username.lower() in ('anonymous', 'ftp'):
                 import pwd
                 try:
                     # ok, here we run into lots of confusion.
@@ -1052,7 +1056,7 @@ if os.name == 'posix':
                     # linux: new linuxen seem to have nobody's UID=-1,
                     #    which is an illegal value.  Use ftp.
                     ftp_user_info = pwd.getpwnam ('ftp')
-                    if string.lower(os.uname()[0]) == 'linux':
+                    if os.uname()[0].lower() == 'linux':
                         nobody_user_info = pwd.getpwnam ('ftp')
                     else:
                         nobody_user_info = pwd.getpwnam ('nobody')
@@ -1081,7 +1085,7 @@ if os.name == 'posix':
     def test (port='8021'):
         fs = ftp_server (
                 unix_authorizer(),
-                port=string.atoi (port)
+                port=int(port)
                 )
         try:
             asyncore.loop()
@@ -1148,7 +1152,7 @@ command_documentation = {
 
 # debugging aid (linux)
 def get_vm_size ():
-    return string.atoi (string.split(open ('/proc/self/stat').readline())[22])
+    return int(open('/proc/self/stat').readline().split()[22])
 
 def print_vm():
     print 'vm: %8dk' % (get_vm_size()/1024)

@@ -33,16 +33,16 @@ HEADER_LINE = regex.compile ('\([A-Za-z0-9-]+\): \(.*\)')
 			self._write (data)
 		else:
 			# CGI scripts may optionally provide extra headers.
-			# 
+			#
 			# If they do not, then the output is assumed to be
 			# text/html, with an HTTP reply code of '200 OK'.
-			# 
+			#
 			# If they do, we need to scan those headers for one in
 			# particular: the 'Status:' header, which will tell us
 			# to use a different HTTP reply code [like '302 Moved']
 			#
 			self.buffer = self.buffer + data
-			lines = string.split (self.buffer, '\n')
+			lines = self.buffer.split('\n')
 			# look for something un-header-like
 			for i in range(len(lines)):
 				if i == (len(lines)-1):
@@ -53,5 +53,5 @@ HEADER_LINE = regex.compile ('\([A-Za-z0-9-]+\): \(.*\)')
 					self.got_header = 1
 					self.buffer = self.build_header (lines[:i])
 					# rejoin the rest of the data
-					self._write (string.join (lines[i:], '\n'))
+					self._write('\n'.join(lines[i:]))
 					break

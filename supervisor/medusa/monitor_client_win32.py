@@ -14,9 +14,8 @@ import md5
 def hex_digest (s):
     m = md5.md5()
     m.update (s)
-    return string.join (
+    return ''.join(
             map (lambda x: hex (ord (x))[2:], map (None, m.digest())),
-            '',
             )
 
 def reader (lock, sock, password):
@@ -45,7 +44,7 @@ if __name__ == '__main__':
     print 'Enter Password: ',
     p = raw_input()
     s = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
-    s.connect ((sys.argv[1], string.atoi(sys.argv[2])))
+    s.connect((sys.argv[1], int(sys.argv[2])))
     l = thread.allocate_lock()
     l.acquire()
     thread.start_new_thread (reader, (l, s, p))

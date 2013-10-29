@@ -60,17 +60,16 @@ class lines_producer:
         if self.lines:
             chunk = self.lines[:50]
             self.lines = self.lines[50:]
-            return string.join (chunk, '\r\n') + '\r\n'
+            return '\r\n'.join(chunk) + '\r\n'
         else:
             return ''
 
 class buffer_list_producer:
     "producer for a list of strings"
 
-    # i.e., data == string.join (buffers, '')
+    # i.e., data == ''.join(buffers)
 
     def __init__ (self, buffers):
-
         self.index = 0
         self.buffers = buffers
 
@@ -117,19 +116,16 @@ class output_producer:
     def __init__ (self):
         self.data = ''
 
-    def write (self, data):
-        lines = string.splitfields (data, '\n')
-        data = string.join (lines, '\r\n')
+    def write(self, data):
+        lines = data.split('\n')
+        data = '\r\n'.join(lines)
         self.data = self.data + data
 
     def writeline (self, line):
         self.data = self.data + line + '\r\n'
 
     def writelines (self, lines):
-        self.data = self.data + string.joinfields (
-                lines,
-                '\r\n'
-                ) + '\r\n'
+        self.data = self.data + '\r\n'.join(lines) + '\r\n'
 
     def flush (self):
         pass
@@ -240,10 +236,7 @@ class chunked_producer:
             else:
                 self.producer = None
                 if self.footers:
-                    return string.join (
-                            ['0'] + self.footers,
-                            '\r\n'
-                            ) + '\r\n\r\n'
+                    return '\r\n'.join(['0'] + self.footers) + '\r\n\r\n'
                 else:
                     return '0\r\n\r\n'
         else:
@@ -305,7 +298,7 @@ class escaping_producer:
         buffer = self.buffer + self.producer.more()
 
         if buffer:
-            buffer = string.replace (buffer, esc_from, esc_to)
+            buffer = buffer.replace(esc_from, esc_to)
             i = self.find_prefix_at_end (buffer, esc_from)
             if i:
                 # we found a prefix

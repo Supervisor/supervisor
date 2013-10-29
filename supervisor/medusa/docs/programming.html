@@ -556,7 +556,7 @@ log: closing channel 4:&lt;http_client connected at 80ef3e8&gt;
     <font color="808000">if</font> len(sys.argv) &lt; 3:
         <font color="808000">print</font> <font color="008000">'Usage: %s &lt;server-host&gt; &lt;server-port&gt;'</font> % sys.argv[0]
     <font color="808000">else</font>:
-        ps = proxy_server (sys.argv[1], string.atoi (sys.argv[2]))
+        ps = proxy_server(sys.argv[1], int(sys.argv[2]))
         asyncore.loop()
 
 </pre>
