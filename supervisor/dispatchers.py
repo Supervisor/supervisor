@@ -490,23 +490,23 @@ ANSI_ESCAPE_BEGIN = '\x1b['
 ANSI_TERMINATORS = ('H', 'f', 'A', 'B', 'C', 'D', 'R', 's', 'u', 'J',
                     'K', 'h', 'l', 'p', 'm')
 
-def stripEscapes(string):
+def stripEscapes(s):
     """
     Remove all ANSI color escapes from the given string.
     """
     result = ''
     show = 1
     i = 0
-    L = len(string)
+    L = len(s)
     while i < L:
-        if show == 0 and string[i] in ANSI_TERMINATORS:
+        if show == 0 and s[i] in ANSI_TERMINATORS:
             show = 1
         elif show:
-            n = string.find(ANSI_ESCAPE_BEGIN, i)
+            n = s.find(ANSI_ESCAPE_BEGIN, i)
             if n == -1:
-                return result + string[i:]
+                return result + s[i:]
             else:
-                result = result + string[i:n]
+                result = result + s[i:n]
                 i = n
                 show = 0
         i = i + 1
