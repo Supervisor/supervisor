@@ -21,6 +21,14 @@ file.  It has sections (each denoted by a ``[header]``)and key / value
 pairs within the sections.  The sections and their allowable values
 are described below.
 
+.. note::
+
+  Some distributions have packaged Supervisor with their own
+  customizations.  These modified versions of Supervisor may load the
+  configuration file from locations other than those described here.
+  Notably, Ubuntu packages have been found that use
+  ``/etc/supervisor/supervisord.conf``.
+
 ``[unix_http_server]`` Section Settings
 ---------------------------------------
 
