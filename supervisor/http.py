@@ -4,7 +4,10 @@ import time
 import sys
 import socket
 import errno
-import pwd
+try:
+    import pwd
+except ImportError:
+    import getpass as pwd
 import urllib
 
 try:
