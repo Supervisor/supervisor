@@ -18,10 +18,6 @@
 - Removed ``setuptools`` from the ``requires`` list in ``setup.py`` because
   it caused installation issues on some systems.
 
-- The ``main()`` function of the ``supervisord`` module now allows an
-  ``options`` instance to be passed in.  This is consistent with the
-  ``main()`` function of ``supervisorctl``, which already allowed this.
-
 3.0 (2013-07-30)
 ----------------
 

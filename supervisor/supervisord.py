@@ -344,13 +344,12 @@ def profile(cmd, globals, locals, sort_order, callers):
 
 
 # Main program
-def main(args=None, options=None, test=False):
+def main(args=None, test=False):
     assert os.name == "posix", "This code makes Unix-specific assumptions"
     # if we hup, restart by making a new Supervisor()
     first = True
     while 1:
-        if options is None:
-            options = ServerOptions()
+        options = ServerOptions()
         options.realize(args, doc=__doc__)
         options.first = first
         options.test = test
