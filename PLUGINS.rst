@@ -69,14 +69,16 @@ with 3rd party applications:
 `PHP5 Supervisor wrapper <https://github.com/yzalis/Supervisor>`_
     PHP 5 library to manage Supervisor instances as object.
 `Symfony2 SupervisorBundle <https://github.com/yzalis/SupervisorBundle>`_
-    Provide full integration of Supervisor multiple servers management into Symfony2 project. 
+    Provide full integration of Supervisor multiple servers management into Symfony2 project.
 `supervisord-php-client <https://github.com/mondalaci/supervisord-php-client>`_
     PHP client for the supervisord XML-RPC interface.
 `sd-supervisord <https://github.com/robcowie/sd-supervisord>`_
     `Server Density <http://www.serverdensity.com>`_ plugin for
     supervisor.
+`node-supervisord <https://github.com/crcn/node-supervisord>`_
+    Node.js client for Supervisor's XML-RPC interface.
 `node-supervisord-eventlistener <https://github.com/sugendran/node-supervisord-eventlistener>`_
-    Lists for supervisord events and raises them.
+    Node.js implementation of an event listener for Supervisor.
 `ruby-supervisor <https://github.com/schmurfy/ruby-supervisor>`_
     Ruby client library for Supervisor's XML-RPC interface.
 `Sulphite <https://github.com/jib/sulphite>`_
