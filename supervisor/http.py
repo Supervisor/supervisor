@@ -136,9 +136,9 @@ class deferring_hooked_producer:
 
 class deferring_http_request(http_server.http_request):
     """ The medusa http_request class uses the default set of producers in
-    medusa.prodcers.  We can't use these because they don't know anything about
-    deferred responses, so we override various methods here.  This was added
-    to support tail -f like behavior on the logtail handler """
+    medusa.producers.  We can't use these because they don't know anything
+    about deferred responses, so we override various methods here.  This was
+    added to support tail -f like behavior on the logtail handler """
 
     def get_header(self, header):
         # this is overridden purely for speed (the base class doesn't
