@@ -1107,11 +1107,11 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output('fg <process>\tConnect to a process in foreground mode')
         self.ctl.output('Press Ctrl+C to exit foreground')
 
-def main(args=None, options=None):
+def main(args=None, options=None, controller=Controller):
     if options is None:
         options = ClientOptions()
     options.realize(args, doc=__doc__)
-    c = Controller(options)
+    c = controller(options)
     if options.args:
         c.onecmd(" ".join(options.args))
     if options.interactive:
