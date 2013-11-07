@@ -18,6 +18,9 @@
 - Removed ``setuptools`` from the ``requires`` list in ``setup.py`` because
   it caused installation issues on some systems.
 
+- Changed ``supervisorctl`` to reuse the server proxy object between commands
+  to reduce the number of open connections.  Patch by Zev Benjamin.
+
 3.0 (2013-07-30)
 ----------------
 
