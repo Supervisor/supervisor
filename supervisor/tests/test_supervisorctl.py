@@ -142,6 +142,14 @@ class ControllerTests(unittest.TestCase):
         expected = options.getServerProxy().supervisor
         self.assertEqual(proxy, expected)
 
+    def test_get_supervisor_caches_serverproxy_instance(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+
+        proxy_1 = controller.get_supervisor()
+        proxy_2 = controller.get_supervisor()
+        self.assertTrue(proxy_1 is proxy_2)
+
     def test_get_server_proxy_with_no_args_returns_serverproxy(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
