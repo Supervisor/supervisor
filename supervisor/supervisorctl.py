@@ -101,7 +101,7 @@ class Controller(cmd.Cmd):
         self.options = options
         self.prompt = self.options.prompt + '> '
         self.options.plugins = []
-        self.supervisor_proxy = None
+        self.server_proxy = None
         self.vocab = ['add','exit','maintail','pid','reload',
                       'restart','start','stop','version','clear',
                       'fg','open','quit','remove','shutdown','status',
@@ -184,16 +184,16 @@ class Controller(cmd.Cmd):
             self.stdout.write(stuff + '\n')
 
     def get_supervisor(self):
-        if self.supervisor_proxy is None:
-            self.supervisor_proxy = self.get_server_proxy('supervisor')
-        return self.supervisor_proxy
+        return self.get_server_proxy('supervisor')
 
     def get_server_proxy(self, namespace=None):
-        proxy = self.options.getServerProxy()
+        if self.server_proxy is None:
+            self.server_proxy = self.options.getServerProxy()
+
         if namespace is None:
-            return proxy
+            return self.server_proxy
         else:
-            return getattr(proxy, namespace)
+            return getattr(self.server_proxy, namespace)
 
     def upcheck(self):
         try:
