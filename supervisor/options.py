@@ -101,7 +101,8 @@ class Options:
         here = os.path.dirname(os.path.dirname(sys.argv[0]))
         searchpaths = [os.path.join(here, 'etc', 'supervisord.conf'),
                        os.path.join(here, 'supervisord.conf'),
-                       'supervisord.conf', 'etc/supervisord.conf',
+                       'supervisord.conf',
+                       'etc/supervisord.conf',
                        '/etc/supervisord.conf']
         self.searchpaths = searchpaths
 
