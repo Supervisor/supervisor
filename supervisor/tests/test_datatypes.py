@@ -256,7 +256,7 @@ class DatatypesTest(unittest.TestCase):
         self.assertRaises(ValueError, datatypes.name_to_gid, "foo")
 
     @patch("grp.getgrgid", Mock(side_effect=KeyError("bad group id")))
-    def test_name_to_gid_raises_for_bad_group_name(self):
+    def test_name_to_gid_raises_for_bad_group_id(self):
         self.assertRaises(ValueError, datatypes.name_to_gid, "42")
 
 class InetStreamSocketConfigTests(unittest.TestCase):
@@ -404,8 +404,8 @@ class RangeCheckedConversionTests(unittest.TestCase):
         from supervisor.datatypes import RangeCheckedConversion
         return RangeCheckedConversion
 
-    def _makeOne(self, conversion, min=None, max=None):
-        return self._getTargetClass()(conversion, min, max)
+    def _makeOne(self, conversion, rmin=None, rmax=None):
+        return self._getTargetClass()(conversion, rmin, rmax)
 
     def test_below_lower_bound(self):
         conversion = self._makeOne(lambda *arg: -1, 0)
