@@ -217,7 +217,12 @@ class RotatingFileHandler(FileHandler):
                     # catch race condition (already deleted)
                     if why.args[0] != errno.ENOENT:
                         raise
-            os.rename(self.baseFilename, dfn)
+            try:
+                os.rename(self.baseFilename, dfn)
+            except OSError, why:
+                # Current log file unlinked
+                if why[0] != errno.ENOENT:
+                    raise
         self.stream = open(self.baseFilename, 'w')
 
 class LogRecord:

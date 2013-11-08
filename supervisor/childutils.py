@@ -1,4 +1,6 @@
 import sys
+import select
+import gevent
 import time
 import xmlrpclib
 from supervisor.xmlrpc import SupervisorTransport
@@ -49,7 +51,15 @@ pcomm = ProcessCommunicationsProtocol()
 class EventListenerProtocol:
     def wait(self, stdin=sys.stdin, stdout=sys.stdout):
         self.ready(stdout)
-        line = stdin.readline()
+        while 1:
+            gevent.sleep(1)
+            if select.select([sys.stdin,],[],[], 1)[0]:
+                line = stdin.readline()
+                if line is not None:
+                    sys.stderr.write("wokeup and found a line\n")
+                    break
+                else:
+                    sys.stderr.write("wokeup from select just like that\n")
         headers = get_headers(line)
         payload = stdin.read(int(headers['len']))
         return headers, payload

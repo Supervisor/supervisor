@@ -328,6 +328,11 @@ class Subprocess:
             try:
                 if self.config.umask is not None:
                     options.setumask(self.config.umask)
+                if "pre_exec_cmd" in env:
+                    options.write(2, "Pre exec cmd:" + env['pre_exec_cmd']+ '\n')
+                    os.system(env['pre_exec_cmd'])
+                else:
+                    options.write(2, "No pre_exec_cmd found\n")
                 options.execve(filename, argv, env)
             except OSError, why:
                 code = errno.errorcode.get(why.args[0], why.args[0])

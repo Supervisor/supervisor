@@ -59,6 +59,22 @@ VERSION = open(version_txt).read().strip()
 def normalize_path(v):
     return os.path.normpath(os.path.abspath(os.path.expanduser(v)))
 
+# following routing combines lines of a file into a string delimiting them
+# by a ','
+def joinfile(filename) :
+    sarray = []
+    if (filename != ''):
+        try:
+            with open(filename) as fd:
+                for line in fd:
+                    if not (line.isspace()):
+			key_value_pair = (line.rstrip('\n')).split('=', 1)
+                        sarray.append(key_value_pair[0] + "=" + '\"' + key_value_pair[1] + '\"')
+        except IOError:
+            print "couldnt open file:"+filename
+    return ','.join(sarray)
+
+
 class Dummy:
     pass
 
@@ -582,6 +598,11 @@ class ServerOptions(Options):
         expansions = {'here':self.here}
         expansions.update(environ_expansions())
         environ_str = get('environment', '')
+        environ_file_str = get('environment_file', '')
+        if environ_str is not '':
+            environ_str += ',' + joinfile(environ_file_str)
+        else:
+            environ_str = joinfile(environ_file_str)
         environ_str = expand(environ_str, expansions, 'environment')
         section.environment = dict_of_key_value_pairs(environ_str)
         # Process rpcinterface plugins before groups to allow custom events to
@@ -790,6 +811,11 @@ class ServerOptions(Options):
         numprocs = integer(get(section, 'numprocs', 1))
         numprocs_start = integer(get(section, 'numprocs_start', 0))
         environment_str = get(section, 'environment', '')
+        environment_file_str = get(section, 'environment_file', '')
+        if environment_str is not '':
+            environment_str += ',' + joinfile(environment_file_str)
+        else:
+            environment_str = joinfile(environment_file_str)
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
         stdout_events = boolean(get(section, 'stdout_events_enabled','false'))
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
