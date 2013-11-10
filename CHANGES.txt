@@ -6,7 +6,7 @@
   ignored.  Patch by Pascal Varet.
 
 - The ``directory`` option is now expanded separately for each process in
-  a homogeneous process group.  This allows each process to have it own
+  a homogeneous process group.  This allows each process to have its own
   working directory.  Patch by Perttu Ranta-aho.
 
 - Added new ``stdout_syslog`` and ``stderr_syslog`` options to the config
