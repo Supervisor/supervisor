@@ -57,7 +57,7 @@ class auth_handler:
                     print 'malformed authorization info <%s>' % cookie
                     request.error (400)
                     return
-                auth_info = decoded.split(':')
+                auth_info = decoded.split(':', 1)
                 if self.authorizer.authorize (auth_info):
                     self.pass_count.increment()
                     request.auth_info = auth_info

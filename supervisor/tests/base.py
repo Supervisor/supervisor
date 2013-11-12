@@ -597,6 +597,9 @@ class DummyMedusaChannel:
     def close_when_done(self):
         pass
 
+    def set_terminator(self, terminator):
+        pass
+
 class DummyRequest:
     command = 'GET'
     _error = None
