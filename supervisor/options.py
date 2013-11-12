@@ -1302,7 +1302,7 @@ class ServerOptions(Options):
 
                 try:
                     resource.setrlimit(res, (lmin, hard))
-                    msgs.append('Increased %(name)s limit to %(min)s' %
+                    msgs.append('Increased %(name)s limit to %(lmin)s' %
                                 locals())
                 except (resource.error, ValueError):
                     self.usage(msg % locals())
