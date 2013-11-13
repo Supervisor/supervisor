@@ -950,8 +950,11 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 raise e
 
         added, changed, removed = result[0]
+        valid_gnames = set(arg.strip().split())
 
         for gname in removed:
+            if valid_gnames and gname not in valid_gnames:
+                continue
             results = supervisor.stopProcessGroup(gname)
             log(gname, "stopped")
 
@@ -964,6 +967,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
             log(gname, "removed process group")
 
         for gname in changed:
+            if valid_gnames and gname not in valid_gnames:
+                continue
             results = supervisor.stopProcessGroup(gname)
             log(gname, "stopped")
 
@@ -972,11 +977,14 @@ class DefaultControllerPlugin(ControllerPluginBase):
             log(gname, "updated process group")
 
         for gname in added:
+            if valid_gnames and gname not in valid_gnames:
+                continue
             supervisor.addProcessGroup(gname)
             log(gname, "added process group")
 
     def help_update(self):
-        self.ctl.output("update\t\tReload config and add/remove as necessary")
+        self.ctl.output("update\t\t\tReload config and add/remove as necessary")
+        self.ctl.output("update <gname> [...]\tUpdate a specific groups.")
 
     def _clearresult(self, result):
         name = result['name']
