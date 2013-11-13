@@ -757,6 +757,33 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin.do_update('')
         self.assertEqual(supervisor.processes, ['new_proc'])
 
+    def test_update_with_gname(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+
+        def reloadConfig():
+            return [[['added1', 'added2'], ['changed'], ['removed']]]
+        supervisor.reloadConfig = reloadConfig
+        supervisor.processes = ['changed', 'removed']
+
+
+        plugin.do_update('changed')
+        self.assertEqual(sorted(supervisor.processes),
+                         sorted(['changed', 'removed']))
+
+        plugin.do_update('added1 added2')
+        self.assertEqual(sorted(supervisor.processes),
+                         sorted(['changed', 'removed', 'added1', 'added2']))
+
+        plugin.do_update('removed')
+        self.assertEqual(sorted(supervisor.processes),
+                         sorted(['changed', 'added1', 'added2']))
+
+        supervisor.processes = ['changed', 'removed']
+        plugin.do_update('removed added1')
+        self.assertEqual(sorted(supervisor.processes),
+                         sorted(['changed', 'added1']))
+
     def test_update_changed_procs(self):
         from supervisor import xmlrpc
 
