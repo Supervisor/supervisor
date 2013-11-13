@@ -766,7 +766,6 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         supervisor.reloadConfig = reloadConfig
         supervisor.processes = ['changed', 'removed']
 
-
         plugin.do_update('changed')
         self.assertEqual(sorted(supervisor.processes),
                          sorted(['changed', 'removed']))
