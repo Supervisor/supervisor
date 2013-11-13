@@ -783,6 +783,12 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(sorted(supervisor.processes),
                          sorted(['changed', 'added1']))
 
+        supervisor.processes = ['changed', 'removed']
+        plugin.do_update('all')
+        self.assertEqual(sorted(supervisor.processes),
+                         sorted(['changed', 'added1', 'added2']))
+
+
     def test_update_changed_procs(self):
         from supervisor import xmlrpc
 

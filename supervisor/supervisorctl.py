@@ -952,6 +952,24 @@ class DefaultControllerPlugin(ControllerPluginBase):
         added, changed, removed = result[0]
         valid_gnames = set(arg.strip().split())
 
+        # If all is specified treat it as if nothing was specified.
+        if "all" in valid_gnames:
+            valid_gnames = set()
+
+        # If any gnames are specified we need to verify that they are
+        # valid in order to print a useful error message.
+        if valid_gnames:
+            groups = set()
+            for info in supervisor.getAllProcessInfo():
+                groups.add(info['group'])
+            # New gnames would not currently exist in this set so
+            # add those as well.
+            groups.update(added)
+
+            for gname in valid_gnames:
+                if gname not in groups:
+                    self.ctl.output('ERROR: no such group: %s' % gname)
+
         for gname in removed:
             if valid_gnames and gname not in valid_gnames:
                 continue
@@ -984,7 +1002,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
     def help_update(self):
         self.ctl.output("update\t\t\tReload config and add/remove as necessary")
-        self.ctl.output("update <gname> [...]\tUpdate a specific groups.")
+        self.ctl.output("update all\t\tReload config and add/remove as necessary")
+        self.ctl.output("update <gname> [...]\tUpdate specific groups")
 
     def _clearresult(self, result):
         name = result['name']
