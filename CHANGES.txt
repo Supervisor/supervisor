@@ -25,6 +25,10 @@
   exception if the password contained a colon.  Thanks to Thomas Guttler
   for reporting this issue.
 
+- The ``update`` command in ``supervisorctl`` now accepts optional group
+  names.  When group names are specified, only those groups will be
+  updated.  Patch by Gary M. Josack.
+
 3.0 (2013-07-30)
 ----------------
 
