@@ -18,9 +18,6 @@
 - Removed ``setuptools`` from the ``requires`` list in ``setup.py`` because
   it caused installation issues on some systems.
 
-- Changed ``supervisorctl`` to reuse the server proxy object between commands
-  to reduce the number of open connections.  Patch by Zev Benjamin.
-
 - Fixed a bug in Medusa where the HTTP Basic authorizer would cause an
   exception if the password contained a colon.  Thanks to Thomas Guttler
   for reporting this issue.
