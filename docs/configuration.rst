@@ -1174,8 +1174,21 @@ groups of FastCGI processes sharing sockets without being tied to a
 particular web server.  It's a clean separation of concerns, allowing
 the web server and the process manager to each do what they do best.
 
-Note that all the options available to ``[program:x]`` sections are
-also respected by fcgi-program sections.
+.. note::
+
+   The socket manager in Supervisor was originally developed to support
+   FastCGI processes but it is not limited to FastCGI.  Other protocols may
+   be used as well with no special configuration.  Any program that can
+   access an open socket from a file descriptor (e.g. with
+   `socket.fromfd <http://docs.python.org/library/socket.html#socket.fromfd>`_
+   in Python) can use the socket manager.  Supervisor will automatically
+   create the socket, bind, and listen before forking the first child in a
+   group.  The socket will be passed to each child on file descriptor
+   number ``0`` (zero).  When the last child in the group exits,
+   Supervisor will close the socket.
+
+All the options available to ``[program:x]`` sections are
+also respected by ``fcgi-program`` sections.
 
 ``[fcgi-program:x]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
