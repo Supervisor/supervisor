@@ -44,6 +44,10 @@ listeners.
 `supervisor-serialrestart <https://github.com/native2k/supervisor-serialrestart>`_
     Adds a ``serialrestart`` command to ``supervisorctl`` that restarts
     processes one after another rather than all at once.
+`Nodervisor <https://github.com/TAKEALOT/nodervisor>`_
+    Web-based dashboard written in Node.js for monitoring and controlling
+    Supervisor instances across multiple hosts.
+
 
 Libraries that integrate 3rd Party Applications with Supervisor
 ===============================================================
