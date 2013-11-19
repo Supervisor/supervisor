@@ -1,20 +1,32 @@
-3rd Party Applications and Libraries
-====================================
+Third Party Applications and Libraries
+======================================
 
-There are a number of 3rd party applications that can be useful together
-with supervisor. This list aims to summarize them and make them easier
+There are a number of third party applications that can be useful together
+with Supervisor. This list aims to summarize them and make them easier
 to find.
 
 See README.rst for information on how to contribute to this list.
-Obviously, you can always also send an e-mail to the supervisor mailing
-list to inform about missing plugins or libraries for/using supervisor.
+Obviously, you can always also send an e-mail to the Supervisor mailing
+list to inform about missing plugins or libraries for/using Supervisor.
 
-3rd Party Applications/Plugins/Libraries for Supervisor
-=======================================================
+Dashboards and Tools for Multiple Supervisor Instances
+------------------------------------------------------
 
-These are applications/plugins/libraries that add functionality or
-improves behaviour of supervisor. This also includes various event
-listeners.
+These are tools that can monitor or control a number of Supervisor
+instances running on different servers.
+
+`Nodervisor <https://github.com/TAKEALOT/nodervisor>`_
+    Web-based dashboard written in Node.js.
+
+`Supervisord-Monitor <https://github.com/mlazarov/supervisord-monitor>`_
+    Web-based dashboard written in PHP.
+
+
+Third Party Plugins and Libraries for Supervisor
+------------------------------------------------
+
+These are plugins and libraries that add new functionality to Supervisor.
+These also includes various event listeners.
 
 `superlance <http://pypi.python.org/pypi/superlance>`_
     Provides set of common eventlisteners that can be used to monitor
@@ -24,7 +36,8 @@ listeners.
     processes to the number of cores on the supervisor host.
 `supervisor-wildcards <https://github.com/aleszoulek/supervisor-wildcards>`_
     Implemenents start/stop/restart commands with wildcard support for
-    Supervisor.  These commands run in parallel and can be much faster than the built-in start/stop/restart commands.
+    Supervisor.  These commands run in parallel and can be much faster
+    than the built-in start/stop/restart commands.
 `mr.laforge <https://github.com/fschulze/mr.laforge>`_
     Lets you easily make sure that ``supervisord`` and specific
     processes controlled by it are running from within shell and
@@ -44,16 +57,13 @@ listeners.
 `supervisor-serialrestart <https://github.com/native2k/supervisor-serialrestart>`_
     Adds a ``serialrestart`` command to ``supervisorctl`` that restarts
     processes one after another rather than all at once.
-`Nodervisor <https://github.com/TAKEALOT/nodervisor>`_
-    Web-based dashboard written in Node.js for monitoring and controlling
-    Supervisor instances across multiple hosts.
 
 
-Libraries that integrate 3rd Party Applications with Supervisor
-===============================================================
+Libraries that integrate Third Party Applications with Supervisor
+-----------------------------------------------------------------
 
-These are libraries and plugins that makes it easier to use supervisor
-with 3rd party applications:
+These are libraries and plugins that makes it easier to use Supervisor
+with third party applications:
 
 `django-supervisor <http://pypi.python.org/pypi/django-supervisor/>`_
     Easy integration between djangocl and supervisord.
