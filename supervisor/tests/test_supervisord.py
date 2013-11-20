@@ -373,7 +373,7 @@ class SupervisordTests(unittest.TestCase):
         supervisord = self._makeOne(options)
 
         supervisord.add_process_group(gconfig)
-        supervisord.process_groups['foo'].unstopped_processes = [DummyProcess(None)]
+        supervisord.process_groups['foo'].stopped_processes = [DummyProcess(None)]
         supervisord.remove_process_group('foo')
         options.test = True
         supervisord.runforever()
