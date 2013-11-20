@@ -29,10 +29,8 @@ if sys.version_info[:2] < (2, 5):
     requires.append('elementtree')
 
 from setuptools import setup, find_packages
-here = os.path.abspath(os.path.normpath(os.path.dirname(__file__)))
-
+here = os.path.abspath(os.path.dirname(__file__))
 try:
-    here = os.path.abspath(os.path.dirname(__file__))
     README = open(os.path.join(here, 'README.rst')).read()
     CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 except:
