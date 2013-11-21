@@ -185,6 +185,16 @@ class RotatingFileHandler(FileHandler):
         FileHandler.emit(self, record)
         self.doRollover()
 
+    def removeAndRename(self, sfn, dfn):
+        if os.path.exists(dfn):
+            try:
+                os.remove(dfn)
+            except OSError, why:
+                # catch race condition (already deleted)
+                if why.args[0] != errno.ENOENT:
+                    raise
+        os.rename(sfn, dfn)
+
     def doRollover(self):
         """
         Do a rollover, as described in __init__().
@@ -201,23 +211,9 @@ class RotatingFileHandler(FileHandler):
                 sfn = "%s.%d" % (self.baseFilename, i)
                 dfn = "%s.%d" % (self.baseFilename, i + 1)
                 if os.path.exists(sfn):
-                    if os.path.exists(dfn):
-                        try:
-                            os.remove(dfn)
-                        except OSError, why:
-                            # catch race condition (already deleted)
-                            if why.args[0] != errno.ENOENT:
-                                raise
-                    os.rename(sfn, dfn)
+                    self.removeAndRename(sfn, dfn)
             dfn = self.baseFilename + ".1"
-            if os.path.exists(dfn):
-                try:
-                    os.remove(dfn)
-                except OSError, why:
-                    # catch race condition (already deleted)
-                    if why.args[0] != errno.ENOENT:
-                        raise
-            os.rename(self.baseFilename, dfn)
+            self.removeAndRename(self.baseFilename, dfn)
         self.stream = open(self.baseFilename, 'w')
 
 class LogRecord:
