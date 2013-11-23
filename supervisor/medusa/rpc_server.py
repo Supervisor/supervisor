@@ -32,16 +32,18 @@
 # and is easier to use from an asynchronous client.
 
 import marshal
-import socket
-import string
+import supervisor.medusa.text_socket as socket
 import sys
-import types
 
-import asyncore_25 as asyncore
-import asynchat_25 as asynchat
+import supervisor.medusa.asyncore_25 as asyncore
+import supervisor.medusa.asynchat_25 as asynchat
 
-from producers import scanning_producer
-from counter import counter
+from supervisor.medusa.producers import scanning_producer
+from supervisor.medusa.counter import counter
+
+from supervisor.py3compat import *
+if PY3:
+    from functools import reduce
 
 MY_NAME = socket.gethostname().split('.')[0]
 
@@ -56,7 +58,7 @@ MY_NAME = socket.gethostname().split('.')[0]
 
 class rpc_channel (asynchat.async_chat):
 
-    'Simple RPC server.'
+    """Simple RPC server."""
 
     # a 'packet': NNNNNNNNmmmmmmmmmmmmmmmm
     # (hex length in 8 bytes, followed by marshal'd packet data)
@@ -119,13 +121,12 @@ class rpc_channel (asynchat.async_chat):
             oid, kind, arg = marshal.loads (data)
 
             obj, refcnt = self.proxies[oid]
-            e = None
             reply_kind = 2
 
             try:
                 if kind == 0:
                     # __call__
-                    result = apply (obj, arg)
+                    result = obj(*arg)
                 elif kind == 1:
                     # __getattr__
                     result = getattr (obj, arg)
@@ -152,6 +153,8 @@ class rpc_channel (asynchat.async_chat):
                 elif kind == 7:
                     # __len__
                     result = len(obj)
+                else:
+                    result = None
 
             except:
                 reply_kind = 1
@@ -162,18 +165,9 @@ class rpc_channel (asynchat.async_chat):
 
             self.request_counter.increment()
 
-            # optimize a common case
-            if type(result) is types.InstanceType:
-                can_marshal = 0
-            else:
-                can_marshal = 1
-
             try:
                 rb = marshal.dumps ((reply_kind, result))
             except ValueError:
-                can_marshal = 0
-
-            if not can_marshal:
                 # unmarshallable object, return a reference
                 rid = id(result)
                 self.new_reference (result)
@@ -192,6 +186,7 @@ class rpc_server_root:
 class rpc_server (asyncore.dispatcher):
 
     def __init__ (self, root, address = ('', 8746)):
+        asyncore.dispatcher.__init__(self)
         self.create_socket (socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
         self.bind (address)
@@ -221,7 +216,7 @@ class rpc_server (asyncore.dispatcher):
 
 class fastrpc_channel (asynchat.async_chat):
 
-    'Simple RPC server'
+    """Simple RPC server"""
 
     # a 'packet': NNNNNNNNmmmmmmmmmmmmmmmm
     # (hex length in 8 bytes, followed by marshal'd packet data)
@@ -265,7 +260,7 @@ class fastrpc_channel (asynchat.async_chat):
             try:
                 for p in path:
                     o = getattr (o, p)
-                result = apply (o, params)
+                result = o(*params)
             except:
                 e = repr (asyncore.compact_traceback())
                 result = None
@@ -276,6 +271,7 @@ class fastrpc_channel (asynchat.async_chat):
 class fastrpc_server (asyncore.dispatcher):
 
     def __init__ (self, root, address = ('', 8748)):
+        asyncore.dispatcher.__init__(self)
         self.create_socket (socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
         self.bind (address)
@@ -292,7 +288,7 @@ if __name__ == '__main__':
 
     class thing:
         def __del__ (self):
-            print 'a thing has gone away %08x' % id(self)
+            print('a thing has gone away %08x' % id(self))
 
     class sample_calc:
 

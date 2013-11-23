@@ -5,18 +5,20 @@
 # since we can't do select() on stdin/stdout, we simply
 # use threads and blocking sockets.  <sigh>
 
-import socket
-import string
+import supervisor.medusa.text_socket as socket
 import sys
-import thread
-import md5
+import supervisor.medusa.thread as thread
+from supervisor.py3compat import *
+
+try:
+    from md5 import md5
+except ImportError:
+    from hashlib import md5
 
 def hex_digest (s):
     m = md5.md5()
     m.update (s)
-    return ''.join(
-            map (lambda x: hex (ord (x))[2:], map (None, m.digest())),
-            )
+    return ''.join([hex (ord (x))[2:] for x in list(m.digest())])
 
 def reader (lock, sock, password):
     # first grab the timestamp
@@ -26,7 +28,7 @@ def reader (lock, sock, password):
         d = sock.recv (1024)
         if not d:
             lock.release()
-            print 'Connection closed.  Hit <return> to exit'
+            print('Connection closed.  Hit <return> to exit')
             thread.exit()
         sys.stdout.write (d)
         sys.stdout.flush()
@@ -39,9 +41,9 @@ def writer (lock, sock, barrel="just kidding"):
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
-        print 'Usage: %s host port'
+        print('Usage: %s host port')
         sys.exit(0)
-    print 'Enter Password: ',
+    print_function('Enter Password: ',end='')
     p = raw_input()
     s = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
     s.connect((sys.argv[1], int(sys.argv[2])))

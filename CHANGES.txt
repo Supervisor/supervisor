@@ -1,6 +1,14 @@
 3.1a1 (Next Release)
 --------------------
 
+Python 3 related
+~~~~~~~~~~~~~~~~
+
+- The ``supervisor`` package is no longer a namespace package.
+
+Other
+~~~~~
+
 - Stopping a process in the backoff state now changes it to the stopped
   state.  Previously, an attempt to stop a process in backoff would be
   ignored.  Patch by Pascal Varet.

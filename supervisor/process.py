@@ -3,7 +3,15 @@ import sys
 import time
 import errno
 import shlex
-import StringIO
+try:
+    #noinspection PyUnresolvedReferences
+    import StringIO
+    #noinspection PyUnresolvedReferences
+    from sys import maxint
+except ImportError:
+    import io as StringIO
+    from sys import maxsize as maxint
+
 import traceback
 import signal
 
@@ -21,12 +29,13 @@ from supervisor.options import ProcessException, BadCommand
 from supervisor.dispatchers import EventListenerStates
 
 from supervisor import events
+from supervisor.py3compat import total_ordering
 
 from supervisor.datatypes import RestartUnconditionally
 
 from supervisor.socket_manager import SocketManager
 
-class Subprocess:
+class Subprocess(object):
 
     """A class to manage a subprocess."""
 
@@ -44,9 +53,9 @@ class Subprocess:
     system_stop = 0 # true if the process has been stopped by the system
     killing = 0 # flag determining whether we are trying to kill this proc
     backoff = 0 # backoff counter (to startretries)
-    dispatchers = None # asnycore output dispatchers (keyed by fd)
+    dispatchers = None # asyncore output dispatchers (keyed by fd)
     pipes = None # map of channel name to file descriptor #
-    exitstatus = None # status attached to dead process by finsh()
+    exitstatus = None # status attached to dead process by finish()
     spawnerr = None # error message attached by spawn() if any
     group = None # ProcessGroup instance if process is in the group
 
@@ -102,7 +111,8 @@ class Subprocess:
         if not """
         try:
             commandargs = shlex.split(self.config.command)
-        except ValueError, e:
+        except ValueError:
+            e = sys.exc_info()[1]
             raise BadCommand("can't parse command %r: %s" % \
                 (self.config.command, str(e)))
 
@@ -166,7 +176,7 @@ class Subprocess:
 
         if new_state == ProcessStates.BACKOFF:
             now = time.time()
-            self.backoff = self.backoff + 1
+            self.backoff += 1
             self.delay = now + self.backoff
 
         self.state = new_state
@@ -209,7 +219,8 @@ class Subprocess:
 
         try:
             filename, argv = self.get_execv_args()
-        except ProcessException, what:
+        except ProcessException:
+            what = sys.exc_info()[1]
             self.record_spawnerr(what.args[0])
             self._assertInState(ProcessStates.STARTING)
             self.change_state(ProcessStates.BACKOFF)
@@ -217,7 +228,8 @@ class Subprocess:
 
         try:
             self.dispatchers, self.pipes = self.config.make_dispatchers(self)
-        except OSError, why:
+        except OSError:
+            why = sys.exc_info()[1]
             code = why.args[0]
             if code == errno.EMFILE:
                 # too many file descriptors open
@@ -231,7 +243,8 @@ class Subprocess:
 
         try:
             pid = options.fork()
-        except OSError, why:
+        except OSError:
+            why = sys.exc_info()[1]
             code = why.args[0]
             if code == errno.EAGAIN:
                 # process table full
@@ -312,13 +325,13 @@ class Subprocess:
                 env['SUPERVISOR_GROUP_NAME'] = self.group.config.name
             if self.config.environment is not None:
                 env.update(self.config.environment)
-
             # change directory
+            cwd = self.config.directory
             try:
-                cwd = self.config.directory
                 if cwd is not None:
                     options.chdir(cwd)
-            except OSError, why:
+            except OSError:
+                why = sys.exc_info()[1]
                 code = errno.errorcode.get(why.args[0], why.args[0])
                 msg = "couldn't chdir to %s: %s\n" % (cwd, code)
                 options.write(2, "supervisor: " + msg)
@@ -329,7 +342,8 @@ class Subprocess:
                 if self.config.umask is not None:
                     options.setumask(self.config.umask)
                 options.execve(filename, argv, env)
-            except OSError, why:
+            except OSError:
+                why = sys.exc_info()[1]
                 code = errno.errorcode.get(why.args[0], why.args[0])
                 msg = "couldn't exec %s: %s\n" % (argv[0], code)
                 options.write(2, "supervisor: " + msg)
@@ -473,7 +487,7 @@ class Subprocess:
             self.exitstatus = es
 
             if self.state == ProcessStates.STARTING:
-                # XXX I dont know under which circumstances this
+                # XXX I don't know under which circumstances this
                 # happens, but in the wild, there is a transition that
                 # subverts the RUNNING state (directly from STARTING
                 # to EXITED), so we perform the correct transition
@@ -514,9 +528,12 @@ class Subprocess:
         msg = self.config.options.dropPrivileges(self.config.uid)
         return msg
 
-    def __cmp__(self, other):
+    def __lt__(self, other):
+        return self.config.priority < other.config.priority
+
+    def __eq__(self, other):
         # sort by priority
-        return cmp(self.config.priority, other.config.priority)
+        return self.config.priority == other.config.priority
 
     def __repr__(self):
         return '<Subprocess at %s with name %s in state %s>' % (
@@ -588,6 +605,8 @@ class Subprocess:
                                                       self.pid))
                 self.kill(signal.SIGKILL)
 
+Subprocess = total_ordering(Subprocess)
+                
 class FastCGISubprocess(Subprocess):
     """Extends Subprocess class to handle FastCGI subprocesses"""
 
@@ -649,7 +668,7 @@ class FastCGISubprocess(Subprocess):
         for i in range(3, options.minfds):
             options.close_fd(i)
 
-class ProcessGroupBase:
+class ProcessGroupBase(object):
     def __init__(self, config):
         self.config = config
         self.processes = {}
@@ -657,8 +676,11 @@ class ProcessGroupBase:
             self.processes[pconfig.name] = pconfig.make_process(self)
 
 
-    def __cmp__(self, other):
-        return cmp(self.config.priority, other.config.priority)
+    def __lt__(self, other):
+        return self.config.priority < other.config.priority
+
+    def __eq__(self, other):
+        return self.config.priority == other.config.priority
 
     def __repr__(self):
         return '<%s instance at %s named %s>' % (self.__class__, id(self),
@@ -673,7 +695,7 @@ class ProcessGroupBase:
             process.reopenlogs()
 
     def stop_all(self):
-        processes = self.processes.values()
+        processes = list(self.processes.values())
         processes.sort()
         processes.reverse() # stop in desc priority order
 
@@ -700,6 +722,8 @@ class ProcessGroupBase:
             dispatchers.update(process.dispatchers)
         return dispatchers
 
+ProcessGroupBase = total_ordering(ProcessGroupBase)
+
 class ProcessGroup(ProcessGroupBase):
     def transition(self):
         for proc in self.processes.values():
@@ -715,8 +739,9 @@ class FastCGIProcessGroup(ProcessGroup):
         #It's not required to call get_socket() here but we want
         #to fail early during start up if there is a config error
         try:
-            sock = self.socket_manager.get_socket()
-        except Exception, e:
+            self.socket_manager.get_socket()
+        except Exception:
+            e = sys.exc_info()[1]
             raise ValueError('Could not create FastCGI socket %s: %s' % (self.socket_manager.config(), e))
 
 class EventListenerPool(ProcessGroupBase):
@@ -774,7 +799,7 @@ class EventListenerPool(ProcessGroupBase):
             event.serial = new_serial(GlobalSerial)
         if not hasattr(event, 'pool_serials'):
             event.pool_serials = {}
-        if not event.pool_serials.has_key(self.config.name):
+        if self.config.name not in event.pool_serials:
             event.pool_serials[self.config.name] = new_serial(self)
         else:
             self.config.options.logger.debug(
@@ -807,7 +832,8 @@ class EventListenerPool(ProcessGroupBase):
                     envelope = self._eventEnvelope(event_type, serial,
                                                    pool_serial, payload)
                     process.write(envelope)
-                except OSError, why:
+                except OSError:
+                    why = sys.exc_info()[1]
                     if why.args[0] != errno.EPIPE:
                         raise
                     continue
@@ -838,14 +864,14 @@ class EventListenerPool(ProcessGroupBase):
                 'pool:%(pool_name)s poolserial:%(pool_serial)s '
                 'eventname:%(event_name)s len:%(len)s\n%(payload)s' % D)
 
-class GlobalSerial:
+class GlobalSerial(object):
     def __init__(self):
         self.serial = -1
 
 GlobalSerial = GlobalSerial() # singleton
 
 def new_serial(inst):
-    if inst.serial == sys.maxint:
+    if inst.serial == maxint:
         inst.serial = -1
     inst.serial += 1
     return inst.serial

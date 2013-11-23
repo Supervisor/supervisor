@@ -1,5 +1,4 @@
-import ConfigParser
-import socket
+import supervisor.medusa.text_socket as socket
 import getopt
 import os
 import sys
@@ -7,7 +6,17 @@ import tempfile
 import errno
 import signal
 import re
-import xmlrpclib
+from supervisor.py3compat import *
+if PY3:
+    import configparser as ConfigParser
+    import xmlrpc.client as xmlrpclib
+    from io import StringIO
+else:
+    #noinspection PyUnresolvedReferences
+    import ConfigParser
+    #noinspection PyUnresolvedReferences
+    import xmlrpclib
+    from StringIO import StringIO
 import pwd
 import grp
 import resource
@@ -51,10 +60,12 @@ from supervisor.datatypes import set_here
 from supervisor import loggers
 from supervisor import states
 from supervisor import xmlrpc
+from supervisor import read_file
 
 mydir = os.path.abspath(os.path.dirname(__file__))
 version_txt = os.path.join(mydir, 'version.txt')
-VERSION = open(version_txt).read().strip()
+
+VERSION = read_file(version_txt).strip()
 
 def normalize_path(v):
     return os.path.normpath(os.path.abspath(os.path.expanduser(v)))
@@ -127,7 +138,7 @@ class Options:
         help = self.doc + "\n"
         if help.find("%s") > 0:
             help = help.replace("%s", self.progname)
-        self.stdout.write(help)
+        print_function(help, end='')
         self.exit(0)
 
     def usage(self, msg):
@@ -191,7 +202,7 @@ class Options:
             if rest not in ("", ":"):
                 raise ValueError("short option should be 'x' or 'x:'")
             key = "-" + key
-            if self.options_map.has_key(key):
+            if key in self.options_map:
                 raise ValueError("duplicate short option key '%s'" % key)
             self.options_map[key] = (name, handler)
             self.short_options.append(short)
@@ -203,7 +214,7 @@ class Options:
             if key[-1] == "=":
                 key = key[:-1]
             key = "--" + key
-            if self.options_map.has_key(key):
+            if key in self.options_map:
                 raise ValueError("duplicate long option key '%s'" % key)
             self.options_map[key] = (name, handler)
             self.long_options.append(long)
@@ -243,8 +254,12 @@ class Options:
         if progname is None:
             progname = sys.argv[0]
         if doc is None:
-            import __main__
-            doc = __main__.__doc__
+            try:
+                #noinspection PyUnresolvedReferences
+                import __main__
+                doc = __main__.__doc__
+            except Exception:
+                pass
         self.progname = progname
         self.doc = doc
 
@@ -255,7 +270,8 @@ class Options:
         try:
             self.options, self.args = getopt.getopt(
                 args, "".join(self.short_options), self.long_options)
-        except getopt.error, msg:
+        except getopt.error:
+            msg = sys.exc_info()[1]
             if raise_getopt_errs:
                 self.usage(msg)
 
@@ -269,7 +285,8 @@ class Options:
             if handler is not None:
                 try:
                     arg = handler(arg)
-                except ValueError, msg:
+                except ValueError:
+                    msg = sys.exc_info()[1]
                     self.usage("invalid value for %s %r: %s" % (opt, arg, msg))
             if name and arg is not None:
                 if getattr(self, name) is not None:
@@ -279,12 +296,13 @@ class Options:
         # Process environment variables
         for envvar in self.environ_map.keys():
             name, handler = self.environ_map[envvar]
-            if os.environ.has_key(envvar):
+            if envvar in os.environ:
                 value = os.environ[envvar]
                 if handler is not None:
                     try:
                         value = handler(value)
-                    except ValueError, msg:
+                    except ValueError:
+                        msg = sys.exc_info()[1]
                         self.usage("invalid environment value for %s %r: %s"
                                    % (envvar, value, msg))
                 if name and value is not None:
@@ -343,7 +361,8 @@ class Options:
             set_here(self.here)
         try:
             self.read_config(self.configfile)
-        except ValueError, msg:
+        except ValueError:
+            msg = sys.exc_info()[1]
             if do_usage:
                 # if this is not called from an RPC method, run usage and exit.
                 self.usage(str(msg))
@@ -455,7 +474,8 @@ class ServerOptions(Options):
         if self.user is not None:
             try:
                 uid = name_to_uid(self.user)
-            except ValueError, msg:
+            except ValueError:
+                msg = sys.exc_info()[1]
                 self.usage(msg) # invalid user
             self.uid = uid
             self.gid = gid_for_uid(uid)
@@ -519,18 +539,30 @@ class ServerOptions(Options):
         self.parse_warnings = []
 
         section = self.configroot.supervisord
+        need_close = False
         if not hasattr(fp, 'read'):
             if not os.path.exists(fp):
                 raise ValueError("could not find config file %s" % fp)
             try:
                 fp = open(fp, 'r')
+                need_close = True
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)
-        parser = UnhosedConfigParser()
+        kwargs = {}
+        if PY3:
+            kwargs['inline_comment_prefixes'] = (';','#')
+        parser = UnhosedConfigParser(**kwargs)
         try:
-            parser.readfp(fp)
-        except ConfigParser.ParsingError, why:
+            try:
+                parser.read_file(fp)
+            except AttributeError:
+                parser.readfp(fp)
+        except ConfigParser.ParsingError:
+            why = sys.exc_info()[1]
             raise ValueError(str(why))
+        finally:
+            if need_close:
+                fp.close()
 
         if parser.has_section('include'):
             if not parser.has_option('include', 'files'):
@@ -549,7 +581,8 @@ class ServerOptions(Options):
                         'Included extra file "%s" during parsing' % filename)
                     try:
                         parser.read(filename)
-                    except ConfigParser.ParsingError, why:
+                    except ConfigParser.ParsingError:
+                        why = sys.exc_info()[1]
                         raise ValueError(str(why))
 
         sections = parser.sections()
@@ -725,7 +758,8 @@ class ServerOptions(Options):
             try:
                 socket_config = self.parse_fcgi_socket(socket, proc_uid,
                                                     socket_owner, socket_mode)
-            except ValueError, e:
+            except ValueError:
+                e = sys.exc_info()[1]
                 raise ValueError('%s in [%s] socket' % (str(e), section))
 
             processes=self.processes_from_section(parser, section, program_name,
@@ -753,7 +787,7 @@ class ServerOptions(Options):
                     socket_owner = (proc_uid, gid_for_uid(proc_uid))
 
             if socket_mode is None:
-                socket_mode = 0700
+                socket_mode = 448 # 0700 in Py2, 0o700 Py3
 
             return UnixStreamSocketConfig(path, owner=socket_owner,
                                                 mode=socket_mode)
@@ -980,7 +1014,7 @@ class ServerOptions(Options):
                 except (TypeError, ValueError):
                     raise ValueError('Invalid chmod value %s' % chmod)
             else:
-                chmod = 0700
+                chmod = 448 # 0700 on py2, 0o700 on py3
             config['chmod'] = chmod
             config['section'] = section
             configs.append(config)
@@ -1019,7 +1053,8 @@ class ServerOptions(Options):
         if self.directory:
             try:
                 os.chdir(self.directory)
-            except OSError, err:
+            except OSError:
+                err = sys.exc_info()[1]
                 self.logger.critical("can't chdir into %r: %s"
                                      % (self.directory, err))
             else:
@@ -1105,7 +1140,8 @@ class ServerOptions(Options):
     def openhttpservers(self, supervisord):
         try:
             self.httpservers = self.make_http_servers(supervisord)
-        except socket.error, why:
+        except socket.error:
+            why = sys.exc_info()[1]
             if why.args[0] == errno.EADDRINUSE:
                 self.usage('Another program is already listening on '
                            'a port that one of our HTTP servers is '
@@ -1120,7 +1156,8 @@ class ServerOptions(Options):
                     self.usage('%s errno.%s (%d)' %
                                (help, errorname, why.args[0]))
             self.unlink_socketfiles = False
-        except ValueError, why:
+        except ValueError:
+            why = sys.exc_info()[1]
             self.usage(why.args[0])
 
     def get_autochildlog_name(self, name, identifier, channel):
@@ -1238,7 +1275,8 @@ class ServerOptions(Options):
         # we're sitting in the waitpid call.
         try:
             pid, sts = os.waitpid(-1, os.WNOHANG)
-        except OSError, why:
+        except OSError:
+            why = sys.exc_info()[1]
             err = why.args[0]
             if err not in (errno.ECHILD, errno.EINTR):
                 self.logger.critical(
@@ -1352,7 +1390,7 @@ class ServerOptions(Options):
         return os.stat(filename)
 
     def write(self, fd, data):
-        return os.write(fd, data)
+        return os.write(fd, as_bytes(data))
 
     def execve(self, filename, argv, env):
         return os.execve(filename, argv, env)
@@ -1381,7 +1419,7 @@ class ServerOptions(Options):
     def get_path(self):
         """Return a list corresponding to $PATH, or a default."""
         path = ["/bin", "/usr/bin", "/usr/local/bin"]
-        if os.environ.has_key("PATH"):
+        if "PATH" in os.environ:
             p = os.environ["PATH"]
             if p:
                 path = p.split(os.pathsep)
@@ -1397,7 +1435,7 @@ class ServerOptions(Options):
         elif stat.S_ISDIR(st[stat.ST_MODE]):
             raise NotExecutable("command at %r is a directory" % filename)
 
-        elif not (stat.S_IMODE(st[stat.ST_MODE]) & 0111):
+        elif not (stat.S_IMODE(st[stat.ST_MODE]) & 73): #0111 in py2, 0o111 in py3
             raise NotExecutable("command at %r is not executable" % filename)
 
         elif not os.access(filename, os.X_OK):
@@ -1412,11 +1450,12 @@ class ServerOptions(Options):
     def readfd(self, fd):
         try:
             data = os.read(fd, 2 << 16) # 128K
-        except OSError, why:
+        except OSError:
+            why = sys.exc_info()[1]
             if why.args[0] not in (errno.EWOULDBLOCK, errno.EBADF, errno.EINTR):
                 raise
             data = ''
-        return data
+        return as_string(data)
 
     def process_environment(self):
         os.environ.update(self.environment or {})
@@ -1429,7 +1468,7 @@ class ServerOptions(Options):
 
     def make_pipes(self, stderr=True):
         """ Create pipes for parent to child stdin/stdout/stderr
-        communications.  Open fd in nonblocking mode so we can read them
+        communications.  Open fd in non-blocking mode so we can read them
         in the mainloop without blocking.  If stderr is False, don't
         create a pipe for stderr. """
 
@@ -1511,17 +1550,24 @@ class ClientOptions(Options):
 
     def read_config(self, fp):
         section = self.configroot.supervisorctl
+        need_close = False
         if not hasattr(fp, 'read'):
             self.here = os.path.dirname(normalize_path(fp))
             if not os.path.exists(fp):
                 raise ValueError("could not find config file %s" % fp)
             try:
                 fp = open(fp, 'r')
+                need_close = True
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)
         config = UnhosedConfigParser()
         config.mysection = 'supervisorctl'
-        config.readfp(fp)
+        try:
+            config.read_file(fp)
+        except AttributeError:
+            config.readfp(fp)
+        if need_close:
+            fp.close()
         sections = config.sections()
         if not 'supervisorctl' in sections:
             raise ValueError('.ini file does not include supervisorctl section')
@@ -1573,9 +1619,13 @@ _marker = []
 class UnhosedConfigParser(ConfigParser.RawConfigParser):
     mysection = 'supervisord'
     def read_string(self, s):
-        from StringIO import StringIO
+        if not PY3 and isinstance(s, str):
+            s = unicode(s)
         s = StringIO(s)
-        return self.readfp(s)
+        try:
+            return self.read_file(s)
+        except AttributeError:
+            return self.readfp(s)
 
     def getdefault(self, option, default=_marker):
         try:
@@ -1793,10 +1843,7 @@ class EventListenerPoolConfig(Config):
 class FastCGIGroupConfig(ProcessGroupConfig):
     def __init__(self, options, name, priority, process_configs,
                  socket_config):
-        self.options = options
-        self.name = name
-        self.priority = priority
-        self.process_configs = process_configs
+        ProcessGroupConfig.__init__(self, options, name, priority, process_configs)
         self.socket_config = socket_config
 
     def __eq__(self, other):
@@ -1819,6 +1866,7 @@ def readFile(filename, offset, length):
     absoffset = abs(offset)
     abslength = abs(length)
 
+    f = None
     try:
         f = open(filename, 'rb')
         if absoffset != offset:
@@ -1839,11 +1887,14 @@ def readFile(filename, offset, length):
                 f.seek(offset)
                 data = f.read()
             else:
-                sz = f.seek(offset)
+                f.seek(offset)
                 data = f.read(length)
     except (OSError, IOError):
         raise ValueError('FAILED')
 
+    finally:
+        if f:
+            f.close()
     return data
 
 def tailFile(filename, offset, length):
@@ -1855,6 +1906,7 @@ def tailFile(filename, offset, length):
     """
 
     overflow = False
+    f = None
     try:
         f = open(filename, 'rb')
         f.seek(0, 2)
@@ -1865,7 +1917,7 @@ def tailFile(filename, offset, length):
             offset   = sz - 1
 
         if (offset + length) > sz:
-            if (offset > (sz - 1)):
+            if offset > (sz - 1):
                 length = 0
             offset = sz - length
 
@@ -1879,10 +1931,13 @@ def tailFile(filename, offset, length):
             data = f.read(length)
 
         offset = sz
-        return [data, offset, overflow]
+        return [as_string(data), offset, overflow]
 
     except (OSError, IOError):
         return ['', offset, False]
+    finally:
+        if f:
+            f.close()
 
 # Helpers for dealing with signals and exit status
 
@@ -1979,7 +2034,7 @@ def environ_expansions():
         return _environ_expansions
 
     _environ_expansions = {}
-    for key, value in os.environ.iteritems():
+    for key, value in os.environ.items():
         _environ_expansions['ENV_%s' % key] = value
 
     return _environ_expansions

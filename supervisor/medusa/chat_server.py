@@ -7,14 +7,12 @@
 
 RCS_ID = '$Id: chat_server.py,v 1.4 2002/03/20 17:37:48 amk Exp $'
 
-import string
-
 VERSION = RCS_ID.split()[2]
 
-import socket
-import asyncore_25 as asyncore
-import asynchat_25 as asynchat
-import status_handler
+import supervisor.medusa.text_socket as socket
+import supervisor.medusa.asyncore_25 as asyncore
+import supervisor.medusa.asynchat_25 as asynchat
+import supervisor.medusa.status_handler as status_handler
 
 class chat_channel (asynchat.async_chat):
 
@@ -37,7 +35,7 @@ class chat_channel (asynchat.async_chat):
             self.nick = line.split()[0]
             if not self.nick:
                 self.nick = None
-                self.push ('huh? gimmee a nickname: ')
+                self.push ('huh? gimme a nickname: ')
             else:
                 self.greet()
         else:
@@ -55,12 +53,11 @@ class chat_channel (asynchat.async_chat):
             self.push ('[Kinda lonely in here... you\'re the only caller!]\r\n')
         else:
             self.push ('[There are %d other callers]\r\n' % (len(self.server.channels)-1))
-            nicks = map (lambda x: x.get_nick(), self.server.channels.keys())
-            self.push('\r\n  '.join(nicks) + '\r\n')
+            nicks = [x.get_nick() for x in list(self.server.channels.keys())]
+            self.push ('\r\n  '.join(nicks) + '\r\n')
             self.server.push_line (self, '[joined]')
 
     def handle_command (self, command):
-        import types
         command_line = command.split()
         name = 'cmd_%s' % command_line[0][1:]
         if hasattr (self, name):
@@ -71,6 +68,7 @@ class chat_channel (asynchat.async_chat):
             else:
                 self.push ('unknown command: %s' % command_line[0])
 
+    #noinspection PyUnusedLocal
     def cmd_quit (self, args):
         self.server.push_line (self, '[left]')
         self.push ('Goodbye!\r\n')
@@ -108,21 +106,21 @@ class chat_server (asyncore.dispatcher):
         self.port = port
         self.create_socket (socket.AF_INET, socket.SOCK_STREAM)
         self.bind ((ip, port))
-        print '%s started on port %d' % (self.SERVER_IDENT, port)
+        print('%s started on port %d' % (self.SERVER_IDENT, port))
         self.listen (5)
         self.channels = {}
         self.count = 0
 
     def handle_accept (self):
         conn, addr = self.accept()
-        self.count = self.count + 1
-        print 'client #%d - %s:%d' % (self.count, addr[0], addr[1])
+        self.count += 1
+        print('client #%d - %s:%d' % (self.count, addr[0], addr[1]))
         self.channels[self.channel_class (self, conn, addr)] = 1
 
     def push_line (self, from_channel, line):
         nick = from_channel.get_nick()
         if self.spy:
-            print '%s: %s' % (nick, line)
+            print('%s: %s' % (nick, line))
         for c in self.channels.keys():
             if c is not from_channel:
                 c.push ('%s: %s\r\n' % (nick, line))

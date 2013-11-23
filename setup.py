@@ -15,19 +15,17 @@
 import os
 import sys
 
-if sys.version_info[:2] < (2, 4) or sys.version_info[0] > 2:
-    msg = ("Supervisor requires Python 2.4 or later but does not work on "
-           "any version of Python 3.  You are using version %s.  Please "
-           "install using a supported version." % sys.version)
+if sys.version_info[:2] < (2, 5):
+    msg = ("Supervisor requires Python 2.5 or later. You are using version %s. "
+           "Please install using a supported version." % sys.version)
     sys.stderr.write(msg)
     sys.exit(1)
 
 requires = ['meld3 >= 0.6.5']
-
-if sys.version_info[:2] < (2, 5):
-    # for meld3 (it's a distutils package)
-    requires.append('elementtree')
-
+tests_require = []
+if sys.version_info[:2] < (3, 3):
+    tests_require.append('mock')
+    
 from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
 try:
@@ -68,10 +66,9 @@ dist = setup(
     packages = find_packages(),
     install_requires = requires,
     extras_require = {'iterparse':['cElementTree >= 1.0.2']},
-    tests_require = ['mock >= 0.5.0'],
+    tests_require = tests_require,
     include_package_data = True,
     zip_safe = False,
-    namespace_packages = ['supervisor'],
     test_suite = "supervisor.tests",
     entry_points = {
      'console_scripts': [

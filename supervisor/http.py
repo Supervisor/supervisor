@@ -2,9 +2,14 @@ import os
 import stat
 import time
 import sys
-import socket
+import supervisor.medusa.text_socket as socket
 import errno
-import urllib
+import pwd
+from supervisor.py3compat import *
+if PY3:
+    import urllib.parse as urllib
+else:
+    import urllib
 
 try:
     import pwd
@@ -13,7 +18,8 @@ except ImportError:  # Windows
 
 try:
     from hashlib import sha1
-except ImportError:  # Python 2.4 or earlier
+except ImportError:
+    #noinspection PyUnresolvedReferences
     from sha import new as sha1
 
 from supervisor.medusa import asyncore_25 as asyncore
@@ -60,7 +66,7 @@ class deferring_chunked_producer:
             return ''
 
 class deferring_composite_producer:
-    "combine a fifo of producers into one"
+    """combine a fifo of producers into one"""
     def __init__ (self, producers):
         self.producers = producers
         self.delay = 0.1
@@ -128,7 +134,7 @@ class deferring_hooked_producer:
                 self.producer = None
                 self.function (self.bytes)
             else:
-                self.bytes = self.bytes + len(result)
+                self.bytes += len(result)
             return result
         else:
             return ''
@@ -145,7 +151,7 @@ class deferring_http_request(http_server.http_request):
         # use string methods
         header = header.lower()
         hc = self._header_cache
-        if not hc.has_key(header):
+        if header not in hc:
             h = header + ': '
             for line in self.header:
                 if line.lower().startswith(h):
@@ -306,11 +312,11 @@ class deferring_http_request(http_server.http_request):
             key,value=header.split(":",1)
             key=key.lower()
             value=value.strip()
-            if header2env.has_key(key) and value:
+            if key in header2env and value:
                 env[header2env.get(key)]=value
             else:
                 key='HTTP_%s' % ("_".join(key.split( "-"))).upper()
-                if value and not env.has_key(key):
+                if value and key not in env:
                     env[key]=value
         return env
 
@@ -327,14 +333,14 @@ class deferring_http_request(http_server.http_request):
         else:
             protocol = 'http'
 
-        if environ.has_key('HTTP_HOST'):
+        if 'HTTP_HOST' in environ:
             host = environ['HTTP_HOST'].strip()
             hostname, port = urllib.splitport(host)
         else:
             hostname = environ['SERVER_NAME'].strip()
             port = environ['SERVER_PORT']
 
-        if (port is None or default_port[protocol] == port):
+        if port is None or default_port[protocol] == port:
             host = hostname
         else:
             host = hostname + ':' + port
@@ -380,7 +386,7 @@ class deferring_http_channel(http_server.http_channel):
                     return
                 elif isinstance(p, str):
                     self.producer_fifo.pop()
-                    self.ac_out_buffer = self.ac_out_buffer + p
+                    self.ac_out_buffer += p
                     return
 
                 data = p.more()
@@ -522,6 +528,7 @@ class supervisor_http_server(http_server.http_server):
                         )
                 )
 
+    #noinspection PyUnusedLocal
     def log_info(self, message, type='info'):
         ip = ''
         if getattr(self, 'ip', None) is not None:
@@ -531,6 +538,7 @@ class supervisor_http_server(http_server.http_server):
 class supervisor_af_inet_http_server(supervisor_http_server):
     """ AF_INET version of supervisor HTTP server """
 
+    #noinspection PyMissingConstructor
     def __init__(self, ip, port, logger_object):
         self.ip = ip
         self.port = port
@@ -538,7 +546,6 @@ class supervisor_af_inet_http_server(supervisor_http_server):
         self.prebind(sock, logger_object)
         self.bind((ip, port))
 
-        host, port = self.socket.getsockname()
         if not ip:
             self.log_info('Computing default hostname', 'warning')
             hostname = socket.gethostname()
@@ -562,6 +569,7 @@ class supervisor_af_inet_http_server(supervisor_http_server):
 class supervisor_af_unix_http_server(supervisor_http_server):
     """ AF_UNIX version of supervisor HTTP server """
 
+    #noinspection PyMissingConstructor
     def __init__(self, socketname, sockchmod, sockchown, logger_object):
         self.ip = socketname
         self.port = socketname
@@ -607,7 +615,8 @@ class supervisor_af_unix_http_server(supervisor_http_server):
                 else:
                     try:
                         os.chown(socketname, sockchown[0], sockchown[1])
-                    except OSError, why:
+                    except OSError:
+                        why = sys.exc_info()[1]
                         if why.args[0] == errno.EPERM:
                             msg = ('Not permitted to chown %s to uid/gid %s; '
                                    'adjust "sockchown" value in config file or '
@@ -638,7 +647,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
         try:
             s.connect(socketname)
             s.send("GET / HTTP/1.0\r\n\r\n")
-            data = s.recv(1)
+            s.recv(1)
             s.close()
         except socket.error:
             return False
@@ -797,9 +806,9 @@ def make_http_servers(options, supervisord):
         else:
             raise ValueError('Cannot determine socket type %r' % family)
 
-        from xmlrpc import supervisor_xmlrpc_handler
-        from xmlrpc import SystemNamespaceRPCInterface
-        from web import supervisor_ui_handler
+        from supervisor.xmlrpc import supervisor_xmlrpc_handler
+        from supervisor.xmlrpc import SystemNamespaceRPCInterface
+        from supervisor.web import supervisor_ui_handler
 
         subinterfaces = []
         for name, factory, d in options.rpcinterface_factories:
@@ -855,10 +864,10 @@ class encrypted_dictionary_authorizer:
 
     def authorize(self, auth_info):
         username, password = auth_info
-        if self.dict.has_key(username):
+        if username in self.dict:
             stored_password = self.dict[username]
             if stored_password.startswith('{SHA}'):
-                password_hash = sha1(password).hexdigest()
+                password_hash = sha1(as_bytes(password)).hexdigest()
                 return stored_password[5:] == password_hash
             else:
                 return stored_password == password

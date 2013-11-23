@@ -1,21 +1,23 @@
 # -*- Mode: Python -*-
 
 # monitor client, unix version.
-
-import asyncore_25 as asyncore
-import asynchat_25 as asynchat
-import socket
-import string
+import supervisor.medusa.asyncore_25 as asyncore
+import supervisor.medusa.asynchat_25 as asynchat
+import supervisor.medusa.text_socket as socket
 import sys
 import os
+from supervisor.py3compat import *
 
-import md5
+try:
+    from md5 import md5
+except ImportError:
+    from hashlib import md5
 
 class stdin_channel (asyncore.file_dispatcher):
     def handle_read (self):
         data = self.recv(512)
         if not data:
-            print '\nclosed.'
+            print('\nclosed.')
             self.sock_channel.close()
             try:
                 self.close()
@@ -53,18 +55,19 @@ class monitor_client (asynchat.async_chat):
             self.push (hex_digest (self.timestamp + self.password) + '\r\n')
             self.sent_auth = 1
         else:
-            print
+            print()
 
     def handle_close (self):
         # close all the channels, which will make the standard main
         # loop exit.
-        map (lambda x: x.close(), asyncore.socket_map.values())
+        for c in asyncore.socket_map.values():
+            c.close()
 
     def log (self, *ignore):
         pass
 
 class encrypted_monitor_client (monitor_client):
-    "Wrap push() and recv() with a stream cipher"
+    """Wrap push() and recv() with a stream cipher"""
 
     def init_cipher (self, cipher, key):
         self.outgoing = cipher.new (key)
@@ -83,17 +86,15 @@ class encrypted_monitor_client (monitor_client):
 
 def hex_digest (s):
     m = md5.md5()
-    m.update (s)
-    return ''.join(
-            map (lambda x: hex (ord (x))[2:], map (None, m.digest()))
-            )
+    m.update(s)
+    return ''.join([hex (ord (x))[2:] for x in m.digest()])
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
-        print 'Usage: %s host port' % sys.argv[0]
+        print('Usage: %s host port' % sys.argv[0])
         sys.exit(0)
 
-    if ('-e' in sys.argv):
+    if '-e' in sys.argv:
         encrypt = 1
         sys.argv.remove ('-e')
     else:
@@ -104,17 +105,18 @@ if __name__ == '__main__':
     try:
         os.system ('stty -echo')
         p = raw_input()
-        print
+        print()
     finally:
         os.system ('stty echo')
     stdin = stdin_channel (0)
     if len(sys.argv) > 1:
         if encrypt:
             client = encrypted_monitor_client(p, (sys.argv[1], int(sys.argv[2])))
+            #noinspection PyUnresolvedReferences
             import sapphire
             client.init_cipher (sapphire, p)
         else:
-            client = monitor_client(p, (sys.argv[1], int(sys.argv[2])))
+            client = monitor_client (p, (sys.argv[1], int(sys.argv[2])))
     else:
         # default to local host, 'standard' port
         client = monitor_client (p)

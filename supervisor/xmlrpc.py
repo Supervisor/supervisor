@@ -1,10 +1,24 @@
 import types
-import socket
-import xmlrpclib
-import httplib
-import urllib
+import supervisor.medusa.text_socket as socket
+from supervisor.py3compat import *
+if PY3:
+    import xmlrpc.client as xmlrpclib
+    import http.client as httplib
+    import urllib.parse as urllib
+    from io import StringIO
+    from base64 import decodebytes as decodestring, encodebytes as encodestring
+    func_attribute = '__func__'
+else:
+    #noinspection PyUnresolvedReferences
+    import xmlrpclib
+    #noinspection PyUnresolvedReferences
+    import httplib
+    import urllib
+    #noinspection PyUnresolvedReferences
+    from cStringIO import StringIO
+    from base64 import decodestring, encodestring
+    func_attribute = 'im_func'
 import re
-from cStringIO import StringIO
 import traceback
 import sys
 import base64
@@ -66,7 +80,8 @@ class DeferredXMLRPCResponse:
                 value = self.callback()
                 if value is NOT_DONE_YET:
                     return NOT_DONE_YET
-            except RPCError, err:
+            except RPCError:
+                err = sys.exc_info()[1]
                 value = xmlrpclib.Fault(err.code, err.text)
                 
             body = xmlrpc_marshal(value)
@@ -92,7 +107,7 @@ class DeferredXMLRPCResponse:
 
         if self.request.version == '1.0':
             if connection == 'keep-alive':
-                if not self.request.has_key ('Content-Length'):
+                if 'Content-Length' not in self.request:
                     close_it = 1
                 else:
                     self.request['Connection'] = 'Keep-Alive'
@@ -101,8 +116,8 @@ class DeferredXMLRPCResponse:
         elif self.request.version == '1.1':
             if connection == 'close':
                 close_it = 1
-            elif not self.request.has_key ('Content-Length'):
-                if self.request.has_key ('Transfer-Encoding'):
+            elif 'Content-Length' not in self.request:
+                if 'Transfer-Encoding' in self.request:
                     if not self.request['Transfer-Encoding'] == 'chunked':
                         close_it = 1
                 elif self.request.use_chunked:
@@ -175,7 +190,7 @@ class SystemNamespaceRPCInterface:
                 # introspect; any methods that don't start with underscore
                 # are published
                 func = getattr(namespace, method_name)
-                meth = getattr(func, 'im_func', None)
+                meth = getattr(func, func_attribute, None)
                 if meth is not None:
                     if not method_name.startswith('_'):
                         sig = '%s.%s' % (ns_name, method_name)
@@ -188,7 +203,7 @@ class SystemNamespaceRPCInterface:
         @return array result  An array of method names available (strings).
         """
         methods = self._listMethods()
-        keys = methods.keys()
+        keys = list(methods.keys())
         keys.sort()
         return keys
 
@@ -233,7 +248,7 @@ class SystemNamespaceRPCInterface:
         """Process an array of calls, and return an array of
         results. Calls should be structs of the form {'methodName':
         string, 'params': array}. Each result will either be a
-        single-item array containg the result value, or a struct of
+        single-item array containing the result value, or a struct of
         the form {'faultCode': int, 'faultString': string}. This is
         useful when you need to make lots of small calls without lots
         of round trips.
@@ -252,11 +267,12 @@ class SystemNamespaceRPCInterface:
                     raise RPCError(Faults.INCORRECT_PARAMETERS)
                 root = AttrDict(self.namespaces)
                 value = traverse(root, name, params)
-            except RPCError, inst:
+            except RPCError:
+                inst = sys.exc_info()[1]
                 value = {'faultCode': inst.code,
                          'faultString': inst.text}
             except:
-                errmsg = "%s:%s" % (sys.exc_type, sys.exc_value)
+                errmsg = "%s:%s" % (sys.exc_info()[0], sys.exc_info()[1])
                 value = {'faultCode': 1, 'faultString': errmsg}
             producers.append(value)
 
@@ -272,7 +288,8 @@ class SystemNamespaceRPCInterface:
             if isinstance(callback, types.FunctionType):
                 try:
                     value = callback()
-                except RPCError, inst:
+                except RPCError:
+                    inst = sys.exc_info()[1]
                     value = {'faultCode':inst.code, 'faultString':inst.text}
 
                 if value is NOT_DONE_YET:
@@ -353,8 +370,9 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                     )
                 logger.trace('XML-RPC method %s() returned successfully' %
                              method)
-            except RPCError, err:
+            except RPCError:
                 # turn RPCError reported by method into a Fault instance
+                err = sys.exc_info()[1]
                 value = xmlrpclib.Fault(err.code, err.text)
                 logger.trace('XML-RPC method %s() returned fault: [%d] %s' % (
                     method,
@@ -414,6 +432,7 @@ class SupervisorTransport(xmlrpclib.Transport):
 
     _use_datetime = 0 # python 2.5 fwd compatibility
     def __init__(self, username=None, password=None, serverurl=None):
+        xmlrpclib.Transport.__init__(self)
         self.username = username
         self.password = password
         self.verbose = False
@@ -452,7 +471,9 @@ class SupervisorTransport(xmlrpclib.Transport):
             # basic auth
             if self.username is not None and self.password is not None:
                 unencoded = "%s:%s" % (self.username, self.password)
-                encoded = base64.encodestring(unencoded).replace('\n', '')
+                encoded = as_string(encodestring(as_bytes(unencoded)))
+                encoded = encoded.replace('\n', '')
+                encoded = encoded.replace('\012', '')
                 self.headers["Authorization"] = "Basic %s" % encoded
                 
         self.headers["Content-Length"] = str(len(request_body))
@@ -517,7 +538,7 @@ def gettags(comment):
         else:
             if line:
                 tag_text.append(line)
-        lineno = lineno + 1
+        lineno += 1
 
     tags.append((tag_lineno, tag, datatype, name, '\n'.join(tag_text)))
 
@@ -530,6 +551,7 @@ try:
 except ImportError:
     try:
         # Failing that, try cElementTree instead.
+        #noinspection PyPackageRequirements
         from cElementTree import iterparse
     except ImportError:
         iterparse = None
@@ -537,7 +559,6 @@ except ImportError:
 
 if iterparse is not None:
     import datetime, time
-    from base64 import decodestring
 
     def make_datetime(text):
         return datetime.datetime(
@@ -554,7 +575,7 @@ if iterparse is not None:
         "array": lambda x: x[0].text,
         "data": lambda x: [v.text for v in x],
         "struct": lambda x: dict([(k.text or "", v.text) for k, v in x]),
-        "base64": lambda x: decodestring(x.text or ""),
+        "base64": lambda x: as_string(decodestring(as_bytes(x.text or ""))),
         "value": lambda x: x[0].text,
         "param": lambda x: x[0].text,
     }
@@ -562,9 +583,9 @@ if iterparse is not None:
     def loads(data):
         params = method = None
         for action, elem in iterparse(StringIO(data)):
-            unmarshal = unmarshallers.get(elem.tag)
-            if unmarshal:
-                data = unmarshal(elem)
+            unmarshall = unmarshallers.get(elem.tag)
+            if unmarshall:
+                data = unmarshall(elem)
                 elem.clear()
                 elem.text = data
             elif elem.tag == "methodName":

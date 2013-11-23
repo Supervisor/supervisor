@@ -3,10 +3,21 @@
 import sys
 import os
 import unittest
-import socket
+import supervisor.medusa.text_socket as socket
 import tempfile
-from mock import Mock, patch, sentinel
+
+try:
+    from mock import Mock, patch, sentinel
+except ImportError:
+    from unittest.mock import Mock, patch, sentinel
+
 from supervisor import datatypes
+from supervisor.py3compat import *
+if PY3:
+    maxint = sys.maxsize
+else:
+    #noinspection PyUnresolvedReferences
+    maxint = sys.maxint
 
 class DatatypesTest(unittest.TestCase):
     def test_boolean_returns_true_for_truthy_values(self):
@@ -201,7 +212,7 @@ class DatatypesTest(unittest.TestCase):
         from supervisor.datatypes import integer
         self.assertRaises(ValueError, integer, 'abc')
         self.assertEqual(integer('1'), 1)
-        self.assertEqual(integer(str(sys.maxint+1)), sys.maxint+1)
+        self.assertEqual(integer(str(maxint+1)), maxint+1)
 
     def test_url_accepts_urlparse_recognized_scheme_with_netloc(self):
         good_url = 'http://localhost:9001'
@@ -277,8 +288,7 @@ class InetStreamSocketConfigTests(unittest.TestCase):
     def test_repr(self):
         conf = self._makeOne('127.0.0.1', 8675)
         s = repr(conf)
-        self.assertTrue(s.startswith(
-            '<supervisor.datatypes.InetStreamSocketConfig at'), s)
+        self.assertTrue('supervisor.datatypes.InetStreamSocketConfig' in s)
         self.assertTrue(s.endswith('for tcp://127.0.0.1:8675>'), s)
 
     def test_addr(self):
@@ -335,8 +345,7 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
     def test_repr(self):
         conf = self._makeOne('/tmp/foo.sock')
         s = repr(conf)
-        self.assertTrue(s.startswith(
-            '<supervisor.datatypes.UnixStreamSocketConfig at'), s)
+        self.assertTrue('supervisor.datatypes.UnixStreamSocketConfig' in s)
         self.assertTrue(s.endswith('for unix:///tmp/foo.sock>'), s)
 
     def test_get_addr(self):
@@ -449,13 +458,11 @@ class TestSocketAddress(unittest.TestCase):
         return self._getTargetClass()(s)
 
     def test_unix_socket(self):
-        import socket
         addr = self._makeOne('/foo/bar')
         self.assertEqual(addr.family, socket.AF_UNIX)
         self.assertEqual(addr.address, '/foo/bar')
 
     def test_inet_socket(self):
-        import socket
         addr = self._makeOne('localhost:8080')
         self.assertEqual(addr.family, socket.AF_INET)
         self.assertEqual(addr.address, ('localhost', 8080))

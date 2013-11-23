@@ -5,7 +5,7 @@
 request = 'GET /index.html HTTP/1.0\r\nConnection: Keep-Alive\r\n\r\n'
 last_request = 'GET /index.html HTTP/1.0\r\nConnection: close\r\n\r\n'
 
-import socket
+import supervisor.medusa.text_socket as socket
 import time
 
 class timer:
@@ -24,12 +24,11 @@ def bench (host, port=80, n=100):
         if not d:
             break
     total = t.end()
-    print 'time: %.2f seconds  (%.2f hits/sec)' % (total, n/total)
+    print('time: %.2f seconds  (%.2f hits/sec)' % (total, n / total))
 
 if __name__ == '__main__':
     import sys
-    import string
     if len(sys.argv) < 3:
-        print 'usage: %s <host> <port> <count>' % (sys.argv[0])
+        print('usage: %s <host> <port> <count>' % (sys.argv[0]))
     else:
         bench(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))

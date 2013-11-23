@@ -3,7 +3,7 @@
 import os
 import sys
 import tempfile
-import socket
+import supervisor.medusa.text_socket as socket
 import unittest
 import signal
 import shutil
@@ -15,7 +15,17 @@ except ImportError:
     # Python >= 3
     from io import StringIO
 
-from mock import Mock, patch, sentinel
+try:
+    from mock import Mock, patch, sentinel
+except ImportError:
+    from unittest.mock import Mock, patch, sentinel
+from supervisor.py3compat import *
+from supervisor import read_file
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import DummyLogger
@@ -28,7 +38,6 @@ from supervisor.tests.base import lstrip
 class OptionTests(unittest.TestCase):
 
     def _makeOptions(self, read_error=False):
-        from cStringIO import StringIO
         from supervisor.options import Options
         from supervisor.datatypes import integer
 
@@ -97,7 +106,6 @@ class OptionTests(unittest.TestCase):
 
     def test_config_reload_do_usage_true(self):
         options = self._makeOptions(read_error='error')
-        from StringIO import StringIO
         L = []
         def exit(num):
             L.append(num)
@@ -163,7 +171,6 @@ class ClientOptionsTests(unittest.TestCase):
         history_file=%s/sc_history
         """ % tempdir)
 
-        from StringIO import StringIO
         fp = StringIO(s)
         instance = self._makeOne()
         instance.configfile = fp
@@ -197,14 +204,16 @@ class ClientOptionsTests(unittest.TestCase):
         instance.exit = dummy_exit
         try:
             instance.realize(args=['-c', fname])
-        except DummyException, e:
+        except DummyException:
+            e = sys.exc_info()[1]
             self.assertEqual(e.exitcode, 2)
         else:
             self.fail("expected exception")
 
         try:
             instance.read_config(fname)
-        except ValueError, e:
+        except ValueError:
+            e = sys.exc_info()[1]
             self.assertTrue("could not find config file" in str(e))
         else:
             self.fail("expected exception")
@@ -213,14 +222,14 @@ class ClientOptionsTests(unittest.TestCase):
         os.chmod(tempf.name, 0) # Removing read perms
         try:
             instance.read_config(tempf.name)
-        except ValueError, e:
+        except ValueError:
+            e = sys.exc_info()[1]
             self.assertTrue("could not read config file" in str(e))
         else:
             self.fail("expected exception")
         tempf.close()
 
     def test_options_unixsocket_cli(self):
-        from StringIO import StringIO
         fp = StringIO('[supervisorctl]')
         instance = self._makeOne()
         instance.configfile = fp
@@ -238,7 +247,6 @@ class ServerOptionsTests(unittest.TestCase):
     def test_version(self):
         from supervisor.options import VERSION
         options = self._makeOne()
-        from StringIO import StringIO
         options.stdout = StringIO()
         self.assertRaises(SystemExit, options.version, None)
         self.assertEqual(options.stdout.getvalue(), VERSION + '\n')
@@ -316,14 +324,13 @@ class ServerOptionsTests(unittest.TestCase):
 
         from supervisor import datatypes
 
-        from StringIO import StringIO
         fp = StringIO(s)
         instance = self._makeOne()
         instance.configfile = fp
         instance.realize(args=[])
         options = instance.configroot.supervisord
         self.assertEqual(options.directory, tempfile.gettempdir())
-        self.assertEqual(options.umask, 022)
+        self.assertEqual(options.umask, 18) # 022 in Py2, 0o22 in Py3
         self.assertEqual(options.logfile, 'supervisord.log')
         self.assertEqual(options.logfile_maxbytes, 1000 * 1024 * 1024)
         self.assertEqual(options.logfile_backups, 5)
@@ -369,7 +376,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.stdout_logfile_backups, 10)
         self.assertEqual(proc1.exitcodes, [0,2])
         self.assertEqual(proc1.directory, '/tmp')
-        self.assertEqual(proc1.umask, 002)
+        self.assertEqual(proc1.umask, 2)
         self.assertEqual(proc1.environment, dict(FAKE_ENV_VAR='/some/path'))
 
         cat2 = options.process_group_configs[1]
@@ -472,7 +479,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.uid, 0)
         self.assertEqual(instance.gid, 0)
         self.assertEqual(instance.directory, tempfile.gettempdir())
-        self.assertEqual(instance.umask, 022)
+        self.assertEqual(instance.umask, 18) # 022 in Py2, 0o22 in Py3
         self.assertEqual(instance.logfile, os.path.join(here,'supervisord.log'))
         self.assertEqual(instance.logfile_maxbytes, 1000 * 1024 * 1024)
         self.assertEqual(instance.logfile_backups, 5)
@@ -514,16 +521,18 @@ class ServerOptionsTests(unittest.TestCase):
 
         try:
             instance.realize()
-        except DummyException, e:
+        except DummyException:
+            e = sys.exc_info()[1]
             # Caught expected exception
             import traceback
-            self.assertEqual(e.exitcode, 2,
-                              "Wrong exitcode for: %s" % traceback.format_exc(e))
+            self.assertEqual(
+                e.exitcode, 2,
+                "Wrong exitcode for: %s" % traceback.format_exc()
+                )
         else:
             self.fail("Did not get a DummyException.")
 
     def test_reload(self):
-        from cStringIO import StringIO
         text = lstrip("""\
         [supervisord]
         user=root
@@ -596,7 +605,6 @@ class ServerOptionsTests(unittest.TestCase):
         old_warning = "Warning from a prior config read"
         instance.parse_warnings = [old_warning]
 
-        from cStringIO import StringIO
         text = lstrip("""\
         [supervisord]
         user=root
@@ -627,14 +635,16 @@ class ServerOptionsTests(unittest.TestCase):
         instance.exit = dummy_exit
         try:
             instance.realize(args=['-c', fname])
-        except DummyException, e:
+        except DummyException:
+            e = sys.exc_info()[1]
             self.assertEqual(e.exitcode, 2)
         else:
             self.fail("expected exception")
 
         try:
             instance.read_config(fname)
-        except ValueError, e:
+        except ValueError:
+            e = sys.exc_info()[1]
             self.assertTrue("could not find config file" in str(e))
         else:
             self.fail("expected exception")
@@ -643,7 +653,8 @@ class ServerOptionsTests(unittest.TestCase):
         os.chmod(tempf.name, 0) # Removing read perms
         try:
             instance.read_config(tempf.name)
-        except ValueError, e:
+        except ValueError:
+            e = sys.exc_info()[1]
             self.assertTrue("could not read config file" in str(e))
         else:
             self.fail("expected exception")
@@ -653,7 +664,8 @@ class ServerOptionsTests(unittest.TestCase):
         from supervisor.options import readFile
         try:
             readFile('/notthere', 0, 10)
-        except ValueError, inst:
+        except ValueError:
+            inst = sys.exc_info()[1]
             self.assertEqual(inst.args[0], 'FAILED')
         else:
             raise AssertionError("Didn't raise")
@@ -757,7 +769,7 @@ class ServerOptionsTests(unittest.TestCase):
             instance.pidfile = fn
             instance.write_pidfile()
             self.assertTrue(os.path.exists(fn))
-            pid = int(open(fn, 'r').read()[:-1])
+            pid = int(read_file(fn)[:-1])
             self.assertEqual(pid, os.getpid())
             msg = instance.logger.data[0]
             self.assertTrue(msg.startswith('supervisord started with pid'))
@@ -780,11 +792,11 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         innie, outie = os.pipe()
         os.read(innie, 0) # we can read it while its open
-        os.write(outie, 'foo') # we can write to it while its open
+        os.write(outie, as_bytes('foo')) # we can write to it while its open
         instance.close_fd(innie)
         self.assertRaises(OSError, os.read, innie, 0)
         instance.close_fd(outie)
-        self.assertRaises(OSError, os.write, outie, 'foo')
+        self.assertRaises(OSError, os.write, outie, as_bytes('foo'))
 
     def test_processes_from_section(self):
         instance = self._makeOne()
@@ -1176,7 +1188,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(gconf_foo.socket_config.url,
                                 'unix:///tmp/foo.sock')
         self.assertEqual(exp_owner, gconf_foo.socket_config.get_owner())
-        self.assertEqual(0666, gconf_foo.socket_config.get_mode())
+        self.assertEqual(438, gconf_foo.socket_config.get_mode()) # 0666 in Py2, 0o666 in Py3
         self.assertEqual(len(gconf_foo.process_configs), 2)
         pconfig_foo = gconf_foo.process_configs[0]
         self.assertEqual(pconfig_foo.__class__, FastCGIProcessConfig)
@@ -1187,7 +1199,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(gconf_bar.socket_config.url,
                          'unix:///tmp/bar.sock')
         self.assertEqual(exp_owner, gconf_bar.socket_config.get_owner())
-        self.assertEqual(0700, gconf_bar.socket_config.get_mode())
+        self.assertEqual(448, gconf_bar.socket_config.get_mode()) # 0700 in Py2, 0o700 in Py3
         self.assertEqual(len(gconf_bar.process_configs), 3)
 
         gconf_cub = gconfigs[2]
@@ -1201,7 +1213,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(gconf_flub.socket_config.url,
                          'unix:///tmp/flub.sock')
         self.assertEqual(None, gconf_flub.socket_config.get_owner())
-        self.assertEqual(0700, gconf_flub.socket_config.get_mode())
+        self.assertEqual(448, gconf_flub.socket_config.get_mode()) # 0700 in Py2, 0o700 in Py3
         self.assertEqual(len(gconf_flub.process_configs), 1)
 
 
@@ -1464,12 +1476,14 @@ class ServerOptionsTests(unittest.TestCase):
             logfn = instance.get_autochildlog_name('foo', sid,'stdout')
             first = logfn + '.1'
             second = logfn + '.2'
-            open(first, 'w')
-            open(second, 'w')
+            f1 = open(first, 'w')
+            f2 = open(second, 'w')
             instance.clear_autochildlogdir()
             self.assertFalse(os.path.exists(logfn))
             self.assertFalse(os.path.exists(first))
             self.assertFalse(os.path.exists(second))
+            f1.close()
+            f2.close()
         finally:
             shutil.rmtree(dn)
 
@@ -1598,13 +1612,15 @@ class TestProcessConfig(unittest.TestCase):
                      'startsecs', 'startretries', 'uid',
                      'stdout_logfile', 'stdout_capture_maxbytes',
                      'stdout_events_enabled', 'stdout_syslog',
-                     'stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile', 'stderr_capture_maxbytes',
                      'stderr_events_enabled', 'stderr_syslog',
-                     'stderr_logfile_backups', 'stderr_logfile_maxbytes',
-                     'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup', 'exitcodes',
-                     'redirect_stderr', 'environment'):
+                     'stopsignal', 'stopwaitsecs', 'stopasgroup',
+                     'killasgroup', 'exitcodes', 'redirect_stderr',
+                     'environment'):
             defaults[name] = name
+        for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
+                     'stderr_logfile_backups', 'stderr_logfile_maxbytes'):
+            defaults[name] = 10
         defaults.update(kw)
         return self._getTargetClass()(*arg, **defaults)
 
@@ -1672,13 +1688,15 @@ class FastCGIProcessConfigTest(unittest.TestCase):
                      'startsecs', 'startretries', 'uid',
                      'stdout_logfile', 'stdout_capture_maxbytes',
                      'stdout_events_enabled', 'stdout_syslog',
-                     'stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile', 'stderr_capture_maxbytes',
                      'stderr_events_enabled', 'stderr_syslog',
-                     'stderr_logfile_backups', 'stderr_logfile_maxbytes',
-                     'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup', 'exitcodes',
-                     'redirect_stderr', 'environment'):
+                     'stopsignal', 'stopwaitsecs', 'stopasgroup',
+                     'killasgroup', 'exitcodes', 'redirect_stderr',
+                     'environment'):
             defaults[name] = name
+        for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
+                     'stderr_logfile_backups', 'stderr_logfile_maxbytes'):
+            defaults[name] = 10
         defaults.update(kw)
         return self._getTargetClass()(*arg, **defaults)
 

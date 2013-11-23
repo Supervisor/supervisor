@@ -4,8 +4,13 @@ import time
 import unittest
 import sys
 import errno
-from mock import Mock, patch, sentinel
 
+try:
+    from mock import Mock, patch, sentinel
+except ImportError:
+    from unittest.mock import Mock, patch, sentinel
+
+from supervisor.py3compat import *
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyProcess
@@ -17,6 +22,12 @@ from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import DummyProcessGroup
 from supervisor.tests.base import DummyFCGIProcessGroup
 from supervisor.tests.base import DummySocketManager
+
+if PY3:
+    maxint = sys.maxsize
+else:
+    #noinspection PyUnresolvedReferences
+    maxint = sys.maxint
 
 from supervisor.process import Subprocess
 from supervisor.options import BadCommand
@@ -37,7 +48,8 @@ class SubprocessTests(unittest.TestCase):
         from supervisor.states import ProcessStates
         from supervisor.process import getProcessStateDescription
         for statename, code in ProcessStates.__dict__.items():
-            self.assertEqual(getProcessStateDescription(code), statename)
+            if isinstance(code, int):
+                self.assertEqual(getProcessStateDescription(code), statename)
 
     def test_ctor(self):
         options = DummyOptions()
@@ -380,13 +392,13 @@ class SubprocessTests(unittest.TestCase):
     def test_spawn_as_child_sets_umask(self):
         options = DummyOptions()
         options.forkpid = 0
-        config = DummyPConfig(options, 'good', '/good/filename', umask=002)
+        config = DummyPConfig(options, 'good', '/good/filename', umask=2)
         instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(options.execv_args,
                          ('/good/filename', ['/good/filename']) )
-        self.assertEqual(options.umaskset, 002)
+        self.assertEqual(options.umaskset, 2)
         self.assertEqual(options.execve_called, True)
         # if the real execve() succeeds, the code that writes the
         # "was not spawned" message won't be reached.  this assertion
@@ -451,7 +463,7 @@ class SubprocessTests(unittest.TestCase):
         msg = options.written[2] # dict, 2 is fd #
         head = "supervisor: couldn't exec /good/filename:"
         self.assertTrue(msg.startswith(head))
-        self.assertTrue("exceptions.RuntimeError" in msg)
+        self.assertTrue("RuntimeError" in msg)
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options._exitcode, 127)
 
@@ -588,48 +600,50 @@ class SubprocessTests(unittest.TestCase):
         instance.dispatchers[stdin_fd].flush_error = errno.EPIPE
         self.assertRaises(OSError, instance.write, sent)
 
-    def dont_test_spawn_and_kill(self):
-        # this is a functional test
-        from supervisor.tests.base import makeSpew
-        try:
-            called = 0
-            def foo(*args):
-                called = 1
-            signal.signal(signal.SIGCHLD, foo)
-            executable = makeSpew()
-            options = DummyOptions()
-            config = DummyPConfig(options, 'spew', executable)
-            instance = self._makeOne(config)
-            result = instance.spawn()
-            msg = options.logger.data[0]
-            self.assertTrue(msg.startswith("spawned: 'spew' with pid"))
-            self.assertEqual(len(instance.pipes), 6)
-            self.assertTrue(instance.pid)
-            self.assertTrueEqual(instance.pid, result)
-            origpid = instance.pid
-            import errno
-            while 1:
-                try:
-                    data = os.popen('ps').read()
-                    break
-                except IOError, why:
-                    if why.args[0] != errno.EINTR:
-                        raise
-                        # try again ;-)
-            time.sleep(0.1) # arbitrary, race condition possible
-            self.assertTrue(data.find(repr(origpid)) != -1 )
-            msg = instance.kill(signal.SIGTERM)
-            time.sleep(0.1) # arbitrary, race condition possible
-            self.assertEqual(msg, None)
-            pid, sts = os.waitpid(-1, os.WNOHANG)
-            data = os.popen('ps').read()
-            self.assertEqual(data.find(`origpid`), -1) # dubious
-        finally:
-            try:
-                os.remove(executable)
-            except:
-                pass
-            signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+    # def dont_test_spawn_and_kill(self):
+    #     # this is a functional test
+    #     from supervisor.tests.base import makeSpew
+    #     try:
+    #         called = 0
+    #         def foo(*args):
+    #             called = 1
+    #         signal.signal(signal.SIGCHLD, foo)
+    #         executable = makeSpew()
+    #         options = DummyOptions()
+    #         config = DummyPConfig(options, 'spew', executable)
+    #         instance = self._makeOne(config)
+    #         result = instance.spawn()
+    #         msg = options.logger.data[0]
+    #         self.assertTrue(msg.startswith("spawned: 'spew' with pid"))
+    #         self.assertEqual(len(instance.pipes), 6)
+    #         self.assertTrue(instance.pid)
+    #         self.assertTrueEqual(instance.pid, result)
+    #         origpid = instance.pid
+    #         import errno
+    #         while 1:
+    #             try:
+    #                 data = os.popen('ps').read()
+    #                 break
+    #             except IOError:
+    #                 why = sys.exc_info()[1]
+    #                 if why.args[0] != errno.EINTR:
+    #                     raise
+    #                     # try again ;-)
+    #         time.sleep(0.1) # arbitrary, race condition possible
+    #         #noinspection PyUnboundLocalVariable
+    #         self.assertTrue(data.find(as_bytes(repr(origpid))) != -1 )
+    #         msg = instance.kill(signal.SIGTERM)
+    #         time.sleep(0.1) # arbitrary, race condition possible
+    #         self.assertEqual(msg, None)
+    #         pid, sts = os.waitpid(-1, os.WNOHANG)
+    #         data = os.popen('ps').read()
+    #         self.assertEqual(data.find(as_bytes(repr(origpid))), -1) # dubious
+    #     finally:
+    #         try:
+    #             os.remove(executable)
+    #         except:
+    #             pass
+    #         signal.signal(signal.SIGCHLD, signal.SIG_DFL)
 
     def test_stop(self):
         options = DummyOptions()
@@ -1123,7 +1137,7 @@ class SubprocessTests(unittest.TestCase):
         pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
         process = self._makeOne(pconfig)
         process.laststart = 1
-        process.delay = sys.maxint
+        process.delay = maxint
         process.backoff = 0
         process.state = ProcessStates.BACKOFF
         process.transition()
@@ -1202,7 +1216,7 @@ class SubprocessTests(unittest.TestCase):
 
         pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
         process = self._makeOne(pconfig)
-        process.delay = sys.maxint
+        process.delay = maxint
         process.state = ProcessStates.STOPPING
 
         process.transition()
@@ -1478,8 +1492,8 @@ class ProcessGroupBaseTests(unittest.TestCase):
         gconfig2 = DummyPGroupConfig(options)
         group2 = self._makeOne(gconfig2)
 
-        group1.priority = 5
-        group2.priority = 1
+        group1.config.priority = 5
+        group2.config.priority = 1
 
         L = [group1, group2]
         L.sort()
@@ -1496,8 +1510,7 @@ class ProcessGroupTests(ProcessGroupBaseTests):
         gconfig = DummyPGroupConfig(options)
         group = self._makeOne(gconfig)
         s = repr(group)
-        self.assertTrue(s.startswith(
-            '<supervisor.process.ProcessGroup instance at'), s)
+        self.assertTrue('supervisor.process.ProcessGroup' in s)
         self.assertTrue(s.endswith('named whatever>'), s)
 
     def test_transition(self):
@@ -1645,8 +1658,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         gconfig = DummyPGroupConfig(options)
         pool = self._makeOne(gconfig)
         s = repr(pool)
-        self.assertTrue(s.startswith(
-            '<supervisor.process.EventListenerPool instance at'))
+        self.assertTrue('supervisor.process.EventListenerPool' in s)
         self.assertTrue(s.endswith('named whatever>'))
 
     def test_transition_nobody_ready(self):

@@ -19,13 +19,18 @@ RCS_ID =  '$Id: ftp_server.py,v 1.11 2003/12/24 16:05:28 akuchling Exp $'
 # vestigial anyway.  I've attempted to include the most commonly-used
 # commands, using the feature set of wu-ftpd as a guide.
 
-import asyncore_25 as asyncore
-import asynchat_25 as asynchat
+import supervisor.medusa.asyncore_25 as asyncore
+import supervisor.medusa.asynchat_25 as asynchat
+#noinspection PyUnresolvedReferences
+from supervisor.py3compat import * # needed for long
 
 import os
-import socket
+import supervisor.medusa.text_socket as socket
 import stat
-import string
+try:
+    from string import letters
+except ImportError:
+    from string import ascii_letters as letters
 import sys
 import time
 
@@ -52,10 +57,10 @@ from supervisor.medusa.producers import file_producer
 
 VERSION = RCS_ID.split()[2]
 
-from counter import counter
-import producers
-import status_handler
-import logger
+from supervisor.medusa.counter import counter
+import supervisor.medusa.producers as producers
+import supervisor.medusa.status_handler as status_handler
+import supervisor.medusa.logger as logger
 
 class ftp_channel (asynchat.async_chat):
 
@@ -137,7 +142,6 @@ class ftp_channel (asynchat.async_chat):
         if command.find('abor') != -1:
             # ascii_letters for python 3
             letters = getattr(string, "letters", string.ascii_letters)
-
             # strip off telnet sync chars and the like...
             while command and command[0] not in letters:
                 command = command[1:]
@@ -159,11 +163,11 @@ class ftp_channel (asynchat.async_chat):
         fun = getattr (self, fun_name)
         if (not self.authorized) and (command not in ('user', 'pass', 'help', 'quit')):
             self.respond ('530 Please log in with USER and PASS')
-        elif (not self.check_command_authorization (command)):
+        elif not self.check_command_authorization (command):
             self.command_not_authorized (command)
         else:
             try:
-                result = apply (fun, (line,))
+                fun(*(line,))
             except:
                 self.server.total_exceptions.increment()
                 (file, fun, line), t,v, tbinfo = asyncore.compact_traceback()
@@ -337,7 +341,7 @@ class ftp_channel (asynchat.async_chat):
     # --------------------------------------------------
 
     def cmd_type (self, line):
-        'specify data transfer type'
+        """specify data transfer type"""
         # ascii, ebcdic, image, local <byte size>
         t = line[1].lower()
         # no support for EBCDIC
@@ -352,14 +356,14 @@ class ftp_channel (asynchat.async_chat):
 
 
     def cmd_quit (self, line):
-        'terminate session'
+        """terminate session"""
         self.respond ('221 Goodbye.')
         self.close_when_done()
 
     def cmd_port (self, line):
-        'specify data connection port'
-        info = line[1].split(',')
-        ip = info[:4].join('.')
+        """specify data connection port"""
+        info = line[1].split (',')
+        ip = '.'.join (info[:4])
         port = int(info[4])*256 + int(info[5])
         # how many data connections at a time?
         # I'm assuming one for now...
@@ -377,7 +381,7 @@ class ftp_channel (asynchat.async_chat):
         return self.passive_acceptor
 
     def cmd_pasv (self, line):
-        'prepare for server-to-server transfer'
+        """prepare for server-to-server transfer"""
         pc = self.new_passive_acceptor()
         port = pc.addr[1]
         ip_addr = pc.control_channel.getsockname()[0]
@@ -391,14 +395,15 @@ class ftp_channel (asynchat.async_chat):
         self.client_dc = None
 
     def cmd_nlst (self, line):
-        'give name list of files in directory'
+        """give name list of files in directory"""
         # ncftp adds the -FC argument for the user-visible 'nlist'
         # command.  We could try to emulate ls flags, but not just yet.
         if '-FC' in line:
             line.remove ('-FC')
         try:
             dir_list_producer = self.get_dir_list (line, 0)
-        except os.error, why:
+        except os.error:
+            why = sys.exc_info()[1]
             self.respond ('550 Could not list directory: %s' % why)
             return
         self.respond (
@@ -411,10 +416,11 @@ class ftp_channel (asynchat.async_chat):
         self.client_dc.close_when_done()
 
     def cmd_list (self, line):
-        'give a list of files in a directory'
+        """give a list of files in a directory"""
         try:
             dir_list_producer = self.get_dir_list (line, 1)
-        except os.error, why:
+        except os.error:
+            why = sys.exc_info()[1]
             self.respond ('550 Could not list directory: %s' % why)
             return
         self.respond (
@@ -427,21 +433,21 @@ class ftp_channel (asynchat.async_chat):
         self.client_dc.close_when_done()
 
     def cmd_cwd (self, line):
-        'change working directory'
+        """change working directory"""
         if self.cwd (line):
             self.respond ('250 CWD command successful.')
         else:
             self.respond ('550 No such directory.')
 
     def cmd_cdup (self, line):
-        'change to parent of current working directory'
+        """change to parent of current working directory"""
         if self.cdup(line):
             self.respond ('250 CDUP command successful.')
         else:
             self.respond ('550 No such directory.')
 
     def cmd_pwd (self, line):
-        'print the current working directory'
+        """print the current working directory"""
         self.respond (
                 '257 "%s" is the current directory.' % (
                         self.filesystem.current_directory()
@@ -452,7 +458,7 @@ class ftp_channel (asynchat.async_chat):
     # example output:
     # 213 19960301204320
     def cmd_mdtm (self, line):
-        'show last modification time of file'
+        """show last modification time of file"""
         filename = line[1]
         if not self.filesystem.isfile (filename):
             self.respond ('550 "%s" is not a file' % filename)
@@ -470,11 +476,11 @@ class ftp_channel (asynchat.async_chat):
                     )
 
     def cmd_noop (self, line):
-        'do nothing'
+        """do nothing"""
         self.respond ('200 NOOP command successful.')
 
     def cmd_size (self, line):
-        'return size of file'
+        """return size of file"""
         filename = line[1]
         if not self.filesystem.isfile (filename):
             self.respond ('550 "%s" is not a file' % filename)
@@ -484,7 +490,7 @@ class ftp_channel (asynchat.async_chat):
                     )
 
     def cmd_retr (self, line):
-        'retrieve a file'
+        """retrieve a file"""
         if len(line) < 2:
             self.command_not_understood(line.join())
         else:
@@ -497,7 +503,8 @@ class ftp_channel (asynchat.async_chat):
                     # FIXME: for some reason, 'rt' isn't working on win95
                     mode = 'r'+self.type_mode_map[self.current_mode]
                     fd = self.open (file, mode)
-                except IOError, why:
+                except IOError:
+                    why = sys.exc_info()[1]
                     self.respond ('553 could not open file for reading: %s' % (repr(why)))
                     return
                 self.respond (
@@ -524,19 +531,20 @@ class ftp_channel (asynchat.async_chat):
                 self.client_dc.close_when_done()
 
     def cmd_stor (self, line, mode='wb'):
-        'store a file'
+        """store a file"""
         if len (line) < 2:
             self.command_not_understood(line.join())
         else:
             if self.restart_position:
-                restart_position = 0
+                self.restart_position = 0
                 self.respond ('553 restart on STOR not yet supported')
                 return
             file = line[1]
             # todo: handle that type flag
             try:
                 fd = self.open (file, mode)
-            except IOError, why:
+            except IOError:
+                why = sys.exc_info()[1]
                 self.respond ('553 could not open file for writing: %s' % (repr(why)))
                 return
             self.respond (
@@ -548,13 +556,13 @@ class ftp_channel (asynchat.async_chat):
             self.make_recv_channel (fd)
 
     def cmd_abor (self, line):
-        'abort operation'
+        """abort operation"""
         if self.client_dc:
             self.client_dc.close()
         self.respond ('226 ABOR command successful.')
 
     def cmd_appe (self, line):
-        'append to a file'
+        """append to a file"""
         return self.cmd_stor (line, 'ab')
 
     def cmd_dele (self, line):
@@ -584,7 +592,7 @@ class ftp_channel (asynchat.async_chat):
 
     def cmd_rnfr (self, line):
         if not hasattr(self.filesystem,'rename'):
-            self.respond('502 RNFR not implemented.' % src)
+            self.respond('502 RNFR not implemented.')
             return
 
         if len(line)!=2:
@@ -631,7 +639,7 @@ class ftp_channel (asynchat.async_chat):
                 self.respond ('550 error removing directory.')
 
     def cmd_user (self, line):
-        'specify user name'
+        """specify user name"""
         if len(line) > 1:
             self.user = line[1]
             self.respond ('331 Password required.')
@@ -639,7 +647,7 @@ class ftp_channel (asynchat.async_chat):
             self.command_not_understood(line.join())
 
     def cmd_pass (self, line):
-        'specify password'
+        """specify password"""
         if len(line) < 2:
             pw = ''
         else:
@@ -654,18 +662,16 @@ class ftp_channel (asynchat.async_chat):
             self.respond ('530 %s' % message)
 
     def cmd_rest (self, line):
-        'restart incomplete transfer'
+        """restart incomplete transfer"""
         try:
             pos = int(line[1])
         except ValueError:
             self.command_not_understood(line.join())
         self.restart_position = pos
-        self.respond (
-                '350 Restarting at %d. Send STORE or RETRIEVE to initiate transfer.' % pos
-                )
+        self.respond ('350 Restarting at %d. Send STORE or RETRIEVE to initiate transfer.' % pos)
 
     def cmd_stru (self, line):
-        'obsolete - set file transfer structure'
+        """obsolete - set file transfer structure"""
         if line[1] in 'fF':
             # f == 'file'
             self.respond ('200 STRU F Ok')
@@ -673,7 +679,7 @@ class ftp_channel (asynchat.async_chat):
             self.respond ('504 Unimplemented STRU type')
 
     def cmd_mode (self, line):
-        'obsolete - set file transfer mode'
+        """obsolete - set file transfer mode"""
         if line[1] in 'sS':
             # f == 'file'
             self.respond ('200 MODE S Ok')
@@ -691,7 +697,7 @@ class ftp_channel (asynchat.async_chat):
 ##              pass
 
     def cmd_syst (self, line):
-        'show operating system type of server system'
+        """show operating system type of server system"""
         # Replying to this command is of questionable utility, because
         # this server does not behave in a predictable way w.r.t. the
         # output of the LIST command.  We emulate Unix ls output, but
@@ -713,13 +719,14 @@ class ftp_channel (asynchat.async_chat):
         # 500 'SYST': command not understood. (SVR4)
 
     def cmd_help (self, line):
-        'give help information'
+        """give help information"""
         # find all the methods that match 'cmd_xxxx',
         # use their docstrings for the help response.
         attrs = dir(self.__class__)
         help_lines = []
         for attr in attrs:
             if attr[:4] == 'cmd_':
+                #noinspection PyTypeChecker
                 x = getattr (self, attr)
                 if type(x) == type(self.cmd_help):
                     if x.__doc__:
@@ -915,7 +922,7 @@ class xmit_channel (asynchat.async_chat):
 
     def send (self, data):
         result = asynchat.async_chat.send (self, data)
-        self.bytes_out = self.bytes_out + result
+        self.bytes_out += result
         return result
 
     def handle_error (self):
@@ -962,9 +969,8 @@ class recv_channel (asyncore.dispatcher):
     def writable (self):
         return 0
 
-    def recv (*args):
-        result = apply (asyncore.dispatcher.recv, args)
-        self = args[0]
+    def recv (self, *args):
+        result = asyncore.dispatcher.recv(self, *args)
         self.bytes_in.increment(len(result))
         return result
 
@@ -986,12 +992,14 @@ class recv_channel (asyncore.dispatcher):
         self.channel.respond ('226 Transfer complete.')
         self.close()
 
-import filesys
+import supervisor.medusa.filesys as filesys
 
 # not much of a doorman! 8^)
 class dummy_authorizer:
     def __init__ (self, root='/'):
         self.root = root
+
+    #noinspection PyUnusedLocal
     def authorize (self, channel, username, password):
         channel.persona = -1, -1
         channel.read_only = 1
@@ -1001,6 +1009,7 @@ class anon_authorizer:
     def __init__ (self, root='/'):
         self.root = root
 
+    #noinspection PyUnusedLocal
     def authorize (self, channel, username, password):
         if username in ('ftp', 'anonymous'):
             channel.persona = -1, -1
@@ -1100,7 +1109,7 @@ if os.name == 'posix':
 # not unix
 else:
     def test ():
-        fs = ftp_server (dummy_authorizer())
+        ftp_server (dummy_authorizer())
     if __name__ == '__main__':
         test ()
 
@@ -1155,4 +1164,4 @@ def get_vm_size ():
     return int(open('/proc/self/stat').readline().split()[22])
 
 def print_vm():
-    print 'vm: %8dk' % (get_vm_size()/1024)
+    print('vm: %8dk' % (get_vm_size()/1024))

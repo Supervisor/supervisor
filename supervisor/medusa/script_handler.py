@@ -21,15 +21,18 @@
 # instead (this is now the default, see class variable
 # script_handler.restricted)
 
-import rexec
 import re
-import string
-import StringIO
+from supervisor.py3compat import *
+if PY3:
+    from io import StringIO
+else:
+    #noinspection PyUnresolvedReferences
+    from StringIO import StringIO
 import sys
 
-import counter
-import default_handler
-import producers
+import supervisor.medusa.counter as counter
+import supervisor.medusa.default_handler as default_handler
+import supervisor.medusa.producers as producers
 
 unquote    = default_handler.unquote
 
@@ -49,13 +52,13 @@ class script_handler:
         self.exceptions = counter.counter()
 
     def match (self, request):
-        [path, params, query, fragment] = request.split_uri()
+        path = request.split_uri()[0]
         m = self.script_regex.match (path)
-        return (m and (m.end() == len(path)))
+        return m and (m.end() == len(path))
 
     def handle_request (self, request):
 
-        [path, params, query, fragment] = request.split_uri()
+        path = request.split_uri()[0]
 
         while path and path[0] == '/':
             path = path[1:]
@@ -83,30 +86,25 @@ class script_handler:
             else:
                 self.continue_request (
                         request,
-                        StringIO.StringIO() # empty stdin
+                        StringIO() # empty stdin
                         )
 
     def continue_request (self, request, stdin):
-        temp_files = stdin, StringIO.StringIO(), StringIO.StringIO()
+        temp_files = stdin, StringIO(), StringIO()
         old_files = sys.stdin, sys.stdout, sys.stderr
-
-        if self.restricted:
-            r = rexec.RExec()
 
         try:
             sys.request = request
             sys.stdin, sys.stdout, sys.stderr = temp_files
             try:
-                if self.restricted:
-                    r.s_execfile (request.script_filename)
-                else:
-                    execfile (request.script_filename)
+                exec(compile(open(request.script_filename).read(), request.script_filename, 'exec'))
                 request.reply_code = 200
             except:
                 request.reply_code = 500
                 self.exceptions.increment()
         finally:
             sys.stdin, sys.stdout, sys.stderr = old_files
+            #noinspection PyUnresolvedReferences
             del sys.request
 
         i,o,e = temp_files
@@ -144,9 +142,9 @@ class persistent_script_handler:
         del self.modules[name]
 
     def match (self, request):
-        [path, params, query, fragment] = request.split_uri()
-        parts = path.split('/')
-        if (len(parts)>1) and self.modules.has_key (parts[1]):
+        path = request.split_uri()[0]
+        parts = path.split ('/')
+        if (len(parts)>1) and parts[1] in self.modules:
             module = self.modules[parts[1]]
             request.module = module
             return 1
@@ -163,10 +161,10 @@ class persistent_script_handler:
             else:
                 collector (self, length, request)
         else:
-            self.continue_request (request, StringIO.StringIO())
+            self.continue_request (request, StringIO())
 
     def continue_request (self, request, input_data):
-        temp_files = input_data, StringIO.StringIO(), StringIO.StringIO()
+        temp_files = input_data, StringIO(), StringIO()
         old_files = sys.stdin, sys.stdout, sys.stderr
 
         try:
@@ -200,7 +198,7 @@ class collector:
         self.request = request
         self.request.collector = self
         self.request.channel.set_terminator (length)
-        self.buffer = StringIO.StringIO()
+        self.buffer = StringIO()
 
     def collect_incoming_data (self, data):
         self.buffer.write (data)
