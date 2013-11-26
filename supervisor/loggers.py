@@ -83,9 +83,9 @@ class Handler:
                 self.stream.write(msg.encode("UTF-8"))
             self.flush()
         except:
-            self.handleError(record)
+            self.handleError()
 
-    def handleError(self, record):
+    def handleError(self):
         ei = sys.exc_info()
         traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
         del ei
@@ -314,7 +314,7 @@ class SyslogHandler(Handler):
                 except UnicodeError:
                     syslog.syslog(msg.encode("UTF-8"))
         except:
-            self.handleError(record)
+            self.handleError()
 
 def getLogger(level=None):
     return Logger(level)
