@@ -4,13 +4,10 @@ import sys
 import supervisor.medusa.text_socket as socket
 import tempfile
 import unittest
-from supervisor.py3compat import *
 
-try:
-    from hashlib import sha1
-except ImportError:
-    #noinspection PyUnresolvedReferences
-    from sha import new as sha1
+from supervisor.compat import as_bytes
+from supervisor.compat import as_string
+from supervisor.compat import sha1
 
 from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import PopulatedDummySupervisor
@@ -26,12 +23,12 @@ class HandlerTests:
         return self._getTargetClass()(supervisord)
 
     def test_match(self):
-        class DummyRequest:
+        class FakeRequest:
             def __init__(self, uri):
                 self.uri = uri
         supervisor = DummySupervisor()
         handler = self._makeOne(supervisor)
-        self.assertEqual(handler.match(DummyRequest(handler.path)), True)
+        self.assertEqual(handler.match(FakeRequest(handler.path)), True)
 
 class LogtailHandlerTests(HandlerTests, unittest.TestCase):
     def _getTargetClass(self):
@@ -49,7 +46,6 @@ class LogtailHandlerTests(HandlerTests, unittest.TestCase):
         self.assertEqual(request._error, 410)
 
     def test_handle_request_stdout_logfile_missing(self):
-        supervisor = DummySupervisor()
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', 'foo', 'it/is/missing')
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
@@ -59,9 +55,6 @@ class LogtailHandlerTests(HandlerTests, unittest.TestCase):
         self.assertEqual(request._error, 410)
 
     def test_handle_request(self):
-        supervisor = DummySupervisor()
-        import tempfile
-        import os
         import stat
         f = tempfile.NamedTemporaryFile()
         t = f.name

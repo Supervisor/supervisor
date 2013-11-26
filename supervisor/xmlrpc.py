@@ -1,28 +1,20 @@
 import types
-import supervisor.medusa.text_socket as socket
-from supervisor.py3compat import *
-if PY3:
-    import xmlrpc.client as xmlrpclib
-    import http.client as httplib
-    import urllib.parse as urllib
-    from io import StringIO
-    from base64 import decodebytes as decodestring, encodebytes as encodestring
-    func_attribute = '__func__'
-else:
-    #noinspection PyUnresolvedReferences
-    import xmlrpclib
-    #noinspection PyUnresolvedReferences
-    import httplib
-    import urllib
-    #noinspection PyUnresolvedReferences
-    from cStringIO import StringIO
-    from base64 import decodestring, encodestring
-    func_attribute = 'im_func'
 import re
 import traceback
 import sys
-import base64
 
+from supervisor.compat import xmlrpclib
+from supervisor.compat import func_attribute
+from supervisor.compat import StringIO
+from supervisor.compat import urllib
+from supervisor.compat import as_bytes
+from supervisor.compat import as_string
+from supervisor.compat import encodestring
+from supervisor.compat import decodestring
+from supervisor.compat import httplib
+from supervisor.compat import iterparse
+
+import supervisor.medusa.text_socket as socket
 from supervisor.medusa.http_server import get_header
 from supervisor.medusa.xmlrpc_handler import xmlrpc_handler
 from supervisor.medusa import producers
@@ -543,18 +535,6 @@ def gettags(comment):
     tags.append((tag_lineno, tag, datatype, name, '\n'.join(tag_text)))
 
     return tags
-
-
-try:
-    # Python 2.6 contains a version of cElementTree inside it.
-    from xml.etree.ElementTree import iterparse
-except ImportError:
-    try:
-        # Failing that, try cElementTree instead.
-        #noinspection PyPackageRequirements
-        from cElementTree import iterparse
-    except ImportError:
-        iterparse = None
 
 
 if iterparse is not None:

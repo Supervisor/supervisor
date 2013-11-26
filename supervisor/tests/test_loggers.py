@@ -6,13 +6,11 @@ import shutil
 import os
 import syslog
 
-try:
-    import mock
-except ImportError:
-    import unittest.mock as mock
+from supervisor.compat import mock
+from supervisor.compat import PY3
+from supervisor.compat import as_string
 
 from supervisor.tests.base import DummyStream
-from supervisor.py3compat import *
 from supervisor import read_file
 
 class LevelTests(unittest.TestCase):

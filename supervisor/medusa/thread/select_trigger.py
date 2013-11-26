@@ -15,18 +15,14 @@
 ##############################################################################
 
 __revision__ = "$Id: select_trigger.py,v 1.4 2003/01/09 15:49:15 akuchling Exp $"
+from supervisor.compat import thread
+from supervisor.compat import as_bytes
 
-from supervisor.py3compat import *
 import supervisor.medusa.asyncore_25 as asyncore
 import supervisor.medusa.asynchat_25 as asynchat
 
 import os
 import supervisor.medusa.text_socket as socket
-try:
-    import _thread as thread
-except ImportError:
-    #noinspection PyUnresolvedReferences
-    import thread
 
 if os.name == 'posix':
 
@@ -316,7 +312,7 @@ if __name__ == '__main__':
 
         def handle_accept (self):
             conn, addr = self.accept()
-            tp = thread_parent (conn, addr)
+            thread_parent (conn, addr)
 
     thread_server()
     #asyncore.loop(1.0, use_poll=1)

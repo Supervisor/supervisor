@@ -1,16 +1,11 @@
-import os
 import signal
-import time
 import unittest
 import sys
 import errno
 
-try:
-    from mock import Mock, patch, sentinel
-except ImportError:
-    from unittest.mock import Mock, patch, sentinel
+from supervisor.compat import Mock, patch, sentinel
+from supervisor.compat import maxint
 
-from supervisor.py3compat import *
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyProcess
@@ -21,13 +16,6 @@ from supervisor.tests.base import DummyFCGIGroupConfig
 from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import DummyProcessGroup
 from supervisor.tests.base import DummyFCGIProcessGroup
-from supervisor.tests.base import DummySocketManager
-
-if PY3:
-    maxint = sys.maxsize
-else:
-    #noinspection PyUnresolvedReferences
-    maxint = sys.maxint
 
 from supervisor.process import Subprocess
 from supervisor.options import BadCommand
@@ -222,7 +210,6 @@ class SubprocessTests(unittest.TestCase):
 
     def test_spawn_fail_make_pipes_emfile(self):
         options = DummyOptions()
-        import errno
         options.make_pipes_error = errno.EMFILE
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
@@ -567,7 +554,7 @@ class SubprocessTests(unittest.TestCase):
         sent = 'a' * (1 << 13)
         self.assertRaises(OSError, instance.write, sent)
         options.forkpid = 1
-        result = instance.spawn()
+        instance.spawn()
         instance.write(sent)
         stdin_fd = instance.pipes['stdin']
         self.assertEqual(sent, instance.dispatchers[stdin_fd].input_buffer)
@@ -582,7 +569,7 @@ class SubprocessTests(unittest.TestCase):
         sent = 'a' * (1 << 13)
         self.assertRaises(OSError, instance.write, sent)
         options.forkpid = 1
-        result = instance.spawn()
+        instance.spawn()
         stdin_fd = instance.pipes['stdin']
         instance.dispatchers[stdin_fd].close()
         self.assertRaises(OSError, instance.write, sent)
@@ -595,7 +582,7 @@ class SubprocessTests(unittest.TestCase):
         sent = 'a' * (1 << 13)
         self.assertRaises(OSError, instance.write, sent)
         options.forkpid = 1
-        result = instance.spawn()
+        instance.spawn()
         stdin_fd = instance.pipes['stdin']
         instance.dispatchers[stdin_fd].flush_error = errno.EPIPE
         self.assertRaises(OSError, instance.write, sent)
@@ -1677,7 +1664,6 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [event])
-        data = pool.config.options.logger.data
 
     def test_transition_event_proc_not_running(self):
         options = DummyOptions()

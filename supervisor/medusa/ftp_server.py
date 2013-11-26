@@ -19,21 +19,16 @@ RCS_ID =  '$Id: ftp_server.py,v 1.11 2003/12/24 16:05:28 akuchling Exp $'
 # vestigial anyway.  I've attempted to include the most commonly-used
 # commands, using the feature set of wu-ftpd as a guide.
 
-import supervisor.medusa.asyncore_25 as asyncore
-import supervisor.medusa.asynchat_25 as asynchat
-#noinspection PyUnresolvedReferences
-from supervisor.py3compat import * # needed for long
-
 import os
-import supervisor.medusa.text_socket as socket
 import stat
-try:
-    from string import letters
-except ImportError:
-    from string import ascii_letters as letters
 import sys
 import time
 
+from supervisor.compat import letters
+
+import supervisor.medusa.asyncore_25 as asyncore
+import supervisor.medusa.asynchat_25 as asynchat
+import supervisor.medusa.text_socket as socket
 from supervisor.medusa.producers import file_producer
 
 # TODO: implement a directory listing cache.  On very-high-load
@@ -140,8 +135,6 @@ class ftp_channel (asynchat.async_chat):
         command = line[0].lower()
         # watch especially for 'urgent' abort commands.
         if command.find('abor') != -1:
-            # ascii_letters for python 3
-            letters = getattr(string, "letters", string.ascii_letters)
             # strip off telnet sync chars and the like...
             while command and command[0] not in letters:
                 command = command[1:]

@@ -6,10 +6,9 @@
 #
 RCS_ID = '$Id: monitor.py,v 1.5 2002/03/23 15:08:06 amk Exp $'
 
-try:
-    from md5 import md5
-except ImportError:
-    from hashlib import md5
+from supervisor.compat import md5
+from supervisor.compat import print_function
+
 import supervisor.medusa.text_socket as socket
 import sys
 import time
@@ -21,7 +20,6 @@ import supervisor.medusa.asynchat_25 as asynchat
 
 from supervisor.medusa.counter import counter
 import supervisor.medusa.producers as producers
-from supervisor.py3compat import *
 
 class monitor_channel (asynchat.async_chat):
     try_linemode = 1

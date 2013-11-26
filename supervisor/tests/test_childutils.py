@@ -1,10 +1,7 @@
 import sys
 import time
 import unittest
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from supervisor.compat import StringIO
 
 class ChildUtilsTests(unittest.TestCase):
     def test_getRPCInterface(self):
@@ -87,8 +84,6 @@ class TestProcessCommunicationsProtocol(unittest.TestCase):
 class TestEventListenerProtocol(unittest.TestCase):
     def test_wait(self):
         from supervisor.childutils import listener
-        from supervisor.dispatchers import PEventListenerDispatcher
-        token = PEventListenerDispatcher.READY_FOR_EVENTS_TOKEN
         class Dummy:
             def readline(self):
                 return 'len:5'

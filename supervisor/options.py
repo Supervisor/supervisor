@@ -6,17 +6,6 @@ import tempfile
 import errno
 import signal
 import re
-from supervisor.py3compat import *
-if PY3:
-    import configparser as ConfigParser
-    import xmlrpc.client as xmlrpclib
-    from io import StringIO
-else:
-    #noinspection PyUnresolvedReferences
-    import ConfigParser
-    #noinspection PyUnresolvedReferences
-    import xmlrpclib
-    from StringIO import StringIO
 import pwd
 import grp
 import resource
@@ -29,6 +18,14 @@ import warnings
 
 from fcntl import fcntl
 from fcntl import F_SETFL, F_GETFL
+
+from supervisor.compat import print_function
+from supervisor.compat import PY3
+from supervisor.compat import ConfigParser
+from supervisor.compat import as_bytes, as_string
+from supervisor.compat import xmlrpclib
+from supervisor.compat import StringIO
+from supervisor.compat import basestring
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -1328,7 +1325,6 @@ class ServerOptions(Options):
             lmin = limit['min']
             res = limit['resource']
             msg = limit['msg']
-            name = limit['name']
 
             soft, hard = resource.getrlimit(res)
 

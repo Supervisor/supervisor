@@ -5,23 +5,10 @@ import sys
 import supervisor.medusa.text_socket as socket
 import errno
 import pwd
-from supervisor.py3compat import *
-if PY3:
-    import urllib.parse as urllib
-else:
-    import urllib
 
-try:
-    import pwd
-except ImportError:  # Windows
-    import getpass as pwd
-
-try:
-    from hashlib import sha1
-except ImportError:
-    #noinspection PyUnresolvedReferences
-    from sha import new as sha1
-
+from supervisor.compat import urllib
+from supervisor.compat import sha1
+from supervisor.compat import as_bytes
 from supervisor.medusa import asyncore_25 as asyncore
 from supervisor.medusa import http_date
 from supervisor.medusa import http_server

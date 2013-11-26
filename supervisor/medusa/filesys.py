@@ -14,7 +14,7 @@
 # opening files for reading, and listing directories, should
 # return a producer.
 
-from supervisor.py3compat import *
+from supervisor.compat import long
 
 class abstract_filesystem:
     def __init__ (self):

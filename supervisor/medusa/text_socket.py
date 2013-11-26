@@ -2,8 +2,10 @@
 
 __author__ = 'Scott Maxwell'
 
-from supervisor.py3compat import *
-from socket import *
+from supervisor.compat import PY3
+from supervisor.compat import as_string, as_bytes
+
+from socket import * # relied on to be imported from elsewhere
 
 if PY3:
     bin_socket = socket

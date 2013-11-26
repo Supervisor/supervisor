@@ -100,7 +100,7 @@ class UIHandlerTests(unittest.TestCase):
         request = DummyRequest('/index.html', [], '', '',
                                {'PATH_INFO':'/index.html'})
         handler = self._makeOne()
-        data = handler.handle_request(request)
+        handler.handle_request(request)
         from supervisor.web import StatusView
         view = request.channel.producer.callback
         self.assertEqual(view.__class__, StatusView)
@@ -110,7 +110,7 @@ class UIHandlerTests(unittest.TestCase):
         request = DummyRequest('/tail.html', [], '', '',
                                {'PATH_INFO':'/tail.html'})
         handler = self._makeOne()
-        data = handler.handle_request(request)
+        handler.handle_request(request)
         from supervisor.web import TailView
         view = request.channel.producer.callback
         self.assertEqual(view.__class__, TailView)
@@ -120,7 +120,7 @@ class UIHandlerTests(unittest.TestCase):
         request = DummyRequest('/tail.html', [], '', '',
                                {'PATH_INFO':'/ok.html'})
         handler = self._makeOne()
-        data = handler.handle_request(request)
+        handler.handle_request(request)
         from supervisor.web import OKView
         view = request.channel.producer.callback
         self.assertEqual(view.__class__, OKView)

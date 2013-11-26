@@ -3,17 +3,12 @@ import sys
 import time
 import errno
 import shlex
-try:
-    #noinspection PyUnresolvedReferences
-    import StringIO
-    #noinspection PyUnresolvedReferences
-    from sys import maxint
-except ImportError:
-    import io as StringIO
-    from sys import maxsize as maxint
-
 import traceback
 import signal
+
+from supervisor.compat import maxint
+from supervisor.compat import StringIO
+from supervisor.compat import total_ordering
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -29,7 +24,6 @@ from supervisor.options import ProcessException, BadCommand
 from supervisor.dispatchers import EventListenerStates
 
 from supervisor import events
-from supervisor.py3compat import total_ordering
 
 from supervisor.datatypes import RestartUnconditionally
 
@@ -430,7 +424,7 @@ class Subprocess(object):
         try:
             options.kill(pid, sig)
         except:
-            io = StringIO.StringIO()
+            io = StringIO()
             traceback.print_exc(file=io)
             tb = io.getvalue()
             msg = 'unknown problem killing %s (%s):%s' % (self.config.name,
@@ -794,7 +788,6 @@ class EventListenerPool(ProcessGroupBase):
     def _acceptEvent(self, event, head=False):
         # events are required to be instances
         # this has a side effect to fail with an attribute error on 'old style' classes
-        event_type = event.__class__
         if not hasattr(event, 'serial'):
             event.serial = new_serial(GlobalSerial)
         if not hasattr(event, 'pool_serials'):

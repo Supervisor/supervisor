@@ -1,9 +1,10 @@
 # -*- Mode: Python -*-
 
+from supervisor.compat import as_bytes
+
 import asyncore
 import socket
 import sys
-from supervisor.py3compat import *
 
 def blurt (thing):
     sys.stdout.write (thing)

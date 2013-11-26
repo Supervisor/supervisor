@@ -1,23 +1,14 @@
 """Test suite for supervisor.datatypes"""
 
-import sys
 import os
 import unittest
-import supervisor.medusa.text_socket as socket
 import tempfile
 
-try:
-    from mock import Mock, patch, sentinel
-except ImportError:
-    from unittest.mock import Mock, patch, sentinel
+from supervisor.compat import Mock, patch, sentinel
+from supervisor.compat import maxint
 
 from supervisor import datatypes
-from supervisor.py3compat import *
-if PY3:
-    maxint = sys.maxsize
-else:
-    #noinspection PyUnresolvedReferences
-    maxint = sys.maxint
+import supervisor.medusa.text_socket as socket
 
 class DatatypesTest(unittest.TestCase):
     def test_boolean_returns_true_for_truthy_values(self):

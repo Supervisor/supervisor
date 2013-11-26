@@ -11,15 +11,13 @@ RCS_ID =  '$Id: resolver.py,v 1.4 2002/03/20 17:37:48 amk Exp $'
 
 # see rfc1035 for details
 
+from supervisor.compat import reduce
+
 import supervisor.medusa.asyncore_25 as asyncore
 import supervisor.medusa.text_socket as socket
 import sys
 import time
 from supervisor.medusa.counter import counter
-from supervisor.py3compat import *
-
-if PY3:
-    from functools import reduce
 
 VERSION = RCS_ID.split()[2]
 

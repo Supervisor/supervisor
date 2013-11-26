@@ -1,14 +1,8 @@
 _NOW = 1151365354
 _TIMEFORMAT = '%b %d %I:%M %p'
 
-try:
-    import xmlrpclib
-    from xmlrpclib import Fault
-except ImportError:
-    import xmlrpc.client as xmlrpclib
-    from xmlrpc.client import Fault
-
-from supervisor.py3compat import total_ordering
+from supervisor.compat import total_ordering
+from supervisor.compat import Fault
 
 class DummyOptions:
 
@@ -734,11 +728,11 @@ class DummySupervisorRPCNamespace:
     def readProcessStdoutLog(self, name, offset, length):
         from supervisor import xmlrpc
         if name == 'BAD_NAME':
-            raise xmlrpclib.Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
         elif name == 'FAILED':
-            raise xmlrpclib.Fault(xmlrpc.Faults.FAILED, 'FAILED')
+            raise Fault(xmlrpc.Faults.FAILED, 'FAILED')
         elif name == 'NO_FILE':
-            raise xmlrpclib.Fault(xmlrpc.Faults.NO_FILE, 'NO_FILE')
+            raise Fault(xmlrpc.Faults.NO_FILE, 'NO_FILE')
         a = 'output line\n' * 10
         return a[offset:]
 
@@ -755,11 +749,11 @@ class DummySupervisorRPCNamespace:
                 info=i
                 return info
         if name == 'BAD_NAME':
-            raise xmlrpclib.Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
         if name == 'FAILED':
-            raise xmlrpclib.Fault(xmlrpc.Faults.FAILED, 'FAILED')
+            raise Fault(xmlrpc.Faults.FAILED, 'FAILED')
         if name == 'NO_FILE':
-            raise xmlrpclib.Fault(xmlrpc.Faults.NO_FILE, 'NO_FILE')
+            raise Fault(xmlrpc.Faults.NO_FILE, 'NO_FILE')
 
     def startProcess(self, name):
         from supervisor import xmlrpc

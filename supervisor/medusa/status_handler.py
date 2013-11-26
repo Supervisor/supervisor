@@ -10,7 +10,9 @@ import time
 import re
 from cgi import escape
 
-from supervisor.py3compat import *
+from supervisor.compat import StringIO
+from supervisor.compat import long
+
 import supervisor.medusa.asyncore_25 as asyncore
 import supervisor.medusa.http_server as http_server
 import supervisor.medusa.medusa_gif as medusa_gif
@@ -78,11 +80,6 @@ class status_extension:
                     request.push (self.objects[i].status())
                 except:
                     import traceback
-                    if PY3:
-                        from io import StringIO
-                    else:
-                        #noinspection PyUnresolvedReferences
-                        from StringIO import StringIO
                     stream = StringIO()
                     traceback.print_exc(None,stream)
                     request.push('<h2><font color="red">Error in Channel %3d: %s</font><pre>%s</pre>' % (i,escape(repr(self.objects[i])), escape(stream.getvalue())))

@@ -22,13 +22,9 @@
 # script_handler.restricted)
 
 import re
-from supervisor.py3compat import *
-if PY3:
-    from io import StringIO
-else:
-    #noinspection PyUnresolvedReferences
-    from StringIO import StringIO
 import sys
+
+from supervisor.compat import StringIO
 
 import supervisor.medusa.counter as counter
 import supervisor.medusa.default_handler as default_handler

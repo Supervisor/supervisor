@@ -54,7 +54,8 @@ import time
 import os
 from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, \
      ENOTCONN, ESHUTDOWN, EINTR, EISCONN, errorcode
-from supervisor.py3compat import *
+
+from supervisor.compat import as_string, as_bytes
 
 try:
     #noinspection PyUnresolvedReferences,PyUnboundLocalVariable

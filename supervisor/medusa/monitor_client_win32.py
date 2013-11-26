@@ -8,12 +8,9 @@
 import supervisor.medusa.text_socket as socket
 import sys
 import supervisor.medusa.thread as thread
-from supervisor.py3compat import *
 
-try:
-    from md5 import md5
-except ImportError:
-    from hashlib import md5
+from supervisor.compat import md5
+from supervisor.compat import print_function
 
 def hex_digest (s):
     m = md5.md5()

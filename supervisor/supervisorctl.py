@@ -25,17 +25,14 @@ actions.
 import cmd
 import sys
 import getpass
-from supervisor.py3compat import *
-try:
-    import xmlrpclib
-    import urlparse
-except ImportError:
-    import xmlrpc.client as xmlrpclib
-    import urllib.parse as urlparse
 
 import supervisor.medusa.text_socket as socket
 import errno
 import threading
+
+from supervisor.compat import xmlrpclib
+from supervisor.compat import urlparse
+from supervisor.compat import unicode
 
 from supervisor.medusa import asyncore_25 as asyncore
 

@@ -8,24 +8,11 @@ import unittest
 import signal
 import shutil
 import errno
-try:
-    # Python < 3
-    from StringIO import StringIO
-except ImportError:
-    # Python >= 3
-    from io import StringIO
 
-try:
-    from mock import Mock, patch, sentinel
-except ImportError:
-    from unittest.mock import Mock, patch, sentinel
-from supervisor.py3compat import *
 from supervisor import read_file
-
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from supervisor.compat import StringIO
+from supervisor.compat import as_bytes
+from supervisor.compat import Mock, sentinel, patch
 
 from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import DummyLogger

@@ -4,6 +4,10 @@ import datetime
 import errno
 import sys
 
+from supervisor.compat import as_string
+from supervisor.compat import unicode
+from supervisor.compat import basestring
+
 from supervisor.options import readFile
 from supervisor.options import tailFile
 from supervisor.options import NotExecutable
@@ -25,7 +29,6 @@ from supervisor.states import getSupervisorStateDescription
 from supervisor.states import ProcessStates
 from supervisor.states import getProcessStateDescription
 from supervisor.states import RUNNING_STATES
-from supervisor.py3compat import *
 
 API_VERSION  = '3.0'
 

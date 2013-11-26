@@ -1,27 +1,22 @@
 import os
 import re
+import sys
 import time
 import traceback
-import urllib
 import datetime
 
-from supervisor.py3compat import *
-if PY3:
-    from io import StringIO
-    import urllib.parse as urllib
-    from urllib.parse import parse_qs, parse_qsl
-else:
-    #noinspection PyUnresolvedReferences
-    from StringIO import StringIO
-    import urllib
-    from cgi import parse_qs, parse_qsl
+import meld3
+
+from supervisor.compat import StringIO
+from supervisor.compat import urllib
+from supervisor.compat import parse_qs
+from supervisor.compat import parse_qsl
+from supervisor.compat import as_string
 
 from supervisor.medusa import producers
 from supervisor.medusa.http_server import http_date
 from supervisor.medusa.http_server import get_header
 from supervisor.medusa.xmlrpc_handler import collector
-
-import supervisor.meld3 as meld3
 
 from supervisor.process import ProcessStates
 from supervisor.http import NOT_DONE_YET
@@ -181,7 +176,7 @@ class MeldView:
         headers['Pragma'] = 'no-cache'
         headers['Cache-Control'] = 'no-cache'
         headers['Expires'] = http_date.build_http_date(0)
-        response['body'] = body
+        response['body'] = as_string(body)
         return response
 
     def render(self):
@@ -235,7 +230,7 @@ class TailView(MeldView):
         else:
             refresh_anchor.deparent()
 
-        return root.write_xhtmlstring()
+        return as_string(root.write_xhtmlstring())
 
 class StatusView(MeldView):
     def actions_for_process(self, process):
@@ -493,7 +488,7 @@ class StatusView(MeldView):
         copyright_year = str(datetime.date.today().year)
         root.findmeld('copyright_date').content(copyright_year)
 
-        return root.write_xhtmlstring()
+        return as_string(root.write_xhtmlstring())
 
 class OKView:
     delay = 0

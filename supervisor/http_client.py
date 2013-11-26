@@ -2,17 +2,12 @@
 
 import sys
 import supervisor.medusa.text_socket as socket
-from supervisor.py3compat import *
-if PY3:
-    from urllib.parse import urlparse
-    from base64 import encodebytes as encodestring
-else:
-    #noinspection PyUnresolvedReferences
-    from urlparse import urlparse
-    #noinspection PyDeprecation
-    from base64 import encodestring
 
-from supervisor.medusa import asyncore_25 as asyncore
+from supervisor.compat import print_function
+from supervisor.compat import urlparse
+from supervisor.compat import as_bytes
+from supervisor.compat import as_string
+from supervisor.compat import encodestring
 from supervisor.medusa import asynchat_25 as asynchat
 
 CR="\x0d"
@@ -64,7 +59,8 @@ class HTTPHandler(asynchat.async_chat):
         if self.url is not None:
             raise AssertionError('Already doing a get')
         self.url = serverurl + path
-        scheme, host, path_ignored, params, query, fragment = urlparse(self.url)
+        scheme, host, path_ignored, params, query, fragment = urlparse.urlparse(
+            self.url)
         if not scheme in ("http", "unix"):
             raise NotImplementedError
         self.host = host

@@ -12,8 +12,6 @@
 # method, the use of long arithmetic is a reminder that the counter
 # will overflow.
 
-from supervisor.py3compat import *
-
 class counter:
     """general-purpose counter"""
 

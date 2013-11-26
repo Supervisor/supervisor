@@ -6,18 +6,15 @@ import supervisor.medusa.asynchat_25 as asynchat
 import supervisor.medusa.text_socket as socket
 import sys
 import os
-from supervisor.py3compat import *
 
-try:
-    from md5 import md5
-except ImportError:
-    from hashlib import md5
+from supervisor.compat import md5
+from supervisor.compat import print_function
 
 class stdin_channel (asyncore.file_dispatcher):
     def handle_read (self):
         data = self.recv(512)
         if not data:
-            print('\nclosed.')
+            print_function('\nclosed.')
             self.sock_channel.close()
             try:
                 self.close()
@@ -55,7 +52,7 @@ class monitor_client (asynchat.async_chat):
             self.push (hex_digest (self.timestamp + self.password) + '\r\n')
             self.sent_auth = 1
         else:
-            print()
+            print_function()
 
     def handle_close (self):
         # close all the channels, which will make the standard main
@@ -91,7 +88,7 @@ def hex_digest (s):
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
-        print('Usage: %s host port' % sys.argv[0])
+        print_function('Usage: %s host port' % sys.argv[0])
         sys.exit(0)
 
     if '-e' in sys.argv:
@@ -105,7 +102,7 @@ if __name__ == '__main__':
     try:
         os.system ('stty -echo')
         p = raw_input()
-        print()
+        print_function()
     finally:
         os.system ('stty echo')
     stdin = stdin_channel (0)

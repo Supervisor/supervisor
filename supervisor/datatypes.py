@@ -5,12 +5,9 @@ import signal
 import sys
 import supervisor.medusa.text_socket as socket
 import shlex
-from supervisor.py3compat import *
-if PY3:
-    import urllib.parse as urlparse
-else:
-    #noinspection PyUnresolvedReferences
-    import urlparse
+
+from supervisor.compat import urlparse
+from supervisor.compat import long
 from supervisor.loggers import getLevelNumByDescription
 
 # I dont know why we bother, this doesn't run on Windows, but just

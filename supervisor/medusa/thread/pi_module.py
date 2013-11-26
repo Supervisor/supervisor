@@ -10,9 +10,9 @@
 # See also the ABC Programmer's Handbook, by Geurts, Meertens & Pemberton,
 # published by Prentice-Hall (UK) Ltd., 1990.
 
-from supervisor.py3compat import *
-
 StopException = "Stop!"
+
+from supervisor.compat import long
 
 def go (file):
     try:

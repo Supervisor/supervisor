@@ -9,21 +9,15 @@ RCS_ID =  '$Id: auth_handler.py,v 1.6 2002/11/25 19:40:23 akuchling Exp $'
 
 # support for 'basic' authentication.
 
-try:
-    from hashlib import md5
-except ImportError:
-    #noinspection PyUnresolvedReferences
-    from md5 import new as md5
-try:
-    from base64 import decodebytes as decodestring, encodebytes as encodestring
-except ImportError:
-    from base64 import decodestring, encodestring
-
 import re
 import time
-import supervisor.medusa.counter as counter
-from supervisor.py3compat import *
 
+from supervisor.compat import encodestring, decodestring
+from supervisor.compat import md5
+from supervisor.compat import as_string, as_bytes
+from supervisor.compat import print_function
+
+import supervisor.medusa.counter as counter
 import supervisor.medusa.default_handler as default_handler
 
 get_header = default_handler.get_header

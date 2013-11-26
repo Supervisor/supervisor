@@ -41,9 +41,7 @@ import supervisor.medusa.asynchat_25 as asynchat
 from supervisor.medusa.producers import scanning_producer
 from supervisor.medusa.counter import counter
 
-from supervisor.py3compat import *
-if PY3:
-    from functools import reduce
+from supervisor.compat import reduce
 
 MY_NAME = socket.gethostname().split('.')[0]
 

@@ -12,14 +12,9 @@ import errno
 import sys
 import time
 import traceback
-from supervisor.py3compat import *
 
-try:
-    #noinspection PyUnresolvedReferences
-    import syslog
-except ImportError:
-    # only required when 'syslog' is specified as the log filename
-    pass
+from supervisor.compat import syslog
+from supervisor.compat import long
 
 class LevelsByName:
     CRIT = 50   # messages that probably require immediate user attention
@@ -310,7 +305,7 @@ class Logger:
 class SyslogHandler(Handler):
     def __init__(self):
         Handler.__init__(self)
-        assert 'syslog' in globals(), "Syslog module not present"
+        assert syslog is not None, "Syslog module not present"
 
     def close(self):
         pass

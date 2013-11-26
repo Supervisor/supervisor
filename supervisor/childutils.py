@@ -1,11 +1,9 @@
 import sys
 import time
-from supervisor.py3compat import *
-if PY3:
-    import xmlrpc.client as xmlrpclib
-else:
-    #noinspection PyUnresolvedReferences
-    import xmlrpclib
+
+from supervisor.compat import xmlrpclib
+from supervisor.compat import long
+
 from supervisor.xmlrpc import SupervisorTransport
 from supervisor.events import ProcessCommunicationEvent
 from supervisor.dispatchers import PEventListenerDispatcher

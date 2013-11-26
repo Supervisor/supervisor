@@ -15,8 +15,6 @@ from supervisor.tests.base import PopulatedDummySupervisor
 from supervisor.tests.base import _NOW
 from supervisor.tests.base import _TIMEFORMAT
 
-from supervisor.py3compat import *
-
 class TestBase(unittest.TestCase):
     def setUp(self):
         pass
@@ -478,7 +476,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.set_procattr('process1', 'state', ProcessStates.STOPPED)
         supervisord.set_procattr('process2', 'state', ProcessStates.STOPPED)
         interface = self._makeOne(supervisord)
-        callback = interface.startProcess('foo:*')
+        interface.startProcess('foo:*')
         self.assertEqual(interface.update_text, 'startProcessGroup')
 
     def test_startProcessGroup(self):
@@ -781,7 +779,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.set_procattr('process1', 'state', ProcessStates.STOPPED)
         supervisord.set_procattr('process2', 'state', ProcessStates.STOPPED)
         interface = self._makeOne(supervisord)
-        callback = interface.stopProcess('foo:*')
+        interface.stopProcess('foo:*')
         self.assertEqual(interface.update_text, 'stopProcessGroup')
 
     def test_stopAllProcesses(self):
@@ -1619,6 +1617,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(event.data, 'bar')
 
     def test_sendRemoteCommEvent_unicode_encoded_to_utf8(self):
+        from supervisor.compat import as_string, PY3
         options = DummyOptions()
         supervisord = DummySupervisor(options)
         interface = self._makeOne(supervisord)
