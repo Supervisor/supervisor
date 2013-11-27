@@ -1325,6 +1325,7 @@ class ServerOptions(Options):
             lmin = limit['min']
             res = limit['resource']
             msg = limit['msg']
+            name = limit['name']
 
             soft, hard = resource.getrlimit(res)
 
