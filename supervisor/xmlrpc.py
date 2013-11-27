@@ -185,7 +185,8 @@ class SystemNamespaceRPCInterface:
     def listMethods(self):
         """ Return an array listing the available method names
 
-        @return array result  An array of method names available (strings).
+        :return:  An array of method names available (strings).
+        :rtype: array
         """
         methods = self._listMethods()
         keys = methods.keys()
@@ -195,8 +196,10 @@ class SystemNamespaceRPCInterface:
     def methodHelp(self, name):
         """ Return a string showing the method's documentation
 
-        @param string name   The name of the method.
-        @return string result The documentation for the method name.
+        :param name: The name of the method.
+        :type name: string
+        :return: The documentation for the method name.
+        :rtype: string
         """
         methods = self._listMethods()
         for methodname in methods.keys():
@@ -210,8 +213,10 @@ class SystemNamespaceRPCInterface:
         of the method, and ptypes are the parameter data types that the
         method accepts in method argument order.
 
-        @param string name  The name of the method.
-        @return array result  The result.
+        :param name: The name of the method.
+        :type name: string
+        :return: The result.
+        :rtype: array
         """
         methods = self._listMethods()
         for method in methods:
@@ -238,8 +243,10 @@ class SystemNamespaceRPCInterface:
         useful when you need to make lots of small calls without lots
         of round trips.
 
-        @param array calls  An array of call requests
-        @return array result  An array of results
+        :param calls: An array of call requests
+        :type calls: array
+        :return: An array of results
+        :rtype: array
         """
         producers = []
 
@@ -483,7 +490,47 @@ class UnixStreamHTTPConnection(httplib.HTTPConnection):
 def gettags(comment):
     """ Parse documentation strings into JavaDoc-like tokens """
 
-    tags = []
+    tags = {}
+    lineno = 0
+    match = None
+
+    for line in comment.split('\n'):
+        line = line.strip()
+        lineno = lineno + 1
+
+        if not line:
+            continue
+
+        if tags and not line.startswith(':'):
+            tags[match['name']]['tag_text'].append(line)
+            continue
+
+        match = re.match(r':param (?P<name>[a-zA-Z0-9_]+): (?P<tag_text>.*)',
+                         line)
+        if match:
+            match = match.groupdict()
+            match.update({'tag': 'param', 'tag_lineno': lineno})
+            tags[match['name']] = match
+            continue
+
+        match = re.match(r':type (?P<name>[a-zA-Z0-9_]+): (?P<datatype>.*)',
+                         line)
+        if match:
+            match = match.groupdict()
+            tags[match['name']]['datatype'] = match['datatype']
+            continue
+
+        if line.startswith(':return:'):
+            tags['return'] = {'tag': 'return', 'tag_lineno': lineno,
+                              'name': 'return', 'tag_text': line[9:]}
+            continue
+
+        if line.startswith(':rtype:'):
+            tags['return']['datatype'] = line[8:]
+            continue
+
+    tags = sorted([(val['tag_lineno'], val['tag'], val['datatype'],
+                    val['name'], val['tag_text']) for val in tags.values()])
 
     tag = None
     datatype = None
