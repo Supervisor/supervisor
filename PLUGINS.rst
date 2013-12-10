@@ -21,6 +21,9 @@ instances running on different servers.
 `Supervisord-Monitor <https://github.com/mlazarov/supervisord-monitor>`_
     Web-based dashboard written in PHP.
 
+`SupervisorUI <https://github.com/luxbet/supervisorui>`_
+    Another Web-based dashboard written in PHP.
+
 
 Third Party Plugins and Libraries for Supervisor
 ------------------------------------------------
