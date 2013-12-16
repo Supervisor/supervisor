@@ -106,3 +106,5 @@ with third party applications:
     `Capistrano <https://github.com/capistrano/capistrano>`_ recipe to deploy supervisord based services.
 `chef-supervisor <https://github.com/opscode-cookbooks/supervisor>`_
     `Chef <http://www.opscode.com/chef/>`_ cookbook install and configure supervisord.
+`PHP Supervisor <https://github.com/indigophp/supervisor>`_
+    PHP client for the supervisord XML-RPC interface. Configuration generator. Event listener work in progress.
