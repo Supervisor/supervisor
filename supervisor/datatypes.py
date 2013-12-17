@@ -68,7 +68,7 @@ def dict_of_key_value_pairs(arg):
     """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'}
         Quotes can be used to allow commas in the value
     """
-    lexer = shlex.shlex(str(arg))
+    lexer = shlex.shlex(str(arg), posix=True)
     lexer.wordchars += '/.+-():'
 
     tokens = list(lexer)
@@ -81,7 +81,7 @@ def dict_of_key_value_pairs(arg):
         if len(k_eq_v) != 3 or k_eq_v[1] != '=':
             raise ValueError(
                 "Unexpected end of key/value pairs in value '%s'" % arg)
-        D[k_eq_v[0]] = k_eq_v[2].strip('\'"')
+        D[k_eq_v[0]] = k_eq_v[2]
         i += 4
     return D
 

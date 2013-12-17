@@ -164,6 +164,11 @@ class DictOfKeyValuePairsTests(unittest.TestCase):
         expected = {'foo': 'a\nb\nc'}
         self.assertEqual(actual, expected)
 
+    def test_handles_quotes_inside_quotes(self):
+        actual = datatypes.dict_of_key_value_pairs('foo="\'\\""')
+        expected = {'foo': '\'"'}
+        self.assertEqual(actual, expected)
+
     def test_handles_empty_inside_quotes(self):
         actual = datatypes.dict_of_key_value_pairs('foo=""')
         expected = {'foo': ''}
