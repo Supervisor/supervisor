@@ -70,6 +70,7 @@ dist = setup(
     extras_require = {'iterparse':['cElementTree >= 1.0.2']},
     tests_require = ['mock >= 0.5.0'],
     include_package_data = True,
+    package_data = { 'supervisor':['version.txt','skel/*']},
     zip_safe = False,
     namespace_packages = ['supervisor'],
     test_suite = "supervisor.tests",
