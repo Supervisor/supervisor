@@ -628,7 +628,8 @@ class ServerOptions(Options):
                 group_processes.extend(processes)
             raw_params = dict(parser.items(section))
             groups.append(
-                ProcessGroupConfig(self, group_name, priority, group_processes, raw_params)
+                ProcessGroupConfig(self, group_name, priority, group_processes,
+                                   raw_params=raw_params)
                 )
 
         # process "normal" homogeneous groups
@@ -642,7 +643,8 @@ class ServerOptions(Options):
                                                   ProcessConfig)
             raw_params = dict(parser.items(section))
             groups.append(
-                ProcessGroupConfig(self, program_name, priority, processes, raw_params)
+                ProcessGroupConfig(self, program_name, priority, processes,
+                                   raw_params=raw_params)
                 )
 
         # process "event listener" homogeneous groups
@@ -681,7 +683,8 @@ class ServerOptions(Options):
             groups.append(
                 EventListenerPoolConfig(self, pool_name, priority, processes,
                                         buffer_size, pool_events,
-                                        result_handler, raw_params)
+                                        result_handler,
+                                        raw_params=raw_params)
                 )
 
         # process fastcgi homogeneous groups
@@ -735,7 +738,7 @@ class ServerOptions(Options):
             raw_params = dict(parser.items(section))
             groups.append(
                 FastCGIGroupConfig(self, program_name, priority, processes,
-                                   socket_config, raw_params)
+                                   socket_config, raw_params=raw_params)
                 )
 
         groups.sort()
@@ -1646,9 +1649,9 @@ class ProcessConfig(Config):
         'exitcodes', 'redirect_stderr' ]
     optional_param_names = [ 'environment', 'serverurl' ]
 
-    def __init__(self, options, raw_params, **params):
+    def __init__(self, options, raw_params=None, **params):
         self.options = options
-        self.raw_params = raw_params
+        self.raw_params = raw_params if raw_params is not None else {}
         for name in self.req_param_names:
             setattr(self, name, params[name])
         for name in self.optional_param_names:
@@ -1741,12 +1744,12 @@ class FastCGIProcessConfig(ProcessConfig):
         return dispatchers, p
 
 class ProcessGroupConfig(Config):
-    def __init__(self, options, name, priority, process_configs, raw_params):
+    def __init__(self, options, name, priority, process_configs, raw_params=None):
         self.options = options
         self.name = name
         self.priority = priority
         self.process_configs = process_configs
-        self.raw_params = raw_params
+        self.raw_params = raw_params if raw_params is not None else {}
 
     def __eq__(self, other):
         if not isinstance(other, ProcessGroupConfig):
@@ -1771,7 +1774,7 @@ class ProcessGroupConfig(Config):
 
 class EventListenerPoolConfig(Config):
     def __init__(self, options, name, priority, process_configs, buffer_size,
-                 pool_events, result_handler, raw_params):
+                 pool_events, result_handler, raw_params=None):
         self.options = options
         self.name = name
         self.priority = priority
@@ -1779,7 +1782,7 @@ class EventListenerPoolConfig(Config):
         self.buffer_size = buffer_size
         self.pool_events = pool_events
         self.result_handler = result_handler
-        self.raw_params = raw_params
+        self.raw_params = raw_params if raw_params is not None else {}
 
     def __eq__(self, other):
         if not isinstance(other, EventListenerPoolConfig):
@@ -1800,13 +1803,13 @@ class EventListenerPoolConfig(Config):
 
 class FastCGIGroupConfig(ProcessGroupConfig):
     def __init__(self, options, name, priority, process_configs,
-                 socket_config, raw_params):
+                 socket_config, raw_params=None):
         self.options = options
         self.name = name
         self.priority = priority
         self.process_configs = process_configs
         self.socket_config = socket_config
-        self.raw_params = raw_params
+        self.raw_params = raw_params if raw_params is not None else {}
 
     def __eq__(self, other):
         if not isinstance(other, FastCGIGroupConfig):
