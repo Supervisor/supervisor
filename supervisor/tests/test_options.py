@@ -1606,6 +1606,7 @@ class TestProcessConfig(unittest.TestCase):
                      'redirect_stderr', 'environment'):
             defaults[name] = name
         defaults.update(kw)
+        defaults['raw_params'] = {}
         return self._getTargetClass()(*arg, **defaults)
 
     def test_create_autochildlogs(self):
@@ -1680,6 +1681,7 @@ class FastCGIProcessConfigTest(unittest.TestCase):
                      'redirect_stderr', 'environment'):
             defaults[name] = name
         defaults.update(kw)
+        defaults['raw_params'] = {}
         return self._getTargetClass()(*arg, **defaults)
 
     def test_make_process(self):
@@ -1719,28 +1721,29 @@ class ProcessGroupConfigTests(unittest.TestCase):
         from supervisor.options import ProcessGroupConfig
         return ProcessGroupConfig
 
-    def _makeOne(self, options, name, priority, pconfigs):
-        return self._getTargetClass()(options, name, priority, pconfigs)
+    def _makeOne(self, options, name, priority, pconfigs, raw_params):
+        return self._getTargetClass()(options, name, priority, pconfigs, raw_params)
 
     def test_ctor(self):
         options = DummyOptions()
-        instance = self._makeOne(options, 'whatever', 999, [])
+        instance = self._makeOne(options, 'whatever', 999, [], {'a':'b'})
         self.assertEqual(instance.options, options)
         self.assertEqual(instance.name, 'whatever')
         self.assertEqual(instance.priority, 999)
         self.assertEqual(instance.process_configs, [])
+        self.assertEqual(instance.raw_params, {'a':'b'})
 
     def test_after_setuid(self):
         options = DummyOptions()
         pconfigs = [DummyPConfig(options, 'process1', '/bin/process1')]
-        instance = self._makeOne(options, 'whatever', 999, pconfigs)
+        instance = self._makeOne(options, 'whatever', 999, pconfigs, {})
         instance.after_setuid()
         self.assertEqual(pconfigs[0].autochildlogs_created, True)
 
     def test_make_group(self):
         options = DummyOptions()
         pconfigs = [DummyPConfig(options, 'process1', '/bin/process1')]
-        instance = self._makeOne(options, 'whatever', 999, pconfigs)
+        instance = self._makeOne(options, 'whatever', 999, pconfigs, {})
         group = instance.make_group()
         from supervisor.process import ProcessGroup
         self.assertEqual(group.__class__, ProcessGroup)
@@ -1756,7 +1759,7 @@ class FastCGIGroupConfigTests(unittest.TestCase):
     def test_ctor(self):
         options = DummyOptions()
         sock_config = DummySocketConfig(6)
-        instance = self._makeOne(options, 'whatever', 999, [], sock_config)
+        instance = self._makeOne(options, 'whatever', 999, [], sock_config, {})
         self.assertEqual(instance.options, options)
         self.assertEqual(instance.name, 'whatever')
         self.assertEqual(instance.priority, 999)
@@ -1766,10 +1769,10 @@ class FastCGIGroupConfigTests(unittest.TestCase):
     def test_same_sockets_are_equal(self):
         options = DummyOptions()
         sock_config1 = DummySocketConfig(6)
-        instance1 = self._makeOne(options, 'whatever', 999, [], sock_config1)
+        instance1 = self._makeOne(options, 'whatever', 999, [], sock_config1, {})
 
         sock_config2 = DummySocketConfig(6)
-        instance2 = self._makeOne(options, 'whatever', 999, [], sock_config2)
+        instance2 = self._makeOne(options, 'whatever', 999, [], sock_config2, {})
 
         self.assertTrue(instance1 == instance2)
         self.assertFalse(instance1 != instance2)
@@ -1777,10 +1780,10 @@ class FastCGIGroupConfigTests(unittest.TestCase):
     def test_diff_sockets_are_not_equal(self):
         options = DummyOptions()
         sock_config1 = DummySocketConfig(6)
-        instance1 = self._makeOne(options, 'whatever', 999, [], sock_config1)
+        instance1 = self._makeOne(options, 'whatever', 999, [], sock_config1, {})
 
         sock_config2 = DummySocketConfig(7)
-        instance2 = self._makeOne(options, 'whatever', 999, [], sock_config2)
+        instance2 = self._makeOne(options, 'whatever', 999, [], sock_config2, {})
 
         self.assertTrue(instance1 != instance2)
         self.assertFalse(instance1 == instance2)
@@ -1837,4 +1840,3 @@ def test_suite():
 
 if __name__ == '__main__':
     unittest.main(defaultTest='test_suite')
-
