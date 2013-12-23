@@ -509,7 +509,7 @@ class DummyPConfig:
                  stdout_events_enabled=False,
                  stdout_logfile_backups=0, stdout_logfile_maxbytes=0,
                  stderr_logfile=None, stderr_capture_maxbytes=0,
-                 stderr_events_enabled=False,
+                 stderr_events_enabled=False,stdout_append_timestamp=False,stderr_append_timestamp=False,
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
@@ -534,6 +534,8 @@ class DummyPConfig:
         self.stderr_logfile_backups = stderr_logfile_backups
         self.stderr_logfile_maxbytes = stderr_logfile_maxbytes
         self.redirect_stderr = redirect_stderr
+        self.stdout_append_timestamp = stdout_append_timestamp
+        self.stderr_append_timestamp = stderr_append_timestamp
         if stopsignal is None:
             import signal
             stopsignal = signal.SIGTERM
