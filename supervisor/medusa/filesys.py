@@ -185,7 +185,7 @@ class os_filesystem:
         # path components, and do it safely.
         # <real_root>/<current_directory>/<path>
         # use the operating system's path separator.
-        path.split('/').join(os.sep)
+        path = os.sep.join(path.split('/'))
         p = self.normalize (self.path_module.join (self.wd, path))
         p = self.normalize (self.path_module.join (self.root, p[1:]))
         return p
