@@ -567,7 +567,12 @@ class ServerOptions(Options):
                 base = '.'
             for pattern in files:
                 pattern = os.path.join(base, pattern)
-                for filename in glob.glob(pattern):
+                filenames = glob.glob(pattern)
+                if not filenames:
+                    self.parse_warnings.append(
+                        'No file matches via include "%s"' % pattern)
+                    continue
+                for filename in filenames:
                     self.parse_warnings.append(
                         'Included extra file "%s" during parsing' % filename)
                     try:
