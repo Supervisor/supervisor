@@ -432,6 +432,7 @@ class ServerOptions(Options):
         self.pidhistory = {}
         self.process_group_configs = []
         self.parse_warnings = []
+        self.parse_infos = []
         self.signal_receiver = SignalReceiver()
 
     def version(self, dummy):
@@ -517,6 +518,7 @@ class ServerOptions(Options):
         # Clear parse warnings, since we may be re-reading the
         # config a second time after a reload.
         self.parse_warnings = []
+        self.parse_infos = []
 
         section = self.configroot.supervisord
         if not hasattr(fp, 'read'):
@@ -545,7 +547,7 @@ class ServerOptions(Options):
             for pattern in files:
                 pattern = os.path.join(base, pattern)
                 for filename in glob.glob(pattern):
-                    self.parse_warnings.append(
+                    self.parse_infos.append(
                         'Included extra file "%s" during parsing' % filename)
                     try:
                         parser.read(filename)

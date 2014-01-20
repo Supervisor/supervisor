@@ -69,6 +69,7 @@ class Supervisor:
         if self.options.first:
             rlimit_messages = self.options.set_rlimits()
             info_messages.extend(rlimit_messages)
+        info_messages.extend(self.options.parse_infos)
         warn_messages.extend(self.options.parse_warnings)
 
         # this sets the options.logger object

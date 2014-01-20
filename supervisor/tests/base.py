@@ -65,6 +65,7 @@ class DummyOptions:
         self.openreturn = None
         self.readfd_result = ''
         self.parse_warnings = []
+        self.parse_infos = []
         self.serverurl = 'http://localhost:9001'
         self.changed_directory = False
         self.chdir_error = None
