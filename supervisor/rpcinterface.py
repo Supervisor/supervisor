@@ -67,7 +67,7 @@ class SupervisorNamespaceRPCInterface:
     def getState(self):
         """ Return current state of supervisord as a struct
 
-        @return struct A struct with keys string statecode, int statename
+        @return struct A struct with keys int statecode, string statename
         """
         self._update('getState')
 
