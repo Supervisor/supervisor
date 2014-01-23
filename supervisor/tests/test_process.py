@@ -940,6 +940,23 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.privsdropped, 1)
         self.assertEqual(msg, None)
 
+    def test_rlimits(self):
+        limit_fds = 5042
+        limit_procs = 4042
+        limit_memlock = 70042
+        expected = {'enforce_max':   True,
+                    'limit_fds':     limit_fds,
+                    'limit_procs':   limit_procs,
+                    'limit_memlock': limit_memlock}
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test',
+                              limit_fds=limit_fds,
+                              limit_procs=limit_procs,
+                              limit_memlock=limit_memlock)
+        instance = self._makeOne(config)
+        instance.spawn()
+        self.assertEquals(expected, options.rlimits_set)
+
     def test_cmp_bypriority(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'notthere', '/notthere',

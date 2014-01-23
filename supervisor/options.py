@@ -805,6 +805,21 @@ class ServerOptions(Options):
             uid = None
         else:
             uid = name_to_uid(user)
+        try:
+            limit_fds = integer(get(section, 'limit_fds', resource.getrlimit(resource.RLIMIT_NOFILE)[0]))
+        except (ValueError, resource.error):
+            # this rlimit is not supported
+            limit_fds = -1
+        try:
+            limit_procs = integer(get(section, 'limit_procs', resource.getrlimit(resource.RLIMIT_NPROC)[0]))
+        except (ValueError, resource.error):
+            # this rlimit is not supported
+            limit_procs = -1
+        try:
+            limit_memlock = integer(get(section, 'limit_memlock', resource.getrlimit(resource.RLIMIT_MEMLOCK)[0]))
+        except (ValueError, resource.error):
+            # this rlimit is not supported
+            limit_memlock = -1
 
         umask = get(section, 'umask', None)
         if umask is not None:
@@ -904,7 +919,11 @@ class ServerOptions(Options):
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
                 environment=environment,
-                serverurl=serverurl)
+                serverurl=serverurl,
+                limit_fds=limit_fds,
+                limit_procs=limit_procs,
+                limit_memlock=limit_memlock)
+
 
             programs.append(pconfig)
 
@@ -1248,21 +1267,26 @@ class ServerOptions(Options):
             pid, sts = None, None
         return pid, sts
 
-    def set_rlimits(self):
+    def set_rlimits(self, enforce_max=False, limit_fds=None, limit_procs=None, limit_memlock=None):
+        limit_fds = limit_fds or self.minfds
+        limit_procs = limit_procs or self.minprocs
+        # minmemlock is not a server option, so no fallback
+
         limits = []
         if hasattr(resource, 'RLIMIT_NOFILE'):
             limits.append(
                 {
                 'msg':('The minimum number of file descriptors required '
                        'to run this process is %(min)s as per the "minfds" '
-                       'command-line argument or config file setting. '
+                       'command-line argument or config file setting, '
+                       'or process config file setting "limit_fds".'
                        'The current environment will only allow you '
                        'to open %(hard)s file descriptors.  Either raise '
                        'the number of usable file descriptors in your '
                        'environment (see README.rst) or lower the '
-                       'minfds setting in the config file to allow '
+                       'minfds/limit_fds setting in the config file to allow '
                        'the process to start.'),
-                'min':self.minfds,
+                'min':limit_fds,
                 'resource':resource.RLIMIT_NOFILE,
                 'name':'RLIMIT_NOFILE',
                 })
@@ -1271,16 +1295,33 @@ class ServerOptions(Options):
                 {
                 'msg':('The minimum number of available processes required '
                        'to run this program is %(min)s as per the "minprocs" '
-                       'command-line argument or config file setting. '
+                       'command-line argument or config file setting, '
+                       'or process config file setting "limit_procs".'
                        'The current environment will only allow you '
                        'to open %(hard)s processes.  Either raise '
                        'the number of usable processes in your '
                        'environment (see README.rst) or lower the '
-                       'minprocs setting in the config file to allow '
+                       'minprocs/limit_procs setting in the config file to allow '
                        'the program to start.'),
-                'min':self.minprocs,
+                'min':limit_procs,
                 'resource':resource.RLIMIT_NPROC,
                 'name':'RLIMIT_NPROC',
+                })
+        if hasattr(resource, 'RLIMIT_MEMLOCK'):
+            limits.append(
+                {
+                'msg':('The minimum locked memory bytes required '
+                       'to run this program is %(min)s as per the "limit_memlock" '
+                       'process config file setting. '
+                       'The current environment will only allow you '
+                       'to lock %(hard)s bytes of memory.  Either raise '
+                       'the number of lockable bytes in your '
+                       'environment (see README.rst) or lower the '
+                       'limit_memlock setting in the config file to allow '
+                       'the program to start.'),
+                'min':limit_memlock,
+                'resource':resource.RLIMIT_MEMLOCK,
+                'name':'RLIMIT_MEMLOCK',
                 })
 
         msgs = []
@@ -1292,20 +1333,34 @@ class ServerOptions(Options):
             msg = limit['msg']
             name = limit['name']
 
-            soft, hard = resource.getrlimit(res)
+            if not lmin:
+                continue
 
-            if (soft < lmin) and (soft != -1): # -1 means unlimited
+            oldsoft, oldhard = resource.getrlimit(res)
+            soft = oldsoft
+            hard = oldhard
+
+            if enforce_max:
+                # don't just raise limits. Enforce that they are limited
+                soft = lmin
+                hard = lmin
+            elif (soft < lmin) and (soft != -1): # -1 means unlimited
+                # raise soft to lmin
+                soft = lmin
                 if (hard < lmin) and (hard != -1):
-                    # setrlimit should increase the hard limit if we are
-                    # root, if not then setrlimit raises and we print usage
+                    # raise hard to lmin
                     hard = lmin
 
+            if  (soft != oldsoft) or (hard != oldhard):
                 try:
-                    resource.setrlimit(res, (lmin, hard))
-                    msgs.append('Increased %(name)s limit to %(lmin)s' %
-                                locals())
+                    # setrlimit can increase the hard limit if we are
+                    # root, if not root then setrlimit raises and we error.
+                    # can always lower limits
+                    resource.setrlimit(res, (soft, hard))
+                    msgs.append('Increased %(name)s limit to %(lmin)s' % locals())
                 except (resource.error, ValueError):
-                    self.usage(msg % locals())
+                    raise ValueError(msg % locals())
+
         return msgs
 
     def make_logger(self, critical_messages, warn_messages, info_messages):
@@ -1639,7 +1694,8 @@ class ProcessConfig(Config):
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
         'exitcodes', 'redirect_stderr' ]
-    optional_param_names = [ 'environment', 'serverurl' ]
+    optional_param_names = [ 'environment', 'serverurl', 'limit_fds',
+        'limit_procs', 'limit_memlock' ]
 
     def __init__(self, options, **params):
         self.options = options
