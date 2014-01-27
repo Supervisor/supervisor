@@ -110,3 +110,6 @@ Contributors
 - Chris Rossi, 2010-02-02
 
 - Roger Hoover, 2010-08-17
+
+- Martijn Pieters, 2012-06-04
+
