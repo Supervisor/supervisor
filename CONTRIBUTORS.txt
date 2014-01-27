@@ -110,3 +110,5 @@ Contributors
 - Chris Rossi, 2010-02-02
 
 - Roger Hoover, 2010-08-17
+
+- Benoit Sigoure, 2011-06-21
