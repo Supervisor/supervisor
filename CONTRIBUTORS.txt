@@ -113,4 +113,6 @@ Contributors
 
 - Martijn Pieters, 2012-06-04
 
+- Marcin Kuźmiński, 2012-06-21
+
 - Márk Sági-Kazár, 2013-12-16
