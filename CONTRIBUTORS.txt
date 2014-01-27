@@ -122,3 +122,5 @@ Contributors
 - Márk Sági-Kazár, 2013-12-16
 
 - Gunnlaugur Þór Briem, 2011-11-26
+
+- Chris Streeter, 2013-03-23
