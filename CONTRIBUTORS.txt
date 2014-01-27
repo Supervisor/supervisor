@@ -119,6 +119,8 @@ Contributors
 
 - Marcin Kuźmiński, 2012-06-21
 
+- Caio Ariede, 2013-03-25
+
 - Márk Sági-Kazár, 2013-12-16
 
 - Gunnlaugur Þór Briem, 2011-11-26
