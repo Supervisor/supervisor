@@ -94,7 +94,7 @@ List of Contributors
 ====================
 
 The below-signed are contributors to a code repository that is part of the
-project named "meld3".
+project named "supervisor".
 
 Each below-signed contributor has read, understand and agrees to the terms
 above in the section within this document entitled "Supervisor Project
