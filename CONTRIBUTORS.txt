@@ -113,6 +113,8 @@ Contributors
 
 - Benoit Sigoure, 2011-06-21
 
+- Jens Rantil, 2011-11-27
+
 - Marcelo Vanzin, 2012-05-03
 
 - Martijn Pieters, 2012-06-04
