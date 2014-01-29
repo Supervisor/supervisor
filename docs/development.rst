@@ -47,10 +47,8 @@ The following people are responsible for creating Supervisor.
 Primary Authors and Maintainers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- `Chris McDonough <http://plope.com>`_ is the original author of Supervisor.
-
-- `Mike Naberezny <http://mikenaberezny.com>`_ is the primary maintainer
-  of Supervisor.
+- `Chris McDonough <http://plope.com>`_ is the original author of Supervisor
+and the primary maintainer.
 
 Contributors
 ~~~~~~~~~~~~
