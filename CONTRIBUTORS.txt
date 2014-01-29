@@ -127,6 +127,8 @@ Contributors
 
 - Gunnlaugur Þór Briem, 2011-11-26
 
+- Philip Zeyliger, 2012-02-21
+
 - Chris Streeter, 2013-03-23
 
 - David Birdsong, 2013-04-11
