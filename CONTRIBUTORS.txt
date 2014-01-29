@@ -130,3 +130,5 @@ Contributors
 - Chris Streeter, 2013-03-23
 
 - David Birdsong, 2013-04-11
+
+- Thúlio Costa, 2013-10-31
