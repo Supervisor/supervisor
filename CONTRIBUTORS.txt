@@ -115,6 +115,8 @@ Contributors
 
 - Gunnlaugur Þór Briem, 2011-11-26
 
+- Jens Rantil, 2011-11-27
+
 - Michael Blume, 2012-01-09
 
 - Philip Zeyliger, 2012-02-21
