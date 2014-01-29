@@ -127,6 +127,8 @@ Contributors
 
 - Gunnlaugur Þór Briem, 2011-11-26
 
+- Jean Jordaan, 2012-06-28
+
 - Philip Zeyliger, 2012-02-21
 
 - Chris Streeter, 2013-03-23
