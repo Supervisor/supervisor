@@ -122,3 +122,5 @@ Contributors
 - Márk Sági-Kazár, 2013-12-16
 
 - Gunnlaugur Þór Briem, 2011-11-26
+
+- Jean Jordaan, 2012-06-28
