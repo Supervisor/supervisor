@@ -117,15 +117,17 @@ Contributors
 
 - Michael Blume, 2012-01-09
 
+- Philip Zeyliger, 2012-02-21
+
 - Marcelo Vanzin, 2012-05-03
 
 - Martijn Pieters, 2012-06-04
 
 - Marcin Kuźmiński, 2012-06-21
 
-- Philip Zeyliger, 2012-02-21
-
 - Jean Jordaan, 2012-06-28
+
+- Perttu Ranta-aho, 2012-09-27
 
 - Chris Streeter, 2013-03-23
 
