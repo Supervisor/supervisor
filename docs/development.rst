@@ -23,7 +23,7 @@ Version Control Repository
 --------------------------
 
 You can also view the `Supervisor version control repository
-<https://github.com/supervisor/supervisor>`_.
+<https://github.com/Supervisor/supervisor>`_.
 
 Contributing
 ------------
