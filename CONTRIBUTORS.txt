@@ -134,3 +134,5 @@ Contributors
 - David Birdsong, 2013-04-11
 
 - Thúlio Costa, 2013-10-31
+
+- Gary M. Josack, 2013-11-12
