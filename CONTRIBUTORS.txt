@@ -113,6 +113,8 @@ Contributors
 
 - Benoit Sigoure, 2011-06-21
 
+- Gunnlaugur Þór Briem, 2011-11-26
+
 - Michael Blume, 2012-01-09
 
 - Marcelo Vanzin, 2012-05-03
@@ -121,20 +123,18 @@ Contributors
 
 - Marcin Kuźmiński, 2012-06-21
 
-- Caio Ariede, 2013-03-25
-
-- Márk Sági-Kazár, 2013-12-16
-
-- Gunnlaugur Þór Briem, 2011-11-26
+- Philip Zeyliger, 2012-02-21
 
 - Jean Jordaan, 2012-06-28
 
-- Philip Zeyliger, 2012-02-21
-
 - Chris Streeter, 2013-03-23
+
+- Caio Ariede, 2013-03-25
 
 - David Birdsong, 2013-04-11
 
 - Thúlio Costa, 2013-10-31
 
 - Gary M. Josack, 2013-11-12
+
+- Márk Sági-Kazár, 2013-12-16
