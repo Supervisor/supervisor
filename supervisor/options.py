@@ -791,6 +791,7 @@ class ServerOptions(Options):
         numprocs = integer(get(section, 'numprocs', 1))
         numprocs_start = integer(get(section, 'numprocs_start', 0))
         environment_str = get(section, 'environment', '')
+        environment_file = get(section, 'environment_file', None)
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
         stdout_events = boolean(get(section, 'stdout_events_enabled','false'))
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
@@ -838,6 +839,12 @@ class ServerOptions(Options):
                           'group_name':group_name}
             expansions.update(environ_expansions())
 
+            if environment_file:
+                try:
+                    env_fd = open(environment_file)
+                except IOError as e:
+                    raise ValueError("Unable to open environment_file={}".format(environment_file))
+                environment_str += ','.join(env_fd.read().strip().split("\n"))
             environment = dict_of_key_value_pairs(
                 expand(environment_str, expansions, 'environment'))
 
