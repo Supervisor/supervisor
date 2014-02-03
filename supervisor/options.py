@@ -831,6 +831,12 @@ class ServerOptions(Options):
             raise ValueError("Cannot set stopasgroup=true and killasgroup=false")
 
         host_node_name = platform.node()
+        if environment_file:
+            try:
+                env_fd = open(environment_file)
+            except IOError as e:
+                raise ValueError("Unable to open environment_file={}".format(environment_file))
+            environment_str += ','.join(env_fd.read().strip().split("\n"))
         for process_num in range(numprocs_start, numprocs + numprocs_start):
             expansions = {'here':self.here,
                           'process_num':process_num,
@@ -839,12 +845,6 @@ class ServerOptions(Options):
                           'group_name':group_name}
             expansions.update(environ_expansions())
 
-            if environment_file:
-                try:
-                    env_fd = open(environment_file)
-                except IOError as e:
-                    raise ValueError("Unable to open environment_file={}".format(environment_file))
-                environment_str += ','.join(env_fd.read().strip().split("\n"))
             environment = dict_of_key_value_pairs(
                 expand(environment_str, expansions, 'environment'))
 
