@@ -317,7 +317,7 @@ class ServerOptionsTests(unittest.TestCase):
         priority=6
         process_name = cat6
         command = /bin/cat
-        environment_file = tests/fixtures/test_env
+        environment_file = supervisor/tests/fixtures/test_env
         """ % {'tempdir':tempfile.gettempdir()})
 
         from supervisor import datatypes
