@@ -548,7 +548,21 @@ class ServerOptions(Options):
                     self.parse_warnings.append(
                         'Included extra file "%s" during parsing' % filename)
                     try:
-                        parser.read(filename)
+                        # copying all values from included config to this config
+                        # this way we can add extra values
+                        include_parser = ConfigParser.RawConfigParser()
+                        temp_include_file = tempfile.TemporaryFile();
+                        include_parser.read(filename)
+
+                        for include_section in include_parser.sections():
+                            for include_section_key, include_section_value in include_parser.items(include_section):
+                                include_section_value = expand(include_section_value, {'here': os.path.dirname(filename)}, "Include here")
+                                include_parser.set(include_section, include_section_key, include_section_value)
+
+                        include_parser.write(temp_include_file)
+                        temp_include_file.seek(0)
+                        parser.readfp(temp_include_file)
+                        temp_include_file.close()
                     except ConfigParser.ParsingError, why:
                         raise ValueError(str(why))
 
