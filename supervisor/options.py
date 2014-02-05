@@ -626,8 +626,10 @@ class ServerOptions(Options):
                                                         group_name,
                                                         ProcessConfig)
                 group_processes.extend(processes)
+            raw_params = dict(parser.items(section))
             groups.append(
-                ProcessGroupConfig(self, group_name, priority, group_processes)
+                ProcessGroupConfig(self, group_name, priority, group_processes,
+                                   raw_params=raw_params)
                 )
 
         # process "normal" homogeneous groups
@@ -639,8 +641,10 @@ class ServerOptions(Options):
             priority = integer(get(section, 'priority', 999))
             processes=self.processes_from_section(parser, section, program_name,
                                                   ProcessConfig)
+            raw_params = dict(parser.items(section))
             groups.append(
-                ProcessGroupConfig(self, program_name, priority, processes)
+                ProcessGroupConfig(self, program_name, priority, processes,
+                                   raw_params=raw_params)
                 )
 
         # process "event listener" homogeneous groups
@@ -675,11 +679,12 @@ class ServerOptions(Options):
                 pool_events.append(pool_event)
             processes=self.processes_from_section(parser, section, pool_name,
                                                   EventListenerConfig)
-
+            raw_params = dict(parser.items(section))
             groups.append(
                 EventListenerPoolConfig(self, pool_name, priority, processes,
                                         buffer_size, pool_events,
-                                        result_handler)
+                                        result_handler,
+                                        raw_params=raw_params)
                 )
 
         # process fastcgi homogeneous groups
@@ -730,9 +735,10 @@ class ServerOptions(Options):
 
             processes=self.processes_from_section(parser, section, program_name,
                                                   FastCGIProcessConfig)
+            raw_params = dict(parser.items(section))
             groups.append(
                 FastCGIGroupConfig(self, program_name, priority, processes,
-                                   socket_config)
+                                   socket_config, raw_params=raw_params)
                 )
 
         groups.sort()
@@ -776,6 +782,7 @@ class ServerOptions(Options):
             klass = ProcessConfig
         programs = []
         get = parser.saneget
+        raw_params = dict(parser.items(section))
         program_name = process_or_group_name(section.split(':', 1)[1])
         priority = integer(get(section, 'priority', 999))
         autostart = boolean(get(section, 'autostart', 'true'))
@@ -875,6 +882,7 @@ class ServerOptions(Options):
 
             pconfig = klass(
                 self,
+                raw_params=raw_params,
                 name=expand(process_name, expansions, 'process_name'),
                 command=expand(command, expansions, 'command'),
                 directory=directory,
@@ -1641,8 +1649,9 @@ class ProcessConfig(Config):
         'exitcodes', 'redirect_stderr' ]
     optional_param_names = [ 'environment', 'serverurl' ]
 
-    def __init__(self, options, **params):
+    def __init__(self, options, raw_params=None, **params):
         self.options = options
+        self.raw_params = raw_params if raw_params is not None else {}
         for name in self.req_param_names:
             setattr(self, name, params[name])
         for name in self.optional_param_names:
@@ -1735,11 +1744,12 @@ class FastCGIProcessConfig(ProcessConfig):
         return dispatchers, p
 
 class ProcessGroupConfig(Config):
-    def __init__(self, options, name, priority, process_configs):
+    def __init__(self, options, name, priority, process_configs, raw_params=None):
         self.options = options
         self.name = name
         self.priority = priority
         self.process_configs = process_configs
+        self.raw_params = raw_params if raw_params is not None else {}
 
     def __eq__(self, other):
         if not isinstance(other, ProcessGroupConfig):
@@ -1764,7 +1774,7 @@ class ProcessGroupConfig(Config):
 
 class EventListenerPoolConfig(Config):
     def __init__(self, options, name, priority, process_configs, buffer_size,
-                 pool_events, result_handler):
+                 pool_events, result_handler, raw_params=None):
         self.options = options
         self.name = name
         self.priority = priority
@@ -1772,6 +1782,7 @@ class EventListenerPoolConfig(Config):
         self.buffer_size = buffer_size
         self.pool_events = pool_events
         self.result_handler = result_handler
+        self.raw_params = raw_params if raw_params is not None else {}
 
     def __eq__(self, other):
         if not isinstance(other, EventListenerPoolConfig):
@@ -1792,12 +1803,13 @@ class EventListenerPoolConfig(Config):
 
 class FastCGIGroupConfig(ProcessGroupConfig):
     def __init__(self, options, name, priority, process_configs,
-                 socket_config):
+                 socket_config, raw_params=None):
         self.options = options
         self.name = name
         self.priority = priority
         self.process_configs = process_configs
         self.socket_config = socket_config
+        self.raw_params = raw_params if raw_params is not None else {}
 
     def __eq__(self, other):
         if not isinstance(other, FastCGIGroupConfig):
@@ -2026,4 +2038,3 @@ class NoPermission(ProcessException):
     """ Indicates that the file cannot be executed because the supervisor
     process does not possess the appropriate UNIX filesystem permission
     to execute the file. """
-
