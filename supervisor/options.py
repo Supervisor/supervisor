@@ -544,7 +544,7 @@ class ServerOptions(Options):
                 base = '.'
             for pattern in files:
                 pattern = os.path.join(base, pattern)
-                for filename in glob.glob(pattern):
+                for filename in sorted(glob.glob(pattern)):
                     self.parse_warnings.append(
                         'Included extra file "%s" during parsing' % filename)
                     try:
