@@ -21,6 +21,14 @@ def set_here(v):
     global here
     here = v
 
+def process_or_group_name(name):
+    """Ensures that a process or group name is not created with
+       characters that break the eventlistener protocol"""
+    s = str(name).strip()
+    if ' ' in s or ':' in s:
+        raise ValueError("Invalid name: " + repr(name))
+    return s
+
 def integer(value):
     try:
         return int(value)
@@ -84,7 +92,7 @@ def dict_of_key_value_pairs(arg):
     while i < tokens_len:
         k_eq_v = tokens[i:i+3]
         if len(k_eq_v) != 3 or k_eq_v[1] != '=':
-            raise ValueError, "Unexpected end of key/value pairs"
+            raise ValueError("Unexpected end of key/value pairs")
         D[k_eq_v[0]] = k_eq_v[2].strip('\'"')
         i += 4
     return D
@@ -111,22 +119,22 @@ def logfile_name(val):
 class RangeCheckedConversion:
     """Conversion helper that range checks another conversion."""
 
-    def __init__(self, conversion, min=None, max=None):
-        self._min = min
-        self._max = max
+    def __init__(self, conversion, rmin=None, rmax=None):
+        self._min = rmin
+        self._max = rmax
         self._conversion = conversion
 
     def __call__(self, value):
         v = self._conversion(value)
         if self._min is not None and v < self._min:
             raise ValueError("%s is below lower bound (%s)"
-                             % (`v`, `self._min`))
+                             % (repr(v), repr(self._min)))
         if self._max is not None and v > self._max:
             raise ValueError("%s is above upper bound (%s)"
-                             % (`v`, `self._max`))
+                             % (repr(v), repr(self._max)))
         return v
 
-port_number = RangeCheckedConversion(integer, min=1, max=0xffff).__call__
+port_number = RangeCheckedConversion(integer, rmin=1, rmax=0xffff).__call__
 
 def inet_address(s):
     # returns (host, port) tuple
@@ -262,74 +270,70 @@ class UnixStreamSocketConfig(SocketConfig):
                 raise ValueError("Could not change ownership of socket file: "
                                     + "%s" % (e))
 
-
 def colon_separated_user_group(arg):
+    """ Find a user ID and group ID from a string like 'user:group'.  Returns
+        a tuple (uid, gid).  If the string only contains a user like 'user'
+        then (uid, -1) will be returned.  Raises ValueError if either
+        the user or group can't be resolved to valid IDs on the system. """
     try:
-        result = arg.split(':', 1)
-        if len(result) == 1:
-            username = result[0]
-            uid = name_to_uid(username)
-            if uid is None:
-                raise ValueError('Invalid user name %s' % username)
-            return (uid, -1)
+        parts = arg.split(':', 1)
+        if len(parts) == 1:
+            uid = name_to_uid(parts[0])
+            gid = -1
         else:
-            username = result[0]
-            groupname = result[1]
-            uid = name_to_uid(username)
-            gid = name_to_gid(groupname)
-            if uid is None:
-                raise ValueError('Invalid user name %s' % username)
-            if gid is None:
-                raise ValueError('Invalid group name %s' % groupname)
-            return (uid, gid)
-        return result
+            uid = name_to_uid(parts[0])
+            gid = name_to_gid(parts[1])
+        return (uid, gid)
     except:
-        raise ValueError, 'Invalid user.group definition %s' % arg
-
-def octal_type(arg):
-    try:
-        return int(arg, 8)
-    except TypeError:
-        raise ValueError('%s is not convertable to an octal type' % arg)
+        raise ValueError('Invalid user:group definition %s' % arg)
 
 def name_to_uid(name):
-    if name is None:
-        return None
-
+    """ Find a user ID from a string containing a user name or ID.
+        Raises ValueError if the string can't be resolved to a valid
+        user ID on the system. """
     try:
         uid = int(name)
     except ValueError:
         try:
-            pwrec = pwd.getpwnam(name)
+            pwdrec = pwd.getpwnam(name)
         except KeyError:
-            return None
-        uid = pwrec[2]
+            raise ValueError("Invalid user name %s" % name)
+        uid = pwdrec[2]
     else:
         try:
-            pwrec = pwd.getpwuid(uid)
+            pwd.getpwuid(uid) # check if uid is valid
         except KeyError:
-            return None
+            raise ValueError("Invalid user id %s" % name)
     return uid
 
 def name_to_gid(name):
+    """ Find a group ID from a string containing a group name or ID.
+        Raises ValueError if the string can't be resolved to a valid
+        group ID on the system. """
     try:
         gid = int(name)
     except ValueError:
         try:
-            pwrec = grp.getgrnam(name)
+            grprec = grp.getgrnam(name)
         except KeyError:
-            return None
-        gid = pwrec[2]
+            raise ValueError("Invalid group name %s" % name)
+        gid = grprec[2]
     else:
         try:
-            pwrec = grp.getgrgid(gid)
+            grp.getgrgid(gid) # check if gid is valid
         except KeyError:
-            return None
+            raise ValueError("Invalid group id %s" % name)
     return gid
 
 def gid_for_uid(uid):
     pwrec = pwd.getpwuid(uid)
     return pwrec[3]
+
+def octal_type(arg):
+    try:
+        return int(arg, 8)
+    except TypeError:
+        raise ValueError('%s can not be converted to an octal type' % arg)
 
 def existing_directory(v):
     nv = v % {'here':here}
@@ -347,8 +351,8 @@ def existing_dirpath(v):
         return nv
     if os.path.isdir(dir):
         return nv
-    raise ValueError, ('The directory named as part of the path %s '
-                       'does not exist.' % v)
+    raise ValueError('The directory named as part of the path %s '
+                     'does not exist.' % v)
 
 def logging_level(value):
     s = str(value).lower()

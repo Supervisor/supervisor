@@ -58,7 +58,7 @@ class OptionTests(unittest.TestCase):
 
     def test_searchpaths(self):
         options = self._makeOptions()
-        self.assertEquals(len(options.searchpaths), 5)
+        self.assertEqual(len(options.searchpaths), 5)
         self.assertTrue('supervisord.conf' in options.searchpaths)
         self.assertTrue('etc/supervisord.conf' in options.searchpaths)
         self.assertTrue('/etc/supervisord.conf' in options.searchpaths)
@@ -67,28 +67,28 @@ class OptionTests(unittest.TestCase):
         # Only config file exists
         options = self._makeOptions()
         options.realize([])
-        self.assertEquals(options.anoption, 'default')
-        self.assertEquals(options.other, 41)
+        self.assertEqual(options.anoption, 'default')
+        self.assertEqual(options.other, 41)
 
         # Env should trump config
         options = self._makeOptions()
         os.environ['OTHER'] = '42'
         options.realize([])
-        self.assertEquals(options.other, 42)
+        self.assertEqual(options.other, 42)
 
         # Opt should trump both env (still set) and config
         options = self._makeOptions()
         options.realize(['-p', '43'])
-        self.assertEquals(options.other, 43)
+        self.assertEqual(options.other, 43)
         del os.environ['OTHER']
 
     def test_config_reload(self):
         options = self._makeOptions()
         options.realize([])
-        self.assertEquals(options.other, 41)
+        self.assertEqual(options.other, 41)
         options.master['other'] = 42
         options.process_config()
-        self.assertEquals(options.other, 42)
+        self.assertEqual(options.other, 42)
 
     def test_config_reload_do_usage_false(self):
         options = self._makeOptions(read_error='error')
@@ -112,16 +112,16 @@ class OptionTests(unittest.TestCase):
         from supervisor.options import Options
         options = Options()
         options._set('foo', 'bar', 0)
-        self.assertEquals(options.foo, 'bar')
-        self.assertEquals(options.attr_priorities['foo'], 0)
+        self.assertEqual(options.foo, 'bar')
+        self.assertEqual(options.attr_priorities['foo'], 0)
         options._set('foo', 'baz', 1)
-        self.assertEquals(options.foo, 'baz')
-        self.assertEquals(options.attr_priorities['foo'], 1)
+        self.assertEqual(options.foo, 'baz')
+        self.assertEqual(options.attr_priorities['foo'], 1)
         options._set('foo', 'gazonk', 0)
-        self.assertEquals(options.foo, 'baz')
-        self.assertEquals(options.attr_priorities['foo'], 1)
+        self.assertEqual(options.foo, 'baz')
+        self.assertEqual(options.attr_priorities['foo'], 1)
         options._set('foo', 'gazonk', 1)
-        self.assertEquals(options.foo, 'gazonk')
+        self.assertEqual(options.foo, 'gazonk')
 
 class ClientOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -148,7 +148,7 @@ class ClientOptionsTests(unittest.TestCase):
         instance.realize(args=['-s', 'http://localhost:9001', '-u', 'chris',
                                '-p', '123'])
 
-        self.assertEquals(instance.interactive, 1)
+        self.assertEqual(instance.interactive, 1)
         self.assertEqual(instance.serverurl, 'http://localhost:9001')
         self.assertEqual(instance.username, 'chris')
         self.assertEqual(instance.password, '123')
@@ -177,6 +177,47 @@ class ClientOptionsTests(unittest.TestCase):
         self.assertEqual(options.username, 'chris')
         self.assertEqual(options.password, '123')
         self.assertEqual(options.history_file, history_file)
+
+    def test_unreadable_config_file(self):
+        # Quick and dirty way of coming up with a decent filename
+        tempf = tempfile.NamedTemporaryFile()
+        fname = tempf.name
+        tempf.close()
+        self.assertFalse(os.path.exists(fname))
+
+        instance = self._makeOne()
+        instance.stderr = StringIO()
+
+        class DummyException(Exception):
+            def __init__(self, exitcode):
+                self.exitcode = exitcode
+        def dummy_exit(self, exitcode=2):
+            # Important default exitcode=2 like sys.exit.
+            raise DummyException(exitcode)
+        instance.exit = dummy_exit
+        try:
+            instance.realize(args=['-c', fname])
+        except DummyException, e:
+            self.assertEqual(e.exitcode, 2)
+        else:
+            self.fail("expected exception")
+
+        try:
+            instance.read_config(fname)
+        except ValueError, e:
+            self.assertTrue("could not find config file" in str(e))
+        else:
+            self.fail("expected exception")
+
+        tempf = tempfile.NamedTemporaryFile()
+        os.chmod(tempf.name, 0) # Removing read perms
+        try:
+            instance.read_config(tempf.name)
+        except ValueError, e:
+            self.assertTrue("could not read config file" in str(e))
+        else:
+            self.fail("expected exception")
+        tempf.close()
 
     def test_options_unixsocket_cli(self):
         from StringIO import StringIO
@@ -263,6 +304,14 @@ class ServerOptionsTests(unittest.TestCase):
         numprocs = 2
         command = /bin/cat
         autorestart=unexpected
+
+        [program:cat5]
+        priority=5
+        process_name = foo_%%(process_num)02d
+        numprocs = 2
+        numprocs_start = 1
+        command = /bin/cat
+        directory = /some/path/foo_%%(process_num)02d
         """ % {'tempdir':tempfile.gettempdir()})
 
         from supervisor import datatypes
@@ -293,7 +342,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(options.minfds, 2048)
         self.assertEqual(options.minprocs, 300)
         self.assertEqual(options.nocleanup, True)
-        self.assertEqual(len(options.process_group_configs), 4)
+        self.assertEqual(len(options.process_group_configs), 5)
         self.assertEqual(options.environment, dict(FAKE_ENV_VAR='/some/path'))
 
         cat1 = options.process_group_configs[0]
@@ -386,6 +435,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc4_a.stopsignal, signal.SIGTERM)
         self.assertEqual(proc4_a.stopasgroup, False)
         self.assertEqual(proc4_a.killasgroup, False)
+        self.assertEqual(proc4_a.directory, None)
 
         proc4_b = cat4.process_configs[1]
         self.assertEqual(proc4_b.name, 'fleeb_1')
@@ -403,6 +453,20 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc4_b.stopsignal, signal.SIGTERM)
         self.assertEqual(proc4_b.stopasgroup, False)
         self.assertEqual(proc4_b.killasgroup, False)
+        self.assertEqual(proc4_b.directory, None)
+
+        cat5 = options.process_group_configs[4]
+        self.assertEqual(cat5.name, 'cat5')
+        self.assertEqual(cat5.priority, 5)
+        self.assertEqual(len(cat5.process_configs), 2)
+
+        proc5_a = cat5.process_configs[0]
+        self.assertEqual(proc5_a.name, 'foo_01')
+        self.assertEqual(proc5_a.directory, '/some/path/foo_01')
+
+        proc5_b = cat5.process_configs[1]
+        self.assertEqual(proc5_b.name, 'foo_02')
+        self.assertEqual(proc5_b.directory, '/some/path/foo_02')
 
         here = os.path.abspath(os.getcwd())
         self.assertEqual(instance.uid, 0)
@@ -453,7 +517,7 @@ class ServerOptionsTests(unittest.TestCase):
         except DummyException, e:
             # Caught expected exception
             import traceback
-            self.assertEquals(e.exitcode, 2,
+            self.assertEqual(e.exitcode, 2,
                               "Wrong exitcode for: %s" % traceback.format_exc(e))
         else:
             self.fail("Did not get a DummyException.")
@@ -544,6 +608,47 @@ class ServerOptionsTests(unittest.TestCase):
         instance.realize(args=[])
         self.assertFalse(old_warning in instance.parse_warnings)
 
+    def test_unreadable_config_file(self):
+        # Quick and dirty way of coming up with a decent filename
+        tempf = tempfile.NamedTemporaryFile()
+        fname = tempf.name
+        tempf.close()
+        self.assertFalse(os.path.exists(fname))
+
+        instance = self._makeOne()
+        instance.stderr = StringIO()
+
+        class DummyException(Exception):
+            def __init__(self, exitcode):
+                self.exitcode = exitcode
+        def dummy_exit(self, exitcode=2):
+            # Important default exitcode=2 like sys.exit.
+            raise DummyException(exitcode)
+        instance.exit = dummy_exit
+        try:
+            instance.realize(args=['-c', fname])
+        except DummyException, e:
+            self.assertEqual(e.exitcode, 2)
+        else:
+            self.fail("expected exception")
+
+        try:
+            instance.read_config(fname)
+        except ValueError, e:
+            self.assertTrue("could not find config file" in str(e))
+        else:
+            self.fail("expected exception")
+
+        tempf = tempfile.NamedTemporaryFile()
+        os.chmod(tempf.name, 0) # Removing read perms
+        try:
+            instance.read_config(tempf.name)
+        except ValueError, e:
+            self.assertTrue("could not read config file" in str(e))
+        else:
+            self.fail("expected exception")
+        tempf.close()
+
     def test_readFile_failed(self):
         from supervisor.options import readFile
         try:
@@ -600,7 +705,7 @@ class ServerOptionsTests(unittest.TestCase):
                                  Server())]
         instance.pidfile = ''
         instance.cleanup()
-        self.failIf(os.path.exists(fn))
+        self.assertFalse(os.path.exists(fn))
 
     def test_cleanup_afunix_nounlink(self):
         fn = tempfile.mktemp()
@@ -619,7 +724,7 @@ class ServerOptionsTests(unittest.TestCase):
             instance.pidfile = ''
             instance.unlink_socketfiles = False
             instance.cleanup()
-            self.failUnless(os.path.exists(fn))
+            self.assertTrue(os.path.exists(fn))
         finally:
             try:
                 os.unlink(fn)
@@ -651,11 +756,11 @@ class ServerOptionsTests(unittest.TestCase):
             instance.logger = DummyLogger()
             instance.pidfile = fn
             instance.write_pidfile()
-            self.failUnless(os.path.exists(fn))
+            self.assertTrue(os.path.exists(fn))
             pid = int(open(fn, 'r').read()[:-1])
             self.assertEqual(pid, os.getpid())
             msg = instance.logger.data[0]
-            self.failUnless(msg.startswith('supervisord started with pid'))
+            self.assertTrue(msg.startswith('supervisord started with pid'))
         finally:
             try:
                 os.unlink(fn)
@@ -669,7 +774,7 @@ class ServerOptionsTests(unittest.TestCase):
         instance.pidfile = fn
         instance.write_pidfile()
         msg = instance.logger.data[0]
-        self.failUnless(msg.startswith('could not write pidfile'))
+        self.assertTrue(msg.startswith('could not write pidfile'))
 
     def test_close_fd(self):
         instance = self._makeOne()
@@ -758,6 +863,28 @@ class ServerOptionsTests(unittest.TestCase):
         expected = "/bin/foo --path='%s'" % os.environ['PATH']
         self.assertEqual(pconfigs[0].command, expected)
 
+    def test_processes_from_section_bad_program_name_spaces(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:spaces are bad]
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        self.assertRaises(ValueError, instance.processes_from_section,
+                          config, 'program:spaces are bad', None)
+
+    def test_processes_from_section_bad_program_name_colons(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:colons:are:bad]
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        self.assertRaises(ValueError, instance.processes_from_section,
+                          config, 'program:colons:are:bad', None)
+
     def test_processes_from_section_no_procnum_in_processname(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -809,6 +936,19 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertRaises(ValueError, instance.processes_from_section,
                           config, 'program:foo', None)
 
+    def test_processes_from_section_bad_chars_in_process_name(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/cat
+        process_name = colons:are:bad
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        self.assertRaises(ValueError, instance.processes_from_section,
+                          config, 'program:foo', None)
+
     def test_processes_from_section_stopasgroup_implies_killasgroup(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -825,7 +965,7 @@ class ServerOptionsTests(unittest.TestCase):
         pconfig = pconfigs[0]
         self.assertEqual(pconfig.stopasgroup, True)
         self.assertEqual(pconfig.killasgroup, True)
-    
+
     def test_processes_from_section_killasgroup_mismatch_w_stopasgroup(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -1327,9 +1467,9 @@ class ServerOptionsTests(unittest.TestCase):
             open(first, 'w')
             open(second, 'w')
             instance.clear_autochildlogdir()
-            self.failIf(os.path.exists(logfn))
-            self.failIf(os.path.exists(first))
-            self.failIf(os.path.exists(second))
+            self.assertFalse(os.path.exists(logfn))
+            self.assertFalse(os.path.exists(first))
+            self.assertFalse(os.path.exists(second))
         finally:
             shutil.rmtree(dn)
 
@@ -1427,6 +1567,24 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertRaises(OverflowError,
                           instance.openhttpservers, supervisord)
 
+    def test_dropPrivileges_user_none(self):
+        instance = self._makeOne()
+        msg = instance.dropPrivileges(None)
+        self.assertEqual(msg, "No user specified to setuid to!")
+
+    @patch('pwd.getpwuid', Mock(return_value=["foo", None, 12, 34]))
+    @patch('os.getuid', Mock(return_value=12))
+    def test_dropPrivileges_nonroot_same_user(self):
+        instance = self._makeOne()
+        msg = instance.dropPrivileges(os.getuid())
+        self.assertEqual(msg, None) # no error if same user
+
+    @patch('pwd.getpwuid', Mock(return_value=["foo", None, 55, 34]))
+    @patch('os.getuid', Mock(return_value=12))
+    def test_dropPrivileges_nonroot_different_user(self):
+        instance = self._makeOne()
+        msg = instance.dropPrivileges(42)
+        self.assertEqual(msg, "Can't drop privilege as nonroot user")
 
 class TestProcessConfig(unittest.TestCase):
     def _getTargetClass(self):
@@ -1439,10 +1597,10 @@ class TestProcessConfig(unittest.TestCase):
                      'priority', 'autostart', 'autorestart',
                      'startsecs', 'startretries', 'uid',
                      'stdout_logfile', 'stdout_capture_maxbytes',
-                     'stdout_events_enabled',
+                     'stdout_events_enabled', 'stdout_syslog',
                      'stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile', 'stderr_capture_maxbytes',
-                     'stderr_events_enabled',
+                     'stderr_events_enabled', 'stderr_syslog',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup', 'exitcodes',
                      'redirect_stderr', 'environment'):
@@ -1513,10 +1671,10 @@ class FastCGIProcessConfigTest(unittest.TestCase):
                      'priority', 'autostart', 'autorestart',
                      'startsecs', 'startretries', 'uid',
                      'stdout_logfile', 'stdout_capture_maxbytes',
-                     'stdout_events_enabled',
+                     'stdout_events_enabled', 'stdout_syslog',
                      'stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile', 'stderr_capture_maxbytes',
-                     'stderr_events_enabled',
+                     'stderr_events_enabled', 'stderr_syslog',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup', 'exitcodes',
                      'redirect_stderr', 'environment'):
@@ -1631,48 +1789,48 @@ class SignalReceiverTests(unittest.TestCase):
     def test_returns_None_initially(self):
         from supervisor.options import SignalReceiver
         sr = SignalReceiver()
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), None)
 
     def test_returns_signals_in_order_received(self):
         from supervisor.options import SignalReceiver
         sr = SignalReceiver()
         sr.receive(signal.SIGTERM, 'frame')
         sr.receive(signal.SIGCHLD, 'frame')
-        self.assertEquals(sr.get_signal(), signal.SIGTERM)
-        self.assertEquals(sr.get_signal(), signal.SIGCHLD)
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), signal.SIGTERM)
+        self.assertEqual(sr.get_signal(), signal.SIGCHLD)
+        self.assertEqual(sr.get_signal(), None)
 
     def test_does_not_queue_duplicate_signals(self):
         from supervisor.options import SignalReceiver
         sr = SignalReceiver()
         sr.receive(signal.SIGTERM, 'frame')
         sr.receive(signal.SIGTERM, 'frame')
-        self.assertEquals(sr.get_signal(), signal.SIGTERM)
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), signal.SIGTERM)
+        self.assertEqual(sr.get_signal(), None)
 
     def test_queues_again_after_being_emptied(self):
         from supervisor.options import SignalReceiver
         sr = SignalReceiver()
         sr.receive(signal.SIGTERM, 'frame')
-        self.assertEquals(sr.get_signal(), signal.SIGTERM)
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), signal.SIGTERM)
+        self.assertEqual(sr.get_signal(), None)
         sr.receive(signal.SIGCHLD, 'frame')
-        self.assertEquals(sr.get_signal(), signal.SIGCHLD)
-        self.assertEquals(sr.get_signal(), None)
+        self.assertEqual(sr.get_signal(), signal.SIGCHLD)
+        self.assertEqual(sr.get_signal(), None)
 
 class UtilFunctionsTests(unittest.TestCase):
     def test_make_namespec(self):
         from supervisor.options import make_namespec
-        self.assertEquals(make_namespec('group', 'process'), 'group:process')
-        self.assertEquals(make_namespec('process', 'process'), 'process')
+        self.assertEqual(make_namespec('group', 'process'), 'group:process')
+        self.assertEqual(make_namespec('process', 'process'), 'process')
 
     def test_split_namespec(self):
         from supervisor.options import split_namespec
         s = split_namespec
-        self.assertEquals(s('process:group'), ('process', 'group'))
-        self.assertEquals(s('process'), ('process', 'process'))
-        self.assertEquals(s('group:'), ('group', None))
-        self.assertEquals(s('group:*'), ('group', None))
+        self.assertEqual(s('process:group'), ('process', 'group'))
+        self.assertEqual(s('process'), ('process', 'process'))
+        self.assertEqual(s('group:'), ('group', None))
+        self.assertEqual(s('group:*'), ('group', None))
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

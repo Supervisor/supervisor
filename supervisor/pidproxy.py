@@ -40,6 +40,7 @@ class PidProxy:
         signal.signal(signal.SIGINT, self.passtochild)
         signal.signal(signal.SIGUSR1, self.passtochild)
         signal.signal(signal.SIGUSR2, self.passtochild)
+        signal.signal(signal.SIGQUIT, self.passtochild)
         signal.signal(signal.SIGCHLD, self.reap)
 
     def reap(self, sig, frame):

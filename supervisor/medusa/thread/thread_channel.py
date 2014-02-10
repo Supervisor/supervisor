@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
         def found_terminator (self):
             data, self.buffer = self.buffer, ''
-            n = string.atoi (string.split (data)[0])
+            n = int(data.split()[0])
             tc = thread_channel (self, thread_function, self.count, n)
             self.count = self.count + 1
             tc.start()

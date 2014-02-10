@@ -218,7 +218,7 @@ class Subprocess:
         try:
             self.dispatchers, self.pipes = self.config.make_dispatchers(self)
         except OSError, why:
-            code = why[0]
+            code = why.args[0]
             if code == errno.EMFILE:
                 # too many file descriptors open
                 msg = 'too many open files to spawn %r' % self.config.name
@@ -232,7 +232,7 @@ class Subprocess:
         try:
             pid = options.fork()
         except OSError, why:
-            code = why[0]
+            code = why.args[0]
             if code == errno.EAGAIN:
                 # process table full
                 msg  = ('Too many processes in process table to spawn %r' %
@@ -287,14 +287,19 @@ class Subprocess:
             # Presumably it also prevents HUP, etc received by
             # supervisord from being sent to children.
             options.setpgrp()
+
             self._prepare_child_fds()
             # sending to fd 2 will put this output in the stderr log
-            msg = self.set_uid()
-            if msg:
+
+            # set user
+            setuid_msg = self.set_uid()
+            if setuid_msg:
                 uid = self.config.uid
-                s = 'supervisor: error trying to setuid to %s ' % uid
-                options.write(2, s)
-                options.write(2, "(%s)\n" % msg)
+                msg = "couldn't setuid to %s: %s\n" % (uid, setuid_msg)
+                options.write(2, "supervisor: " + msg)
+                return # finally clause will exit the child process
+
+            # set environment
             env = os.environ.copy()
             env['SUPERVISOR_ENABLED'] = '1'
             serverurl = self.config.serverurl
@@ -307,30 +312,39 @@ class Subprocess:
                 env['SUPERVISOR_GROUP_NAME'] = self.group.config.name
             if self.config.environment is not None:
                 env.update(self.config.environment)
+
+            # change directory
             try:
                 cwd = self.config.directory
                 if cwd is not None:
                     options.chdir(cwd)
             except OSError, why:
-                code = errno.errorcode.get(why[0], why[0])
+                code = errno.errorcode.get(why.args[0], why.args[0])
                 msg = "couldn't chdir to %s: %s\n" % (cwd, code)
-                options.write(2, msg)
-            else:
-                try:
-                    if self.config.umask is not None:
-                        options.setumask(self.config.umask)
-                    options.execve(filename, argv, env)
-                except OSError, why:
-                    code = errno.errorcode.get(why[0], why[0])
-                    msg = "couldn't exec %s: %s\n" % (argv[0], code)
-                    options.write(2, msg)
-                except:
-                    (file, fun, line), t,v,tbinfo = asyncore.compact_traceback()
-                    error = '%s, %s: file: %s line: %s' % (t, v, file, line)
-                    options.write(2, "couldn't exec %s: %s\n" % (filename,
-                                                                 error))
+                options.write(2, "supervisor: " + msg)
+                return # finally clause will exit the child process
+
+            # set umask, then execve
+            try:
+                if self.config.umask is not None:
+                    options.setumask(self.config.umask)
+                options.execve(filename, argv, env)
+            except OSError, why:
+                code = errno.errorcode.get(why.args[0], why.args[0])
+                msg = "couldn't exec %s: %s\n" % (argv[0], code)
+                options.write(2, "supervisor: " + msg)
+            except:
+                (file, fun, line), t,v,tbinfo = asyncore.compact_traceback()
+                error = '%s, %s: file: %s line: %s' % (t, v, file, line)
+                msg = "couldn't exec %s: %s\n" % (filename, error)
+                options.write(2, "supervisor: " + msg)
+
+            # this point should only be reached if execve failed.
+            # the finally clause will exit the child process.
+
         finally:
-            options._exit(127)
+            options.write(2, "supervisor: child process was not spawned\n")
+            options._exit(127) # exit process with code for spawn failure
 
     def stop(self):
         """ Administrative stop """
@@ -352,6 +366,15 @@ class Subprocess:
         """
         now = time.time()
         options = self.config.options
+
+        # Properly stop processes in BACKOFF state.
+        if self.state == ProcessStates.BACKOFF:
+            msg = ("Attempted to kill %s, which is in BACKOFF state." %
+                   (self.config.name))
+            options.logger.debug(msg)
+            self.change_state(ProcessStates.STOPPED)
+            return None
+
         if not self.pid:
             msg = ("attempted to kill %s with sig %s but it wasn't running" %
                    (self.config.name, signame(sig)))
@@ -785,7 +808,7 @@ class EventListenerPool(ProcessGroupBase):
     def _acceptEvent(self, event, head=False):
         # events are required to be instances
         # this has a side effect to fail with an attribute error on 'old style' classes
-        event_type = event.__class__ 
+        event_type = event.__class__
         if not hasattr(event, 'serial'):
             event.serial = new_serial(GlobalSerial)
         if not hasattr(event, 'pool_serials'):
@@ -824,7 +847,7 @@ class EventListenerPool(ProcessGroupBase):
                                                    pool_serial, payload)
                     process.write(envelope)
                 except OSError, why:
-                    if why[0] != errno.EPIPE:
+                    if why.args[0] != errno.EPIPE:
                         raise
                     continue
 

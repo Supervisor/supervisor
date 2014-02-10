@@ -49,7 +49,7 @@ class put_handler:
             request.error (411)
             return
         else:
-            cl = string.atoi (cl)
+            cl = int(cl)
 
         # don't let the try to overwrite a directory
         if self.filesystem.isdir (path):

@@ -191,7 +191,7 @@ example of setting these enviroment variables is as below.
    [program:apache2]
    command=/home/chrism/bin/httpd -c "ErrorLog /dev/stdout" -DFOREGROUND
    user=chrism
-   environment=HOME=/home/chrism,USER=chrism
+   environment=HOME="/home/chrism",USER="chrism"
 
 .. _process_states:
 
@@ -263,7 +263,7 @@ automatically restart:
 - never if its ``autorestart`` parameter is set to ``false``.
 
 - unconditionally if its ``autorestart`` parameter is set to ``true``.
-      
+
 - conditionally if its ``autorestart`` parameter is set to
   ``unexpected``.  If it exited with an exit code that doesn't match
   one of the exit codes defined in the ``exitcodes`` configuration
@@ -275,15 +275,15 @@ unconditionally.  The number of transitions between ``RUNNING`` and
 ``EXITED`` is not limited in any way: it is possible to create a
 configuration that endlessly restarts an exited process.  This is a
 feature, not a bug.
-    
+
 An autorestarted process will never be automatically restarted if it
 ends up in the ``FATAL`` state (it must be manually restarted from
 this state).
-    
+
 A process transitions into the ``STOPPING`` state via an
 administrative stop request, and will then end up in the
 ``STOPPED`` state.
-    
+
 A process that cannot be stopped successfully will stay in the
 ``STOPPING`` state forever.  This situation should never be reached
 during normal operations as it implies that the process did not
@@ -305,5 +305,5 @@ is configured to autostart)
 
 ``EXITED`` -> ``STARTING`` (except if process is configured to
 autorestart)
-    
+
 All other state transitions are managed by supervisord automatically.

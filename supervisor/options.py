@@ -23,6 +23,7 @@ from fcntl import F_SETFL, F_GETFL
 
 from supervisor.medusa import asyncore_25 as asyncore
 
+from supervisor.datatypes import process_or_group_name
 from supervisor.datatypes import boolean
 from supervisor.datatypes import integer
 from supervisor.datatypes import name_to_uid
@@ -100,7 +101,8 @@ class Options:
         here = os.path.dirname(os.path.dirname(sys.argv[0]))
         searchpaths = [os.path.join(here, 'etc', 'supervisord.conf'),
                        os.path.join(here, 'supervisord.conf'),
-                       'supervisord.conf', 'etc/supervisord.conf',
+                       'supervisord.conf',
+                       'etc/supervisord.conf',
                        '/etc/supervisord.conf']
         self.searchpaths = searchpaths
 
@@ -122,10 +124,10 @@ class Options:
 
         Occurrences of "%s" in are replaced by self.progname.
         """
-        help = self.doc
+        help = self.doc + "\n"
         if help.find("%s") > 0:
             help = help.replace("%s", self.progname)
-        print help,
+        self.stdout.write(help)
         self.exit(0)
 
     def usage(self, msg):
@@ -168,41 +170,41 @@ class Options:
         """
         if flag is not None:
             if handler is not None:
-                raise ValueError, "use at most one of flag= and handler="
+                raise ValueError("use at most one of flag= and handler=")
             if not long and not short:
-                raise ValueError, "flag= requires a command line flag"
+                raise ValueError("flag= requires a command line flag")
             if short and short.endswith(":"):
-                raise ValueError, "flag= requires a command line flag"
+                raise ValueError("flag= requires a command line flag")
             if long and long.endswith("="):
-                raise ValueError, "flag= requires a command line flag"
+                raise ValueError("flag= requires a command line flag")
             handler = lambda arg, flag=flag: flag
 
         if short and long:
             if short.endswith(":") != long.endswith("="):
-                raise ValueError, "inconsistent short/long options: %r %r" % (
-                    short, long)
+                raise ValueError("inconsistent short/long options: %r %r" % (
+                    short, long))
 
         if short:
             if short[0] == "-":
-                raise ValueError, "short option should not start with '-'"
+                raise ValueError("short option should not start with '-'")
             key, rest = short[:1], short[1:]
             if rest not in ("", ":"):
-                raise ValueError, "short option should be 'x' or 'x:'"
+                raise ValueError("short option should be 'x' or 'x:'")
             key = "-" + key
             if self.options_map.has_key(key):
-                raise ValueError, "duplicate short option key '%s'" % key
+                raise ValueError("duplicate short option key '%s'" % key)
             self.options_map[key] = (name, handler)
             self.short_options.append(short)
 
         if long:
             if long[0] == "-":
-                raise ValueError, "long option should not start with '-'"
+                raise ValueError("long option should not start with '-'")
             key = long
             if key[-1] == "=":
                 key = key[:-1]
             key = "--" + key
             if self.options_map.has_key(key):
-                raise ValueError, "duplicate long option key '%s'" % key
+                raise ValueError("duplicate long option key '%s'" % key)
             self.options_map[key] = (name, handler)
             self.long_options.append(long)
 
@@ -305,7 +307,7 @@ class Options:
 
     def process_config(self, do_usage=True):
         """Process configuration data structure.
-        
+
         This includes reading config file if necessary, setting defaults etc.
         """
         if self.configfile:
@@ -438,10 +440,12 @@ class ServerOptions(Options):
         self.stdout.write('%s\n' % VERSION)
         self.exit(0)
 
-    def getLogger(self, filename, level, fmt, rotating=False, maxbytes=0,
-                  backups=0, stdout=False):
-        return loggers.getLogger(filename, level, fmt, rotating, maxbytes,
-                                 backups, stdout)
+    def getLogger(self, *args, **kwargs):
+        """
+        A proxy to loggers.getLogger so the options might customize log setup.
+        Used by tests to mock log setup.
+        """
+        return loggers.getLogger(*args, **kwargs)
 
     def realize(self, *arg, **kw):
         Options.realize(self, *arg, **kw)
@@ -449,9 +453,10 @@ class ServerOptions(Options):
 
         # Additional checking of user option; set uid and gid
         if self.user is not None:
-            uid = name_to_uid(self.user)
-            if uid is None:
-                self.usage("No such user %s" % self.user)
+            try:
+                uid = name_to_uid(self.user)
+            except ValueError, msg:
+                self.usage(msg) # invalid user
             self.uid = uid
             self.gid = gid_for_uid(uid)
 
@@ -515,10 +520,12 @@ class ServerOptions(Options):
 
         section = self.configroot.supervisord
         if not hasattr(fp, 'read'):
+            if not os.path.exists(fp):
+                raise ValueError("could not find config file %s" % fp)
             try:
                 fp = open(fp, 'r')
             except (IOError, OSError):
-                raise ValueError("could not find config file %s" % fp)
+                raise ValueError("could not read config file %s" % fp)
         parser = UnhosedConfigParser()
         try:
             parser.readfp(fp)
@@ -547,7 +554,7 @@ class ServerOptions(Options):
 
         sections = parser.sections()
         if not 'supervisord' in sections:
-            raise ValueError, '.ini file does not include supervisord section'
+            raise ValueError('.ini file does not include supervisord section')
         get = parser.getdefault
         section.minfds = integer(get('minfds', 1024))
         section.minprocs = integer(get('minprocs', 200))
@@ -605,7 +612,7 @@ class ServerOptions(Options):
         for section in all_sections:
             if not section.startswith('group:'):
                 continue
-            group_name = section.split(':', 1)[1]
+            group_name = process_or_group_name(section.split(':', 1)[1])
             programs = list_of_strings(get(section, 'programs', None))
             priority = integer(get(section, 'priority', 999))
             group_processes = []
@@ -628,7 +635,7 @@ class ServerOptions(Options):
             if ( (not section.startswith('program:') )
                  or section in homogeneous_exclude ):
                 continue
-            program_name = section.split(':', 1)[1]
+            program_name = process_or_group_name(section.split(':', 1)[1])
             priority = integer(get(section, 'priority', 999))
             processes=self.processes_from_section(parser, section, program_name,
                                                   ProcessConfig)
@@ -680,10 +687,15 @@ class ServerOptions(Options):
             if ( (not section.startswith('fcgi-program:') )
                  or section in homogeneous_exclude ):
                 continue
-            program_name = section.split(':', 1)[1]
+            program_name = process_or_group_name(section.split(':', 1)[1])
             priority = integer(get(section, 'priority', 999))
 
-            proc_uid = name_to_uid(get(section, 'user', None))
+            # find proc_uid from "user" option
+            proc_user = get(section, 'user', None)
+            if proc_user is None:
+                proc_uid = None
+            else:
+                proc_uid = name_to_uid(proc_user)
 
             socket_owner = get(section, 'socket_owner', None)
             if socket_owner is not None:
@@ -738,7 +750,7 @@ class ServerOptions(Options):
             if socket_owner is None:
                 uid = os.getuid()
                 if proc_uid is not None and proc_uid != uid:
-                    socket_owner = (proc_uid, self.get_gid_for_uid(proc_uid))
+                    socket_owner = (proc_uid, gid_for_uid(proc_uid))
 
             if socket_mode is None:
                 socket_mode = 0700
@@ -758,24 +770,18 @@ class ServerOptions(Options):
 
         raise ValueError("Bad socket format %s", sock)
 
-    def get_gid_for_uid(self, uid):
-        pwrec = pwd.getpwuid(uid)
-        return pwrec[3]
-
     def processes_from_section(self, parser, section, group_name,
                                klass=None):
         if klass is None:
             klass = ProcessConfig
         programs = []
         get = parser.saneget
-        program_name = section.split(':', 1)[1]
-
+        program_name = process_or_group_name(section.split(':', 1)[1])
         priority = integer(get(section, 'priority', 999))
         autostart = boolean(get(section, 'autostart', 'true'))
         autorestart = auto_restart(get(section, 'autorestart', 'unexpected'))
         startsecs = integer(get(section, 'startsecs', 1))
         startretries = integer(get(section, 'startretries', 3))
-        uid = name_to_uid(get(section, 'user', None))
         stopsignal = signal_number(get(section, 'stopsignal', 'TERM'))
         stopwaitsecs = integer(get(section, 'stopwaitsecs', 10))
         stopasgroup = boolean(get(section, 'stopasgroup', 'false'))
@@ -784,16 +790,21 @@ class ServerOptions(Options):
         redirect_stderr = boolean(get(section, 'redirect_stderr','false'))
         numprocs = integer(get(section, 'numprocs', 1))
         numprocs_start = integer(get(section, 'numprocs_start', 0))
-        process_name = get(section, 'process_name', '%(program_name)s')
         environment_str = get(section, 'environment', '')
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
         stdout_events = boolean(get(section, 'stdout_events_enabled','false'))
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
         stderr_events = boolean(get(section, 'stderr_events_enabled','false'))
-        directory = get(section, 'directory', None)
         serverurl = get(section, 'serverurl', None)
         if serverurl and serverurl.strip().upper() == 'AUTO':
             serverurl = None
+
+        # find uid from "user" option
+        user = get(section, 'user', None)
+        if user is None:
+            uid = None
+        else:
+            uid = name_to_uid(user)
 
         umask = get(section, 'umask', None)
         if umask is not None:
@@ -801,8 +812,11 @@ class ServerOptions(Options):
 
         command = get(section, 'command', None)
         if command is None:
-            raise ValueError, (
+            raise ValueError(
                 'program section %s does not specify a command' % section)
+
+        process_name = process_or_group_name(
+            get(section, 'process_name', '%(program_name)s'))
 
         if numprocs > 1:
             if process_name.find('%(process_num)') == -1:
@@ -811,7 +825,7 @@ class ServerOptions(Options):
                 raise ValueError(
                     '%(process_num) must be present within process_name when '
                     'numprocs > 1')
-                    
+
         if stopasgroup and not killasgroup:
             raise ValueError("Cannot set stopasgroup=true and killasgroup=false")
 
@@ -827,6 +841,7 @@ class ServerOptions(Options):
             environment = dict_of_key_value_pairs(
                 expand(environment_str, expansions, 'environment'))
 
+            directory = get(section, 'directory', None)
             if directory:
                 directory = expand(directory, expansions, 'directory')
 
@@ -847,6 +862,10 @@ class ServerOptions(Options):
                 mb_key = '%s_logfile_maxbytes' % k
                 maxbytes = byte_size(get(section, mb_key, '50MB'))
                 logfiles[mb_key] = maxbytes
+
+                sy_key = '%s_syslog' % k
+                syslog = boolean(get(section, sy_key, False))
+                logfiles[sy_key] = syslog
 
                 if lf_val is Automatic and not maxbytes:
                     self.parse_warnings.append(
@@ -871,11 +890,13 @@ class ServerOptions(Options):
                 stdout_events_enabled = stdout_events,
                 stdout_logfile_backups=logfiles['stdout_logfile_backups'],
                 stdout_logfile_maxbytes=logfiles['stdout_logfile_maxbytes'],
+                stdout_syslog=logfiles['stdout_syslog'],
                 stderr_logfile=logfiles['stderr_logfile'],
                 stderr_capture_maxbytes = stderr_cmaxbytes,
                 stderr_events_enabled = stderr_events,
                 stderr_logfile_backups=logfiles['stderr_logfile_backups'],
                 stderr_logfile_maxbytes=logfiles['stderr_logfile_maxbytes'],
+                stderr_syslog=logfiles['stderr_syslog'],
                 stopsignal=stopsignal,
                 stopwaitsecs=stopwaitsecs,
                 stopasgroup=stopasgroup,
@@ -1085,22 +1106,22 @@ class ServerOptions(Options):
         try:
             self.httpservers = self.make_http_servers(supervisord)
         except socket.error, why:
-            if why[0] == errno.EADDRINUSE:
+            if why.args[0] == errno.EADDRINUSE:
                 self.usage('Another program is already listening on '
                            'a port that one of our HTTP servers is '
                            'configured to use.  Shut this program '
                            'down first before starting supervisord.')
             else:
                 help = 'Cannot open an HTTP server: socket.error reported'
-                errorname = errno.errorcode.get(why[0])
+                errorname = errno.errorcode.get(why.args[0])
                 if errorname is None:
-                    self.usage('%s %s' % (help, why[0]))
+                    self.usage('%s %s' % (help, why.args[0]))
                 else:
                     self.usage('%s errno.%s (%d)' %
-                               (help, errorname, why[0]))
+                               (help, errorname, why.args[0]))
             self.unlink_socketfiles = False
         except ValueError, why:
-            self.usage(why[0])
+            self.usage(why.args[0])
 
     def get_autochildlog_name(self, name, identifier, channel):
         prefix='%s-%s---%s-' % (name, channel, identifier)
@@ -1160,8 +1181,8 @@ class ServerOptions(Options):
         # Drop root privileges if we have them
         if user is None:
             return "No user specified to setuid to!"
-        if os.getuid() != 0:
-            return "Can't drop privilege as nonroot user"
+
+        # get uid for user, which can be a number or username
         try:
             uid = int(user)
         except ValueError:
@@ -1175,6 +1196,19 @@ class ServerOptions(Options):
                 pwrec = pwd.getpwuid(uid)
             except KeyError:
                 return "Can't find uid %r" % uid
+
+        current_uid = os.getuid()
+
+        if current_uid == uid:
+            # do nothing and return successfully if the uid is already the
+            # current one.  this allows a supervisord running as an
+            # unprivileged user "foo" to start a process where the config
+            # has "user=foo" (same user) in it.
+            return
+
+        if current_uid != 0:
+            return "Can't drop privilege as nonroot user"
+
         gid = pwrec[3]
         if hasattr(os, 'setgroups'):
             user = pwrec[0]
@@ -1183,7 +1217,7 @@ class ServerOptions(Options):
 
             # always put our primary gid first in this list, otherwise we can
             # lose group info since sometimes the first group in the setgroups
-            # list gets overwritten on the subsequent setgid call (at least on 
+            # list gets overwritten on the subsequent setgid call (at least on
             # freebsd 9 with python 2.7 - this will be safe though for all unix
             # /python version combos)
             groups.insert(0, gid)
@@ -1205,7 +1239,7 @@ class ServerOptions(Options):
         try:
             pid, sts = os.waitpid(-1, os.WNOHANG)
         except OSError, why:
-            err = why[0]
+            err = why.args[0]
             if err not in (errno.ECHILD, errno.EINTR):
                 self.logger.critical(
                     'waitpid error; a process may not be cleaned up properly')
@@ -1253,22 +1287,22 @@ class ServerOptions(Options):
 
         for limit in limits:
 
-            min = limit['min']
+            lmin = limit['min']
             res = limit['resource']
             msg = limit['msg']
             name = limit['name']
 
             soft, hard = resource.getrlimit(res)
 
-            if (soft < min) and (soft != -1): # -1 means unlimited
-                if (hard < min) and (hard != -1):
+            if (soft < lmin) and (soft != -1): # -1 means unlimited
+                if (hard < lmin) and (hard != -1):
                     # setrlimit should increase the hard limit if we are
                     # root, if not then setrlimit raises and we print usage
-                    hard = min
+                    hard = lmin
 
                 try:
-                    resource.setrlimit(res, (min, hard))
-                    msgs.append('Increased %(name)s limit to %(min)s' %
+                    resource.setrlimit(res, (lmin, hard))
+                    msgs.append('Increased %(name)s limit to %(lmin)s' %
                                 locals())
                 except (resource.error, ValueError):
                     self.usage(msg % locals())
@@ -1276,16 +1310,18 @@ class ServerOptions(Options):
 
     def make_logger(self, critical_messages, warn_messages, info_messages):
         # must be called after realize() and after supervisor does setuid()
-        format =  '%(asctime)s %(levelname)s %(message)s\n'
-        self.logger = loggers.getLogger(
+        format = '%(asctime)s %(levelname)s %(message)s\n'
+        self.logger = loggers.getLogger(self.loglevel)
+        if self.nodaemon:
+            loggers.handle_stdout(self.logger, format)
+        loggers.handle_file(
+            self.logger,
             self.logfile,
-            self.loglevel,
             format,
             rotating=True,
             maxbytes=self.logfile_maxbytes,
             backups=self.logfile_backups,
-            stdout = self.nodaemon,
-            )
+        )
         for msg in critical_messages:
             self.logger.critical(msg)
         for msg in warn_messages:
@@ -1377,7 +1413,7 @@ class ServerOptions(Options):
         try:
             data = os.read(fd, 2 << 16) # 128K
         except OSError, why:
-            if why[0] not in (errno.EWOULDBLOCK, errno.EBADF, errno.EINTR):
+            if why.args[0] not in (errno.EWOULDBLOCK, errno.EBADF, errno.EINTR):
                 raise
             data = ''
         return data
@@ -1477,16 +1513,18 @@ class ClientOptions(Options):
         section = self.configroot.supervisorctl
         if not hasattr(fp, 'read'):
             self.here = os.path.dirname(normalize_path(fp))
+            if not os.path.exists(fp):
+                raise ValueError("could not find config file %s" % fp)
             try:
                 fp = open(fp, 'r')
             except (IOError, OSError):
-                raise ValueError("could not find config file %s" % fp)
+                raise ValueError("could not read config file %s" % fp)
         config = UnhosedConfigParser()
         config.mysection = 'supervisorctl'
         config.readfp(fp)
         sections = config.sections()
         if not 'supervisorctl' in sections:
-            raise ValueError,'.ini file does not include supervisorctl section'
+            raise ValueError('.ini file does not include supervisorctl section')
         serverurl = config.getdefault('serverurl', 'http://localhost:9001')
         if serverurl.startswith('unix://'):
             sf = serverurl[7:]
@@ -1594,11 +1632,11 @@ class ProcessConfig(Config):
         'name', 'uid', 'command', 'directory', 'umask', 'priority',
         'autostart', 'autorestart', 'startsecs', 'startretries',
         'stdout_logfile', 'stdout_capture_maxbytes',
-        'stdout_events_enabled',
+        'stdout_events_enabled', 'stdout_syslog',
         'stdout_logfile_backups', 'stdout_logfile_maxbytes',
         'stderr_logfile', 'stderr_capture_maxbytes',
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
-        'stderr_events_enabled',
+        'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
         'exitcodes', 'redirect_stderr' ]
     optional_param_names = [ 'environment', 'serverurl' ]

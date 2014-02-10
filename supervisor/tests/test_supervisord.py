@@ -33,7 +33,7 @@ class EntryPointTests(unittest.TestCase):
             sys.stdout = old_stdout
             shutil.rmtree(tempdir)
         output = new_stdout.getvalue()
-        self.failUnless(output.find('supervisord started') != 1, output)
+        self.assertTrue(output.find('supervisord started') != 1, output)
 
     if sys.version_info[:2] >= (2, 4):
         def test_main_profile(self):
@@ -55,14 +55,14 @@ class EntryPointTests(unittest.TestCase):
                 sys.stdout = old_stdout
                 shutil.rmtree(tempdir)
             output = new_stdout.getvalue()
-            self.failUnless(output.find('cumulative time, call count') != -1,
+            self.assertTrue(output.find('cumulative time, call count') != -1,
                             output)
 
 class SupervisordTests(unittest.TestCase):
     def tearDown(self):
         from supervisor.events import clear
         clear()
-        
+
     def _getTargetClass(self):
         from supervisor.supervisord import Supervisor
         return Supervisor
@@ -106,7 +106,7 @@ class SupervisordTests(unittest.TestCase):
         supervisord.main()
         self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.fds_cleaned_up, True)
-        self.failIf(hasattr(options, 'rlimits_set'))
+        self.assertFalse(hasattr(options, 'rlimits_set'))
         self.assertEqual(options.make_logger_messages,
                          (['setuid_called'], [], []))
         self.assertEqual(options.autochildlogdir_cleared, True)
@@ -131,7 +131,7 @@ class SupervisordTests(unittest.TestCase):
         process.waitstatus = None, None
         options.pidhistory = {1:process}
         supervisord = self._makeOne(options)
-        
+
         supervisord.reap(once=True)
         self.assertEqual(process.finished, (1,1))
 
@@ -254,14 +254,17 @@ class SupervisordTests(unittest.TestCase):
                 'uid': None, 'stdout_logfile': None, 'stdout_capture_maxbytes': 0,
                 'stdout_events_enabled': False,
                 'stdout_logfile_backups': 0, 'stdout_logfile_maxbytes': 0,
+                'stdout_syslog': False,
                 'stderr_logfile': None, 'stderr_capture_maxbytes': 0,
                 'stderr_events_enabled': False,
                 'stderr_logfile_backups': 0, 'stderr_logfile_maxbytes': 0,
+                'stderr_syslog': False,
                 'redirect_stderr': False,
                 'stopsignal': None, 'stopwaitsecs': 10,
                 'stopasgroup': False,
                 'killasgroup': False,
-                'exitcodes': (0,2), 'environment': None, 'serverurl': None }
+                'exitcodes': (0,2), 'environment': None, 'serverurl': None,
+            }
             result.update(params)
             return ProcessConfig(options, **result)
 
@@ -444,7 +447,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertTrue(isinstance(L[0], events.SupervisorStateChangeEvent))
         self.assertTrue(isinstance(L[1], events.SupervisorStoppingEvent))
         self.assertTrue(isinstance(L[1], events.SupervisorStateChangeEvent))
-        
+
     def test_exit(self):
         options = DummyOptions()
         supervisord = self._makeOne(options)
@@ -506,14 +509,14 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(supervisord.ticks[3600], 0)
         self.assertEqual(len(L), 1)
         self.assertEqual(L[-1].__class__, events.Tick5Event)
-        
+
         supervisord.tick(now=61)
         self.assertEqual(supervisord.ticks[5], 60)
         self.assertEqual(supervisord.ticks[60], 60)
         self.assertEqual(supervisord.ticks[3600], 0)
         self.assertEqual(len(L), 3)
         self.assertEqual(L[-1].__class__, events.Tick60Event)
-        
+
         supervisord.tick(now=3601)
         self.assertEqual(supervisord.ticks[5], 3600)
         self.assertEqual(supervisord.ticks[60], 3600)

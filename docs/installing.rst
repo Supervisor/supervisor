@@ -102,6 +102,21 @@ you can run ``yum info supervisor``.
 Packaged Supervisor will normally already be integrated into the service
 management infrastructure of your distribution.
 
+Installing via pip
+------------------
+
+With pip >= 1.4
+
+.. code-block:: bash
+
+    pip install supervisor --pre
+
+With previous versions of pip:
+
+.. code-block:: bash
+
+    pip install supervisor
+
 Creating a Configuration File
 -----------------------------
 

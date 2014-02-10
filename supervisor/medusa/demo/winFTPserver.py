@@ -28,7 +28,7 @@ class Win32Authorizer:
                                                     win32con.LOGON32_LOGON_INTERACTIVE,
                                                     win32con.LOGON32_PROVIDER_DEFAULT )
         except pywintypes.error, ErrorMsg:
-            return 0, ErrorMsg[ 2 ], None
+            return 0, ErrorMsg.args[2], None
 
         userInfo = win32net.NetUserGetInfo( None, userName, 1 )
 

@@ -9,7 +9,7 @@ RCS_ID = '$Id: chat_server.py,v 1.4 2002/03/20 17:37:48 amk Exp $'
 
 import string
 
-VERSION = string.split(RCS_ID)[2]
+VERSION = RCS_ID.split()[2]
 
 import socket
 import asyncore_25 as asyncore
@@ -34,7 +34,7 @@ class chat_channel (asynchat.async_chat):
         line = self.data
         self.data = ''
         if self.nick is None:
-            self.nick = string.split (line)[0]
+            self.nick = line.split()[0]
             if not self.nick:
                 self.nick = None
                 self.push ('huh? gimmee a nickname: ')
@@ -56,12 +56,12 @@ class chat_channel (asynchat.async_chat):
         else:
             self.push ('[There are %d other callers]\r\n' % (len(self.server.channels)-1))
             nicks = map (lambda x: x.get_nick(), self.server.channels.keys())
-            self.push (string.join (nicks, '\r\n  ') + '\r\n')
+            self.push('\r\n  '.join(nicks) + '\r\n')
             self.server.push_line (self, '[joined]')
 
     def handle_command (self, command):
         import types
-        command_line = string.split(command)
+        command_line = command.split()
         name = 'cmd_%s' % command_line[0][1:]
         if hasattr (self, name):
             # make sure it's a method...
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     import sys
 
     if len(sys.argv) > 1:
-        port = string.atoi (sys.argv[1])
+        port = int(sys.argv[1])
     else:
         port = 8518
 

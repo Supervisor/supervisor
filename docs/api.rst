@@ -299,6 +299,8 @@ Process Control
 
     .. automethod:: startProcessGroup
 
+    .. automethod:: stopProcess
+
     .. automethod:: stopProcessGroup
 
     .. automethod:: stopAllProcesses

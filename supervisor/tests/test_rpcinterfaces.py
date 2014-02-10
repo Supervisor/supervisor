@@ -57,7 +57,7 @@ class MainXMLRPCInterfaceTests(TestBase):
                              'dummy.hello', [1])
         self.assertEqual(xmlrpc.traverse(
             interface, 'dummy.hello', []), 'Hello!')
-            
+
 class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
     def _getTargetClass(self):
         from supervisor import rpcinterface
@@ -97,7 +97,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         from supervisor import options
         self.assertEqual(version, options.VERSION)
         self.assertEqual(interface.update_text, 'getSupervisorVersion')
-        
+
 
     def test_getIdentification(self):
         supervisord = DummySupervisor()
@@ -439,7 +439,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         time.sleep(.1)
         from supervisor import xmlrpc
         self._assertRPCError(xmlrpc.Faults.ABNORMAL_TERMINATION, callback)
-    
+
     def test_startProcess_abormal_term_startsecs_exceeded(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', __file__, autostart=False,
@@ -947,7 +947,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                    'start':start,
                    'stop':stop,
                    'now':_NOW}
-        
+
         description = interface._interpretProcessInfo(running)
         self.assertEqual(description, 'pid 1, uptime 0:01:40')
 
@@ -958,7 +958,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                  'stop':stop,
                  'now':_NOW,
                  'spawnerr':'Hosed'}
-                 
+
         description = interface._interpretProcessInfo(fatal)
         self.assertEqual(description, 'Hosed')
 
@@ -969,10 +969,10 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                   'stop':stop,
                   'now':_NOW,
                   'spawnerr':'',}
-                 
+
         description = interface._interpretProcessInfo(fatal2)
         self.assertEqual(description, 'unknown error (try "tail fatal")')
-        
+
         stopped = {'name':'stopped',
                    'pid':3,
                    'state':ProcessStates.STOPPED,
@@ -985,7 +985,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         from datetime import datetime
         stoptime = datetime(*time.localtime(stop)[:7])
         self.assertEqual(description, stoptime.strftime(_TIMEFORMAT))
-        
+
         stopped2 = {'name':'stopped',
                    'pid':3,
                    'state':ProcessStates.STOPPED,
@@ -996,7 +996,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
         description = interface._interpretProcessInfo(stopped2)
         self.assertEqual(description, 'Not started')
-                   
+
 
     def test_getProcessInfo(self):
         from supervisor.process import ProcessStates
@@ -1027,7 +1027,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(data['statename'], 'RUNNING')
         self.assertEqual(data['exitstatus'], 0)
         self.assertEqual(data['spawnerr'], '')
-        self.failUnless(data['description'].startswith('pid 111'))
+        self.assertTrue(data['description'].startswith('pid 111'))
 
     def test_getProcessInfo_logfile_NONE(self):
         options = DummyOptions()
@@ -1046,6 +1046,20 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
         self.assertEqual(data['logfile'], '')
         self.assertEqual(data['stdout_logfile'], '')
+
+    def test_getProcessInfo_bad_name(self):
+        from supervisor import xmlrpc
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
+                             interface.getProcessInfo, 'nonexistant')
+
+    def test_getProcessInfo_bad_name_group_only(self):
+        from supervisor import xmlrpc
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
+                             interface.getProcessInfo, 'grouponly:')
 
     def test_getAllProcessInfo(self):
         from supervisor.process import ProcessStates
@@ -1091,7 +1105,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(p1info['exitstatus'], 0)
         self.assertEqual(p1info['spawnerr'], '')
         self.assertEqual(p1info['group'], 'gname')
-        self.failUnless(p1info['description'].startswith('pid 111'))
+        self.assertTrue(p1info['description'].startswith('pid 111'))
 
         p2info = info[1]
         process2 = supervisord.process_groups['gname'].processes['process2']
@@ -1107,10 +1121,10 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(p2info['exitstatus'], 0)
         self.assertEqual(p2info['spawnerr'], '')
         self.assertEqual(p1info['group'], 'gname')
-        
+
         from datetime import datetime
         starttime = datetime(*time.localtime(process2.laststart)[:7])
-        self.assertEqual(p2info['description'], 
+        self.assertEqual(p2info['description'],
                             starttime.strftime(_TIMEFORMAT))
 
     def test_readProcessStdoutLog_unreadable(self):
@@ -1243,7 +1257,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         from supervisor import xmlrpc
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
-        self._assertRPCError(xmlrpc.Faults.BAD_NAME, 
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
                              interface.tailProcessStdoutLog, 'BAD_NAME', 0, 10)
 
     def test_tailProcessStdoutLog_all(self):
@@ -1260,9 +1274,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f = open(logfile, 'w+')
             f.write(letters)
             f.close()
-            
-            data, offset, overflow = interface.tailProcessStdoutLog('foo', 
-                                                        offset=0, 
+
+            data, offset, overflow = interface.tailProcessStdoutLog('foo',
+                                                        offset=0,
                                                         length=len(letters))
             self.assertEqual(interface.update_text, 'tailProcessStdoutLog')
             self.assertEqual(overflow, False)
@@ -1287,8 +1301,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f.close()
 
             # offset==logsize
-            data, offset, overflow = interface.tailProcessStdoutLog('foo', 
-                                                        offset=len(letters), 
+            data, offset, overflow = interface.tailProcessStdoutLog('foo',
+                                                        offset=len(letters),
                                                         length=100)
             self.assertEqual(interface.update_text, 'tailProcessStdoutLog')
             self.assertEqual(overflow, False)
@@ -1296,8 +1310,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             self.assertEqual(data, '')
 
             # offset > logsize
-            data, offset, overflow = interface.tailProcessStdoutLog('foo', 
-                                                        offset=len(letters)+5, 
+            data, offset, overflow = interface.tailProcessStdoutLog('foo',
+                                                        offset=len(letters)+5,
                                                         length=100)
             self.assertEqual(interface.update_text, 'tailProcessStdoutLog')
             self.assertEqual(overflow, False)
@@ -1321,7 +1335,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f.write(letters)
             f.close()
 
-            data, offset, overflow = interface.tailProcessStdoutLog('foo', 
+            data, offset, overflow = interface.tailProcessStdoutLog('foo',
                                                         offset=0, length=5)
             self.assertEqual(interface.update_text, 'tailProcessStdoutLog')
             self.assertEqual(overflow, True)
@@ -1329,7 +1343,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             self.assertEqual(data, letters[-5:])
         finally:
             os.remove(logfile)
-    
+
     def test_tailProcessStdoutLog_unreadable(self):
         # test nothing is returned if the log doesn't exist yet
         options = DummyOptions()
@@ -1337,8 +1351,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                                stdout_logfile='/tmp/fooooooo')
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
         interface = self._makeOne(supervisord)
-                
-        data, offset, overflow = interface.tailProcessStdoutLog('foo', 
+
+        data, offset, overflow = interface.tailProcessStdoutLog('foo',
                                                     offset=0, length=100)
         self.assertEqual(interface.update_text, 'tailProcessStdoutLog')
         self.assertEqual(overflow, False)
@@ -1357,7 +1371,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         from supervisor import xmlrpc
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
-        self._assertRPCError(xmlrpc.Faults.BAD_NAME, 
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
                              interface.tailProcessStderrLog, 'BAD_NAME', 0, 10)
 
     def test_tailProcessStderrLog_all(self):
@@ -1374,9 +1388,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f = open(logfile, 'w+')
             f.write(letters)
             f.close()
-            
-            data, offset, overflow = interface.tailProcessStderrLog('foo', 
-                                                        offset=0, 
+
+            data, offset, overflow = interface.tailProcessStderrLog('foo',
+                                                        offset=0,
                                                         length=len(letters))
             self.assertEqual(interface.update_text, 'tailProcessStderrLog')
             self.assertEqual(overflow, False)
@@ -1401,8 +1415,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f.close()
 
             # offset==logsize
-            data, offset, overflow = interface.tailProcessStderrLog('foo', 
-                                                        offset=len(letters), 
+            data, offset, overflow = interface.tailProcessStderrLog('foo',
+                                                        offset=len(letters),
                                                         length=100)
             self.assertEqual(interface.update_text, 'tailProcessStderrLog')
             self.assertEqual(overflow, False)
@@ -1410,8 +1424,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             self.assertEqual(data, '')
 
             # offset > logsize
-            data, offset, overflow = interface.tailProcessStderrLog('foo', 
-                                                        offset=len(letters)+5, 
+            data, offset, overflow = interface.tailProcessStderrLog('foo',
+                                                        offset=len(letters)+5,
                                                         length=100)
             self.assertEqual(interface.update_text, 'tailProcessStderrLog')
             self.assertEqual(overflow, False)
@@ -1435,7 +1449,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             f.write(letters)
             f.close()
 
-            data, offset, overflow = interface.tailProcessStderrLog('foo', 
+            data, offset, overflow = interface.tailProcessStderrLog('foo',
                                                         offset=0, length=5)
             self.assertEqual(interface.update_text, 'tailProcessStderrLog')
             self.assertEqual(overflow, True)
@@ -1443,7 +1457,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             self.assertEqual(data, letters[-5:])
         finally:
             os.remove(logfile)
-    
+
     def test_tailProcessStderrLog_unreadable(self):
         # test nothing is returned if the log doesn't exist yet
         options = DummyOptions()
@@ -1451,8 +1465,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                                stderr_logfile='/tmp/fooooooo')
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
         interface = self._makeOne(supervisord)
-                
-        data, offset, overflow = interface.tailProcessStderrLog('foo', 
+
+        data, offset, overflow = interface.tailProcessStderrLog('foo',
                                                     offset=0, length=100)
         self.assertEqual(interface.update_text, 'tailProcessStderrLog')
         self.assertEqual(overflow, False)
@@ -1489,7 +1503,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = DummySupervisor(process_groups={'foo':pgroup})
         interface = self._makeOne(supervisord)
         self.assertRaises(xmlrpc.RPCError, interface.clearProcessLogs, 'foo')
-        
+
     def test_clearProcessLogAliasedTo_clearProcessLogs(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo')
@@ -1562,7 +1576,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self._assertRPCError(xmlrpc.Faults.INCORRECT_PARAMETERS,
                              interface.sendProcessStdin,
                              'process1', thing_not_chars)
-    
+
     def test_sendProcessStdin_raises_bad_name_when_no_process(self):
         options = DummyOptions()
         supervisord = PopulatedDummySupervisor(options, 'foo')
@@ -1594,7 +1608,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self._assertRPCError(xmlrpc.Faults.NOT_RUNNING,
                              interface.sendProcessStdin,
                              'process1', 'chars for stdin')
-        
+
     def test_sendProcessStdin_raises_no_file_when_write_raises_epipe(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', 'foo')
@@ -1639,7 +1653,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         L = []
         def callback(event):
             L.append(event)
-        
+
         try:
             events.callbacks[:] = [(events.RemoteCommunicationEvent, callback)]
             result = interface.sendRemoteCommEvent('foo', 'bar')
@@ -1649,7 +1663,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
         self.assertTrue(result)
         self.assertEqual(len(L), 1)
-        event = L[0]                                     
+        event = L[0]
         self.assertEqual(event.type, 'foo')
         self.assertEqual(event.data, 'bar')
 
@@ -1662,7 +1676,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         L = []
         def callback(event):
             L.append(event)
-        
+
         try:
             events.callbacks[:] = [(events.RemoteCommunicationEvent, callback)]
             result = interface.sendRemoteCommEvent(u'fi\xed once', u'fi\xed twice')
@@ -1672,10 +1686,10 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
         self.assertTrue(result)
         self.assertEqual(len(L), 1)
-        event = L[0]                                     
+        event = L[0]
         self.assertEqual(event.type, 'fi\xc3\xad once')
         self.assertEqual(event.data, 'fi\xc3\xad twice')
-        
+
 
 class SystemNamespaceXMLRPCInterfaceTests(TestBase):
     def _getTargetClass(self):
@@ -1693,8 +1707,8 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_ctor(self):
         interface = self._makeOne()
-        self.failUnless(interface.namespaces['supervisor'])
-        self.failUnless(interface.namespaces['system'])
+        self.assertTrue(interface.namespaces['supervisor'])
+        self.assertTrue(interface.namespaces['system'])
 
     def test_listMethods(self):
         interface = self._makeOne()
@@ -1727,8 +1741,8 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
             try:
                 interface.methodSignature(k)
             except xmlrpc.RPCError:
-                raise AssertionError, ('methodSignature for %s raises '
-                                       'RPCError (missing @return doc?)' % k)
+                raise AssertionError('methodSignature for %s raises '
+                                     'RPCError (missing @return doc?)' % k)
 
             # we want to test that the number of arguments implemented in
             # the function is the same as the number of arguments implied by
@@ -1769,42 +1783,42 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
             # param tokens
 
             if len(argnames) != len(pnames):
-                raise AssertionError, ('Incorrect documentation '
-                                       '(%s args, %s doc params) in %s'
-                                       % (len(argnames), len(pnames), k))
+                raise AssertionError('Incorrect documentation '
+                                     '(%s args, %s doc params) in %s'
+                                     % (len(argnames), len(pnames), k))
             for docline in plines:
-                self.failUnless(type(docline) == int, (docline,
+                self.assertTrue(type(docline) == int, (docline,
                                                        type(docline),
                                                        k,
                                                        parsed))
             for doctype in ptypes:
-                self.failUnless(doctype in _RPCTYPES, doctype)
+                self.assertTrue(doctype in _RPCTYPES, doctype)
             for x in range(len(pnames)):
                 if pnames[x] != argnames[x]:
                     msg = 'Name wrong: (%s vs. %s in %s)\n%s' % (pnames[x],
                                                                  argnames[x],
                                                                  k,
                                                                  parsed)
-                    raise AssertionError, msg
+                    raise AssertionError(msg)
             for doctext in ptexts:
-                self.failUnless(type(doctext) == type(''), doctext)
+                self.assertTrue(type(doctext) == type(''), doctext)
 
             # result tokens
-            
+
             if len(rlines) > 1:
                 raise AssertionError(
                     'Duplicate @return values in docs for %s' % k)
             for docline in rlines:
-                self.failUnless(type(docline) == int, (docline,
+                self.assertTrue(type(docline) == int, (docline,
                                                        type(docline), k))
             for doctype in rtypes:
-                self.failUnless(doctype in _RPCTYPES, doctype)
+                self.assertTrue(doctype in _RPCTYPES, doctype)
             for docname in rnames:
-                self.failUnless(type(docname) == type(''), (docname,
+                self.assertTrue(type(docname) == type(''), (docname,
                                                             type(docname),
                                                             k))
             for doctext in rtexts:
-                self.failUnless(type(doctext) == type(''), (doctext,
+                self.assertTrue(type(doctext) == type(''), (doctext,
                                                             type(doctext), k))
 
     def test_multicall_simplevals(self):
@@ -1824,20 +1838,20 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
         from supervisor import xmlrpc
         interface = self._makeOne()
         callback = interface.multicall([
-            {'methodName': 'system.multicall', 'params': []},        
+            {'methodName': 'system.multicall', 'params': []},
         ])
 
         from supervisor import http
         result = http.NOT_DONE_YET
         while result is http.NOT_DONE_YET:
             result = callback()
-        
+
         code = xmlrpc.Faults.INCORRECT_PARAMETERS
         desc = xmlrpc.getFaultDescription(code)
         recursion_fault = {'faultCode': code, 'faultString': desc}
 
         self.assertEqual(result, [recursion_fault])
-        
+
     def test_multicall_nested_callback(self):
         interface = self._makeOne()
         callback = interface.multicall([

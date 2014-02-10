@@ -199,8 +199,8 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(instance.spawnerr, 'bad filename')
         self.assertEqual(options.logger.data[0], "spawnerr: bad filename")
-        self.failUnless(instance.delay)
-        self.failUnless(instance.backoff)
+        self.assertTrue(instance.delay)
+        self.assertTrue(instance.backoff)
         from supervisor.states import ProcessStates
         self.assertEqual(instance.state, ProcessStates.BACKOFF)
         self.assertEqual(len(L), 2)
@@ -226,8 +226,8 @@ class SubprocessTests(unittest.TestCase):
                          "too many open files to spawn 'good'")
         self.assertEqual(options.logger.data[0],
                          "spawnerr: too many open files to spawn 'good'")
-        self.failUnless(instance.delay)
-        self.failUnless(instance.backoff)
+        self.assertTrue(instance.delay)
+        self.assertTrue(instance.backoff)
         from supervisor.states import ProcessStates
         self.assertEqual(instance.state, ProcessStates.BACKOFF)
         self.assertEqual(len(L), 2)
@@ -250,8 +250,8 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
         self.assertEqual(options.logger.data[0],
                          "spawnerr: unknown error: EPERM")
-        self.failUnless(instance.delay)
-        self.failUnless(instance.backoff)
+        self.assertTrue(instance.delay)
+        self.assertTrue(instance.backoff)
         from supervisor.states import ProcessStates
         self.assertEqual(instance.state, ProcessStates.BACKOFF)
         self.assertEqual(len(L), 2)
@@ -278,8 +278,8 @@ class SubprocessTests(unittest.TestCase):
              "spawnerr: Too many processes in process table to spawn 'good'")
         self.assertEqual(len(options.parent_pipes_closed), 6)
         self.assertEqual(len(options.child_pipes_closed), 6)
-        self.failUnless(instance.delay)
-        self.failUnless(instance.backoff)
+        self.assertTrue(instance.delay)
+        self.assertTrue(instance.backoff)
         from supervisor.states import ProcessStates
         self.assertEqual(instance.state, ProcessStates.BACKOFF)
         self.assertEqual(len(L), 2)
@@ -304,8 +304,8 @@ class SubprocessTests(unittest.TestCase):
                          "spawnerr: unknown error: EPERM")
         self.assertEqual(len(options.parent_pipes_closed), 6)
         self.assertEqual(len(options.child_pipes_closed), 6)
-        self.failUnless(instance.delay)
-        self.failUnless(instance.backoff)
+        self.assertTrue(instance.delay)
+        self.assertTrue(instance.backoff)
         from supervisor.states import ProcessStates
         self.assertEqual(instance.state, ProcessStates.BACKOFF)
         self.assertEqual(len(L), 2)
@@ -325,16 +325,20 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.pgrp_set, True)
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
-        self.assertEqual(options.written, {})
         self.assertEqual(options.privsdropped, 1)
         self.assertEqual(options.execv_args,
                          ('/good/filename', ['/good/filename']) )
-        self.assertEqual(options._exitcode, 127)
+        self.assertEqual(options.execve_called, True)
+        # if the real execve() succeeds, the code that writes the
+        # "was not spawned" message won't be reached.  this assertion
+        # is to test that no other errors were written.
+        self.assertEqual(options.written,
+             {2: "supervisor: child process was not spawned\n"})
 
     def test_spawn_as_child_setuid_fail(self):
         options = DummyOptions()
         options.forkpid = 0
-        options.setuid_msg = 'screwed'
+        options.setuid_msg = 'failure reason'
         config = DummyPConfig(options, 'good', '/good/filename', uid=1)
         instance = self._makeOne(config)
         result = instance.spawn()
@@ -345,10 +349,10 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         self.assertEqual(options.written,
-             {2: 'supervisor: error trying to setuid to 1 (screwed)\n'})
+             {2: "supervisor: couldn't setuid to 1: failure reason\n"
+                 "supervisor: child process was not spawned\n"})
         self.assertEqual(options.privsdropped, None)
-        self.assertEqual(options.execv_args,
-                         ('/good/filename', ['/good/filename']) )
+        self.assertEqual(options.execve_called, False)
         self.assertEqual(options._exitcode, 127)
 
     def test_spawn_as_child_cwd_ok(self):
@@ -364,11 +368,15 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.pgrp_set, True)
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
-        self.assertEqual(options.written, {})
         self.assertEqual(options.execv_args,
                          ('/good/filename', ['/good/filename']) )
-        self.assertEqual(options._exitcode, 127)
         self.assertEqual(options.changed_directory, True)
+        self.assertEqual(options.execve_called, True)
+        # if the real execve() succeeds, the code that writes the
+        # "was not spawned" message won't be reached.  this assertion
+        # is to test that no other errors were written.
+        self.assertEqual(options.written,
+             {2: "supervisor: child process was not spawned\n"})
 
     def test_spawn_as_child_sets_umask(self):
         options = DummyOptions()
@@ -377,11 +385,15 @@ class SubprocessTests(unittest.TestCase):
         instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, None)
-        self.assertEqual(options.written, {})
         self.assertEqual(options.execv_args,
                          ('/good/filename', ['/good/filename']) )
-        self.assertEqual(options._exitcode, 127)
         self.assertEqual(options.umaskset, 002)
+        self.assertEqual(options.execve_called, True)
+        # if the real execve() succeeds, the code that writes the
+        # "was not spawned" message won't be reached.  this assertion
+        # is to test that no other errors were written.
+        self.assertEqual(options.written,
+             {2: "supervisor: child process was not spawned\n"})
 
     def test_spawn_as_child_cwd_fail(self):
         options = DummyOptions()
@@ -398,10 +410,12 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         self.assertEqual(options.execv_args, None)
-        self.assertEqual(options.written,
-                         {2: "couldn't chdir to /tmp: ENOENT\n"})
+        out = {2: "supervisor: couldn't chdir to /tmp: ENOENT\n"
+                  "supervisor: child process was not spawned\n"}
+        self.assertEqual(options.written, out)
         self.assertEqual(options._exitcode, 127)
         self.assertEqual(options.changed_directory, False)
+        self.assertEqual(options.execve_called, False)
 
     def test_spawn_as_child_execv_fail_oserror(self):
         options = DummyOptions()
@@ -416,8 +430,9 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.pgrp_set, True)
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
-        self.assertEqual(options.written,
-                         {2: "couldn't exec /good/filename: EPERM\n"})
+        out = {2: "supervisor: couldn't exec /good/filename: EPERM\n"
+                  "supervisor: child process was not spawned\n"}
+        self.assertEqual(options.written, out)
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options._exitcode, 127)
 
@@ -435,8 +450,9 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.duped), 3)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
         msg = options.written[2] # dict, 2 is fd #
-        self.failUnless(msg.startswith("couldn't exec /good/filename:"))
-        self.failUnless("exceptions.RuntimeError" in msg)
+        head = "supervisor: couldn't exec /good/filename:"
+        self.assertTrue(msg.startswith(head))
+        self.assertTrue("exceptions.RuntimeError" in msg)
         self.assertEqual(options.privsdropped, None)
         self.assertEqual(options._exitcode, 127)
 
@@ -486,11 +502,15 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.pgrp_set, True)
         self.assertEqual(len(options.duped), 2)
         self.assertEqual(len(options.fds_closed), options.minfds - 3)
-        self.assertEqual(options.written, {})
         self.assertEqual(options.privsdropped, 1)
         self.assertEqual(options.execv_args,
                          ('/good/filename', ['/good/filename']) )
-        self.assertEqual(options._exitcode, 127)
+        self.assertEqual(options.execve_called, True)
+        # if the real execve() succeeds, the code that writes the
+        # "was not spawned" message won't be reached.  this assertion
+        # is to test that no other errors were written.
+        self.assertEqual(options.written,
+             {2: "supervisor: child process was not spawned\n"})
 
     def test_spawn_as_parent(self):
         options = DummyOptions()
@@ -509,7 +529,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(options.child_pipes_closed), 6)
         self.assertEqual(options.logger.data[0], "spawned: 'good' with pid 10")
         self.assertEqual(instance.spawnerr, None)
-        self.failUnless(instance.delay)
+        self.assertTrue(instance.delay)
         self.assertEqual(instance.config.options.pidhistory[10], instance)
         from supervisor.states import ProcessStates
         self.assertEqual(instance.state, ProcessStates.STARTING)
@@ -583,10 +603,10 @@ class SubprocessTests(unittest.TestCase):
             instance = self._makeOne(config)
             result = instance.spawn()
             msg = options.logger.data[0]
-            self.failUnless(msg.startswith("spawned: 'spew' with pid"))
+            self.assertTrue(msg.startswith("spawned: 'spew' with pid"))
             self.assertEqual(len(instance.pipes), 6)
-            self.failUnless(instance.pid)
-            self.failUnlessEqual(instance.pid, result)
+            self.assertTrue(instance.pid)
+            self.assertTrueEqual(instance.pid, result)
             origpid = instance.pid
             import errno
             while 1:
@@ -594,11 +614,11 @@ class SubprocessTests(unittest.TestCase):
                     data = os.popen('ps').read()
                     break
                 except IOError, why:
-                    if why[0] != errno.EINTR:
+                    if why.args[0] != errno.EINTR:
                         raise
                         # try again ;-)
             time.sleep(0.1) # arbitrary, race condition possible
-            self.failUnless(data.find(`origpid`) != -1 )
+            self.assertTrue(data.find(repr(origpid)) != -1 )
             msg = instance.kill(signal.SIGTERM)
             time.sleep(0.1) # arbitrary, race condition possible
             self.assertEqual(msg, None)
@@ -623,7 +643,7 @@ class SubprocessTests(unittest.TestCase):
         instance.state = ProcessStates.RUNNING
         instance.stop()
         self.assertEqual(instance.administrative_stop, 1)
-        self.failUnless(instance.delay)
+        self.assertTrue(instance.delay)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
                          'signal SIGTERM')
         self.assertEqual(instance.killing, 1)
@@ -671,7 +691,7 @@ class SubprocessTests(unittest.TestCase):
         instance.kill(signal.SIGTERM)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
                          'signal SIGTERM')
-        self.failUnless(options.logger.data[1].startswith(
+        self.assertTrue(options.logger.data[1].startswith(
             'unknown problem killing test'))
         self.assertEqual(instance.killing, 0)
         self.assertEqual(len(L), 2)
@@ -734,6 +754,22 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.killing, 1)
         self.assertEqual(options.kills[11], signal.SIGKILL)
         self.assertEqual(L, []) # no event because we didn't change state
+
+    def test_kill_from_backoff(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        L = []
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        events.subscribe(events.Event, L.append)
+        instance.state = ProcessStates.BACKOFF
+        instance.kill(signal.SIGKILL)
+        self.assertEqual(options.logger.data[0],
+                         'Attempted to kill test, which is in BACKOFF state.')
+        self.assertEqual(instance.killing, 0)
+        event = L[0]
+        self.assertEqual(event.__class__, events.ProcessStateStoppedEvent)
 
     def test_kill_from_stopping_w_killasgroup(self):
         options = DummyOptions()
@@ -1267,7 +1303,7 @@ class SubprocessTests(unittest.TestCase):
         instance.state = 10
         instance.change_state(ProcessStates.BACKOFF)
         self.assertEqual(instance.backoff, 1)
-        self.failUnless(instance.delay > 0)
+        self.assertTrue(instance.delay > 0)
 
 class FastCGISubprocessTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -1724,7 +1760,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [])
         header, payload = process1.stdin_buffer.split('\n', 1)
-        self.assertEquals(payload, 'dummy event', payload)
+        self.assertEqual(payload, 'dummy event', payload)
         self.assertEqual(process1.listener_state, EventListenerStates.BUSY)
         self.assertEqual(process1.event, event)
 

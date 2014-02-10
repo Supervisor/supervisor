@@ -21,6 +21,14 @@ file.  It has sections (each denoted by a ``[header]``)and key / value
 pairs within the sections.  The sections and their allowable values
 are described below.
 
+.. note::
+
+  Some distributions have packaged Supervisor with their own
+  customizations.  These modified versions of Supervisor may load the
+  configuration file from locations other than those described here.
+  Notably, Ubuntu packages have been found that use
+  ``/etc/supervisor/supervisord.conf``.
+
 ``[unix_http_server]`` Section Settings
 ---------------------------------------
 
@@ -363,15 +371,17 @@ follows.
 
 ``environment``
 
-  A list of key/value pairs in the form ``KEY=val,KEY2=val2`` that
+  A list of key/value pairs in the form ``KEY="val",KEY2="val2"`` that
   will be placed in the :program:`supervisord` process' environment
   (and as a result in all of its child process' environments).  This
   option can include the value ``%(here)s``, which expands to the
   directory in which the supervisord configuration file was found.
-  Note that subprocesses will inherit the environment variables of the
-  shell used to start :program:`supervisord` except for the ones
-  overridden here and within the program's ``environment``
-  configuration stanza.  See :ref:`subprocess_environment`.
+  Values containing non-alphanumeric characters should be quoted
+  (e.g. ``KEY="val:123",KEY2="val,456"``).  Otherwise, quoting the
+  values is optional but recommended.  **Note** that subprocesses will
+  inherit the environment variables of the shell used to start
+  :program:`supervisord` except for the ones overridden here and within
+  the program's ``environment`` option. See :ref:`subprocess_environment`.
 
   *Default*: no values
 
@@ -411,7 +421,7 @@ follows.
    nocleanup = true
    childlogdir = /tmp
    strip_ansi = false
-   environment = KEY1=value1,KEY2=value2
+   environment = KEY1="value1",KEY2="value2"
 
 ``[supervisorctl]`` Section Settings
 ------------------------------------
@@ -719,7 +729,7 @@ where specified.
 ``stopasgroup``
 
   If true, the flag causes supervisor to send the stop signal to the
-  whole process group and implies ``killasgroup``=true.  This is useful
+  whole process group and implies ``killasgroup`` is true.  This is useful
   for programs, such as Flask in debug mode, that do not propagate
   stop signals to their children, leaving them orphaned.
 
@@ -745,9 +755,8 @@ where specified.
 ``user``
 
   If :program:`supervisord` runs as root, this UNIX user account will
-  be used as the account which runs the program.  If
-  :program:`supervisord` is not running as root, this option has no
-  effect.
+  be used as the account which runs the program.  If :program:`supervisord`
+  can't switch to the specified user, the program will not be started.
 
   *Default*: Do not switch users
 
@@ -843,6 +852,16 @@ where specified.
 
   *Introduced*: 3.0a7
 
+``stdout_syslog``
+
+  If true, stdout will be directed to syslog along with the process name.
+
+  *Default*: False
+
+  *Required*:  No.
+
+  *Introduced*: 3.1a1
+
 ``stderr_logfile``
 
   Put process stderr output in this file unless ``redirect_stderr`` is
@@ -910,18 +929,29 @@ where specified.
 
   *Introduced*: 3.0a7
 
+``stderr_syslog``
+
+  If true, stderr will be directed to syslog along with the process name.
+
+  *Default*: False
+
+  *Required*:  No.
+
+  *Introduced*: 3.1a1
+
 ``environment``
 
-  A list of key/value pairs in the form ``KEY=val,KEY2=val2`` that
+  A list of key/value pairs in the form ``KEY="val",KEY2="val2"`` that
   will be placed in the child process' environment.  The environment
   string may contain Python string expressions that will be evaluated
   against a dictionary containing ``group_name``, ``host_node_name``,
   ``process_num``, ``program_name``, and ``here`` (the directory of the
   supervisord config file).  Values containing non-alphanumeric characters
-  should be placed in quotes (e.g. ``KEY="val:123",KEY2="val,456"``) **Note**
-  that the subprocess will inherit the environment variables of the
-  shell used to start "supervisord" except for the ones overridden
-  here.  See :ref:`subprocess_environment`.
+  should be quoted (e.g. ``KEY="val:123",KEY2="val,456"``).  Otherwise,
+  quoting the values is optional but recommended.  **Note** that the
+  subprocess will inherit the environment variables of the shell used to
+  start "supervisord" except for the ones overridden here.  See
+  :ref:`subprocess_environment`.
 
   *Default*: No extra environment
 
@@ -997,7 +1027,7 @@ where specified.
    stderr_logfile_maxbytes=1MB
    stderr_logfile_backups=10
    stderr_capture_maxbytes=1MB
-   environment=A=1,B=2
+   environment=A="1",B="2"
    serverurl=AUTO
 
 ``[include]`` Section Settings
@@ -1144,8 +1174,21 @@ groups of FastCGI processes sharing sockets without being tied to a
 particular web server.  It's a clean separation of concerns, allowing
 the web server and the process manager to each do what they do best.
 
-Note that all the options available to ``[program:x]`` sections are
-also respected by fcgi-program sections.
+.. note::
+
+   The socket manager in Supervisor was originally developed to support
+   FastCGI processes but it is not limited to FastCGI.  Other protocols may
+   be used as well with no special configuration.  Any program that can
+   access an open socket from a file descriptor (e.g. with
+   `socket.fromfd <http://docs.python.org/library/socket.html#socket.fromfd>`_
+   in Python) can use the socket manager.  Supervisor will automatically
+   create the socket, bind, and listen before forking the first child in a
+   group.  The socket will be passed to each child on file descriptor
+   number ``0`` (zero).  When the last child in the group exits,
+   Supervisor will close the socket.
+
+All the options available to ``[program:x]`` sections are
+also respected by ``fcgi-program`` sections.
 
 ``[fcgi-program:x]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1220,7 +1263,7 @@ above constraints and additions.
    stderr_logfile=/a/path
    stderr_logfile_maxbytes=1MB
    stderr_logfile_backups
-   environment=A=1,B=2
+   environment=A="1",B="2"
 
 ``[eventlistener:x]`` Section Settings
 --------------------------------------
@@ -1296,7 +1339,7 @@ above constraints and additions.
    stderr_logfile=/a/path
    stderr_logfile_maxbytes=1MB
    stderr_logfile_backups
-   environment=A=1,B=2
+   environment=A="1",B="2"
 
 ``[rpcinterface:x]`` Section Settings
 -------------------------------------

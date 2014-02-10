@@ -7,12 +7,10 @@ from supervisor.medusa import http_date
 
 now = http_date.build_http_date (time.time())
 
-cache_request = string.joinfields (
+cache_request = '\r\n'.join(
         ['GET / HTTP/1.0',
          'If-Modified-Since: %s' % now,
-         ],
-        '\r\n'
-        ) + '\r\n\r\n'
+         ]) + '\r\n\r\n'
 
 nocache_request = 'GET / HTTP/1.0\r\n\r\n'
 

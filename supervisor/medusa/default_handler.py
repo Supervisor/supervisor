@@ -129,7 +129,7 @@ class default_handler:
             length = ims.group (4)
             if length:
                 try:
-                    length = string.atoi (length)
+                    length = int(length)
                     if length != file_length:
                         length_match = 0
                 except:
@@ -169,7 +169,7 @@ class default_handler:
         request.done()
 
     def set_content_type (self, path, request):
-        ext = string.lower (get_extension (path))
+        ext = get_extension(path).lower()
         typ, encoding = mimetypes.guess_type(path)
         if typ is not None:
             request['Content-Type'] = typ
@@ -207,8 +207,8 @@ get_header = http_server.get_header
 get_header_match = http_server.get_header_match
 
 def get_extension (path):
-    dirsep = string.rfind (path, '/')
-    dotsep = string.rfind (path, '.')
+    dirsep = path.rfind('/')
+    dotsep = path.rfind('.')
     if dotsep > dirsep:
         return path[dotsep+1:]
     else:

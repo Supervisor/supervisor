@@ -64,7 +64,7 @@ class Handler:
             self.stream.flush()
         except IOError, why:
             # if supervisor output is piped, EPIPE can be raised at exit
-            if why[0] != errno.EPIPE:
+            if why.args[0] != errno.EPIPE:
                 raise
 
     def close(self):
@@ -83,9 +83,9 @@ class Handler:
                 self.stream.write(msg.encode("UTF-8"))
             self.flush()
         except:
-            self.handleError(record)
+            self.handleError()
 
-    def handleError(self, record):
+    def handleError(self):
         ei = sys.exc_info()
         traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
         del ei
@@ -107,7 +107,7 @@ class FileHandler(Handler):
         try:
             os.remove(self.baseFilename)
         except OSError, why:
-            if why[0] != errno.ENOENT:
+            if why.args[0] != errno.ENOENT:
                 raise
 
 class StreamHandler(Handler):
@@ -185,6 +185,16 @@ class RotatingFileHandler(FileHandler):
         FileHandler.emit(self, record)
         self.doRollover()
 
+    def removeAndRename(self, sfn, dfn):
+        if os.path.exists(dfn):
+            try:
+                os.remove(dfn)
+            except OSError, why:
+                # catch race condition (already deleted)
+                if why.args[0] != errno.ENOENT:
+                    raise
+        os.rename(sfn, dfn)
+
     def doRollover(self):
         """
         Do a rollover, as described in __init__().
@@ -201,23 +211,9 @@ class RotatingFileHandler(FileHandler):
                 sfn = "%s.%d" % (self.baseFilename, i)
                 dfn = "%s.%d" % (self.baseFilename, i + 1)
                 if os.path.exists(sfn):
-                    if os.path.exists(dfn):
-                        try:
-                            os.remove(dfn)
-                        except OSError, why:
-                            # catch race condition (already deleted)
-                            if why[0] != errno.ENOENT:
-                                raise
-                    os.rename(sfn, dfn)
+                    self.removeAndRename(sfn, dfn)
             dfn = self.baseFilename + ".1"
-            if os.path.exists(dfn):
-                try:
-                    os.remove(dfn)
-                except OSError, why:
-                    # catch race condition (already deleted)
-                    if why[0] != errno.ENOENT:
-                        raise
-            os.rename(self.baseFilename, dfn)
+            self.removeAndRename(self.baseFilename, dfn)
         self.stream = open(self.baseFilename, 'w')
 
 class LogRecord:
@@ -318,38 +314,47 @@ class SyslogHandler(Handler):
                 except UnicodeError:
                     syslog.syslog(msg.encode("UTF-8"))
         except:
-            self.handleError(record)
+            self.handleError()
 
-def getLogger(filename, level, fmt, rotating=False, maxbytes=0, backups=0,
-              stdout=False):
+def getLogger(level=None):
+    return Logger(level)
 
-    handlers = []
+_2MB = 1<<21
 
-    logger = Logger(level)
-
-    if filename is None:
-        if not maxbytes:
-            maxbytes = 1<<21 #2MB
-        io = BoundIO(maxbytes)
-        handlers.append(StreamHandler(io))
-        logger.getvalue = io.getvalue
-
-    elif filename == 'syslog':
-        handlers.append(SyslogHandler())
-
-    else:
-        if rotating is False:
-            handlers.append(FileHandler(filename))
-        else:
-            handlers.append(RotatingFileHandler(filename,'a',maxbytes,backups))
-
-    if stdout:
-        handlers.append(StreamHandler(sys.stdout))
-
-    for handler in handlers:
-        handler.setFormat(fmt)
-        handler.setLevel(level)
-        logger.addHandler(handler)
+def handle_boundIO(logger, fmt, maxbytes=_2MB):
+    io = BoundIO(maxbytes)
+    handler = StreamHandler(io)
+    handler.setLevel(logger.level)
+    handler.setFormat(fmt)
+    logger.addHandler(handler)
+    logger.getvalue = io.getvalue
 
     return logger
 
+def handle_stdout(logger, fmt):
+    handler = StreamHandler(sys.stdout)
+    handler.setFormat(fmt)
+    handler.setLevel(logger.level)
+    logger.addHandler(handler)
+
+def handle_syslog(logger, fmt):
+    handler = SyslogHandler()
+    handler.setFormat(fmt)
+    handler.setLevel(logger.level)
+    logger.addHandler(handler)
+
+def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
+    if filename == 'syslog':
+        handler = SyslogHandler()
+
+    else:
+        if rotating is False:
+            handler = FileHandler(filename)
+        else:
+            handler = RotatingFileHandler(filename, 'a', maxbytes, backups)
+
+    handler.setFormat(fmt)
+    handler.setLevel(logger.level)
+    logger.addHandler(handler)
+
+    return logger

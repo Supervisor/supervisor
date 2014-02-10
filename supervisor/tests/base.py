@@ -48,6 +48,7 @@ class DummyOptions:
         self.written = {}
         self.fds_closed = []
         self._exitcode = None
+        self.execve_called = False
         self.execv_args = None
         self.setuid_msg = None
         self.privsdropped = None
@@ -141,7 +142,7 @@ class DummyOptions:
     def get_pid(self):
         import os
         return os.getpid()
-        
+
     def check_execv_args(self, filename, argv, st):
         if filename == '/bad/filename':
             from supervisor.options import NotFound
@@ -193,6 +194,7 @@ class DummyOptions:
         self._exitcode = code
 
     def execve(self, filename, argv, environment):
+        self.execve_called = True
         if self.execv_error:
             if self.execv_error == 1:
                 raise OSError(self.execv_error)
@@ -249,6 +251,8 @@ class DummyOptions:
         self.umaskset = mask
 
 class DummyLogger:
+    level = None
+
     def __init__(self):
         self.reopened = False
         self.removed = False
@@ -265,7 +269,10 @@ class DummyLogger:
         if kw:
             msg = msg % kw
         self.data.append(msg)
-        
+
+    def addHandler(self, handler):
+        pass
+
     def reopen(self):
         self.reopened = True
     def close(self):
@@ -348,7 +355,7 @@ class DummySocketManager:
 
     def get_socket(self):
         return DummySocket(self._config.fd)
-        
+
 class DummyProcess:
     # Initial state; overridden by instance variables
     pid = 0 # Subprocess pid; 0 when not running
@@ -550,7 +557,7 @@ def makeExecutable(file, substitutions=None):
     import os
     import sys
     import tempfile
-    
+
     if substitutions is None:
         substitutions = {}
     data = open(file).read()
@@ -559,7 +566,7 @@ def makeExecutable(file, substitutions=None):
     substitutions['PYTHON'] = sys.executable
     for key in substitutions.keys():
         data = data.replace('<<%s>>' % key.upper(), substitutions[key])
-    
+
     tmpnam = tempfile.mktemp(prefix=last)
     f = open(tmpnam, 'w')
     f.write(data)
@@ -593,6 +600,9 @@ class DummyMedusaChannel:
         self.producer = producer
 
     def close_when_done(self):
+        pass
+
+    def set_terminator(self, terminator):
         pass
 
 class DummyRequest:
@@ -641,7 +651,7 @@ class DummyRequest:
 
     def get_server_url(self):
         return 'http://example.com'
-        
+
 
 class DummyRPCInterfaceFactory:
     def __init__(self, supervisord, **config):
@@ -808,9 +818,9 @@ class DummySupervisorRPCNamespace:
             raise Fault(xmlrpc.Faults.NOT_RUNNING, 'NOT_RUNNING')
         if name == 'FAILED':
             raise Fault(xmlrpc.Faults.FAILED, 'FAILED')
-        
+
         return True
-    
+
     def stopAllProcesses(self):
         from supervisor import xmlrpc
         return [
@@ -941,15 +951,15 @@ class DummyProcessGroup:
 
     def stop_all(self):
         self.all_stopped = True
-        
+
     def get_unstopped_processes(self):
         return self.unstopped_processes
 
     def get_dispatchers(self):
         return self.dispatchers
-        
+
 class DummyFCGIProcessGroup(DummyProcessGroup):
-    
+
     def __init__(self, config):
         DummyProcessGroup.__init__(self, config)
         self.socket_manager = DummySocketManager(config.socket_config)
@@ -1017,7 +1027,7 @@ class DummyDispatcher:
         if self.flush_error:
             raise OSError(self.flush_error)
         self.flushed = True
-                
+
 class DummyStream:
     def __init__(self, error=None):
         self.error = error
@@ -1038,7 +1048,7 @@ class DummyStream:
         pass
     def tell(self):
         return len(self.written)
-        
+
 class DummyEvent:
     def __init__(self, serial='abc'):
         if serial is not None:
@@ -1046,7 +1056,7 @@ class DummyEvent:
 
     def __str__(self):
         return 'dummy event'
-        
+
 def dummy_handler(event, result):
     pass
 

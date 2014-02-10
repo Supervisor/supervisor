@@ -22,17 +22,15 @@ if sys.version_info[:2] < (2, 4) or sys.version_info[0] > 2:
     sys.stderr.write(msg)
     sys.exit(1)
 
-requires = ['setuptools', 'meld3 >= 0.6.5']
+requires = ['meld3 >= 0.6.5']
 
 if sys.version_info[:2] < (2, 5):
     # for meld3 (it's a distutils package)
     requires.append('elementtree')
 
 from setuptools import setup, find_packages
-here = os.path.abspath(os.path.normpath(os.path.dirname(__file__)))
-
+here = os.path.abspath(os.path.dirname(__file__))
 try:
-    here = os.path.abspath(os.path.dirname(__file__))
     README = open(os.path.join(here, 'README.rst')).read()
     CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 except:
@@ -65,8 +63,8 @@ dist = setup(
     classifiers = CLASSIFIERS,
     author = "Chris McDonough",
     author_email = "chrism@plope.com",
-    maintainer = "Mike Naberezny",
-    maintainer_email = "mike@naberezny.com",
+    maintainer = "Chris McDonough",
+    maintainer_email = "chrism@plope.com",
     packages = find_packages(),
     install_requires = requires,
     extras_require = {'iterparse':['cElementTree >= 1.0.2']},

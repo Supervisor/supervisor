@@ -53,9 +53,9 @@ class line_writer:
             return 0
 
 def main (env, stdin, stdout):
-    parts = string.split (env['REQUEST_URI'], '/')
+    parts = env['REQUEST_URI'].split('/')
     if len(parts) >= 3:
-        ndigits = string.atoi (parts[2])
+        ndigits = int(parts[2])
     else:
         ndigits = 5000
     stdout.write ('Content-Type: text/plain\r\n\r\n')

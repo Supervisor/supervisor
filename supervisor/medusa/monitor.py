@@ -13,7 +13,7 @@ import string
 import sys
 import time
 
-VERSION = string.split(RCS_ID)[2]
+VERSION = RCS_ID.split()[2]
 
 import asyncore_25 as asyncore
 import asynchat_25 as asynchat
@@ -104,20 +104,20 @@ class monitor_channel (asynchat.async_chat):
                                 return
                             else:
                                 self.multi_line.append (line)
-                                line =  string.join (self.multi_line, '\n')
+                                line = '\n'.join(self.multi_line)
                                 co = compile (line, repr(self), 'exec')
                                 self.multi_line = []
                         else:
                             co = compile (line, repr(self), 'exec')
                     except SyntaxError, why:
-                        if why[0] == 'unexpected EOF while parsing':
+                        if why.args[0] == 'unexpected EOF while parsing':
                             self.push ('... ')
                             self.multi_line.append (line)
                             return
                         else:
                             t,v,tb = sys.exc_info()
                             del tb
-                            raise t,v
+                            raise t(v)
                     exec co in self.local_env
                     method = 'exec'
             except:
@@ -151,7 +151,7 @@ class monitor_channel (asynchat.async_chat):
                     chars = chars[:-1]
                 else:
                     chars.append (ch)
-        return string.join (chars, '')
+        return ''.join(chars)
 
 class monitor_server (asyncore.dispatcher):
 
@@ -194,10 +194,7 @@ class monitor_server (asyncore.dispatcher):
 def hex_digest (s):
     m = md5.md5()
     m.update (s)
-    return string.joinfields (
-            map (lambda x: hex (ord (x))[2:], map (None, m.digest())),
-            '',
-            )
+    return ''.join(map(lambda x: hex(ord (x))[2:], map(None, m.digest())))
 
 class secure_monitor_channel (monitor_channel):
     authorized = 0
@@ -285,8 +282,8 @@ class output_producer:
             self.channel.close()
 
     def write (self, data):
-        lines = string.splitfields (data, '\n')
-        data = string.join (lines, '\r\n')
+        lines = data.split('\n')
+        data = '\r\n'.join(lines)
         self.data = self.data + data
         self.check_data()
 
@@ -295,10 +292,7 @@ class output_producer:
         self.check_data()
 
     def writelines (self, lines):
-        self.data = self.data + string.joinfields (
-                lines,
-                '\r\n'
-                ) + '\r\n'
+        self.data = self.data + '\r\n'.join(lines) + '\r\n'
         self.check_data()
 
     def flush (self):
@@ -330,7 +324,7 @@ if __name__ == '__main__':
         encrypt = 0
 
     if len(sys.argv) > 1:
-        port = string.atoi (sys.argv[1])
+        port = int(sys.argv[1])
     else:
         port = 8023
 

@@ -121,15 +121,15 @@ if __name__ == '__main__':
         '  (as a client) [--poll] -c <ip> <port> <packet-size> <num-packets> <num-connections>\n' % sys.argv[0]
         sys.exit(0)
     if sys.argv[1] == '-s':
-        s = test_server ((sys.argv[2], string.atoi (sys.argv[3])))
+        s = test_server((sys.argv[2], int(sys.argv[3])))
         asyncore.loop(use_poll=use_poll)
     elif sys.argv[1] == '-c':
         # create the packet
-        packet = string.atoi(sys.argv[4]) * 'B'
+        packet = int(sys.argv[4]) * 'B'
         host = sys.argv[2]
-        port = string.atoi (sys.argv[3])
-        num_packets = string.atoi (sys.argv[5])
-        num_conns = string.atoi (sys.argv[6])
+        port = int(sys.argv[3])
+        num_packets = int(sys.argv[5])
+        num_conns = int(sys.argv[6])
 
         t = timer()
         for i in range (num_conns):
@@ -152,8 +152,7 @@ if __name__ == '__main__':
         sys.stderr.write ( 'transactions/second: %.2f\n' % trans_per_sec)
 
         sys.stdout.write (
-                string.join (
-                        map (str, (num_conns, num_packets, len(packet), throughput, trans_per_sec)),
-                        ','
+                ','.join(
+                        map(str, (num_conns, num_packets, len(packet), throughput, trans_per_sec))
                         ) + '\n'
                 )

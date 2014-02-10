@@ -13,7 +13,7 @@ def build_request_chain (num, host, request_size):
                     request_size, host
                     )
             )
-    return string.join (sl, '')
+    return ''.join(sl)
 
 import time
 
@@ -30,10 +30,7 @@ if __name__ == '__main__':
         print 'usage: %s <host> <port> <request-size> <num-requests>' % (sys.argv[0])
     else:
         host = sys.argv[1]
-        [port, request_size, num_requests] = map (
-                string.atoi,
-                sys.argv[2:]
-                )
+        [port, request_size, num_requests] = map(int, sys.argv[2:])
         chain = build_request_chain (num_requests, host, request_size)
         import socket
         s = socket.socket (socket.AF_INET, socket.SOCK_STREAM)

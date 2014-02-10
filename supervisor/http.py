@@ -4,12 +4,16 @@ import time
 import sys
 import socket
 import errno
-import pwd
 import urllib
 
 try:
+    import pwd
+except ImportError:  # Windows
+    import getpass as pwd
+
+try:
     from hashlib import sha1
-except ImportError:
+except ImportError:  # Python 2.4 or earlier
     from sha import new as sha1
 
 from supervisor.medusa import asyncore_25 as asyncore
@@ -132,9 +136,9 @@ class deferring_hooked_producer:
 
 class deferring_http_request(http_server.http_request):
     """ The medusa http_request class uses the default set of producers in
-    medusa.prodcers.  We can't use these because they don't know anything about
-    deferred responses, so we override various methods here.  This was added
-    to support tail -f like behavior on the logtail handler """
+    medusa.producers.  We can't use these because they don't know anything
+    about deferred responses, so we override various methods here.  This was
+    added to support tail -f like behavior on the logtail handler """
 
     def get_header(self, header):
         # this is overridden purely for speed (the base class doesn't
@@ -604,7 +608,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
                     try:
                         os.chown(socketname, sockchown[0], sockchown[1])
                     except OSError, why:
-                        if why[0] == errno.EPERM:
+                        if why.args[0] == errno.EPERM:
                             msg = ('Not permitted to chown %s to uid/gid %s; '
                                    'adjust "sockchown" value in config file or '
                                    'on command line to values that the '

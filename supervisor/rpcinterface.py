@@ -68,7 +68,7 @@ class SupervisorNamespaceRPCInterface:
     def getState(self):
         """ Return current state of supervisord as a struct
 
-        @return struct A struct with keys string statecode, int statename
+        @return struct A struct with keys int statecode, string statename
         """
         self._update('getState')
 
@@ -564,6 +564,9 @@ class SupervisorNamespaceRPCInterface:
 
         group, process = self._getGroupAndProcess(name)
 
+        if process is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
         start = int(process.laststart)
         stop = int(process.laststop)
         now = int(time.time())
@@ -801,7 +804,7 @@ class SupervisorNamespaceRPCInterface:
         try:
             process.write(chars)
         except OSError, why:
-            if why[0] == errno.EPIPE:
+            if why.args[0] == errno.EPIPE:
                 raise RPCError(Faults.NO_FILE, name)
             else:
                 raise

@@ -17,7 +17,7 @@ class DatatypesTest(unittest.TestCase):
     def test_boolean_returns_true_for_upper_truthy_values(self):
         for s in map(str.upper, datatypes.TRUTHY_STRINGS):
             actual = datatypes.boolean(s)
-            self.assert_(actual, True)
+            self.assertEqual(actual, True)
 
     def test_boolean_returns_false_for_falsy_values(self):
         for s in datatypes.FALSY_STRINGS:
@@ -143,6 +143,18 @@ class DatatypesTest(unittest.TestCase):
         self.assertRaises(ValueError,
                           datatypes.dict_of_key_value_pairs, kvp)
 
+    def test_process_or_group_name_strips_surrounding_whitespace(self):
+        name = " foo\t"
+        self.assertEqual("foo", datatypes.process_or_group_name(name))
+
+    def test_process_or_group_name_disallows_inner_spaces(self):
+        name = "foo bar"
+        self.assertRaises(ValueError, datatypes.process_or_group_name, name)
+
+    def test_process_or_group_name_disallows_colons(self):
+        name = "foo:bar"
+        self.assertRaises(ValueError, datatypes.process_or_group_name, name)
+
     def test_logfile_name_returns_none_for_none_values(self):
         for thing in datatypes.LOGFILE_NONES:
             actual = datatypes.logfile_name(thing)
@@ -211,6 +223,42 @@ class DatatypesTest(unittest.TestCase):
         bad_url = "unix://"
         self.assertRaises(ValueError, datatypes.url, bad_url)
 
+    @patch("pwd.getpwnam", Mock(return_value=[0,0,42]))
+    def test_name_to_uid_gets_uid_from_username(self):
+        uid = datatypes.name_to_uid("foo")
+        self.assertEqual(uid, 42)
+
+    @patch("pwd.getpwuid", Mock(return_value=[0,0,42]))
+    def test_name_to_uid_gets_uid_from_user_id(self):
+        uid = datatypes.name_to_uid("42")
+        self.assertEqual(uid, 42)
+
+    @patch("pwd.getpwnam", Mock(side_effect=KeyError("bad username")))
+    def test_name_to_uid_raises_for_bad_username(self):
+        self.assertRaises(ValueError, datatypes.name_to_uid, "foo")
+
+    @patch("pwd.getpwuid", Mock(side_effect=KeyError("bad user id")))
+    def test_name_to_uid_raises_for_bad_user_id(self):
+        self.assertRaises(ValueError, datatypes.name_to_uid, "42")
+
+    @patch("grp.getgrnam", Mock(return_value=[0,0,42]))
+    def test_name_to_gid_gets_gid_from_group_name(self):
+        gid = datatypes.name_to_gid("foo")
+        self.assertEqual(gid, 42)
+
+    @patch("grp.getgrgid", Mock(return_value=[0,0,42]))
+    def test_name_to_gid_gets_gid_from_group_id(self):
+        gid = datatypes.name_to_gid("42")
+        self.assertEqual(gid, 42)
+
+    @patch("grp.getgrnam", Mock(side_effect=KeyError("bad group name")))
+    def test_name_to_gid_raises_for_bad_group_name(self):
+        self.assertRaises(ValueError, datatypes.name_to_gid, "foo")
+
+    @patch("grp.getgrgid", Mock(side_effect=KeyError("bad group id")))
+    def test_name_to_gid_raises_for_bad_group_id(self):
+        self.assertRaises(ValueError, datatypes.name_to_gid, "42")
+
 class InetStreamSocketConfigTests(unittest.TestCase):
     def _getTargetClass(self):
         return datatypes.InetStreamSocketConfig
@@ -248,7 +296,7 @@ class InetStreamSocketConfigTests(unittest.TestCase):
         sock = conf.create_and_bind()
         reuse = sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
         self.assertTrue(reuse)
-        self.assertEquals(conf.addr(), sock.getsockname()) #verifies that bind was called
+        self.assertEqual(conf.addr(), sock.getsockname()) #verifies that bind was called
         sock.close()
 
     def test_same_urls_are_equal(self):
@@ -314,24 +362,24 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
 
         sock = call_create_and_bind(conf)
         self.assertTrue(os.path.exists(tf_name))
-        self.assertEquals(conf.addr(), sock.getsockname()) #verifies that bind was called
+        self.assertEqual(conf.addr(), sock.getsockname()) #verifies that bind was called
         sock.close()
         self.assertTrue(os.path.exists(tf_name))
         os.unlink(tf_name)
         #Verify that os.chown was called with correct args
-        self.assertEquals(1, chown_mock.call_count)
+        self.assertEqual(1, chown_mock.call_count)
         path_arg = chown_mock.call_args[0][0]
         uid_arg = chown_mock.call_args[0][1]
         gid_arg = chown_mock.call_args[0][2]
-        self.assertEquals(tf_name, path_arg)
-        self.assertEquals(owner[0], uid_arg)
-        self.assertEquals(owner[1], gid_arg)
+        self.assertEqual(tf_name, path_arg)
+        self.assertEqual(owner[0], uid_arg)
+        self.assertEqual(owner[1], gid_arg)
         #Verify that os.chmod was called with correct args
-        self.assertEquals(1, chmod_mock.call_count)
+        self.assertEqual(1, chmod_mock.call_count)
         path_arg = chmod_mock.call_args[0][0]
         mode_arg = chmod_mock.call_args[0][1]
-        self.assertEquals(tf_name, path_arg)
-        self.assertEquals(mode, mode_arg)
+        self.assertEqual(tf_name, path_arg)
+        self.assertEqual(mode, mode_arg)
 
     def test_same_paths_are_equal(self):
         conf1 = self._makeOne('/tmp/foo.sock')
@@ -356,8 +404,8 @@ class RangeCheckedConversionTests(unittest.TestCase):
         from supervisor.datatypes import RangeCheckedConversion
         return RangeCheckedConversion
 
-    def _makeOne(self, conversion, min=None, max=None):
-        return self._getTargetClass()(conversion, min, max)
+    def _makeOne(self, conversion, rmin=None, rmax=None):
+        return self._getTargetClass()(conversion, rmin, rmax)
 
     def test_below_lower_bound(self):
         conversion = self._makeOne(lambda *arg: -1, 0)
@@ -427,6 +475,33 @@ class TestColonSeparatedUserGroup(unittest.TestCase):
     def test_missinguser_username_and_groupname(self):
         self.assertRaises(ValueError,
                           self._callFUT, 'godihopethisuserdoesntexist:foo')
+
+    def test_separated_user_group_returns_both(self):
+        name_to_uid = Mock(return_value=12)
+        name_to_gid = Mock(return_value=34)
+
+        @patch("supervisor.datatypes.name_to_uid", name_to_uid)
+        @patch("supervisor.datatypes.name_to_gid", name_to_gid)
+        def colon_separated(value):
+            return self._callFUT(value)
+
+        uid, gid = colon_separated("foo:bar")
+        name_to_uid.assert_called_with("foo")
+        self.assertEqual(12, uid)
+        name_to_gid.assert_called_with("bar")
+        self.assertEqual(34, gid)
+
+    def test_separated_user_group_returns_user_only(self):
+        name_to_uid = Mock(return_value=42)
+
+        @patch("supervisor.datatypes.name_to_uid", name_to_uid)
+        def colon_separated(value):
+            return self._callFUT(value)
+
+        uid, gid = colon_separated("foo")
+        name_to_uid.assert_called_with("foo")
+        self.assertEqual(42, uid)
+        self.assertEqual(-1, gid)
 
 class TestOctalType(unittest.TestCase):
     def _callFUT(self, arg):

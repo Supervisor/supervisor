@@ -19,7 +19,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.xmlrpc import supervisor_xmlrpc_handler
         return supervisor_xmlrpc_handler
-    
+
     def _makeOne(self, supervisord, subinterfaces):
         return self._getTargetClass()(supervisord, subinterfaces)
 
@@ -161,8 +161,8 @@ class XMLRPCHandlerTests(unittest.TestCase):
         self.assertEqual(len(logdata), expected)
         self.assertEqual(logdata[-2],
                u'XML-RPC method called: supervisor.raiseError()')
-        self.failUnless(logdata[-1].startswith('Traceback'))
-        self.failUnless(logdata[-1].endswith('ValueError: error\n'))
+        self.assertTrue(logdata[-1].startswith('Traceback'))
+        self.assertTrue(logdata[-1].endswith('ValueError: error\n'))
         self.assertEqual(len(request.producers), 0)
         self.assertEqual(request._error, 500)
 
@@ -202,7 +202,7 @@ class SupervisorTransportTests(unittest.TestCase):
         from supervisor import xmlrpc
         transport = self._makeOne('user', 'pass', 'unix:///foo/bar')
         conn = transport._get_connection()
-        self.failUnless(isinstance(conn, xmlrpc.UnixStreamHTTPConnection))
+        self.assertTrue(isinstance(conn, xmlrpc.UnixStreamHTTPConnection))
         self.assertEqual(conn.host, 'localhost')
         self.assertEqual(conn.socketfile, '/foo/bar')
 
@@ -210,7 +210,7 @@ class SupervisorTransportTests(unittest.TestCase):
         import httplib
         transport = self._makeOne('user', 'pass', 'http://127.0.0.1:9001/')
         conn = transport._get_connection()
-        self.failUnless(isinstance(conn, httplib.HTTPConnection))
+        self.assertTrue(isinstance(conn, httplib.HTTPConnection))
         self.assertEqual(conn.host, '127.0.0.1')
         self.assertEqual(conn.port, 9001)
 
@@ -218,7 +218,7 @@ class SupervisorTransportTests(unittest.TestCase):
         import httplib
         transport = self._makeOne('user', 'pass', 'http://127.0.0.1/')
         conn = transport._get_connection()
-        self.failUnless(isinstance(conn, httplib.HTTPConnection))
+        self.assertTrue(isinstance(conn, httplib.HTTPConnection))
         self.assertEqual(conn.host, '127.0.0.1')
         self.assertEqual(conn.port, 80)
 
@@ -320,7 +320,12 @@ class IterparseLoadsTests(unittest.TestCase):
         </struct>
         </param>
         <param>
-        <array><data><value><i4>12</i4></value></data></array>
+        <array>
+          <data>
+            <value><i4>12</i4></value>
+            <value><i4>34</i4></value>
+          </data>
+        </array>
         </param>
         <param>
         <struct>
@@ -348,7 +353,7 @@ class IterparseLoadsTests(unittest.TestCase):
         self.assertEqual(params[5], datetime.datetime(1998, 7, 17, 14, 8, 55))
         self.assertEqual(params[6], "you can't read this!")
         self.assertEqual(params[7], {'k': 5})
-        self.assertEqual(params[8], [12])
+        self.assertEqual(params[8], [12, 34])
         self.assertEqual(params[9], {'k': [1]})
 
 class DummyResponse:
@@ -367,7 +372,7 @@ class DummyConnection:
 
     def getresponse(self):
         return self.response
-        
+
     def request(self, *arg, **kw):
         self.requestargs = arg
         self.requestkw = kw

@@ -1,12 +1,64 @@
-Next release
-------------
+3.1a1 (Next Release)
+--------------------
 
-- Fixed a bug where parsing ``command=`` could cause supervisord to crash if
-  shlex.split() fails, such as a bad quoting.  Patch by Scott Wilson.
+- Stopping a process in the backoff state now changes it to the stopped
+  state.  Previously, an attempt to stop a process in backoff would be
+  ignored.  Patch by Pascal Varet.
 
-- It is now possible to use ``supervisorctl`` on a machine with no
-  ``supervisord.conf`` file by supplying the connection information in
-  command line options.  Patch by Jens Rantil.
+- The ``directory`` option is now expanded separately for each process in
+  a homogeneous process group.  This allows each process to have its own
+  working directory.  Patch by Perttu Ranta-aho.
+
+- Added new ``stdout_syslog`` and ``stderr_syslog`` options to the config
+  file.  These are boolean options that indicate whether process output will
+  be sent to syslog.  Supervisor can now log to both files and syslog at the
+  same time.  Specifying a log filename of ``syslog`` is still supported
+  but deprecated.  Patch by Jason R. Coombs.
+
+- Removed ``setuptools`` from the ``requires`` list in ``setup.py`` because
+  it caused installation issues on some systems.
+
+- Fixed a bug in Medusa where the HTTP Basic authorizer would cause an
+  exception if the password contained a colon.  Thanks to Thomas Guttler
+  for reporting this issue.
+
+- The ``update`` command in ``supervisorctl`` now accepts optional group
+  names.  When group names are specified, only those groups will be
+  updated.  Patch by Gary M. Josack.
+
+3.0 (2013-07-30)
+----------------
+
+- Parsing the config file will now fail with an error message if a process
+  or group name contains characters that are not compatible with the
+  eventlistener protocol.
+
+- Fixed a bug where the ``tail -f`` command in ``supervisorctl`` would fail
+  if the combined length of the username and password was over 56 characters.
+
+- Reading the config file now gives a separate error message when the config
+  file exists but can't be read.  Previously, any error reading the file
+  would be reported as "could not find config file".  Patch by Jens Rantil.
+
+- Fixed an XML-RPC bug where array elements after the first would be ignored
+  when using the ElementTree-based XML parser.  Patch by Zev Benjamin.
+
+- Fixed the usage message output by ``supervisorctl`` to show the correct
+  default config file path.  Patch by Alek Storm.
+
+3.0b2 (2013-05-28)
+------------------
+
+- The behavior of the program option ``user`` has changed.  In all previous
+  versions, if ``supervisord`` failed to switch to the user, a warning would
+  be sent to the stderr log but the child process would still be spawned.
+  This means that a mistake in the config file could result in a child
+  process being unintentionally spawned as root.  Now, ``supervisord`` will
+  not spawn the child unless it was able to successfully switch to the user.
+  Thanks to Igor Partola for reporting this issue.
+
+- If a user specified in the config file does not exist on the system,
+  ``supervisord`` will now print an error and refuse to start.
 
 - Reverted a change to logging introduced in 3.0b1 that was intended to allow
   multiple processes to log to the same file with the rotating log handler.
@@ -17,8 +69,27 @@ Next release
   support, it was decided to remove this feature.  A warning was added to the
   documentation that two processes may not log to the same file.
 
+- Fixed a bug where parsing ``command=`` could cause supervisord to crash if
+  shlex.split() fails, such as a bad quoting.  Patch by Scott Wilson.
+
+- It is now possible to use ``supervisorctl`` on a machine with no
+  ``supervisord.conf`` file by supplying the connection information in
+  command line options.  Patch by Jens Rantil.
+
 - Fixed a bug where supervisord would crash if the syslog handler was used
   and supervisord received SIGUSR2 (log reopen request).
+
+- Fixed an XML-RPC bug where calling supervisor.getProcessInfo() with a bad
+  name would cause a 500 Internal Server Error rather than the returning
+  a BAD_NAME fault.
+
+- Added a favicon to the web interface.  Patch by Caio Ariede.
+
+- Fixed a test failure due to incorrect handling of daylight savings time
+  in the childutils tests.  Patch by Ildar Hizbulin.
+
+- Fixed a number of pyflakes warnings for unused variables, imports, and
+  dead code.  Patch by Philippe Ombredanne.
 
 3.0b1 (2012-09-10)
 ------------------
