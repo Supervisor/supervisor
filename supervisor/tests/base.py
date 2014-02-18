@@ -737,7 +737,6 @@ class DummySupervisorRPCNamespace:
     def getProcessInfo(self, name):
         from supervisor import xmlrpc
         import xmlrpclib
-        from supervisor.process import ProcessStates
         for i in self.all_process_info:
             if i['name']==name:
                 info=i
