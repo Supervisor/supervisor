@@ -247,8 +247,8 @@ Process Control
 
         .. describe:: stop
 
-            UNIX timestamp of when the process ended, or 0 if the process is
-            still running.
+            UNIX timestamp of when the process last ended, or 0 if the process
+            has never been stopped.
 
         .. describe:: now
 
