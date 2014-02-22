@@ -48,37 +48,37 @@ CLASSIFIERS = [
     'Topic :: System :: Boot',
     'Topic :: System :: Monitoring',
     'Topic :: System :: Systems Administration',
-    ]
+]
 
 version_txt = os.path.join(here, 'supervisor/version.txt')
 supervisor_version = open(version_txt).read().strip()
 
 dist = setup(
-    name = 'supervisor',
-    version = supervisor_version,
-    license = 'BSD-derived (http://www.repoze.org/LICENSE.txt)',
-    url = 'http://supervisord.org/',
-    description = "A system for controlling process state under UNIX",
-    long_description=README + '\n\n' +  CHANGES,
-    classifiers = CLASSIFIERS,
-    author = "Chris McDonough",
-    author_email = "chrism@plope.com",
-    maintainer = "Chris McDonough",
-    maintainer_email = "chrism@plope.com",
-    packages = find_packages(),
-    install_requires = requires,
-    extras_require = {'iterparse':['cElementTree >= 1.0.2']},
-    tests_require = ['mock >= 0.5.0'],
-    include_package_data = True,
-    zip_safe = False,
-    namespace_packages = ['supervisor'],
-    test_suite = "supervisor.tests",
-    entry_points = {
-     'console_scripts': [
+    name='supervisor',
+    version=supervisor_version,
+    license='BSD-derived (http://www.repoze.org/LICENSE.txt)',
+    url='http://supervisord.org/',
+    description="A system for controlling process state under UNIX",
+    long_description=README + '\n\n' + CHANGES,
+    classifiers=CLASSIFIERS,
+    author="Chris McDonough",
+    author_email="chrism@plope.com",
+    maintainer="Chris McDonough",
+    maintainer_email="chrism@plope.com",
+    packages=find_packages(),
+    install_requires=requires,
+    extras_require={'iterparse': ['cElementTree >= 1.0.2']},
+    tests_require=['mock >= 0.5.0'],
+    include_package_data=True,
+    zip_safe=False,
+    namespace_packages=['supervisor'],
+    test_suite="supervisor.tests",
+    entry_points={
+        'console_scripts': [
          'supervisord = supervisor.supervisord:main',
          'supervisorctl = supervisor.supervisorctl:main',
          'echo_supervisord_conf = supervisor.confecho:main',
          'pidproxy = supervisor.pidproxy:main',
-         ],
-      },
-    )
+        ],
+    },
+)
