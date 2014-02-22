@@ -588,7 +588,7 @@ class SubprocessTests(unittest.TestCase):
         instance.dispatchers[stdin_fd].flush_error = errno.EPIPE
         self.assertRaises(OSError, instance.write, sent)
 
-    def dont_test_spawn_and_kill(self):
+    def _dont_test_spawn_and_kill(self):
         # this is a functional test
         from supervisor.tests.base import makeSpew
         try:
