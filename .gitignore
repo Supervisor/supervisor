@@ -10,6 +10,8 @@ build/
 docs/.build/
 dist/
 .tox/
+stdout_logfile
+stderr_logfile
 nosetests.xml
 supervisor/coverage.xml
 tmp/
