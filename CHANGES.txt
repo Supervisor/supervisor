@@ -26,6 +26,11 @@
   names.  When group names are specified, only those groups will be
   updated.  Patch by Gary M. Josack.
 
+- Added new ``PROCESS_GROUP_ADDED`` and ``PROCESS_GROUP_REMOVED`` events.
+  These events are fired when process groups are added or removed from
+  Supervisor's runtime configuration when using the ``add`` and ``remove``
+  commands in ``supervisorctl``.  Patch by Brent Tubbs.
+
 3.0 (2013-07-30)
 ----------------
 
