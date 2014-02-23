@@ -344,6 +344,9 @@ def handle_syslog(logger, fmt):
     logger.addHandler(handler)
 
 def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
+    if 'Dummy' in logger.__class__.__name__:
+        return logger
+
     if filename == 'syslog':
         handler = SyslogHandler()
 
