@@ -703,8 +703,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_stopProcessGroup(self):
         options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
-        pconfig2 = DummyPConfig(options, 'process2', '/bin/foo2')
+        pconfig1 = DummyPConfig(options, 'process1', '/bin/foo', priority=1)
+        pconfig2 = DummyPConfig(options, 'process2', '/bin/foo2', priority=2)
         from supervisor.process import ProcessStates
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
                                                pconfig2)
@@ -731,8 +731,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_stopProcessGroup_nowait(self):
         options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'process1', __file__)
-        pconfig2 = DummyPConfig(options, 'process2', __file__)
+        pconfig1 = DummyPConfig(options, 'process1', __file__, priority=1)
+        pconfig2 = DummyPConfig(options, 'process2', __file__, priority=2)
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
                                                pconfig2)
         from supervisor.process import ProcessStates
@@ -784,8 +784,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_stopAllProcesses(self):
         options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
-        pconfig2 = DummyPConfig(options, 'process2', '/bin/foo2')
+        pconfig1 = DummyPConfig(options, 'process1', '/bin/foo', priority=1)
+        pconfig2 = DummyPConfig(options, 'process2', '/bin/foo2', priority=2)
         from supervisor.process import ProcessStates
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
                                                pconfig2)
@@ -812,8 +812,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_stopAllProcesses_nowait(self):
         options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'process1', __file__)
-        pconfig2 = DummyPConfig(options, 'process2', __file__)
+        pconfig1 = DummyPConfig(options, 'process1', __file__, priority=1)
+        pconfig2 = DummyPConfig(options, 'process2', __file__, priority=2)
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
                                                pconfig2)
         from supervisor.process import ProcessStates
@@ -1463,8 +1463,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_clearAllProcessLogs(self):
         options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'process1', 'foo')
-        pconfig2 = DummyPConfig(options, 'process2', 'bar')
+        pconfig1 = DummyPConfig(options, 'process1', 'foo', priority=1)
+        pconfig2 = DummyPConfig(options, 'process2', 'bar', priority=2)
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
                                                pconfig2)
         interface = self._makeOne(supervisord)
@@ -1489,8 +1489,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_clearAllProcessLogs_onefails(self):
         options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'process1', 'foo')
-        pconfig2 = DummyPConfig(options, 'process2', 'bar')
+        pconfig1 = DummyPConfig(options, 'process1', 'foo', priority=1)
+        pconfig2 = DummyPConfig(options, 'process2', 'bar', priority=2)
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
                                                pconfig2)
         supervisord.set_procattr('process1', 'error_at_clear', True)
