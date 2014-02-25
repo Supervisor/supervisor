@@ -599,8 +599,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
                 else:
                     try:
                         os.chown(socketname, sockchown[0], sockchown[1])
-                    except OSError:
-                        why = sys.exc_info()[1]
+                    except OSError as why:
                         if why.args[0] == errno.EPERM:
                             msg = ('Not permitted to chown %s to uid/gid %s; '
                                    'adjust "sockchown" value in config file or '

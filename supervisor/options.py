@@ -266,8 +266,7 @@ class Options:
         try:
             self.options, self.args = getopt.getopt(
                 args, "".join(self.short_options), self.long_options)
-        except getopt.error:
-            msg = sys.exc_info()[1]
+        except getopt.error as msg:
             if raise_getopt_errs:
                 self.usage(msg)
 
@@ -281,8 +280,7 @@ class Options:
             if handler is not None:
                 try:
                     arg = handler(arg)
-                except ValueError:
-                    msg = sys.exc_info()[1]
+                except ValueError as msg:
                     self.usage("invalid value for %s %r: %s" % (opt, arg, msg))
             if name and arg is not None:
                 if getattr(self, name) is not None:
@@ -297,8 +295,7 @@ class Options:
                 if handler is not None:
                     try:
                         value = handler(value)
-                    except ValueError:
-                        msg = sys.exc_info()[1]
+                    except ValueError as msg:
                         self.usage("invalid environment value for %s %r: %s"
                                    % (envvar, value, msg))
                 if name and value is not None:
@@ -357,8 +354,7 @@ class Options:
             set_here(self.here)
         try:
             self.read_config(self.configfile)
-        except ValueError:
-            msg = sys.exc_info()[1]
+        except ValueError as msg:
             if do_usage:
                 # if this is not called from an RPC method, run usage and exit.
                 self.usage(str(msg))
@@ -470,8 +466,7 @@ class ServerOptions(Options):
         if self.user is not None:
             try:
                 uid = name_to_uid(self.user)
-            except ValueError:
-                msg = sys.exc_info()[1]
+            except ValueError as msg:
                 self.usage(msg) # invalid user
             self.uid = uid
             self.gid = gid_for_uid(uid)
@@ -553,8 +548,7 @@ class ServerOptions(Options):
                 parser.read_file(fp)
             except AttributeError:
                 parser.readfp(fp)
-        except ConfigParser.ParsingError:
-            why = sys.exc_info()[1]
+        except ConfigParser.ParsingError as why:
             raise ValueError(str(why))
         finally:
             if need_close:
@@ -577,8 +571,7 @@ class ServerOptions(Options):
                         'Included extra file "%s" during parsing' % filename)
                     try:
                         parser.read(filename)
-                    except ConfigParser.ParsingError:
-                        why = sys.exc_info()[1]
+                    except ConfigParser.ParsingError as why:
                         raise ValueError(str(why))
 
         sections = parser.sections()
@@ -754,8 +747,7 @@ class ServerOptions(Options):
             try:
                 socket_config = self.parse_fcgi_socket(socket, proc_uid,
                                                     socket_owner, socket_mode)
-            except ValueError:
-                e = sys.exc_info()[1]
+            except ValueError as e:
                 raise ValueError('%s in [%s] socket' % (str(e), section))
 
             processes=self.processes_from_section(parser, section, program_name,
@@ -1049,8 +1041,7 @@ class ServerOptions(Options):
         if self.directory:
             try:
                 os.chdir(self.directory)
-            except OSError:
-                err = sys.exc_info()[1]
+            except OSError as err:
                 self.logger.critical("can't chdir into %r: %s"
                                      % (self.directory, err))
             else:
@@ -1136,8 +1127,7 @@ class ServerOptions(Options):
     def openhttpservers(self, supervisord):
         try:
             self.httpservers = self.make_http_servers(supervisord)
-        except socket.error:
-            why = sys.exc_info()[1]
+        except socket.error as why:
             if why.args[0] == errno.EADDRINUSE:
                 self.usage('Another program is already listening on '
                            'a port that one of our HTTP servers is '
@@ -1152,8 +1142,7 @@ class ServerOptions(Options):
                     self.usage('%s errno.%s (%d)' %
                                (help, errorname, why.args[0]))
             self.unlink_socketfiles = False
-        except ValueError:
-            why = sys.exc_info()[1]
+        except ValueError as why:
             self.usage(why.args[0])
 
     def get_autochildlog_name(self, name, identifier, channel):
@@ -1271,8 +1260,7 @@ class ServerOptions(Options):
         # we're sitting in the waitpid call.
         try:
             pid, sts = os.waitpid(-1, os.WNOHANG)
-        except OSError:
-            why = sys.exc_info()[1]
+        except OSError as why:
             err = why.args[0]
             if err not in (errno.ECHILD, errno.EINTR):
                 self.logger.critical(
@@ -1446,8 +1434,7 @@ class ServerOptions(Options):
     def readfd(self, fd):
         try:
             data = os.read(fd, 2 << 16) # 128K
-        except OSError:
-            why = sys.exc_info()[1]
+        except OSError as why:
             if why.args[0] not in (errno.EWOULDBLOCK, errno.EBADF, errno.EINTR):
                 raise
             data = ''

@@ -15,17 +15,18 @@
 import os
 import sys
 
-if sys.version_info[:2] < (2, 5):
-    msg = ("Supervisor requires Python 2.5 or later. You are using version %s. "
-           "Please install using a supported version." % sys.version)
-    sys.stderr.write(msg)
-    sys.exit(1)
+py_version = sys.version_info[:2]
+
+if py_version < (2, 6):
+    raise RuntimeError('On Python 2, Supervisor requires Python 2.6 or later')
+elif (3, 0) < py_version < (3, 2):
+    raise RuntimeError('On Python 3, Supervisor requires Python 3.2 or later')
 
 requires = ['meld3 >= 0.6.5']
 tests_require = []
 if sys.version_info[:2] < (3, 3):
     tests_require.append('mock')
-    
+
 from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
 try:

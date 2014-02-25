@@ -215,8 +215,7 @@ class Supervisor:
 
             try:
                 r, w, x = self.options.select(r, w, x, timeout)
-            except select.error:
-                err = sys.exc_info()[1]
+            except select.error as err:
                 r = w = x = []
                 if err.args[0] == errno.EINTR:
                     self.options.logger.blather('EINTR encountered in select')
@@ -325,7 +324,7 @@ def profile(cmd, globals, locals, sort_order, callers):
     try:
         import cProfile as profile
     except ImportError:
-        import profile # python < 2.5
+        import profile
     import pstats
     import tempfile
     fd, fn = tempfile.mkstemp()

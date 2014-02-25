@@ -63,8 +63,7 @@ class Handler:
     def flush(self):
         try:
             self.stream.flush()
-        except IOError:
-            why = sys.exc_info()[1]
+        except IOError as why:
             # if supervisor output is piped, EPIPE can be raised at exit
             if why.args[0] != errno.EPIPE:
                 raise
@@ -112,8 +111,7 @@ class FileHandler(Handler):
         self.close()
         try:
             os.remove(self.baseFilename)
-        except OSError:
-            why = sys.exc_info()[1]
+        except OSError as why:
             if why.args[0] != errno.ENOENT:
                 raise
 
@@ -197,8 +195,7 @@ class RotatingFileHandler(FileHandler):
         if os.path.exists(dfn):
             try:
                 os.remove(dfn)
-            except OSError:
-                why = sys.exc_info()[1]
+            except OSError as why:
                 # catch race condition (already deleted)
                 if why.args[0] != errno.ENOENT:
                     raise

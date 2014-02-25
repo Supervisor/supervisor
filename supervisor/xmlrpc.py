@@ -72,10 +72,9 @@ class DeferredXMLRPCResponse:
                 value = self.callback()
                 if value is NOT_DONE_YET:
                     return NOT_DONE_YET
-            except RPCError:
-                err = sys.exc_info()[1]
+            except RPCError as err:
                 value = xmlrpclib.Fault(err.code, err.text)
-                
+
             body = xmlrpc_marshal(value)
 
             self.finished = True
@@ -210,7 +209,7 @@ class SystemNamespaceRPCInterface:
             if methodname == name:
                 return methods[methodname]
         raise RPCError(Faults.SIGNATURE_UNSUPPORTED)
-    
+
     def methodSignature(self, name):
         """ Return an array describing the method signature in the
         form [rtype, ptype, ptype...] where rtype is the return data type
@@ -259,8 +258,7 @@ class SystemNamespaceRPCInterface:
                     raise RPCError(Faults.INCORRECT_PARAMETERS)
                 root = AttrDict(self.namespaces)
                 value = traverse(root, name, params)
-            except RPCError:
-                inst = sys.exc_info()[1]
+            except RPCError as inst:
                 value = {'faultCode': inst.code,
                          'faultString': inst.text}
             except:
@@ -280,8 +278,7 @@ class SystemNamespaceRPCInterface:
             if isinstance(callback, types.FunctionType):
                 try:
                     value = callback()
-                except RPCError:
-                    inst = sys.exc_info()[1]
+                except RPCError as inst:
                     value = {'faultCode':inst.code, 'faultString':inst.text}
 
                 if value is NOT_DONE_YET:
@@ -330,10 +327,10 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
 
     def match(self, request):
         return request.uri.startswith(self.path)
-        
+
     def continue_request (self, data, request):
         logger = self.supervisord.options.logger
-        
+
         try:
 
             params, method = self.loads(data)
@@ -343,7 +340,7 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                 logger.trace('XML-RPC request received with no method name')
                 request.error(400)
                 return
-            
+
             # we allow xml-rpc clients that do not send empty <params>
             # when there are no parameters for the method call
             if params is None:
@@ -362,9 +359,8 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                     )
                 logger.trace('XML-RPC method %s() returned successfully' %
                              method)
-            except RPCError:
+            except RPCError as err:
                 # turn RPCError reported by method into a Fault instance
-                err = sys.exc_info()[1]
                 value = xmlrpclib.Fault(err.code, err.text)
                 logger.trace('XML-RPC method %s() returned fault: [%d] %s' % (
                     method,
@@ -459,7 +455,7 @@ class SupervisorTransport(xmlrpclib.Transport):
                 "Content-Type" : "text/xml",
                 "Accept": "text/xml"
                 }
-            
+
             # basic auth
             if self.username is not None and self.password is not None:
                 unencoded = "%s:%s" % (self.username, self.password)
@@ -467,7 +463,7 @@ class SupervisorTransport(xmlrpclib.Transport):
                 encoded = encoded.replace('\n', '')
                 encoded = encoded.replace('\012', '')
                 self.headers["Authorization"] = "Basic %s" % encoded
-                
+
         self.headers["Content-Length"] = str(len(request_body))
 
         self.connection.request('POST', handler, request_body, self.headers)
@@ -485,7 +481,7 @@ class SupervisorTransport(xmlrpclib.Transport):
         p, u = self.getparser()
         p.feed(data)
         p.close()
-        return u.close()    
+        return u.close()
 
 class UnixStreamHTTPConnection(httplib.HTTPConnection):
     def connect(self):

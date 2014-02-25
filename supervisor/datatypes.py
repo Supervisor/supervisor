@@ -259,8 +259,7 @@ class UnixStreamSocketConfig(SocketConfig):
         if self.mode is not None:
             try:
                 os.chmod(self.path, self.mode)
-            except Exception:
-                e = sys.exc_info()[1]
+            except Exception as e:
                 raise ValueError("Could not change permissions of socket "
                                     + "file: %s" % e)
 
@@ -268,8 +267,7 @@ class UnixStreamSocketConfig(SocketConfig):
         if self.owner is not None:
             try:
                 os.chown(self.path, self.owner[0], self.owner[1])
-            except Exception:
-                e = sys.exc_info()[1]
+            except Exception as e:
                 raise ValueError("Could not change ownership of socket file: "
                                     + "%s" % e)
 

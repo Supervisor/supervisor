@@ -191,16 +191,14 @@ class ClientOptionsTests(unittest.TestCase):
         instance.exit = dummy_exit
         try:
             instance.realize(args=['-c', fname])
-        except DummyException:
-            e = sys.exc_info()[1]
+        except DummyException as e:
             self.assertEqual(e.exitcode, 2)
         else:
             self.fail("expected exception")
 
         try:
             instance.read_config(fname)
-        except ValueError:
-            e = sys.exc_info()[1]
+        except ValueError as e:
             self.assertTrue("could not find config file" in str(e))
         else:
             self.fail("expected exception")
@@ -209,8 +207,7 @@ class ClientOptionsTests(unittest.TestCase):
         os.chmod(tempf.name, 0) # Removing read perms
         try:
             instance.read_config(tempf.name)
-        except ValueError:
-            e = sys.exc_info()[1]
+        except ValueError as e:
             self.assertTrue("could not read config file" in str(e))
         else:
             self.fail("expected exception")
@@ -508,8 +505,7 @@ class ServerOptionsTests(unittest.TestCase):
 
         try:
             instance.realize()
-        except DummyException:
-            e = sys.exc_info()[1]
+        except DummyException as e:
             # Caught expected exception
             import traceback
             self.assertEqual(
@@ -622,16 +618,14 @@ class ServerOptionsTests(unittest.TestCase):
         instance.exit = dummy_exit
         try:
             instance.realize(args=['-c', fname])
-        except DummyException:
-            e = sys.exc_info()[1]
+        except DummyException as e:
             self.assertEqual(e.exitcode, 2)
         else:
             self.fail("expected exception")
 
         try:
             instance.read_config(fname)
-        except ValueError:
-            e = sys.exc_info()[1]
+        except ValueError as e:
             self.assertTrue("could not find config file" in str(e))
         else:
             self.fail("expected exception")
@@ -640,8 +634,7 @@ class ServerOptionsTests(unittest.TestCase):
         os.chmod(tempf.name, 0) # Removing read perms
         try:
             instance.read_config(tempf.name)
-        except ValueError:
-            e = sys.exc_info()[1]
+        except ValueError as e:
             self.assertTrue("could not read config file" in str(e))
         else:
             self.fail("expected exception")
@@ -651,8 +644,7 @@ class ServerOptionsTests(unittest.TestCase):
         from supervisor.options import readFile
         try:
             readFile('/notthere', 0, 10)
-        except ValueError:
-            inst = sys.exc_info()[1]
+        except ValueError as inst:
             self.assertEqual(inst.args[0], 'FAILED')
         else:
             raise AssertionError("Didn't raise")

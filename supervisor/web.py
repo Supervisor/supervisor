@@ -205,8 +205,7 @@ class TailView(MeldView):
                 try:
                     tail = rpcinterface.readProcessLog(processname, limit, offset)
                     tail = rpcinterface.readProcessLog(processname, -1024, 0)
-                except RPCError:
-                    e = sys.exc_info()[1]
+                except RPCError as e:
                     if e.code == Faults.NO_FILE:
                         tail = 'No file for %s' % processname
                     else:
@@ -361,8 +360,7 @@ class StatusView(MeldView):
                     try:
                         callback = rpcinterface.supervisor.startProcess(
                             namespec)
-                    except RPCError:
-                        e = sys.exc_info()[1]
+                    except RPCError as e:
                         if e.code == Faults.SPAWN_ERROR:
                             def spawnerr():
                                 return 'Process %s spawn error' % namespec

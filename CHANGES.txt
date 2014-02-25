@@ -1,13 +1,13 @@
-3.1a1 (Next Release)
---------------------
-
-Python 3 related
-~~~~~~~~~~~~~~~~
+4.0.0-dev (Next 4.x Release)
+----------------------------
 
 - The ``supervisor`` package is no longer a namespace package.
 
-Other
-~~~~~
+- Support for Python 2.5 has been dropped.  On Python 2, Supervisor
+  now requires Python 2.6 or later.
+
+3.1.0-dev (Next 3.x Release)
+----------------------------
 
 - Stopping a process in the backoff state now changes it to the stopped
   state.  Previously, an attempt to stop a process in backoff would be

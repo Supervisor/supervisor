@@ -105,8 +105,7 @@ class Subprocess(object):
         if not """
         try:
             commandargs = shlex.split(self.config.command)
-        except ValueError:
-            e = sys.exc_info()[1]
+        except ValueError as e:
             raise BadCommand("can't parse command %r: %s" % \
                 (self.config.command, str(e)))
 
@@ -213,8 +212,7 @@ class Subprocess(object):
 
         try:
             filename, argv = self.get_execv_args()
-        except ProcessException:
-            what = sys.exc_info()[1]
+        except ProcessException as what:
             self.record_spawnerr(what.args[0])
             self._assertInState(ProcessStates.STARTING)
             self.change_state(ProcessStates.BACKOFF)
@@ -222,8 +220,7 @@ class Subprocess(object):
 
         try:
             self.dispatchers, self.pipes = self.config.make_dispatchers(self)
-        except OSError:
-            why = sys.exc_info()[1]
+        except OSError as why:
             code = why.args[0]
             if code == errno.EMFILE:
                 # too many file descriptors open
@@ -237,8 +234,7 @@ class Subprocess(object):
 
         try:
             pid = options.fork()
-        except OSError:
-            why = sys.exc_info()[1]
+        except OSError as why:
             code = why.args[0]
             if code == errno.EAGAIN:
                 # process table full
@@ -324,8 +320,7 @@ class Subprocess(object):
             try:
                 if cwd is not None:
                     options.chdir(cwd)
-            except OSError:
-                why = sys.exc_info()[1]
+            except OSError as why:
                 code = errno.errorcode.get(why.args[0], why.args[0])
                 msg = "couldn't chdir to %s: %s\n" % (cwd, code)
                 options.write(2, "supervisor: " + msg)
@@ -336,8 +331,7 @@ class Subprocess(object):
                 if self.config.umask is not None:
                     options.setumask(self.config.umask)
                 options.execve(filename, argv, env)
-            except OSError:
-                why = sys.exc_info()[1]
+            except OSError as why:
                 code = errno.errorcode.get(why.args[0], why.args[0])
                 msg = "couldn't exec %s: %s\n" % (argv[0], code)
                 options.write(2, "supervisor: " + msg)
@@ -600,7 +594,7 @@ class Subprocess(object):
                 self.kill(signal.SIGKILL)
 
 Subprocess = total_ordering(Subprocess)
-                
+
 class FastCGISubprocess(Subprocess):
     """Extends Subprocess class to handle FastCGI subprocesses"""
 
@@ -734,8 +728,7 @@ class FastCGIProcessGroup(ProcessGroup):
         #to fail early during start up if there is a config error
         try:
             self.socket_manager.get_socket()
-        except Exception:
-            e = sys.exc_info()[1]
+        except Exception as e:
             raise ValueError('Could not create FastCGI socket %s: %s' % (self.socket_manager.config(), e))
 
 class EventListenerPool(ProcessGroupBase):
@@ -825,8 +818,7 @@ class EventListenerPool(ProcessGroupBase):
                     envelope = self._eventEnvelope(event_type, serial,
                                                    pool_serial, payload)
                     process.write(envelope)
-                except OSError:
-                    why = sys.exc_info()[1]
+                except OSError as why:
                     if why.args[0] != errno.EPIPE:
                         raise
                     continue

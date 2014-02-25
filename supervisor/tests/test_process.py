@@ -611,8 +611,7 @@ class SubprocessTests(unittest.TestCase):
     #             try:
     #                 data = os.popen('ps').read()
     #                 break
-    #             except IOError:
-    #                 why = sys.exc_info()[1]
+    #             except IOError as why:
     #                 if why.args[0] != errno.EINTR:
     #                     raise
     #                     # try again ;-)

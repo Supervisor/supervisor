@@ -26,8 +26,7 @@ class TestBase(unittest.TestCase):
         from supervisor import xmlrpc
         try:
             callable(*args, **kw)
-        except xmlrpc.RPCError:
-            inst = sys.exc_info()[1]
+        except xmlrpc.RPCError as inst:
             self.assertEqual(inst.code, code)
         else:
             raise AssertionError("Didn't raise")
@@ -441,7 +440,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         time.sleep(.1)
         from supervisor import xmlrpc
         self._assertRPCError(xmlrpc.Faults.ABNORMAL_TERMINATION, callback)
-    
+
     def test_startProcess_abnormal_term_startsecs_exceeded(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', __file__, autostart=False,
@@ -1646,7 +1645,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         else:
             self.assertEqual(event.type, 'fi\xc3\xad once')
             self.assertEqual(event.data, 'fi\xc3\xad twice')
-            
+
 
 class SystemNamespaceXMLRPCInterfaceTests(TestBase):
     def _getTargetClass(self):

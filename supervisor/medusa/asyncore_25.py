@@ -121,8 +121,7 @@ def poll(timeout=0.0, map=None):
         else:
             try:
                 r, w, e = select.select(r, w, e, timeout)
-            except select.error:
-                err = sys.exc_info()[1]
+            except select.error as err:
                 if err.args[0] != EINTR:
                     raise
                 else:
@@ -168,8 +167,7 @@ def poll2(timeout=0.0, map=None):
                 pollster.register(fd, flags)
         try:
             r = pollster.poll(timeout)
-        except select.error:
-            err = sys.exc_info()[1]
+        except select.error as err:
             if err.args[0] != EINTR:
                 raise
             r = []
@@ -324,8 +322,7 @@ class dispatcher:
         try:
             conn, addr = self.socket.accept()
             return conn, addr
-        except socket.error:
-            why = sys.exc_info()[1]
+        except socket.error as why:
             if why.args[0] == EWOULDBLOCK:
                 pass
             else:
@@ -335,8 +332,7 @@ class dispatcher:
         try:
             result = self.socket.send(data)
             return result
-        except socket.error:
-            why = sys.exc_info()[1]
+        except socket.error as why:
             if why.args[0] == EWOULDBLOCK:
                 return 0
             else:
@@ -352,8 +348,7 @@ class dispatcher:
                 return ''
             else:
                 return data
-        except socket.error:
-            why = sys.exc_info()[1]
+        except socket.error as why:
             # winsock sometimes throws ENOTCONN
             if why.args[0] in [ECONNRESET, ENOTCONN, ESHUTDOWN]:
                 self.handle_close()
