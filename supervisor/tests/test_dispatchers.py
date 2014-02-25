@@ -288,6 +288,8 @@ class POutputDispatcherTests(unittest.TestCase):
 
         finally:
             try:
+                dispatcher.capturelog.close()
+                dispatcher.childlog.close()
                 os.remove(logfile)
             except (OSError, IOError):
                 pass
@@ -352,6 +354,8 @@ class POutputDispatcherTests(unittest.TestCase):
 
         finally:
             try:
+                dispatcher.capturelog.close()
+                dispatcher.childlog.close()
                 os.remove(logfile)
             except (OSError, IOError):
                 pass
