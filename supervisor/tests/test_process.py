@@ -587,48 +587,48 @@ class SubprocessTests(unittest.TestCase):
         instance.dispatchers[stdin_fd].flush_error = errno.EPIPE
         self.assertRaises(OSError, instance.write, sent)
 
-    # def dont_test_spawn_and_kill(self):
-    #     # this is a functional test
-    #     from supervisor.tests.base import makeSpew
-    #     try:
-    #         called = 0
-    #         def foo(*args):
-    #             called = 1
-    #         signal.signal(signal.SIGCHLD, foo)
-    #         executable = makeSpew()
-    #         options = DummyOptions()
-    #         config = DummyPConfig(options, 'spew', executable)
-    #         instance = self._makeOne(config)
-    #         result = instance.spawn()
-    #         msg = options.logger.data[0]
-    #         self.assertTrue(msg.startswith("spawned: 'spew' with pid"))
-    #         self.assertEqual(len(instance.pipes), 6)
-    #         self.assertTrue(instance.pid)
-    #         self.assertTrueEqual(instance.pid, result)
-    #         origpid = instance.pid
-    #         import errno
-    #         while 1:
-    #             try:
-    #                 data = os.popen('ps').read()
-    #                 break
-    #             except IOError as why:
-    #                 if why.args[0] != errno.EINTR:
-    #                     raise
-    #                     # try again ;-)
-    #         time.sleep(0.1) # arbitrary, race condition possible
-    #         self.assertTrue(data.find(as_bytes(repr(origpid))) != -1 )
-    #         msg = instance.kill(signal.SIGTERM)
-    #         time.sleep(0.1) # arbitrary, race condition possible
-    #         self.assertEqual(msg, None)
-    #         pid, sts = os.waitpid(-1, os.WNOHANG)
-    #         data = os.popen('ps').read()
-    #         self.assertEqual(data.find(as_bytes(repr(origpid))), -1) # dubious
-    #     finally:
-    #         try:
-    #             os.remove(executable)
-    #         except:
-    #             pass
-    #         signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+    def _dont_test_spawn_and_kill(self):
+        # this is a functional test
+        from supervisor.tests.base import makeSpew
+        try:
+            called = 0
+            def foo(*args):
+                called = 1
+            signal.signal(signal.SIGCHLD, foo)
+            executable = makeSpew()
+            options = DummyOptions()
+            config = DummyPConfig(options, 'spew', executable)
+            instance = self._makeOne(config)
+            result = instance.spawn()
+            msg = options.logger.data[0]
+            self.assertTrue(msg.startswith("spawned: 'spew' with pid"))
+            self.assertEqual(len(instance.pipes), 6)
+            self.assertTrue(instance.pid)
+            self.assertTrueEqual(instance.pid, result)
+            origpid = instance.pid
+            import errno
+            while 1:
+                try:
+                    data = os.popen('ps').read()
+                    break
+                except IOError as why:
+                    if why.args[0] != errno.EINTR:
+                        raise
+                        # try again ;-)
+            time.sleep(0.1) # arbitrary, race condition possible
+            self.assertTrue(data.find(as_bytes(repr(origpid))) != -1 )
+            msg = instance.kill(signal.SIGTERM)
+            time.sleep(0.1) # arbitrary, race condition possible
+            self.assertEqual(msg, None)
+            pid, sts = os.waitpid(-1, os.WNOHANG)
+            data = os.popen('ps').read()
+            self.assertEqual(data.find(as_bytes(repr(origpid))), -1) # dubious
+        finally:
+            try:
+                os.remove(executable)
+            except:
+                pass
+            signal.signal(signal.SIGCHLD, signal.SIG_DFL)
 
     def test_stop(self):
         options = DummyOptions()
