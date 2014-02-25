@@ -105,6 +105,7 @@ class Controller(cmd.Cmd):
                       'restart','start','stop','version','clear',
                       'fg','open','quit','remove','shutdown','status',
                       'tail','help']
+        self.process_cache = None
         cmd.Cmd.__init__(self, completekey, stdin, stdout)
         for name, factory, kwargs in self.options.plugin_factories:
             plugin = factory(self, **kwargs)
@@ -132,6 +133,7 @@ class Controller(cmd.Cmd):
             return self.emptyline()
         if cmd is None:
             return self.default(line)
+        self.process_cache = None
         self.lastcmd = line
         if cmd == '':
             return self.default(line)
@@ -223,24 +225,24 @@ class Controller(cmd.Cmd):
             raise
         return True
 
+    def _get_process_list(self):
+        if not self.process_cache:
+            groups=[]
+            total=[]
+            info = self.get_supervisor().getAllProcessInfo()
+            for i in info:
+                if i['group'] == i['name']:
+                    total.append(i['name']+' ')
+                if i['group'] not in groups:
+                    groups.append(i['group'])
+                total.append(i['group']+':'+i['name']+' ')
+            self.process_cache = { 'groups':groups,'total':total }
+        return self.process_cache
+
     def completionmatches(self,text,line,flag=0):
-        groups=[]
-        programs=[]
-        groupwiseprograms={}
-        info = self.get_supervisor().getAllProcessInfo()
-        for i in info:
-            programs.append(i['name'])
-            if i['group'] not in groups:
-                groups.append(i['group'])
-                groupwiseprograms[i['group']]=[]
-            groupwiseprograms[i['group']].append(i['name'])
-        total=[]
-        for i in groups:
-            if i in programs:
-                total.append(i+' ')
-            else:
-                for n in groupwiseprograms[i]:
-                    total.append(i+':'+n+' ')
+        processes = self._get_process_list()
+        groups = processes['groups']
+        total = processes['total']
         if flag:
             # add/remove require only the group name
             return [i+' ' for i in groups if i.startswith(text)]
@@ -250,11 +252,6 @@ class Controller(cmd.Cmd):
             current=line.split()[-1]
             if line.endswith(' ') and len(line.split()) > 1:
                 results=[i for i in total if i.startswith(text)]
-                return results
-            if ':' in current:
-                g=current.split(':')[0]
-                results = [i+' ' for i in groupwiseprograms[g]
-                           if i.startswith(text)]
                 return results
             results = [i for i in total if i.startswith(text)]
             return results
@@ -1158,6 +1155,11 @@ def main(args=None, options=None):
     if options.interactive:
         try:
             import readline
+            # Remove - (minus sign) as a word delimiter
+            delim = readline.get_completer_delims()
+            delim = delim.replace('-','')
+            delim = delim.replace(':','')
+            readline.set_completer_delims(delim)
             if options.history_file:
                 try:
                     readline.read_history_file(options.history_file)
