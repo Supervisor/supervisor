@@ -286,7 +286,7 @@ class Controller(cmd.Cmd):
                     return None
                 results=[i+' ' for i in self.vocab if i.startswith(text)]+[None]
                 return results[state]
-            elif exp in ['add','remove']:
+            elif exp in ['add','remove','update']:
                 results=self.completionmatches(text,line,flag=1)+[None]
                 return results[state]
             else:
