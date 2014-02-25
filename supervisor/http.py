@@ -5,6 +5,7 @@ import sys
 import supervisor.medusa.text_socket as socket
 import errno
 import pwd
+import weakref
 
 from supervisor.compat import urllib
 from supervisor.compat import sha1
@@ -644,13 +645,17 @@ class supervisor_af_unix_http_server(supervisor_http_server):
 class tail_f_producer:
     def __init__(self, request, filename, head):
         self.file = open(filename, 'rb')
-        self.request = request
+        self.request = weakref.ref(request)
         self.delay = 0.1
         sz = self.fsize()
         if sz >= head:
             self.sz = sz - head
         else:
             self.sz = 0
+
+    def __del__(self):
+        if self.file:
+            self.file.close()
 
     def more(self):
         try:
