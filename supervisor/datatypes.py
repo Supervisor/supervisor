@@ -204,8 +204,12 @@ class InetStreamSocketConfig(SocketConfig):
 
     def create_and_bind(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(self.addr())
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind(self.addr())
+        except:
+            sock.close()
+            raise
         return sock
 
 class UnixStreamSocketConfig(SocketConfig):
@@ -229,13 +233,14 @@ class UnixStreamSocketConfig(SocketConfig):
         if os.path.exists(self.path):
             os.unlink(self.path)
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.bind(self.addr())
         try:
+            sock.bind(self.addr())
             self._chown()
             self._chmod()
         except:
             sock.close()
-            os.unlink(self.path)
+            if os.path.exists(self.path):
+                os.unlink(self.path)
             raise
         return sock
 
