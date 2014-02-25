@@ -9,7 +9,6 @@ VERSION = "$Id: xmlrpc_handler.py,v 1.6 2004/04/21 14:09:24 akuchling Exp $"
 
 import supervisor.medusa.http_server as http_server
 try:
-    #noinspection PyUnresolvedReferences
     import xmlrpclib
 except:
     import xmlrpc.client as xmlrpclib

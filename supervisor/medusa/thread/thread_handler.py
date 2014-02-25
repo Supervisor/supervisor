@@ -2,7 +2,6 @@
 
 import re
 try:
-    #noinspection PyUnresolvedReferences
     from StringIO import StringIO
 except:
     from io import StringIO

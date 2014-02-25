@@ -10,7 +10,6 @@ from socket import * # relied on to be imported from elsewhere
 if PY3:
     bin_socket = socket
     class text_socket(socket):
-        #noinspection PyMissingConstructor
         def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, fileno=None):
             bin_socket.__init__(self, family, type, proto, fileno)
 

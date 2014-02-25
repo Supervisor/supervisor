@@ -51,7 +51,6 @@ class line_writer:
         else:
             return 0
 
-#noinspection PyUnusedLocal
 def main (env, stdin, stdout):
     parts = env['REQUEST_URI'].split('/')
     if len(parts) >= 3:

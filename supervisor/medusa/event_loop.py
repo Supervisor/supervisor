@@ -72,13 +72,11 @@ class test (asyncore.dispatcher):
     def writable (self):
         return not self.connected
 
-    #noinspection PyUnusedLocal
     def connect_timeout_callback (self, event_loop, when):
         if not self.connected:
             print('Timeout on connect')
             self.close()
 
-    #noinspection PyUnusedLocal
     def periodic_thing_callback (self, event_loop, when):
         print('A Periodic Event has Occurred!')
         # re-schedule it.

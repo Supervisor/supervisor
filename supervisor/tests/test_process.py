@@ -617,7 +617,6 @@ class SubprocessTests(unittest.TestCase):
     #                     raise
     #                     # try again ;-)
     #         time.sleep(0.1) # arbitrary, race condition possible
-    #         #noinspection PyUnboundLocalVariable
     #         self.assertTrue(data.find(as_bytes(repr(origpid))) != -1 )
     #         msg = instance.kill(signal.SIGTERM)
     #         time.sleep(0.1) # arbitrary, race condition possible

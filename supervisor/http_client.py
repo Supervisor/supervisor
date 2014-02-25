@@ -28,7 +28,6 @@ class Listener(object):
     def done(self, url):
         pass
 
-    #noinspection PyUnusedLocal
     def feed(self, url, data):
         sys.stdout.write(data)
         sys.stdout.flush()

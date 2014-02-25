@@ -68,7 +68,6 @@ class chat_channel (asynchat.async_chat):
             else:
                 self.push ('unknown command: %s' % command_line[0])
 
-    #noinspection PyUnusedLocal
     def cmd_quit (self, args):
         self.server.push_line (self, '[left]')
         self.push ('Goodbye!\r\n')

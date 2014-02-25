@@ -515,7 +515,6 @@ class supervisor_http_server(http_server.http_server):
                         )
                 )
 
-    #noinspection PyUnusedLocal
     def log_info(self, message, type='info'):
         ip = ''
         if getattr(self, 'ip', None) is not None:
@@ -525,7 +524,6 @@ class supervisor_http_server(http_server.http_server):
 class supervisor_af_inet_http_server(supervisor_http_server):
     """ AF_INET version of supervisor HTTP server """
 
-    #noinspection PyMissingConstructor
     def __init__(self, ip, port, logger_object):
         self.ip = ip
         self.port = port
@@ -556,7 +554,6 @@ class supervisor_af_inet_http_server(supervisor_http_server):
 class supervisor_af_unix_http_server(supervisor_http_server):
     """ AF_UNIX version of supervisor HTTP server """
 
-    #noinspection PyMissingConstructor
     def __init__(self, socketname, sockchmod, sockchown, logger_object):
         self.ip = socketname
         self.port = socketname

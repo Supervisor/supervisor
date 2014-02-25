@@ -140,7 +140,6 @@ class rpc_proxy:
                 print('RPC: <== proxy(%08x)' % value)
             return rpc_proxy (self.conn, value)
         elif kind == 1:
-            #noinspection PyExceptionInherit
             raise RPC_Error(value)
         else:
             if self.DEBUG:
@@ -207,7 +206,6 @@ class fastrpc_proxy:
         if error is None:
             return result
         else:
-            #noinspection PyExceptionInherit
             raise RPC_Error(error)
 
     def __repr__ (self):

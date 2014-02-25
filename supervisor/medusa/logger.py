@@ -161,7 +161,6 @@ class syslog_logger (m_syslog.syslog_client):
     def __repr__ (self):
         return '<syslog logger address=%s>' % (repr(self.address))
 
-    #noinspection PyMethodOverriding
     def log(self, message):
         m_syslog.syslog_client.log (
                 self,

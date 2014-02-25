@@ -125,9 +125,7 @@ class async_chat (asyncore.dispatcher):
                 #    collect data to the prefix
                 # 3) end of buffer does not match any prefix:
                 #    collect data
-                #noinspection PyTypeChecker
                 terminator_len = len(terminator)
-                #noinspection PyTypeChecker
                 index = self.ac_in_buffer.find(terminator)
                 if index != -1:
                     # we found the terminator

@@ -179,7 +179,6 @@ class monitor_server (asyncore.dispatcher):
 
     def handle_accept (self):
         conn, addr = self.accept()
-        #noinspection PyStringFormat
         self.log_info('Incoming monitor connection from %s:%d' % addr)
         self.channel_class (self, conn, addr)
         self.total_sessions.increment()
@@ -334,7 +333,6 @@ if __name__ == '__main__':
         s = secure_monitor_server (password, '', port)
         if encrypt:
             s.channel_class = secure_encrypted_monitor_channel
-            #noinspection PyUnresolvedReferences
             import sapphire
             s.cipher = sapphire
     else:

@@ -719,7 +719,6 @@ class ftp_channel (asynchat.async_chat):
         help_lines = []
         for attr in attrs:
             if attr[:4] == 'cmd_':
-                #noinspection PyTypeChecker
                 x = getattr (self, attr)
                 if type(x) == type(self.cmd_help):
                     if x.__doc__:
@@ -992,7 +991,6 @@ class dummy_authorizer:
     def __init__ (self, root='/'):
         self.root = root
 
-    #noinspection PyUnusedLocal
     def authorize (self, channel, username, password):
         channel.persona = -1, -1
         channel.read_only = 1
@@ -1002,7 +1000,6 @@ class anon_authorizer:
     def __init__ (self, root='/'):
         self.root = root
 
-    #noinspection PyUnusedLocal
     def authorize (self, channel, username, password):
         if username in ('ftp', 'anonymous'):
             channel.persona = -1, -1

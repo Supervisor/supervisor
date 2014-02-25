@@ -58,7 +58,6 @@ from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, \
 from supervisor.compat import as_string, as_bytes
 
 try:
-    #noinspection PyUnresolvedReferences,PyUnboundLocalVariable
     socket_map
 except NameError:
     socket_map = {}

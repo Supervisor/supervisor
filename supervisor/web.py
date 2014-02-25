@@ -221,7 +221,6 @@ class TailView(MeldView):
 
         refresh_anchor = root.findmeld('refresh_anchor')
         if processname is not None:
-            #noinspection PyUnresolvedReferences
             refresh_anchor.attributes(
                 href='tail.html?processname=%s&limit=%s' % (
                     urllib.quote(processname), urllib.quote(str(abs(limit)))
@@ -235,7 +234,6 @@ class TailView(MeldView):
 class StatusView(MeldView):
     def actions_for_process(self, process):
         state = process.get_state()
-        #noinspection PyUnresolvedReferences
         processname = urllib.quote(make_namespec(process.group.config.name,
                                                  process.config.name))
         start = {
@@ -405,7 +403,6 @@ class StatusView(MeldView):
                     return NOT_DONE_YET
                 if message is not None:
                     server_url = form['SERVER_URL']
-                    #noinspection PyUnresolvedReferences
                     location = server_url + '?message=%s' % urllib.quote(
                         message)
                     response['headers']['Location'] = location

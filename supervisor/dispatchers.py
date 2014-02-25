@@ -412,13 +412,11 @@ class PEventListenerDispatcher(PDispatcher):
                     return
 
             else:
-                #noinspection PyTypeChecker
                 needed = self.resultlen - len(self.result)
 
                 if needed:
                     self.result += self.state_buffer[:needed]
                     self.state_buffer = self.state_buffer[needed:]
-                    #noinspection PyTypeChecker
                     needed = self.resultlen - len(self.result)
 
                 if not needed:
@@ -515,7 +513,6 @@ class RejectEvent(Exception):
     """ The exception type expected by a dispatcher when a handler wants
     to reject an event """
 
-#noinspection PyUnusedLocal
 def default_handler(event, response):
     if response != 'OK':
         raise RejectEvent(response)

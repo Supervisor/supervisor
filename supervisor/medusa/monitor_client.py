@@ -109,7 +109,6 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         if encrypt:
             client = encrypted_monitor_client(p, (sys.argv[1], int(sys.argv[2])))
-            #noinspection PyUnresolvedReferences
             import sapphire
             client.init_cipher (sapphire, p)
         else:

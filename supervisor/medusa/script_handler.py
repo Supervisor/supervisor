@@ -100,7 +100,6 @@ class script_handler:
                 self.exceptions.increment()
         finally:
             sys.stdin, sys.stdout, sys.stderr = old_files
-            #noinspection PyUnresolvedReferences
             del sys.request
 
         i,o,e = temp_files

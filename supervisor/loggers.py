@@ -89,7 +89,6 @@ class Handler:
         except:
             self.handleError()
 
-    #noinspection PyUnusedLocal
     def handleError(self):
         ei = sys.exc_info()
         traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)

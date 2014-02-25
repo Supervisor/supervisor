@@ -75,11 +75,9 @@ else:
 try:
     from hashlib import sha1
 except ImportError:
-    #noinspection PyUnresolvedReferences
     from sha import new as sha1
 
 try:
-    #noinspection PyUnresolvedReferences
     import syslog
 except ImportError:
     syslog = None
@@ -95,7 +93,6 @@ except ImportError:
     from io import StringIO
 
 try:
-    #noinspection PyUnresolvedReferences
     from sys import maxint
 except ImportError:
     from sys import maxsize as maxint
@@ -127,7 +124,6 @@ try:
 except ImportError:
     try:
         # Failing that, try cElementTree instead.
-        #noinspection PyPackageRequirements
         from cElementTree import iterparse
     except ImportError:
         iterparse = None

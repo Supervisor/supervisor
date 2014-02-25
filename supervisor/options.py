@@ -252,7 +252,6 @@ class Options:
             progname = sys.argv[0]
         if doc is None:
             try:
-                #noinspection PyUnresolvedReferences
                 import __main__
                 doc = __main__.__doc__
             except Exception:

@@ -184,7 +184,6 @@ class Controller(cmd.Cmd):
         if stuff is not None:
             if isinstance(stuff, unicode):
                 stuff = stuff.encode('utf-8')
-            #noinspection PyTypeChecker
             self.stdout.write(stuff + '\n')
 
     def get_supervisor(self):
@@ -268,7 +267,6 @@ class Controller(cmd.Cmd):
 
     def complete(self,text,state):
         try:
-            #noinspection PyUnresolvedReferences
             import readline
         except ImportError:
             return None
@@ -1173,7 +1171,6 @@ def main(args=None, options=None):
         c.onecmd(" ".join(options.args))
     if options.interactive:
         try:
-            #noinspection PyUnresolvedReferences
             import readline
             if options.history_file:
                 try:
@@ -1186,7 +1183,6 @@ def main(args=None, options=None):
                     except IOError:
                         pass
 
-                #noinspection PyUnresolvedReferences
                 import atexit
                 atexit.register(save)
         except ImportError:

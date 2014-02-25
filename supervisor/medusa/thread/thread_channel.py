@@ -19,7 +19,6 @@ import supervisor.medusa.text_socket as socket
 try:
     import _thread as thread
 except ImportError:
-    #noinspection PyUnresolvedReferences
     import thread
 
 # this channel slaves off of another one.  it starts a thread which
