@@ -502,6 +502,8 @@ class SupervisorNamespaceRPCInterface:
         self._update('getProcessInfo')
 
         group, process = self._getGroupAndProcess(name)
+        if process is None:
+            return self._getGroupProcessInfo(group)
 
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
@@ -547,6 +549,17 @@ class SupervisorNamespaceRPCInterface:
 
         output = []
         for group, process in all_processes:
+            name = make_namespec(group.config.name, process.config.name)
+            output.append(self.getProcessInfo(name))
+        return output
+
+    def _getGroupProcessInfo(self, group):
+        """ Get info about the processes of a certain group
+
+        @return array result  An array of process status results
+        """
+        output = []
+        for process in group.processes.values():
             name = make_namespec(group.config.name, process.config.name)
             output.append(self.getProcessInfo(name))
         return output

@@ -578,7 +578,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     else:
                         raise
                     continue
-                self.ctl.output(self._procrepr(info))
+                if not isinstance(info, list):
+                    info = [info]
+                for i in info:
+                    self.ctl.output(self._procrepr(i))
         else:
             for info in supervisor.getAllProcessInfo():
                 self.ctl.output(self._procrepr(info))
