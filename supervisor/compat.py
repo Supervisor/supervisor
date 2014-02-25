@@ -11,7 +11,7 @@ if PY3:
     def as_bytes(s): return s if isinstance(s,bytes) else s.encode('utf8')
     def as_string(s): return s if isinstance(s,str) else s.decode('utf8')
     from functools import reduce
-    
+
 else:
     long = long
     raw_input = raw_input
@@ -66,12 +66,12 @@ try:
 except ImportError:
     import urlparse
     import urllib
-    
+
 if PY3:
     from base64 import encodebytes as encodestring
 else:
     from base64 import encodestring
-    
+
 try:
     from hashlib import sha1
 except ImportError:
@@ -93,7 +93,7 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
-    
+
 try:
     #noinspection PyUnresolvedReferences
     from sys import maxint
@@ -115,7 +115,7 @@ try:
 except ImportError:
     from base64 import decodestring, encodestring
 
-    
+
 if PY3:
     func_attribute = '__func__'
 else:

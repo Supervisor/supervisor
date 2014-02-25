@@ -21,7 +21,7 @@ class Listener(object):
 
     def error(self, url, error):
         print_function(url, error)
-    
+
     def response_header(self, url, name, value):
         pass
 

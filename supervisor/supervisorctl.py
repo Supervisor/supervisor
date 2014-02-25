@@ -218,7 +218,7 @@ class Controller(cmd.Cmd):
                     '[rpcinterface:supervisor] section is enabled in the '
                     'configuration file (see sample.conf).')
                 return False
-            raise 
+            raise
         except socket.error:
             why = sys.exc_info()[1]
             if why.args[0] == errno.ECONNREFUSED:
