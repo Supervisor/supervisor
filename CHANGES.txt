@@ -31,6 +31,9 @@
   Supervisor's runtime configuration when using the ``add`` and ``remove``
   commands in ``supervisorctl``.  Patch by Brent Tubbs.
 
+- The ``status`` command in ``supervisorctl`` now supports group name
+  syntax: ``status groupname:*``.
+
 3.0 (2013-07-30)
 ----------------
 

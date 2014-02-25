@@ -294,16 +294,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         value = plugin.ctl.stdout.getvalue().strip()
         self.assertEqual(value, "Error: bad channel 'fudge'")
 
-    def test_status_oneprocess(self):
-        plugin = self._makeOne()
-        result = plugin.do_status('foo')
-        self.assertEqual(result, None)
-        value = plugin.ctl.stdout.getvalue().strip()
-        self.assertEqual(value.split(None, 2),
-                         ['foo', 'RUNNING', 'foo description'])
-
-
-    def test_status_allprocesses(self):
+    def test_status_all_processes_no_arg(self):
         plugin = self._makeOne()
         result = plugin.do_status('')
         self.assertEqual(result, None)
@@ -314,6 +305,64 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          ['bar', 'FATAL', 'bar description'])
         self.assertEqual(value[2].split(None, 2),
                          ['baz:baz_01', 'STOPPED', 'baz description'])
+
+    def test_status_all_processes_all_arg(self):
+        plugin = self._makeOne()
+        result = plugin.do_status('all')
+        self.assertEqual(result, None)
+        value = plugin.ctl.stdout.getvalue().split('\n')
+        self.assertEqual(value[0].split(None, 2),
+                         ['foo', 'RUNNING', 'foo description'])
+        self.assertEqual(value[1].split(None, 2),
+                         ['bar', 'FATAL', 'bar description'])
+        self.assertEqual(value[2].split(None, 2),
+                         ['baz:baz_01', 'STOPPED', 'baz description'])
+
+    def test_status_process_name(self):
+        plugin = self._makeOne()
+        result = plugin.do_status('foo')
+        self.assertEqual(result, None)
+        value = plugin.ctl.stdout.getvalue().strip()
+        self.assertEqual(value.split(None, 2),
+                         ['foo', 'RUNNING', 'foo description'])
+
+    def test_status_group_name(self):
+        plugin = self._makeOne()
+        result = plugin.do_status('baz:*')
+        value = plugin.ctl.stdout.getvalue().split('\n')
+        self.assertEqual(value[0].split(None, 2),
+                         ['baz:baz_01', 'STOPPED', 'baz description'])
+
+    def test_status_mixed_names(self):
+        plugin = self._makeOne()
+        result = plugin.do_status('foo baz:*')
+        value = plugin.ctl.stdout.getvalue().split('\n')
+        self.assertEqual(value[0].split(None, 2),
+                         ['foo', 'RUNNING', 'foo description'])
+        self.assertEqual(value[1].split(None, 2),
+                         ['baz:baz_01', 'STOPPED', 'baz description'])
+
+    def test_status_bad_group_name(self):
+        plugin = self._makeOne()
+        result = plugin.do_status('badgroup:*')
+        self.assertEqual(result, None)
+        value = plugin.ctl.stdout.getvalue().split('\n')
+        self.assertEqual(value[0], "badgroup: ERROR (no such group)")
+
+    def test_status_bad_process_name(self):
+        plugin = self._makeOne()
+        result = plugin.do_status('badprocess')
+        self.assertEqual(result, None)
+        value = plugin.ctl.stdout.getvalue().split('\n')
+        self.assertEqual(value[0], "badprocess: ERROR (no such process)")
+
+    def test_status_bad_process_name_with_group(self):
+        plugin = self._makeOne()
+        result = plugin.do_status('badgroup:badprocess')
+        self.assertEqual(result, None)
+        value = plugin.ctl.stdout.getvalue().split('\n')
+        self.assertEqual(value[0], "badgroup:badprocess: "
+                                   "ERROR (no such process)")
 
     def test_start_fail(self):
         plugin = self._makeOne()

@@ -565,30 +565,44 @@ class DefaultControllerPlugin(ControllerPluginBase):
             return
 
         supervisor = self.ctl.get_supervisor()
+        all_infos = supervisor.getAllProcessInfo()
 
         names = arg.strip().split()
-
-        if names:
-            for name in names:
-                try:
-                    info = supervisor.getProcessInfo(name)
-                except xmlrpclib.Fault, e:
-                    if e.faultCode == xmlrpc.Faults.BAD_NAME:
-                        self.ctl.output('No such process %s' % name)
-                    else:
-                        raise
-                    continue
-                self.ctl.output(self._procrepr(info))
+        if not names or "all" in names:
+            matching_infos = all_infos
         else:
-            for info in supervisor.getAllProcessInfo():
-                self.ctl.output(self._procrepr(info))
+            matching_infos = []
+
+            for name in names:
+                bad_name = True
+                group_name, process_name = split_namespec(name)
+
+                for info in all_infos:
+                    matched = info['group'] == group_name
+                    if process_name is not None:
+                        matched = matched and info['name'] == process_name
+
+                    if matched:
+                        bad_name = False
+                        matching_infos.append(info)
+
+                if bad_name:
+                    if process_name is None:
+                        msg = "%s: ERROR (no such group)" % group_name
+                    else:
+                        msg = "%s: ERROR (no such process)" % name
+                    self.ctl.output(msg)
+
+        for info in matching_infos:
+            self.ctl.output(self._procrepr(info))
 
     def help_status(self):
-        self.ctl.output("status\t\t\tGet all process status info.")
-        self.ctl.output(
-            "status <name>\t\tGet status on a single process by name.")
-        self.ctl.output("status <name> <name>\tGet status on multiple named "
-                     "processes.")
+        self.ctl.output("status <name>\t\tGet status for a single process")
+        self.ctl.output("status <gname>:*\tGet status for all "
+                        "processes in a group")
+        self.ctl.output("status <name> <name>\tGet status for multiple named "
+                        "processes")
+        self.ctl.output("status\t\t\tGet all process status info")
 
     def do_pid(self, arg):
         supervisor = self.ctl.get_supervisor()
