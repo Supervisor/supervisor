@@ -223,7 +223,7 @@ class Controller(cmd.Cmd):
             raise
         return True
 
-    def completionmatches(self,text,line,flag=0):
+    def completionmatches(self, text, line, onlygroups=False):
         groups=[]
         programs=[]
         groupwiseprograms={}
@@ -241,8 +241,8 @@ class Controller(cmd.Cmd):
             else:
                 for n in groupwiseprograms[i]:
                     total.append(i+':'+n+' ')
-        if flag:
-            # add/remove require only the group name
+        if onlygroups:
+            # add/remove/update require only the group name
             return [i+' ' for i in groups if i.startswith(text)]
         if len(line.split()) == 1:
             return total
@@ -287,7 +287,7 @@ class Controller(cmd.Cmd):
                 results=[i+' ' for i in self.vocab if i.startswith(text)]+[None]
                 return results[state]
             elif exp in ['add','remove','update']:
-                results=self.completionmatches(text,line,flag=1)+[None]
+                results=self.completionmatches(text,line,onlygroups=True)+[None]
                 return results[state]
             else:
                 results=[i+' ' for i in self.vocab if i.startswith(text)]+[None]
