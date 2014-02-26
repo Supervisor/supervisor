@@ -1091,7 +1091,7 @@ For a ``[group:x]``, there must be one or more ``[program:x]``
 sections elsewhere in your configuration file, and the group must
 refer to them by name in the ``programs`` value.
 
-If "homogeneous" program groups" (represented by program sections) are
+If "homogeneous" process groups (represented by program sections) are
 placed into a "heterogeneous" group via ``[group:x]`` section's
 ``programs`` line, the homogeneous groups that are implied by the
 program section will not exist at runtime in supervisor.  Instead, all
