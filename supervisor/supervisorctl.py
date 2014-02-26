@@ -101,13 +101,13 @@ class Controller(cmd.Cmd):
         self.options = options
         self.prompt = self.options.prompt + '> '
         self.options.plugins = []
-        self.vocab = ['add','exit','maintail','pid','reload',
-                      'restart','start','stop','version','clear',
-                      'fg','open','quit','remove','shutdown','status',
-                      'tail','help']
+        self.vocab = ['help']
         cmd.Cmd.__init__(self, completekey, stdin, stdout)
         for name, factory, kwargs in self.options.plugin_factories:
             plugin = factory(self, **kwargs)
+            for a in dir(plugin):
+                if a.startswith('do_') and callable(getattr(plugin, a)):
+                    self.vocab.append(a[3:])
             self.options.plugins.append(plugin)
             plugin.name = name
 
