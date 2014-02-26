@@ -269,26 +269,26 @@ class Controller(cmd.Cmd):
             results = [i+' ' for i in self.vocab if i.startswith(text)]+[None]
             return results[state]
         else:
-            exp = line.split()[0]
-            if exp in ['start','stop','restart','clear','status','tail','fg','pid']:
+            cmd = line.split()[0]
+            # commands that accept a process name
+            if cmd in ('clear', 'fg', 'pid', 'restart', 'start', 'stop',
+                       'status', 'tail'):
                 if not line.endswith(' ') and len(line.split()) == 1:
                     return [text + ' ', None][state]
-                if exp == 'fg':
+                if cmd == 'fg':
                     if line.endswith(' ') and len(line.split()) > 1:
                         return None
                 results = self.completionmatches(text,line)+[None]
                 return results[state]
-            elif exp in ['maintail','reload','shutdown','exit','open',
-                         'quit','version','EOF']:
-                return None
-            elif exp == 'help':
-                if line.endswith(' ') and len(line.split()) > 1:
-                    return None
-                results=[i+' ' for i in self.vocab if i.startswith(text)]+[None]
-                return results[state]
-            elif exp in ['add','remove','update']:
+            # commands that accept a group name
+            elif cmd in ('add', 'remove', 'update'):
                 results=self.completionmatches(text,line,onlygroups=True)+[None]
                 return results[state]
+            # commands that accept no arguments
+            elif cmd in ('EOF', 'exit', 'maintail', 'reload', 'shutdown',
+                         'quit', 'open', 'version'):
+                results = None
+            # incomplete or unrecognized command completes to command list
             else:
                 results=[i+' ' for i in self.vocab if i.startswith(text)]+[None]
                 return results[state]
