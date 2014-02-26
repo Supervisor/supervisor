@@ -275,9 +275,6 @@ class Controller(cmd.Cmd):
                        'status', 'tail'):
                 if not line.endswith(' ') and len(line.split()) == 1:
                     return [text + ' ', None][state]
-                if cmd == 'fg':
-                    if line.endswith(' ') and len(line.split()) > 1:
-                        return None
                 results = self.completionmatches(text,line)+[None]
                 return results[state]
             # commands that accept a group name
