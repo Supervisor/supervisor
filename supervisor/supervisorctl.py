@@ -259,7 +259,7 @@ class Controller(cmd.Cmd):
             results = [i for i in total if i.startswith(text)]
             return results
 
-    def complete(self,text,state):
+    def complete(self, text, state):
         try:
             import readline
         except ImportError:
@@ -278,7 +278,7 @@ class Controller(cmd.Cmd):
                         return None
                 results = self.completionmatches(text,line)+[None]
                 return results[state]
-            elif exp in ['maintail','pid','reload','shutdown','exit','open',
+            elif exp in ['maintail','reload','shutdown','exit','open',
                          'quit','version','EOF']:
                 return None
             elif exp == 'help':
