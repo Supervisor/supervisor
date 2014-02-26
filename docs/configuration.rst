@@ -1072,7 +1072,7 @@ configuration.
 ``[group:x]`` Section Settings
 ------------------------------
 
-It is often useful to group "homogeneous" processes groups (aka
+It is often useful to group "homogeneous" process groups (aka
 "programs") together into a "heterogeneous" process group so they can
 be controlled as a unit from Supervisor's various controller
 interfaces.
