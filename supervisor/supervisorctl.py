@@ -333,13 +333,13 @@ class ControllerPluginBase:
                 func = getattr(self, 'help_' + arg)
             except AttributeError:
                 try:
-                    doc=getattr(self, 'do_' + arg).__doc__
+                    doc = getattr(self, 'do_' + arg).__doc__
                     if doc:
-                        self.ctl.stdout.write("%s\n"%str(doc))
+                        self.ctl.output(doc)
                         return
                 except AttributeError:
                     pass
-                self.ctl.stdout.write("%s\n"%str(self.ctl.nohelp % (arg,)))
+                self.ctl.output(self.ctl.nohelp % (arg,))
                 return
             func()
         else:
@@ -366,8 +366,8 @@ class ControllerPluginBase:
                         cmds_doc.append(cmd)
                     else:
                         cmds_undoc.append(cmd)
-            self.ctl.stdout.write("\n")
-            self.ctl.print_topics(self.doc_header,   cmds_doc,   15,80)
+            self.ctl.output('')
+            self.ctl.print_topics(self.doc_header, cmds_doc, 15, 80)
 
 class DefaultControllerPlugin(ControllerPluginBase):
     name = 'default'
