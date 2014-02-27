@@ -927,7 +927,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
         for name in names:
             try:
-                result = supervisor.removeProcessGroup(name)
+                supervisor.removeProcessGroup(name)
             except xmlrpclib.Fault, e:
                 if e.faultCode == xmlrpc.Faults.STILL_RUNNING:
                     self.ctl.output('ERROR: process/group still running: %s'
