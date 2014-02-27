@@ -263,32 +263,30 @@ class Controller(cmd.Cmd):
         try:
             import readline
         except ImportError:
-            return None
+            return
+
         line = readline.get_line_buffer()
-        if line == '':
-            results = [i+' ' for i in self.vocab if i.startswith(text)]+[None]
-            return results[state]
+        results = []
+        # blank line completes to command list
+        if not line.strip():
+            results = [v+' ' for v in self.vocab if v.startswith(text)]
+        # whole command without trailing space completes the space
+        elif line.lstrip() in self.vocab:
+            results = [text+' ']
         else:
             cmd = line.split()[0]
+            # "help" or incomplete command completes command list
+            if cmd == 'help' or cmd not in self.vocab:
+                results = [v+' ' for v in self.vocab if v.startswith(text)]
             # commands that accept a process name
-            if cmd in ('clear', 'fg', 'pid', 'restart', 'start', 'stop',
-                       'status', 'tail'):
-                if not line.endswith(' ') and len(line.split()) == 1:
-                    return [text + ' ', None][state]
-                results = self.completionmatches(text,line)+[None]
-                return results[state]
+            elif cmd in ('clear', 'fg', 'pid', 'restart', 'start', 'stop',
+                         'status', 'tail'):
+                results = self.completionmatches(text, line)
             # commands that accept a group name
             elif cmd in ('add', 'remove', 'update'):
-                results=self.completionmatches(text,line,onlygroups=True)+[None]
-                return results[state]
-            # commands that accept no arguments
-            elif cmd in ('EOF', 'exit', 'maintail', 'reload', 'shutdown',
-                         'quit', 'open', 'version'):
-                results = None
-            # incomplete or unrecognized command completes to command list
-            else:
-                results=[i+' ' for i in self.vocab if i.startswith(text)]+[None]
-                return results[state]
+                results = self.completionmatches(text, line, onlygroups=True)
+        if len(results) > state:
+            return results[state]
 
     def do_help(self, arg):
         for plugin in self.options.plugins:
