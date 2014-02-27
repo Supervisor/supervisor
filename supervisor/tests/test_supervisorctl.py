@@ -129,10 +129,19 @@ class ControllerTests(unittest.TestCase):
         options = DummyClientOptions()
         controller = self._makeOne(options)
         controller.stdout = StringIO()
-        results = controller.do_help(None)
+        results = controller.do_help('')
         helpval = controller.stdout.getvalue()
         self.assertEqual(results, None)
         self.assertEqual(helpval, 'foo helped')
+
+    def test_do_help_for_help(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        results = controller.do_help("help")
+        helpval = controller.stdout.getvalue()
+        self.assertEqual(results, None)
+        self.assertTrue("help\t\tPrint a list" in helpval)
 
     def test_get_supervisor_returns_serverproxy_supervisor_namespace(self):
         options = DummyClientOptions()

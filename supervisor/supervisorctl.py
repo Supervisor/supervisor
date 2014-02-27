@@ -289,8 +289,11 @@ class Controller(cmd.Cmd):
             return results[state]
 
     def do_help(self, arg):
-        for plugin in self.options.plugins:
-            plugin.do_help(arg)
+        if arg.strip() == 'help':
+            self.help_help()
+        else:
+            for plugin in self.options.plugins:
+                plugin.do_help(arg)
 
     def help_help(self):
         self.output("help\t\tPrint a list of available actions")
