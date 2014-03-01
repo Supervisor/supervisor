@@ -114,11 +114,14 @@ class ControllerTests(unittest.TestCase):
         controller.stdout=StringIO()
         plugin = DummyPlugin()
         controller.options.plugin=(plugin,)
-        for i in ['add','remove']:
-            result = controller.completionmatches('',i+' ',1)
-            self.assertEqual(result,['foo ','bar ','baz '])
-        result = controller.completionmatches('','fg baz:')
-        self.assertEqual(result,['baz_01 '])
+        results = controller.completionmatches('', onlygroups=True)
+        self.assertEqual(results, ['foo ','bar ','baz '])
+        results = controller.completionmatches('f', onlygroups=True)
+        self.assertEqual(results, ['foo '])
+        results = controller.completionmatches('', onlygroups=False)
+        self.assertEqual(results, ['foo ', 'bar ', 'baz:baz_01 '])
+        results = controller.completionmatches('b', onlygroups=False)
+        self.assertEqual(results, ['bar ', 'baz:baz_01 '])
 
     def test_nohelp(self):
         options = DummyClientOptions()

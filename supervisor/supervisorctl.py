@@ -223,7 +223,7 @@ class Controller(cmd.Cmd):
             raise
         return True
 
-    def completionmatches(self, text, line, onlygroups=False):
+    def completionmatches(self, text, onlygroups=False):
         groups=[]
         programs=[]
         groupwiseprograms={}
@@ -245,11 +245,12 @@ class Controller(cmd.Cmd):
             # add/remove/update require only the group name
             results = [i+' ' for i in groups if i.startswith(text)]
         else:
-            current = line.split()[-1]
-            if ':' in current:
-                g = current.split(':')[0]
-                results = [i+' ' for i in groupwiseprograms[g]
-                           if i.startswith(text)]
+            if ':' in text:
+                group, piece = text.split(':', 1)
+                results = []
+                for p in groupwiseprograms.get(group, []):
+                    if p.startswith(piece):
+                        results.append('%s:%s ' % (group, p))
             else:
                 results = [i for i in total if i.startswith(text)]
         return results
@@ -276,10 +277,10 @@ class Controller(cmd.Cmd):
             # commands that accept a process name
             elif cmd in ('clear', 'fg', 'pid', 'restart', 'start', 'stop',
                          'status', 'tail'):
-                results = self.completionmatches(text, line)
+                results = self.completionmatches(text)
             # commands that accept a group name
             elif cmd in ('add', 'remove', 'update'):
-                results = self.completionmatches(text, line, onlygroups=True)
+                results = self.completionmatches(text, onlygroups=True)
         if len(results) > state:
             return results[state]
 
@@ -1151,6 +1152,10 @@ def main(args=None, options=None):
     if options.interactive:
         try:
             import readline
+            delims = readline.get_completer_delims()
+            delims = delims.replace(':', '') # "group:process" as one word
+            readline.set_completer_delims(delims)
+
             if options.history_file:
                 try:
                     readline.read_history_file(options.history_file)
