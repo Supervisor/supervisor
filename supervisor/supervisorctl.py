@@ -243,21 +243,16 @@ class Controller(cmd.Cmd):
                     total.append(i+':'+n+' ')
         if onlygroups:
             # add/remove/update require only the group name
-            return [i+' ' for i in groups if i.startswith(text)]
-        if len(line.split()) == 1:
-            return total
+            results = [i+' ' for i in groups if i.startswith(text)]
         else:
-            current=line.split()[-1]
-            if line.endswith(' ') and len(line.split()) > 1:
-                results=[i for i in total if i.startswith(text)]
-                return results
+            current = line.split()[-1]
             if ':' in current:
-                g=current.split(':')[0]
+                g = current.split(':')[0]
                 results = [i+' ' for i in groupwiseprograms[g]
                            if i.startswith(text)]
-                return results
-            results = [i for i in total if i.startswith(text)]
-            return results
+            else:
+                results = [i for i in total if i.startswith(text)]
+        return results
 
     def complete(self, text, state):
         try:
