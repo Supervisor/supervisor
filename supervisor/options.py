@@ -1997,7 +1997,7 @@ def make_namespec(group_name, process_name):
 def split_namespec(namespec):
     names = namespec.split(':', 1)
     if len(names) == 2:
-        # group and and process name differ
+        # group and process name differ
         group_name, process_name = names
         if not process_name or process_name == '*':
             process_name = None
