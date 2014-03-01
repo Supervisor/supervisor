@@ -224,6 +224,8 @@ class Controller(cmd.Cmd):
         return True
 
     def completionmatches(self, text, onlygroups=False):
+        """Helper method used by complete() to generate completion
+        lists for group and process names."""
         groups=[]
         programs=[]
         groupwiseprograms={}
@@ -255,13 +257,16 @@ class Controller(cmd.Cmd):
                 results = [i for i in total if i.startswith(text)]
         return results
 
-    def complete(self, text, state):
-        try:
+    def complete(self, text, state, line=None):
+        """Completer function that Cmd will register with readline using
+        readline.set_completer().  This function will be called by readline
+        as complete(text, state) where text is a fragment to complete and
+        state is an integer (0..n).  Each call returns a string with a new
+        completion.  When no more are available, None is returned."""
+        if line is None: # line is only set in tests
             import readline
-        except ImportError:
-            return
+            line = readline.get_line_buffer()
 
-        line = readline.get_line_buffer()
         results = []
         # blank line completes to command list
         if not line.strip():

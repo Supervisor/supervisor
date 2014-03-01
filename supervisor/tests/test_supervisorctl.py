@@ -113,7 +113,7 @@ class ControllerTests(unittest.TestCase):
         controller = self._makeOne(options)
         controller.stdout=StringIO()
         plugin = DummyPlugin()
-        controller.options.plugin=(plugin,)
+        controller.options.plugins=(plugin,)
         results = controller.completionmatches('', onlygroups=True)
         self.assertEqual(results, ['foo ','bar ','baz '])
         results = controller.completionmatches('f', onlygroups=True)
