@@ -117,7 +117,7 @@ class SupervisorNamespaceRPCInterface:
         self._update('clearLog')
 
         logfile = self.supervisord.options.logfile
-        if  logfile is None or not self.supervisord.options.exists(logfile):
+        if logfile is None or not self.supervisord.options.exists(logfile):
             raise RPCError(Faults.NO_FILE)
 
         # there is a race condition here, but ignore it.
