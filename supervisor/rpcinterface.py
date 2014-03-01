@@ -656,6 +656,9 @@ class SupervisorNamespaceRPCInterface:
 
         group, process = self._getGroupAndProcess(name)
 
+        if process is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
         try:
             # implies a reopen
             process.removelogs()

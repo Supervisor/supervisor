@@ -34,6 +34,10 @@
 - The ``status`` command in ``supervisorctl`` now supports group name
   syntax: ``status groupname:*``.
 
+- Fixed an XML-RPC bug where calling supervisor.clearProcessLogs() with a
+  name like "group:*" would cause a 500 Internal Server Error rather than
+  returning a BAD_NAME fault.
+
 3.0 (2013-07-30)
 ----------------
 
