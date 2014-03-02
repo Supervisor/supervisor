@@ -108,20 +108,136 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(controller.cmdqueue, [' help'])
         self.assertEqual(plugin.helped, True)
 
-    def test_completionmatches(self):
+    def test_complete_action_empty(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
         controller.stdout=StringIO()
-        plugin = DummyPlugin()
-        controller.options.plugins=(plugin,)
-        results = controller.completionmatches('', onlygroups=True)
-        self.assertEqual(results, ['foo ','bar ','baz '])
-        results = controller.completionmatches('f', onlygroups=True)
-        self.assertEqual(results, ['foo '])
-        results = controller.completionmatches('', onlygroups=False)
-        self.assertEqual(results, ['foo ', 'bar ', 'baz:baz_01 '])
-        results = controller.completionmatches('b', onlygroups=False)
-        self.assertEqual(results, ['bar ', 'baz:baz_01 '])
+        controller.vocab = ['help']
+        result = controller.complete('', 0, line='')
+        self.assertEqual(result, 'help ')
+        result = controller.complete('', 1, line='')
+        self.assertTrue(result is None)
+
+    def test_complete_action_partial(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help']
+        result = controller.complete('h', 0, line='h')
+        self.assertEqual(result, 'help ')
+        result = controller.complete('h', 1, line='h')
+        self.assertTrue(result is None)
+
+    def test_complete_action_whole(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help']
+        result = controller.complete('help', 0, line='help')
+        self.assertEqual(result, 'help ')
+
+    def test_complete_action_uncompletable(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        result = controller.complete('bad', 0, line='bad')
+        self.assertTrue(result is None)
+
+    def test_complete_help_empty(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help', 'start']
+        result = controller.complete('', 0, line='help ')
+        self.assertEqual(result, 'help ')
+        result = controller.complete('', 1, line='help ')
+        self.assertEqual(result, 'start ')
+        result = controller.complete('', 2, line='help ')
+        self.assertTrue(result is None)
+
+    def test_complete_help_action(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help', 'start']
+        result = controller.complete('he', 0, line='help he')
+        self.assertEqual(result, 'help ')
+        result = controller.complete('he', 1, line='help he')
+        self.assertTrue(result is None)
+
+    def test_complete_start_empty(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help', 'start']
+        result = controller.complete('', 0, line='start ')
+        self.assertEqual(result, 'foo ')
+        result = controller.complete('', 1, line='start ')
+        self.assertEqual(result, 'bar ')
+        result = controller.complete('', 2, line='start ')
+        self.assertEqual(result, 'baz:baz_01 ')
+        result = controller.complete('', 3, line='start ')
+        self.assertTrue(result is None)
+
+    def test_complete_start_no_colon(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help', 'start']
+        result = controller.complete('f', 0, line='start f')
+        self.assertEqual(result, 'foo ')
+        result = controller.complete('f', 1, line='start f')
+        self.assertTrue(result is None)
+
+    def test_complete_start_with_colon(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help', 'start']
+        result = controller.complete('foo:', 0, line='start foo:')
+        self.assertEqual(result, 'foo:foo ')
+        result = controller.complete('foo:', 1, line='start foo:')
+        self.assertTrue(result is None)
+
+    def test_complete_start_uncompletable(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help', 'start']
+        result = controller.complete('bad', 0, line='start bad')
+        self.assertTrue(result is None)
+
+    def test_complete_add_empty(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help', 'add']
+        result = controller.complete('', 0, line='add ')
+        self.assertEqual(result, 'foo ')
+        result = controller.complete('', 1, line='add ')
+        self.assertEqual(result, 'bar ')
+        result = controller.complete('', 2, line='add ')
+        self.assertEqual(result, 'baz ')
+        result = controller.complete('', 3, line='add ')
+        self.assertTrue(result is None)
+
+    def test_complete_add_uncompletable(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help', 'add']
+        result = controller.complete('bad', 0, line='add bad')
+        self.assertTrue(result is None)
+
+    def test_complete_add_group(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help', 'add']
+        result = controller.complete('f', 0, line='add f')
+        self.assertEqual(result, 'foo ')
+        result = controller.complete('f', 1, line='add f')
+        self.assertTrue(result is None)
 
     def test_nohelp(self):
         options = DummyClientOptions()
