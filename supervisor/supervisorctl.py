@@ -223,7 +223,45 @@ class Controller(cmd.Cmd):
             raise
         return True
 
-    def completionmatches(self, text, onlygroups=False):
+    def complete(self, text, state, line=None):
+        """Completer function that Cmd will register with readline using
+        readline.set_completer().  This function will be called by readline
+        as complete(text, state) where text is a fragment to complete and
+        state is an integer (0..n).  Each call returns a string with a new
+        completion.  When no more are available, None is returned."""
+        if line is None: # line is only set in tests
+            import readline
+            line = readline.get_line_buffer()
+
+        results = []
+        # blank line completes to action list
+        if not line.strip():
+            results = self._complete_actions(text)
+        else:
+            words = line.split()
+            action = words[0]
+            # incomplete action completes to action list
+            if len(words) == 1 and not line.endswith(' '):
+                results = self._complete_actions(text)
+            # actions that accept an action name
+            elif action in ('help'):
+                results = self._complete_actions(text)
+            # actions that accept a process name
+            elif action in ('clear', 'fg', 'pid', 'restart', 'start',
+                            'stop', 'status', 'tail'):
+                results = self._complete_names(text)
+            # actions that accept a group name
+            elif action in ('add', 'remove', 'update'):
+                results = self._complete_names(text, onlygroups=True)
+        if len(results) > state:
+            return results[state]
+
+    def _complete_actions(self, text):
+        """Helper method used by complete() to generate completion
+        lists of action names"""
+        return [v+' ' for v in self.vocab if v.startswith(text)]
+
+    def _complete_names(self, text, onlygroups=False):
         """Helper method used by complete() to generate completion
         lists for group and process names."""
         groups=[]
@@ -256,38 +294,6 @@ class Controller(cmd.Cmd):
             else:
                 results = [i for i in total if i.startswith(text)]
         return results
-
-    def complete(self, text, state, line=None):
-        """Completer function that Cmd will register with readline using
-        readline.set_completer().  This function will be called by readline
-        as complete(text, state) where text is a fragment to complete and
-        state is an integer (0..n).  Each call returns a string with a new
-        completion.  When no more are available, None is returned."""
-        if line is None: # line is only set in tests
-            import readline
-            line = readline.get_line_buffer()
-
-        results = []
-        # blank line completes to command list
-        if not line.strip():
-            results = [v+' ' for v in self.vocab if v.startswith(text)]
-        # whole command without trailing space completes the space
-        elif line.lstrip() in self.vocab:
-            results = [text+' ']
-        else:
-            cmd = line.split()[0]
-            # "help" or incomplete command completes command list
-            if cmd == 'help' or cmd not in self.vocab:
-                results = [v+' ' for v in self.vocab if v.startswith(text)]
-            # commands that accept a process name
-            elif cmd in ('clear', 'fg', 'pid', 'restart', 'start', 'stop',
-                         'status', 'tail'):
-                results = self.completionmatches(text)
-            # commands that accept a group name
-            elif cmd in ('add', 'remove', 'update'):
-                results = self.completionmatches(text, onlygroups=True)
-        if len(results) > state:
-            return results[state]
 
     def do_help(self, arg):
         if arg.strip() == 'help':

@@ -136,11 +136,19 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('help', 0, line='help')
         self.assertEqual(result, 'help ')
 
-    def test_complete_action_uncompletable(self):
+    def test_complete_unknown_action_uncompletable(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
         controller.stdout=StringIO()
         result = controller.complete('bad', 0, line='bad')
+        self.assertTrue(result is None)
+
+    def test_complete_unknown_action_arg_uncompletable(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help', 'add']
+        result = controller.complete('', 1, line='bad ')
         self.assertTrue(result is None)
 
     def test_complete_help_empty(self):
@@ -237,6 +245,14 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('f', 0, line='add f')
         self.assertEqual(result, 'foo ')
         result = controller.complete('f', 1, line='add f')
+        self.assertTrue(result is None)
+
+    def test_complete_reload_arg_uncompletable(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help', 'reload']
+        result = controller.complete('', 1, line='reload ')
         self.assertTrue(result is None)
 
     def test_nohelp(self):
