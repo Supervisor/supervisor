@@ -255,6 +255,16 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('', 1, line='reload ')
         self.assertTrue(result is None)
 
+    def test_complete_semicolon_separated_commands(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help', 'start']
+        result = controller.complete('f', 0, line='help;start f')
+        self.assertEqual(result, 'foo ')
+        result = controller.complete('f', 1, line='help;start f')
+        self.assertTrue(result is None)
+
     def test_nohelp(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
