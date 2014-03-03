@@ -236,67 +236,50 @@ class Controller(cmd.Cmd):
         # take the last phrase from a line like "stop foo; start bar"
         phrase = line.split(';')[-1]
 
-        results = []
+        matches = []
         # blank phrase completes to action list
         if not phrase.strip():
-            results = self._complete_actions(text)
+            matches = self._complete_actions(text)
         else:
             words = phrase.split()
             action = words[0]
             # incomplete action completes to action list
             if len(words) == 1 and not phrase.endswith(' '):
-                results = self._complete_actions(text)
+                matches = self._complete_actions(text)
             # actions that accept an action name
             elif action in ('help'):
-                results = self._complete_actions(text)
+                matches = self._complete_actions(text)
+            # actions that accept a group name
+            elif action in ('add', 'remove', 'update'):
+                matches = self._complete_groups(text)
             # actions that accept a process name
             elif action in ('clear', 'fg', 'pid', 'restart', 'start',
                             'stop', 'status', 'tail'):
-                results = self._complete_names(text)
-            # actions that accept a group name
-            elif action in ('add', 'remove', 'update'):
-                results = self._complete_names(text, onlygroups=True)
-        if len(results) > state:
-            return results[state]
+                matches = self._complete_processes(text)
+        if len(matches) > state:
+            return matches[state]
 
     def _complete_actions(self, text):
-        """Helper method used by complete() to generate completion
-        lists of action names"""
-        return [v+' ' for v in self.vocab if v.startswith(text)]
+        """Build a completion list of action names matching text"""
+        return [ a + ' ' for a in self.vocab if a.startswith(text)]
 
-    def _complete_names(self, text, onlygroups=False):
-        """Helper method used by complete() to generate completion
-        lists for group and process names."""
-        groups=[]
-        programs=[]
-        groupwiseprograms={}
-        info = self.get_supervisor().getAllProcessInfo()
-        for i in info:
-            programs.append(i['name'])
-            if i['group'] not in groups:
-                groups.append(i['group'])
-                groupwiseprograms[i['group']]=[]
-            groupwiseprograms[i['group']].append(i['name'])
-        total=[]
-        for i in groups:
-            if i in programs:
-                total.append(i+' ')
+    def _complete_groups(self, text):
+        """Build a completion list of group names matching text"""
+        groups = []
+        for info in self.get_supervisor().getAllProcessInfo():
+            if info['group'] not in groups:
+                groups.append(info['group'])
+        return [ g + ' ' for g in groups if g.startswith(text) ]
+
+    def _complete_processes(self, text):
+        """Build a completion list of process names matching text"""
+        processes = []
+        for info in self.get_supervisor().getAllProcessInfo():
+            if ':' in text or info['name'] != info['group']:
+                processes.append('%s:%s' % (info['group'], info['name']))
             else:
-                for n in groupwiseprograms[i]:
-                    total.append(i+':'+n+' ')
-        if onlygroups:
-            # add/remove/update require only the group name
-            results = [i+' ' for i in groups if i.startswith(text)]
-        else:
-            if ':' in text:
-                group, piece = text.split(':', 1)
-                results = []
-                for p in groupwiseprograms.get(group, []):
-                    if p.startswith(piece):
-                        results.append('%s:%s ' % (group, p))
-            else:
-                results = [i for i in total if i.startswith(text)]
-        return results
+                processes.append(info['name'])
+        return [ p + ' ' for p in processes if p.startswith(text) ]
 
     def do_help(self, arg):
         if arg.strip() == 'help':
