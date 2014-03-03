@@ -279,6 +279,8 @@ class Controller(cmd.Cmd):
         for info in self._get_complete_info():
             if ':' in text or info['name'] != info['group']:
                 processes.append('%s:%s' % (info['group'], info['name']))
+                if '%s:*' % info['group'] not in processes:
+                    processes.append('%s:*' % info['group'])
             else:
                 processes.append(info['name'])
         return [ p + ' ' for p in processes if p.startswith(text) ]
@@ -1162,6 +1164,7 @@ def main(args=None, options=None):
             delims = readline.get_completer_delims()
             delims = delims.replace(':', '') # "group:process" as one word
             delims = delims.replace('-', '') # names with "-" as one word
+            delims = delims.replace('*', '') # "group:process" as one word
             readline.set_completer_delims(delims)
 
             if options.history_file:
