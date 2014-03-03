@@ -108,6 +108,14 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(controller.cmdqueue, [' help'])
         self.assertEqual(plugin.helped, True)
 
+    def test_onecmd_clears_completion_cache(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        controller._complete_info = {}
+        controller.onecmd('help')
+        self.assertTrue(controller._complete_info is None)
+
     def test_complete_action_empty(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
@@ -214,6 +222,18 @@ class ControllerTests(unittest.TestCase):
         controller.vocab = ['help', 'start']
         result = controller.complete('bad', 0, line='start bad')
         self.assertTrue(result is None)
+
+    def test_complete_caches_process_info(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout=StringIO()
+        controller.vocab = ['help', 'start']
+        result = controller.complete('', 0, line='start ')
+        self.assertFalse(result is None)
+        def f(*arg, **kw):
+            raise Exception("should not have called getAllProcessInfo")
+        controller.options._server.supervisor.getAllProcessInfo = f
+        controller.complete('', 1, line='start ')
 
     def test_complete_add_empty(self):
         options = DummyClientOptions()

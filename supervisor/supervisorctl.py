@@ -102,6 +102,7 @@ class Controller(cmd.Cmd):
         self.prompt = self.options.prompt + '> '
         self.options.plugins = []
         self.vocab = ['help']
+        self._complete_info = None
         cmd.Cmd.__init__(self, completekey, stdin, stdout)
         for name, factory, kwargs in self.options.plugin_factories:
             plugin = factory(self, **kwargs)
@@ -132,6 +133,7 @@ class Controller(cmd.Cmd):
             return self.emptyline()
         if cmd is None:
             return self.default(line)
+        self._complete_info = None
         self.lastcmd = line
         if cmd == '':
             return self.default(line)
@@ -266,7 +268,7 @@ class Controller(cmd.Cmd):
     def _complete_groups(self, text):
         """Build a completion list of group names matching text"""
         groups = []
-        for info in self.get_supervisor().getAllProcessInfo():
+        for info in self._get_complete_info():
             if info['group'] not in groups:
                 groups.append(info['group'])
         return [ g + ' ' for g in groups if g.startswith(text) ]
@@ -274,12 +276,20 @@ class Controller(cmd.Cmd):
     def _complete_processes(self, text):
         """Build a completion list of process names matching text"""
         processes = []
-        for info in self.get_supervisor().getAllProcessInfo():
+        for info in self._get_complete_info():
             if ':' in text or info['name'] != info['group']:
                 processes.append('%s:%s' % (info['group'], info['name']))
             else:
                 processes.append(info['name'])
         return [ p + ' ' for p in processes if p.startswith(text) ]
+
+    def _get_complete_info(self):
+        """Get all process info used for completion.  We cache this between
+        commands to reduce XML-RPC calls because readline may call
+        complete() many times if the user hits tab only once."""
+        if self._complete_info is None:
+            self._complete_info = self.get_supervisor().getAllProcessInfo()
+        return self._complete_info
 
     def do_help(self, arg):
         if arg.strip() == 'help':
