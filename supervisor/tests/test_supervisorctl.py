@@ -193,7 +193,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('', 2, line='start ')
         self.assertEqual(result, 'baz:baz_01 ')
         result = controller.complete('', 3, line='start ')
-        self.assertEqual(result, None)
+        self.assertEqual(result, 'baz:* ')
 
     def test_complete_start_no_colon(self):
         options = DummyClientOptions()
@@ -213,7 +213,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('foo:', 0, line='start foo:')
         self.assertEqual(result, 'foo:foo ')
         result = controller.complete('foo:', 1, line='start foo:')
-        self.assertEqual(result, None)
+        self.assertEqual(result, 'foo:* ')
 
     def test_complete_start_uncompletable(self):
         options = DummyClientOptions()
