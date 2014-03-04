@@ -712,10 +712,10 @@ class FastCGIProcessGroup(ProcessGroup):
         sockManagerKlass = kwargs.get('socketManager', SocketManager)
         self.socket_manager = sockManagerKlass(config.socket_config,
                                                logger=config.options.logger)
-        #It's not required to call get_socket() here but we want
-        #to fail early during start up if there is a config error
+        # It's not required to call get_socket() here but we want
+        # to fail early during start up if there is a config error
         try:
-            sock = self.socket_manager.get_socket()
+            self.socket_manager.get_socket()
         except Exception, e:
             raise ValueError('Could not create FastCGI socket %s: %s' % (self.socket_manager.config(), e))
 
@@ -769,7 +769,6 @@ class EventListenerPool(ProcessGroupBase):
     def _acceptEvent(self, event, head=False):
         # events are required to be instances
         # this has a side effect to fail with an attribute error on 'old style' classes
-        event_type = event.__class__
         if not hasattr(event, 'serial'):
             event.serial = new_serial(GlobalSerial)
         if not hasattr(event, 'pool_serials'):
