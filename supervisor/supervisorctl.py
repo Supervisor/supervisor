@@ -1163,8 +1163,8 @@ def main(args=None, options=None):
             import readline
             delims = readline.get_completer_delims()
             delims = delims.replace(':', '') # "group:process" as one word
+            delims = delims.replace('*', '') # "group:*" as one word
             delims = delims.replace('-', '') # names with "-" as one word
-            delims = delims.replace('*', '') # "group:process" as one word
             readline.set_completer_delims(delims)
 
             if options.history_file:
