@@ -114,7 +114,7 @@ class ControllerTests(unittest.TestCase):
         controller.stdout = StringIO()
         controller._complete_info = {}
         controller.onecmd('help')
-        self.assertTrue(controller._complete_info is None)
+        self.assertEqual(controller._complete_info, None)
 
     def test_complete_action_empty(self):
         options = DummyClientOptions()
@@ -124,7 +124,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('', 0, line='')
         self.assertEqual(result, 'help ')
         result = controller.complete('', 1, line='')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_complete_action_partial(self):
         options = DummyClientOptions()
@@ -134,7 +134,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('h', 0, line='h')
         self.assertEqual(result, 'help ')
         result = controller.complete('h', 1, line='h')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_complete_action_whole(self):
         options = DummyClientOptions()
@@ -149,7 +149,7 @@ class ControllerTests(unittest.TestCase):
         controller = self._makeOne(options)
         controller.stdout=StringIO()
         result = controller.complete('bad', 0, line='bad')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_complete_unknown_action_arg_uncompletable(self):
         options = DummyClientOptions()
@@ -157,7 +157,7 @@ class ControllerTests(unittest.TestCase):
         controller.stdout=StringIO()
         controller.vocab = ['help', 'add']
         result = controller.complete('', 1, line='bad ')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_complete_help_empty(self):
         options = DummyClientOptions()
@@ -169,7 +169,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('', 1, line='help ')
         self.assertEqual(result, 'start ')
         result = controller.complete('', 2, line='help ')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_complete_help_action(self):
         options = DummyClientOptions()
@@ -179,7 +179,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('he', 0, line='help he')
         self.assertEqual(result, 'help ')
         result = controller.complete('he', 1, line='help he')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_complete_start_empty(self):
         options = DummyClientOptions()
@@ -193,7 +193,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('', 2, line='start ')
         self.assertEqual(result, 'baz:baz_01 ')
         result = controller.complete('', 3, line='start ')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_complete_start_no_colon(self):
         options = DummyClientOptions()
@@ -203,7 +203,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('f', 0, line='start f')
         self.assertEqual(result, 'foo ')
         result = controller.complete('f', 1, line='start f')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_complete_start_with_colon(self):
         options = DummyClientOptions()
@@ -213,7 +213,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('foo:', 0, line='start foo:')
         self.assertEqual(result, 'foo:foo ')
         result = controller.complete('foo:', 1, line='start foo:')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_complete_start_uncompletable(self):
         options = DummyClientOptions()
@@ -221,7 +221,7 @@ class ControllerTests(unittest.TestCase):
         controller.stdout=StringIO()
         controller.vocab = ['help', 'start']
         result = controller.complete('bad', 0, line='start bad')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_complete_caches_process_info(self):
         options = DummyClientOptions()
@@ -229,7 +229,7 @@ class ControllerTests(unittest.TestCase):
         controller.stdout=StringIO()
         controller.vocab = ['help', 'start']
         result = controller.complete('', 0, line='start ')
-        self.assertFalse(result is None)
+        self.assertNotEqual(result, None)
         def f(*arg, **kw):
             raise Exception("should not have called getAllProcessInfo")
         controller.options._server.supervisor.getAllProcessInfo = f
@@ -247,7 +247,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('', 2, line='add ')
         self.assertEqual(result, 'baz ')
         result = controller.complete('', 3, line='add ')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_complete_add_uncompletable(self):
         options = DummyClientOptions()
@@ -255,7 +255,7 @@ class ControllerTests(unittest.TestCase):
         controller.stdout=StringIO()
         controller.vocab = ['help', 'add']
         result = controller.complete('bad', 0, line='add bad')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_complete_add_group(self):
         options = DummyClientOptions()
@@ -265,7 +265,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('f', 0, line='add f')
         self.assertEqual(result, 'foo ')
         result = controller.complete('f', 1, line='add f')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_complete_reload_arg_uncompletable(self):
         options = DummyClientOptions()
@@ -273,7 +273,7 @@ class ControllerTests(unittest.TestCase):
         controller.stdout=StringIO()
         controller.vocab = ['help', 'reload']
         result = controller.complete('', 1, line='reload ')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_complete_semicolon_separated_commands(self):
         options = DummyClientOptions()
@@ -283,7 +283,7 @@ class ControllerTests(unittest.TestCase):
         result = controller.complete('f', 0, line='help;start f')
         self.assertEqual(result, 'foo ')
         result = controller.complete('f', 1, line='help;start f')
-        self.assertTrue(result is None)
+        self.assertEqual(result, None)
 
     def test_nohelp(self):
         options = DummyClientOptions()
@@ -342,7 +342,7 @@ class ControllerTests(unittest.TestCase):
         options.searchpaths = []
 
         options.realize(args, doc=__doc__)
-        c = self._makeOne(options)
+        self._makeOne(options) # should not raise
 
 
 class TestControllerPluginBase(unittest.TestCase):
@@ -359,7 +359,8 @@ class TestControllerPluginBase(unittest.TestCase):
 
     def test_do_help_noarg(self):
         plugin = self._makeOne()
-        results = plugin.do_help(None)
+        result = plugin.do_help(None)
+        self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(), '\n')
         self.assertEqual(len(plugin.ctl.topics_printed), 1)
         topics = plugin.ctl.topics_printed[0]
@@ -367,11 +368,11 @@ class TestControllerPluginBase(unittest.TestCase):
         self.assertEqual(topics[1], [])
         self.assertEqual(topics[2], 15)
         self.assertEqual(topics[3], 80)
-        self.assertEqual(results, None)
 
     def test_do_help_witharg(self):
         plugin = self._makeOne()
-        results = plugin.do_help('foo')
+        result = plugin.do_help('foo')
+        self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(), 'no help on foo\n')
         self.assertEqual(len(plugin.ctl.topics_printed), 0)
 
@@ -420,6 +421,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_tail_no_file(self):
         plugin = self._makeOne()
         result = plugin.do_tail('NO_FILE')
+        self.assertEqual(result, None)
         lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0], 'NO_FILE: ERROR (no log file)')
@@ -427,6 +429,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_tail_failed(self):
         plugin = self._makeOne()
         result = plugin.do_tail('FAILED')
+        self.assertEqual(result, None)
         lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0], 'FAILED: ERROR (unknown error reading log)')
@@ -434,6 +437,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_tail_bad_name(self):
         plugin = self._makeOne()
         result = plugin.do_tail('BAD_NAME')
+        self.assertEqual(result, None)
         lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0], 'BAD_NAME: ERROR (no such process name)')
@@ -457,6 +461,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_tail_explicit_channel_stderr_nomodifier(self):
         plugin = self._makeOne()
         result = plugin.do_tail('foo stderr')
+        self.assertEqual(result, None)
         lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 12)
         self.assertEqual(lines[0], 'output line')
@@ -503,6 +508,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_status_group_name(self):
         plugin = self._makeOne()
         result = plugin.do_status('baz:*')
+        self.assertEqual(result, None)
         value = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(value[0].split(None, 2),
                          ['baz:baz_01', 'STOPPED', 'baz description'])
@@ -510,6 +516,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_status_mixed_names(self):
         plugin = self._makeOne()
         result = plugin.do_status('foo baz:*')
+        self.assertEqual(result, None)
         value = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(value[0].split(None, 2),
                          ['foo', 'RUNNING', 'foo description'])
@@ -910,7 +917,6 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin = self._makeOne()
         result = plugin.do_add('ALREADY_ADDED')
         self.assertEqual(result, None)
-        supervisor = plugin.ctl.options._server.supervisor
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ERROR: process group already active\n')
 
@@ -918,7 +924,6 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin = self._makeOne()
         result = plugin.do_add('BAD_NAME')
         self.assertEqual(result, None)
-        supervisor = plugin.ctl.options._server.supervisor
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ERROR: no such process/group: BAD_NAME\n')
 
@@ -964,12 +969,12 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin = self._makeOne()
         supervisor = plugin.ctl.options._server.supervisor
 
-        calls = []
         def reloadConfig():
             return [[['new_proc'], [], []]]
         supervisor.reloadConfig = reloadConfig
 
-        plugin.do_update('')
+        result = plugin.do_update('')
+        self.assertEqual(result, None)
         self.assertEqual(supervisor.processes, ['new_proc'])
 
     def test_update_with_gname(self):
@@ -1101,8 +1106,8 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_pid_supervisord(self):
         plugin = self._makeOne()
         result = plugin.do_pid('')
-        options = plugin.ctl.options
         self.assertEqual(result, None)
+        options = plugin.ctl.options
         lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0], str(options._server.supervisor.getPID()))
@@ -1124,23 +1129,27 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_pid_oneprocess(self):
         plugin = self._makeOne()
         result = plugin.do_pid('foo')
+        self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue().strip(), '11')
 
     def test_maintail_toomanyargs(self):
         plugin = self._makeOne()
         result = plugin.do_maintail('foo bar')
+        self.assertEqual(result, None)
         val = plugin.ctl.stdout.getvalue()
         self.assertTrue(val.startswith('Error: too many'), val)
 
     def test_maintail_minus_string_fails(self):
         plugin = self._makeOne()
         result = plugin.do_maintail('-wrong')
+        self.assertEqual(result, None)
         val = plugin.ctl.stdout.getvalue()
         self.assertTrue(val.startswith('Error: bad argument -wrong'), val)
 
     def test_maintail_wrong(self):
         plugin = self._makeOne()
         result = plugin.do_maintail('wrong')
+        self.assertEqual(result, None)
         val = plugin.ctl.stdout.getvalue()
         self.assertTrue(val.startswith('Error: bad argument wrong'), val)
 
@@ -1148,6 +1157,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin = self._makeOne()
         plugin.listener = DummyListener()
         result = plugin.do_maintail('-f')
+        self.assertEqual(result, None)
         errors = plugin.listener.errors
         self.assertEqual(len(errors), 1)
         error = errors[0]
@@ -1161,11 +1171,13 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_maintail_nobytes(self):
         plugin = self._makeOne()
         result = plugin.do_maintail('')
+        self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(), 'mainlogdata\n')
 
     def test_maintail_dashbytes(self):
         plugin = self._makeOne()
         result = plugin.do_maintail('-100')
+        self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(), 'mainlogdata\n')
 
     def test_maintail_readlog_error_nofile(self):
@@ -1174,6 +1186,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         from supervisor import xmlrpc
         supervisor_rpc._readlog_error = xmlrpc.Faults.NO_FILE
         result = plugin.do_maintail('-100')
+        self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'supervisord: ERROR (no log file)\n')
 
@@ -1183,35 +1196,36 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         from supervisor import xmlrpc
         supervisor_rpc._readlog_error = xmlrpc.Faults.FAILED
         result = plugin.do_maintail('-100')
+        self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'supervisord: ERROR (unknown error reading log)\n')
 
     def test_fg_too_few_args(self):
         plugin = self._makeOne()
         result = plugin.do_fg('')
-        lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(result, None)
+        lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(lines[0], 'Error: no process name supplied')
 
     def test_fg_too_many_args(self):
         plugin = self._makeOne()
         result = plugin.do_fg('foo bar')
-        line = plugin.ctl.stdout.getvalue()
         self.assertEqual(result, None)
+        line = plugin.ctl.stdout.getvalue()
         self.assertEqual(line, 'Error: too many process names supplied\n')
 
     def test_fg_badprocname(self):
         plugin = self._makeOne()
         result = plugin.do_fg('BAD_NAME')
-        line = plugin.ctl.stdout.getvalue()
         self.assertEqual(result, None)
+        line = plugin.ctl.stdout.getvalue()
         self.assertEqual(line, 'Error: bad process name supplied\n')
 
     def test_fg_procnotrunning(self):
         plugin = self._makeOne()
         result = plugin.do_fg('bar')
-        line = plugin.ctl.stdout.getvalue()
         self.assertEqual(result, None)
+        line = plugin.ctl.stdout.getvalue()
         self.assertEqual(line, 'Error: process not running\n')
         result = plugin.do_fg('baz_01')
         lines = plugin.ctl.stdout.getvalue().split('\n')
