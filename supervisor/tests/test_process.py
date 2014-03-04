@@ -16,7 +16,6 @@ from supervisor.tests.base import DummyFCGIGroupConfig
 from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import DummyProcessGroup
 from supervisor.tests.base import DummyFCGIProcessGroup
-from supervisor.tests.base import DummySocketManager
 
 from supervisor.process import Subprocess
 from supervisor.options import BadCommand
