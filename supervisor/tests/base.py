@@ -958,7 +958,7 @@ class DummyProcessGroup(object):
         return self.config.priority == other.config.priority
 
 DummyProcessGroup = total_ordering(DummyProcessGroup)
-    
+
 class DummyFCGIProcessGroup(DummyProcessGroup):
 
     def __init__(self, config):

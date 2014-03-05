@@ -1421,13 +1421,31 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(offset, 0)
         self.assertEqual(data, '')
 
-    def test_clearProcessLogs_bad_name(self):
+    def test_clearProcessLogs_bad_name_no_group(self):
         from supervisor import xmlrpc
-        supervisord = DummySupervisor()
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', 'foo')
+        process = DummyProcess(pconfig)
+        pgroup = DummyProcessGroup(None)
+        pgroup.processes = {'foo': process}
+        supervisord = DummySupervisor(process_groups={'foo':pgroup})
         interface = self._makeOne(supervisord)
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
                              interface.clearProcessLogs,
-                             'spew')
+                             'badgroup')
+
+    def test_clearProcessLogs_bad_name_no_process(self):
+        from supervisor import xmlrpc
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', 'foo')
+        process = DummyProcess(pconfig)
+        pgroup = DummyProcessGroup(None)
+        pgroup.processes = {'foo': process}
+        supervisord = DummySupervisor(process_groups={'foo':pgroup})
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
+                             interface.clearProcessLogs,
+                             'foo:*')
 
     def test_clearProcessLogs(self):
         options = DummyOptions()

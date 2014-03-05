@@ -378,10 +378,12 @@ follows.
   directory in which the supervisord configuration file was found.
   Values containing non-alphanumeric characters should be quoted
   (e.g. ``KEY="val:123",KEY2="val,456"``).  Otherwise, quoting the
-  values is optional but recommended.  **Note** that subprocesses will
-  inherit the environment variables of the shell used to start
-  :program:`supervisord` except for the ones overridden here and within
-  the program's ``environment`` option. See :ref:`subprocess_environment`.
+  values is optional but recommended.  To escape percent characters,
+  simply use two. (e.g. ``URI="/first%%20name"``) **Note** that 
+  subprocesses will inherit the environment variables of the shell 
+  used to start :program:`supervisord` except for the ones overridden
+  here and within the program's ``environment`` option.  See 
+  :ref:`subprocess_environment`.
 
   *Default*: no values
 
@@ -1070,7 +1072,7 @@ configuration.
 ``[group:x]`` Section Settings
 ------------------------------
 
-It is often useful to group "homogeneous" processes groups (aka
+It is often useful to group "homogeneous" process groups (aka
 "programs") together into a "heterogeneous" process group so they can
 be controlled as a unit from Supervisor's various controller
 interfaces.
@@ -1089,7 +1091,7 @@ For a ``[group:x]``, there must be one or more ``[program:x]``
 sections elsewhere in your configuration file, and the group must
 refer to them by name in the ``programs`` value.
 
-If "homogeneous" program groups" (represented by program sections) are
+If "homogeneous" process groups (represented by program sections) are
 placed into a "heterogeneous" group via ``[group:x]`` section's
 ``programs`` line, the homogeneous groups that are implied by the
 program section will not exist at runtime in supervisor.  Instead, all

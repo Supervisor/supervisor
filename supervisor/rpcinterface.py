@@ -72,7 +72,7 @@ class SupervisorNamespaceRPCInterface:
     def getState(self):
         """ Return current state of supervisord as a struct
 
-        @return struct A struct with keys string statecode, int statename
+        @return struct A struct with keys int statecode, string statename
         """
         self._update('getState')
 
@@ -122,7 +122,7 @@ class SupervisorNamespaceRPCInterface:
         self._update('clearLog')
 
         logfile = self.supervisord.options.logfile
-        if  logfile is None or not self.supervisord.options.exists(logfile):
+        if logfile is None or not self.supervisord.options.exists(logfile):
             raise RPCError(Faults.NO_FILE)
 
         # there is a race condition here, but ignore it.
@@ -660,6 +660,9 @@ class SupervisorNamespaceRPCInterface:
         self._update('clearProcessLogs')
 
         group, process = self._getGroupAndProcess(name)
+
+        if process is None:
+            raise RPCError(Faults.BAD_NAME, name)
 
         try:
             # implies a reopen

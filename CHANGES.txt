@@ -34,6 +34,26 @@
   names.  When group names are specified, only those groups will be
   updated.  Patch by Gary M. Josack.
 
+- Added new ``PROCESS_GROUP_ADDED`` and ``PROCESS_GROUP_REMOVED`` events.
+  These events are fired when process groups are added or removed from
+  Supervisor's runtime configuration when using the ``add`` and ``remove``
+  commands in ``supervisorctl``.  Patch by Brent Tubbs.
+
+- The ``status`` command in ``supervisorctl`` now supports group name
+  syntax: ``status group:*``.
+
+- Fixed an XML-RPC bug where calling supervisor.clearProcessLogs() with a
+  name like "group:*" would cause a 500 Internal Server Error rather than
+  returning a BAD_NAME fault.
+
+- Tab completion in ``supervisorctl`` has been improved and now works for
+  more cases.  Thanks to Mathieu Longtin and Marc Abramowitz for the patches.
+
+- Attempting to start or stop a process group in ``supervisorctl`` with the
+  ``group:*`` syntax will now show the same error message as the ``process``
+  syntax if the name does not exist.  Previously, it would show a Python
+  exception.  Patch by George Ang.
+
 3.0 (2013-07-30)
 ----------------
 

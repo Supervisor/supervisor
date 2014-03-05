@@ -1,0 +1,48 @@
+Contributors
+------------
+
+- Chris McDonough, 2006-06-26
+
+- Siddhant Goel, 2008-06-15
+
+- Chris Rossi, 2010-02-02
+
+- Roger Hoover, 2010-08-17
+
+- Benoit Sigoure, 2011-06-21
+
+- John Szakmeister, 2011-09-06
+
+- Gunnlaugur Þór Briem, 2011-11-26
+
+- Jens Rantil, 2011-11-27
+
+- Michael Blume, 2012-01-09
+
+- Philip Zeyliger, 2012-02-21
+
+- Marcelo Vanzin, 2012-05-03
+
+- Martijn Pieters, 2012-06-04
+
+- Marcin Kuźmiński, 2012-06-21
+
+- Jean Jordaan, 2012-06-28
+
+- Perttu Ranta-aho, 2012-09-27
+
+- Chris Streeter, 2013-03-23
+
+- Caio Ariede, 2013-03-25
+
+- David Birdsong, 2013-04-11
+
+- Lukas Rist, 2013-04-18
+
+- Honza Pokorny, 2013-07-23
+
+- Thúlio Costa, 2013-10-31
+
+- Gary M. Josack, 2013-11-12
+
+- Márk Sági-Kazár, 2013-12-16

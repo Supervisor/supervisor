@@ -123,6 +123,7 @@ class Supervisor:
         if name not in self.process_groups:
             config.after_setuid()
             self.process_groups[name] = config.make_group()
+            events.notify(events.ProcessGroupAddedEvent(name))
             return True
         return False
 
@@ -130,6 +131,7 @@ class Supervisor:
         if self.process_groups[name].get_unstopped_processes():
             return False
         del self.process_groups[name]
+        events.notify(events.ProcessGroupRemovedEvent(name))
         return True
 
     def get_process_map(self):

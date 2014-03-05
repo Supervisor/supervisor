@@ -724,8 +724,8 @@ class FastCGIProcessGroup(ProcessGroup):
         sockManagerKlass = kwargs.get('socketManager', SocketManager)
         self.socket_manager = sockManagerKlass(config.socket_config,
                                                logger=config.options.logger)
-        #It's not required to call get_socket() here but we want
-        #to fail early during start up if there is a config error
+        # It's not required to call get_socket() here but we want
+        # to fail early during start up if there is a config error
         try:
             self.socket_manager.get_socket()
         except Exception as e:

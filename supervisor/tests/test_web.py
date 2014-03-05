@@ -85,7 +85,7 @@ class UIHandlerTests(unittest.TestCase):
         handler = self._makeOne()
         data = handler.handle_request(request)
         self.assertEqual(data, None)
-        
+
     def test_handle_request_default(self):
         request = DummyRequest('/index.html', [], '', '',
                                {'PATH_INFO':'/index.html'})

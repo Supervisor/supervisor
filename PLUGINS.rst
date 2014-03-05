@@ -15,11 +15,17 @@ Dashboards and Tools for Multiple Supervisor Instances
 These are tools that can monitor or control a number of Supervisor
 instances running on different servers.
 
+`Django-Dashvisor <https://github.com/aleszoulek/django-dashvisor>`_
+    Web-based dashboard written in Python.  Requires Django 1.3 or 1.4.
+
 `Nodervisor <https://github.com/TAKEALOT/nodervisor>`_
     Web-based dashboard written in Node.js.
 
 `Supervisord-Monitor <https://github.com/mlazarov/supervisord-monitor>`_
     Web-based dashboard written in PHP.
+
+`SupervisorUI <https://github.com/luxbet/supervisorui>`_
+    Another Web-based dashboard written in PHP.
 
 
 Third Party Plugins and Libraries for Supervisor
@@ -103,3 +109,5 @@ with third party applications:
     `Capistrano <https://github.com/capistrano/capistrano>`_ recipe to deploy supervisord based services.
 `chef-supervisor <https://github.com/opscode-cookbooks/supervisor>`_
     `Chef <http://www.opscode.com/chef/>`_ cookbook install and configure supervisord.
+`PHP Supervisor <https://github.com/indigophp/supervisor>`_
+    PHP client for the supervisord XML-RPC interface. Configuration generator. Event listener work in progress.
