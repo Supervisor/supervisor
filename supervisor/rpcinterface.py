@@ -672,7 +672,7 @@ class SupervisorNamespaceRPCInterface:
     def clearAllProcessLogs(self):
         """ Clear all process log files
 
-        @return boolean result      Always return true
+        @return array result   An array of process status info structs
         """
         self._update('clearAllProcessLogs')
         results  = []
