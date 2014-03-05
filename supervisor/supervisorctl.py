@@ -698,6 +698,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                                                    'description': e.faultString})
                         self.ctl.output(error)
                     else:
+                        name = make_namespec(group_name, process_name)
                         self.ctl.output('%s: started' % name)
 
     def help_start(self):
@@ -766,6 +767,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                                                   'description':e.faultString})
                         self.ctl.output(error)
                     else:
+                        name = make_namespec(group_name, process_name)
                         self.ctl.output('%s: stopped' % name)
 
     def help_stop(self):

@@ -599,6 +599,13 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: started\n')
 
+    def test_start_one_with_group_name_success(self):
+        plugin = self._makeOne()
+        result = plugin.do_start('foo:foo')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: started\n')
+
     def test_start_many(self):
         plugin = self._makeOne()
         result = plugin.do_start('foo bar')
@@ -654,6 +661,13 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_stop_one_success(self):
         plugin = self._makeOne()
         result = plugin.do_stop('foo')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: stopped\n')
+
+    def test_stop_one_with_group_name_success(self):
+        plugin = self._makeOne()
+        result = plugin.do_stop('foo:foo')
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: stopped\n')
