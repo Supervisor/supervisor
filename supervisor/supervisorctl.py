@@ -23,6 +23,7 @@ actions.
 """
 
 import cmd
+import os
 import sys
 import getpass
 import xmlrpclib
@@ -30,6 +31,20 @@ import socket
 import errno
 import urlparse
 import threading
+
+fancycompleter = None
+readline = None
+
+try:
+    import fancycompleter
+except ImportError:
+    pass
+
+if os.environ.get('SUPERVISORCTL_NO_FANCYCOMPLETER'):
+    fancycompleter = None
+
+if not fancycompleter:
+    import readline
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -112,6 +127,12 @@ class Controller(cmd.Cmd):
                     self.vocab.append(a[3:])
             self.options.plugins.append(plugin)
             plugin.name = name
+        if fancycompleter:
+            self.completer = fancycompleter.setup()
+            self.completer.config.readline.set_completer(self.complete)
+            self.readline = self.completer.config.readline
+        else:
+            self.readline = readline
 
     def emptyline(self):
         # We don't want a blank line to repeat the last command.
@@ -233,7 +254,7 @@ class Controller(cmd.Cmd):
         state is an integer (0..n).  Each call returns a string with a new
         completion.  When no more are available, None is returned."""
         if line is None: # line is only set in tests
-            import readline
+            readline = self.readline
             line = readline.get_line_buffer()
 
         # take the last phrase from a line like "stop foo; start bar"
@@ -1175,7 +1196,7 @@ def main(args=None, options=None):
         c.onecmd(" ".join(options.args))
     if options.interactive:
         try:
-            import readline
+            readline = c.readline
             delims = readline.get_completer_delims()
             delims = delims.replace(':', '') # "group:process" as one word
             delims = delims.replace('*', '') # "group:*" as one word
