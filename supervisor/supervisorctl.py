@@ -752,10 +752,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
                             result = self._stopresult(result)
                             self.ctl.output(result)
                     except xmlrpclib.Fault, e:
-                        error = self._startresult({'status': e.faultCode,
-                                                   'name': process_name,
-                                                   'group': group_name,
-                                                   'description': e.faultString})
+                        error = self._stopresult({'status': e.faultCode,
+                                                  'name': process_name,
+                                                  'group': group_name,
+                                                  'description': e.faultString})
                         self.ctl.output(error)
                 else:
                     try:
