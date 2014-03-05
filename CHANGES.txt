@@ -46,6 +46,13 @@
   syntax if the name does not exist.  Previously, it would show a Python
   exception.  Patch by George Ang.
 
+- The output of the ``start``, ``stop``, and ``restart`` commands in
+  ``supervisorctl`` has been changed to be consistent with the ``status``
+  command.  Previously, the ``status`` command would show a process like
+  ``foo:foo_01`` but starting that process would show ``foo_01: started``
+  (note the group ``foo`` was missing).  Now, starting the will show
+  ``foo:foo_01: started``.  Suggested by Chris Wood.
+
 3.0 (2013-07-30)
 ----------------
 

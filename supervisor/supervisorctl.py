@@ -34,6 +34,7 @@ import threading
 from supervisor.medusa import asyncore_25 as asyncore
 
 from supervisor.options import ClientOptions
+from supervisor.options import make_namespec
 from supervisor.options import split_namespec
 from supervisor import xmlrpc
 from supervisor import states
@@ -555,11 +556,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
     def _procrepr(self, info):
         template = '%(name)-32s %(state)-10s %(desc)s'
-        if info['name'] == info['group']:
-            name = info['name']
-        else:
-            name = '%s:%s' % (info['group'], info['name'])
-
+        name = make_namespec(info['group'], info['name'])
         return template % {'name':name, 'state':info['statename'],
                            'desc':info['description']}
 
@@ -638,7 +635,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             "process, one per line.")
 
     def _startresult(self, result):
-        name = result['name']
+        name = make_namespec(result['group'], result['name'])
         code = result['status']
         template = '%s: ERROR (%s)'
         if code == xmlrpc.Faults.BAD_NAME:
@@ -687,7 +684,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                             self.ctl.output(result)
                     except xmlrpclib.Fault, e:
                         error = self._startresult({'status': e.faultCode,
-                                                   'name': name,
+                                                   'name': process_name,
+                                                   'group': group_name,
                                                    'description': e.faultString})
                         self.ctl.output(error)
                 else:
@@ -695,7 +693,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                         result = supervisor.startProcess(name)
                     except xmlrpclib.Fault, e:
                         error = self._startresult({'status': e.faultCode,
-                                                   'name': name,
+                                                   'name': process_name,
+                                                   'group': group_name,
                                                    'description': e.faultString})
                         self.ctl.output(error)
                     else:
@@ -709,7 +708,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output("start all\t\tStart all processes")
 
     def _stopresult(self, result):
-        name = result['name']
+        name = make_namespec(result['group'], result['name'])
         code = result['status']
         fault_string = result['description']
         template = '%s: ERROR (%s)'
@@ -753,15 +752,17 @@ class DefaultControllerPlugin(ControllerPluginBase):
                             self.ctl.output(result)
                     except xmlrpclib.Fault, e:
                         error = self._startresult({'status': e.faultCode,
-                                                   'name': name,
+                                                   'name': process_name,
+                                                   'group': group_name,
                                                    'description': e.faultString})
                         self.ctl.output(error)
                 else:
                     try:
                         result = supervisor.stopProcess(name)
                     except xmlrpclib.Fault, e:
-                        error = self._stopresult({'status':e.faultCode,
-                                                  'name':name,
+                        error = self._stopresult({'status': e.faultCode,
+                                                  'name': process_name,
+                                                  'group': group_name,
                                                   'description':e.faultString})
                         self.ctl.output(error)
                     else:

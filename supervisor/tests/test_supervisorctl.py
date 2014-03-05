@@ -30,10 +30,10 @@ class ControllerTests(unittest.TestCase):
         controller.stdout = StringIO()
         result = controller.upcheck()
         self.assertEqual(result, False)
-        value = controller.stdout.getvalue()
-        self.assertEqual(value, 'Sorry, this version of supervisorctl expects '
-        'to talk to a server with API version 3.0, but the remote version is '
-        '1.0.\n')
+        self.assertEqual(controller.stdout.getvalue(),
+                         'Sorry, this version of supervisorctl expects'
+                         ' to talk to a server with API version 3.0, but'
+                         ' the remote version is 1.0.\n')
 
     def test__upcheck_unknown_method(self):
         options = DummyClientOptions()
@@ -46,12 +46,13 @@ class ControllerTests(unittest.TestCase):
         controller.stdout = StringIO()
         result = controller.upcheck()
         self.assertEqual(result, False)
-        value = controller.stdout.getvalue()
-        self.assertEqual(value, 'Sorry, supervisord responded but did not '
-        'recognize the supervisor namespace commands that supervisorctl '
-        'uses to control it.  Please check that the '
-        '[rpcinterface:supervisor] section is enabled in the '
-        'configuration file (see sample.conf).\n')
+        self.assertEqual(controller.stdout.getvalue(),
+                         'Sorry, supervisord responded but did not recognize'
+                         ' the supervisor namespace commands that'
+                         ' supervisorctl uses to control it.  Please check'
+                         ' that the [rpcinterface:supervisor] section is'
+                         ' enabled in the configuration file'
+                         ' (see sample.conf).\n')
 
     def test__upcheck_catches_socket_error_ECONNREFUSED(self):
         options = DummyClientOptions()
@@ -308,8 +309,8 @@ class ControllerTests(unittest.TestCase):
         controller = self._makeOne(options)
         controller.stdout = StringIO()
         results = controller.do_help("help")
-        helpval = controller.stdout.getvalue()
         self.assertEqual(results, None)
+        helpval = controller.stdout.getvalue()
         self.assertTrue("help\t\tPrint a list" in helpval)
 
     def test_get_supervisor_returns_serverproxy_supervisor_namespace(self):
@@ -595,7 +596,8 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin = self._makeOne()
         result = plugin.do_start('foo')
         self.assertEqual(result, None)
-        self.assertEqual(plugin.ctl.stdout.getvalue(), 'foo: started\n')
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: started\n')
 
     def test_start_many(self):
         plugin = self._makeOne()
@@ -609,7 +611,8 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         result = plugin.do_start('foo:')
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
-                         'foo_00: started\nfoo_01: started\n')
+                         'foo:foo_00: started\n'
+                         'foo:foo_01: started\n')
 
     def test_start_all(self):
         plugin = self._makeOne()
@@ -617,15 +620,16 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
 
         self.assertEqual(plugin.ctl.stdout.getvalue(),
-                'foo: started\nfoo2: started\nfailed: ERROR (spawn error)\n')
-
+                         'foo: started\n'
+                         'foo2: started\n'
+                         'failed_group:failed: ERROR (spawn error)\n')
 
     def test_stop_fail(self):
         plugin = self._makeOne()
         result = plugin.do_stop('')
         self.assertEqual(result, None)
-        expected = "Error: stop requires a process name"
-        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0], expected)
+        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0],
+                         "Error: stop requires a process name")
 
     def test_stop_badname(self):
         plugin = self._makeOne()
@@ -651,21 +655,24 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin = self._makeOne()
         result = plugin.do_stop('foo')
         self.assertEqual(result, None)
-        self.assertEqual(plugin.ctl.stdout.getvalue(), 'foo: stopped\n')
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: stopped\n')
 
     def test_stop_many(self):
         plugin = self._makeOne()
         result = plugin.do_stop('foo bar')
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
-                         'foo: stopped\nbar: stopped\n')
+                         'foo: stopped\n'
+                         'bar: stopped\n')
 
     def test_stop_group(self):
         plugin = self._makeOne()
         result = plugin.do_stop('foo:')
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
-                         'foo_00: stopped\nfoo_01: stopped\n')
+                         'foo:foo_00: stopped\n'
+                         'foo:foo_01: stopped\n')
 
     def test_stop_all(self):
         plugin = self._makeOne()
@@ -673,21 +680,21 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
 
         self.assertEqual(plugin.ctl.stdout.getvalue(),
-         'foo: stopped\nfoo2: stopped\nfailed: ERROR (no such process)\n')
+                         'foo: stopped\n'
+                         'foo2: stopped\n'
+                         'failed_group:failed: ERROR (no such process)\n')
 
     def test_restart_fail(self):
         plugin = self._makeOne()
         result = plugin.do_restart('')
         self.assertEqual(result, None)
-
         self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0],
-         'Error: restart requires a process name')
+                         'Error: restart requires a process name')
 
     def test_restart_one(self):
         plugin = self._makeOne()
         result = plugin.do_restart('foo')
         self.assertEqual(result, None)
-
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: stopped\nfoo: started\n')
 
@@ -695,19 +702,18 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin = self._makeOne()
         result = plugin.do_restart('all')
         self.assertEqual(result, None)
-
         self.assertEqual(plugin.ctl.stdout.getvalue(),
-                         ('foo: stopped\nfoo2: stopped\n'
-                          'failed: ERROR (no such process)\n'
-                          'foo: started\nfoo2: started\n'
-                          'failed: ERROR (spawn error)\n'))
+                         'foo: stopped\nfoo2: stopped\n'
+                         'failed_group:failed: ERROR (no such process)\n'
+                         'foo: started\nfoo2: started\n'
+                         'failed_group:failed: ERROR (spawn error)\n')
 
     def test_clear_fail(self):
         plugin = self._makeOne()
         result = plugin.do_clear('')
         self.assertEqual(result, None)
-        expected = "Error: clear requires a process name"
-        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0], expected)
+        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0],
+                         "Error: clear requires a process name")
 
     def test_clear_badname(self):
         plugin = self._makeOne()
@@ -720,7 +726,8 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin = self._makeOne()
         result = plugin.do_clear('foo')
         self.assertEqual(result, None)
-        self.assertEqual(plugin.ctl.stdout.getvalue(), 'foo: cleared\n')
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: cleared\n')
 
     def test_clear_many(self):
         plugin = self._makeOne()
@@ -735,7 +742,9 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
 
         self.assertEqual(plugin.ctl.stdout.getvalue(),
-         'foo: cleared\nfoo2: cleared\nfailed: ERROR (failed)\n')
+                         'foo: cleared\n'
+                         'foo2: cleared\n'
+                         'failed: ERROR (failed)\n')
 
     def test_open_fail(self):
         plugin = self._makeOne()
