@@ -1035,7 +1035,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output("update <gname> [...]\tUpdate specific groups")
 
     def _clearresult(self, result):
-        name = result['name']
+        name = make_namespec(result['group'], result['name'])
         code = result['status']
         template = '%s: ERROR (%s)'
         if code == xmlrpc.Faults.BAD_NAME:
@@ -1064,18 +1064,19 @@ class DefaultControllerPlugin(ControllerPluginBase):
             for result in results:
                 result = self._clearresult(result)
                 self.ctl.output(result)
-
         else:
-
             for name in names:
+                group_name, process_name = split_namespec(name)
                 try:
                     result = supervisor.clearProcessLogs(name)
                 except xmlrpclib.Fault, e:
-                    error = self._clearresult({'status':e.faultCode,
-                                               'name':name,
-                                               'description':e.faultString})
+                    error = self._clearresult({'status': e.faultCode,
+                                               'name': process_name,
+                                               'group': group_name,
+                                               'description': e.faultString})
                     self.ctl.output(error)
                 else:
+                    name = make_namespec(group_name, process_name)
                     self.ctl.output('%s: cleared' % name)
 
     def help_clear(self):

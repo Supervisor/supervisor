@@ -1,8 +1,8 @@
 3.1a1 (Next Release)
 --------------------
 
-- The output of the ``start``, ``stop``, and ``restart`` commands in
-  ``supervisorctl`` has been changed to be consistent with the ``status``
+- The output of the ``start``, ``stop``, ``restart``, and ``clear`` commands
+  in ``supervisorctl`` has been changed to be consistent with the ``status``
   command.  Previously, the ``status`` command would show a process like
   ``foo:foo_01`` but starting that process would show ``foo_01: started``
   (note the group prefix ``foo:`` was missing).  Now, starting the process

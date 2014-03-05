@@ -743,6 +743,13 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: cleared\n')
 
+    def test_clear_one_with_group_success(self):
+        plugin = self._makeOne()
+        result = plugin.do_clear('foo:foo')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: cleared\n')
+
     def test_clear_many(self):
         plugin = self._makeOne()
         result = plugin.do_clear('foo bar')
@@ -758,7 +765,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: cleared\n'
                          'foo2: cleared\n'
-                         'failed: ERROR (failed)\n')
+                         'failed_group:failed: ERROR (failed)\n')
 
     def test_open_fail(self):
         plugin = self._makeOne()
