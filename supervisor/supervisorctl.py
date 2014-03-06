@@ -554,11 +554,19 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def help_exit(self):
         self.ctl.output("exit\tExit the supervisor shell.")
 
-    def _procrepr(self, info):
-        template = '%(name)-32s %(state)-10s %(desc)s'
-        name = make_namespec(info['group'], info['name'])
-        return template % {'name':name, 'state':info['statename'],
-                           'desc':info['description']}
+    def _show_statuses(self, process_infos):
+        namespecs, maxlen = [], 30
+        for i, info in enumerate(process_infos):
+            namespecs.append(make_namespec(info['group'], info['name']))
+            if len(namespecs[i]) > maxlen:
+                maxlen = len(namespecs[i])
+
+        template = '%(namespec)-' + str(maxlen+3) + 's%(state)-10s%(desc)s'
+        for i, info in enumerate(process_infos):
+            line = template % {'namespec': namespecs[i],
+                               'state': info['statename'],
+                               'desc': info['description']}
+            self.ctl.output(line)
 
     def do_status(self, arg):
         if not self.ctl.upcheck():
@@ -592,9 +600,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     else:
                         msg = "%s: ERROR (no such process)" % name
                     self.ctl.output(msg)
-
-        for info in matching_infos:
-            self.ctl.output(self._procrepr(info))
+        self._show_statuses(matching_infos)
 
     def help_status(self):
         self.ctl.output("status <name>\t\tGet status for a single process")

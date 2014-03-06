@@ -478,6 +478,46 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         value = plugin.ctl.stdout.getvalue().strip()
         self.assertEqual(value, "Error: bad channel 'fudge'")
 
+    def test_status_table_process_column_min_width(self):
+        plugin = self._makeOne()
+        result = plugin.do_status('')
+        self.assertEqual(result, None)
+        lines = plugin.ctl.stdout.getvalue().split("\n")
+        self.assertEqual(lines[0].index("RUNNING"), 33)
+
+    def test_status_table_process_column_expands(self):
+        plugin = self._makeOne()
+        options = plugin.ctl.options
+        def f(*arg, **kw):
+            from supervisor.states import ProcessStates
+            return [{'name': 'foo'*50, # long name
+                     'group':'foo',
+                     'pid': 11,
+                     'state': ProcessStates.RUNNING,
+                     'statename': 'RUNNING',
+                     'start': 0,
+                     'stop': 0,
+                     'spawnerr': '',
+                     'now': 0,
+                     'description':'foo description'},
+                    {
+                    'name': 'bar', # short name
+                    'group': 'bar',
+                    'pid': 12,
+                    'state': ProcessStates.FATAL,
+                    'statename': 'RUNNING',
+                    'start': 0,
+                    'stop': 0,
+                    'spawnerr': '',
+                    'now': 0,
+                    'description': 'bar description',
+                    }]
+        options._server.supervisor.getAllProcessInfo = f
+        self.assertEqual(plugin.do_status(''), None)
+        lines = plugin.ctl.stdout.getvalue().split("\n")
+        self.assertEqual(lines[0].index("RUNNING"), 157)
+        self.assertEqual(lines[1].index("RUNNING"), 157)
+
     def test_status_all_processes_no_arg(self):
         plugin = self._makeOne()
         result = plugin.do_status('')

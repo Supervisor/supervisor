@@ -11,6 +11,9 @@
 - The ``status`` command in ``supervisorctl`` now supports group name
   syntax: ``status group:*``.
 
+- The process column in the table output by the ``status`` command in
+  ``supervisorctl`` now expands to fit the widest name.
+
 - The ``update`` command in ``supervisorctl`` now accepts optional group
   names.  When group names are specified, only those groups will be
   updated.  Patch by Gary M. Josack.
