@@ -683,11 +683,11 @@ class DefaultControllerPlugin(ControllerPluginBase):
                             result = self._startresult(result)
                             self.ctl.output(result)
                     except xmlrpclib.Fault, e:
-                        error = self._startresult({'status': e.faultCode,
-                                                   'name': process_name,
-                                                   'group': group_name,
-                                                   'description': e.faultString})
-                        self.ctl.output(error)
+                        if e.faultCode == xmlrpc.Faults.BAD_NAME:
+                            error = "%s: ERROR (no such group)" % group_name
+                            self.ctl.output(error)
+                        else:
+                            raise
                 else:
                     try:
                         result = supervisor.startProcess(name)
@@ -752,11 +752,11 @@ class DefaultControllerPlugin(ControllerPluginBase):
                             result = self._stopresult(result)
                             self.ctl.output(result)
                     except xmlrpclib.Fault, e:
-                        error = self._stopresult({'status': e.faultCode,
-                                                  'name': process_name,
-                                                  'group': group_name,
-                                                  'description': e.faultString})
-                        self.ctl.output(error)
+                        if e.faultCode == xmlrpc.Faults.BAD_NAME:
+                            error = "%s: ERROR (no such group)" % group_name
+                            self.ctl.output(error)
+                        else:
+                            raise
                 else:
                     try:
                         result = supervisor.stopProcess(name)

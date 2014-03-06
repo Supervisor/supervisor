@@ -767,6 +767,9 @@ class DummySupervisorRPCNamespace:
 
     def startProcessGroup(self, name):
         from supervisor import xmlrpc
+        from xmlrpclib import Fault
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
         return [
             {'name':'foo_00', 'group':'foo',
              'status': xmlrpc.Faults.SUCCESS,
@@ -792,6 +795,9 @@ class DummySupervisorRPCNamespace:
 
     def stopProcessGroup(self, name):
         from supervisor import xmlrpc
+        from xmlrpclib import Fault
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
         return [
             {'name':'foo_00', 'group':'foo',
              'status': xmlrpc.Faults.SUCCESS,

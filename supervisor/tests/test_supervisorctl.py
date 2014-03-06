@@ -621,6 +621,13 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'foo:foo_00: started\n'
                          'foo:foo_01: started\n')
 
+    def test_start_group_bad_name(self):
+        plugin = self._makeOne()
+        result = plugin.do_start('BAD_NAME:')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'BAD_NAME: ERROR (no such group)\n')
+
     def test_start_all(self):
         plugin = self._makeOne()
         result = plugin.do_start('all')
@@ -688,11 +695,17 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'foo:foo_00: stopped\n'
                          'foo:foo_01: stopped\n')
 
+    def test_stop_group_bad_name(self):
+        plugin = self._makeOne()
+        result = plugin.do_stop('BAD_NAME:')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'BAD_NAME: ERROR (no such group)\n')
+
     def test_stop_all(self):
         plugin = self._makeOne()
         result = plugin.do_stop('all')
         self.assertEqual(result, None)
-
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: stopped\n'
                          'foo2: stopped\n'
