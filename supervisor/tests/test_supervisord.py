@@ -434,7 +434,6 @@ class SupervisordTests(unittest.TestCase):
         options = DummyOptions()
         supervisord = self._makeOne(options)
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
-        process = DummyProcess(pconfig)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
         pgroup = DummyProcessGroup(gconfig)
         readable = DummyDispatcher(readable=True)
@@ -454,7 +453,6 @@ class SupervisordTests(unittest.TestCase):
         options = DummyOptions()
         supervisord = self._makeOne(options)
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
-        process = DummyProcess(pconfig)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
         pgroup = DummyProcessGroup(gconfig)
         from supervisor.medusa import asyncore_25 as asyncore
@@ -490,7 +488,6 @@ class SupervisordTests(unittest.TestCase):
         options = DummyOptions()
         supervisord = self._makeOne(options)
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
-        process = DummyProcess(pconfig)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
         pgroup = DummyProcessGroup(gconfig)
         L = []

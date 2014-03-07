@@ -554,7 +554,7 @@ class SubprocessTests(unittest.TestCase):
         sent = 'a' * (1 << 13)
         self.assertRaises(OSError, instance.write, sent)
         options.forkpid = 1
-        result = instance.spawn()
+        instance.spawn()
         instance.write(sent)
         stdin_fd = instance.pipes['stdin']
         self.assertEqual(sent, instance.dispatchers[stdin_fd].input_buffer)
@@ -569,7 +569,7 @@ class SubprocessTests(unittest.TestCase):
         sent = 'a' * (1 << 13)
         self.assertRaises(OSError, instance.write, sent)
         options.forkpid = 1
-        result = instance.spawn()
+        instance.spawn()
         stdin_fd = instance.pipes['stdin']
         instance.dispatchers[stdin_fd].close()
         self.assertRaises(OSError, instance.write, sent)
@@ -582,7 +582,7 @@ class SubprocessTests(unittest.TestCase):
         sent = 'a' * (1 << 13)
         self.assertRaises(OSError, instance.write, sent)
         options.forkpid = 1
-        result = instance.spawn()
+        instance.spawn()
         stdin_fd = instance.pipes['stdin']
         instance.dispatchers[stdin_fd].flush_error = errno.EPIPE
         self.assertRaises(OSError, instance.write, sent)
@@ -1664,7 +1664,6 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [event])
-        data = pool.config.options.logger.data
 
     def test_transition_event_proc_not_running(self):
         options = DummyOptions()

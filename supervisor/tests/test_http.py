@@ -47,7 +47,6 @@ class LogtailHandlerTests(HandlerTests, unittest.TestCase):
         self.assertEqual(request._error, 410)
 
     def test_handle_request_stdout_logfile_missing(self):
-        supervisor = DummySupervisor()
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', 'foo', 'it/is/missing')
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
@@ -57,7 +56,6 @@ class LogtailHandlerTests(HandlerTests, unittest.TestCase):
         self.assertEqual(request._error, 410)
 
     def test_handle_request(self):
-        supervisor = DummySupervisor()
         import tempfile
         import os
         import stat

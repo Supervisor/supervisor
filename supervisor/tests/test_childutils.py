@@ -8,6 +8,7 @@ class ChildUtilsTests(unittest.TestCase):
         from supervisor.childutils import getRPCInterface
         rpc = getRPCInterface({'SUPERVISOR_SERVER_URL':'http://localhost:9001'})
         # we can't really test this thing; its a magic object
+        self.assertTrue(rpc is not None)
 
     def test_getRPCTransport_no_uname_pass(self):
         from supervisor.childutils import getRPCTransport
@@ -67,7 +68,7 @@ class TestProcessCommunicationsProtocol(unittest.TestCase):
             self.assertEqual(io.getvalue(), '%s%s%s' % (begin, 'hello', end))
         finally:
             sys.stdout = old
-        
+
     def test_stderr(self):
         from supervisor.childutils import pcomm
         old = sys.stderr
@@ -84,8 +85,6 @@ class TestProcessCommunicationsProtocol(unittest.TestCase):
 class TestEventListenerProtocol(unittest.TestCase):
     def test_wait(self):
         from supervisor.childutils import listener
-        from supervisor.dispatchers import PEventListenerDispatcher
-        token = PEventListenerDispatcher.READY_FOR_EVENTS_TOKEN
         class Dummy:
             def readline(self):
                 return 'len:5'
@@ -131,7 +130,7 @@ class TestEventListenerProtocol(unittest.TestCase):
         listener.send(msg, stdout)
         expected = '%s%s\n%s' % (begin, len(msg), msg)
         self.assertEqual(stdout.getvalue(), expected)
-        
+
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

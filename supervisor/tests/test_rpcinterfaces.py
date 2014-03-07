@@ -474,7 +474,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.set_procattr('process1', 'state', ProcessStates.STOPPED)
         supervisord.set_procattr('process2', 'state', ProcessStates.STOPPED)
         interface = self._makeOne(supervisord)
-        callback = interface.startProcess('foo:*')
+        interface.startProcess('foo:*')
         self.assertEqual(interface.update_text, 'startProcessGroup')
 
     def test_startProcessGroup(self):
@@ -777,7 +777,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.set_procattr('process1', 'state', ProcessStates.STOPPED)
         supervisord.set_procattr('process2', 'state', ProcessStates.STOPPED)
         interface = self._makeOne(supervisord)
-        callback = interface.stopProcess('foo:*')
+        interface.stopProcess('foo:*')
         self.assertEqual(interface.update_text, 'stopProcessGroup')
 
     def test_stopAllProcesses(self):

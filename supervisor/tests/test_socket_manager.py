@@ -176,7 +176,7 @@ class SocketManagerTest(unittest.TestCase):
         sock = sock_manager.get_socket()
         sock_manager2 = self._makeOne(conf)
         self.assertRaises(socket.error, sock_manager2.get_socket)
-        sock = None
+        del sock
 
     def test_unix_bad_sock(self):
         conf = UnixStreamSocketConfig('/notthere/foo.sock')
