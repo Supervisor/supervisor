@@ -28,7 +28,6 @@ from supervisor.tests.base import lstrip
 class OptionTests(unittest.TestCase):
 
     def _makeOptions(self, read_error=False):
-        from cStringIO import StringIO
         from supervisor.options import Options
         from supervisor.datatypes import integer
 

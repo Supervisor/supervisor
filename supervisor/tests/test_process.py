@@ -209,7 +209,6 @@ class SubprocessTests(unittest.TestCase):
 
     def test_spawn_fail_make_pipes_emfile(self):
         options = DummyOptions()
-        import errno
         options.make_pipes_error = errno.EMFILE
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
@@ -259,7 +258,6 @@ class SubprocessTests(unittest.TestCase):
 
     def test_spawn_fork_fail_eagain(self):
         options = DummyOptions()
-        import errno
         options.fork_error = errno.EAGAIN
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
@@ -606,7 +604,6 @@ class SubprocessTests(unittest.TestCase):
             self.assertTrue(instance.pid)
             self.assertEqual(instance.pid, result)
             origpid = instance.pid
-            import errno
             while 1:
                 try:
                     data = os.popen('ps').read()
@@ -1613,7 +1610,6 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
         pool = self._makeOne(gconfig)
         process1 = pool.processes['process1']
-        import errno
         process1.write_error = errno.EPIPE
         process1.listener_state = EventListenerStates.READY
         event = DummyEvent()
