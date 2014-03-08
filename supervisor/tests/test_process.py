@@ -604,7 +604,7 @@ class SubprocessTests(unittest.TestCase):
             self.assertTrue(msg.startswith("spawned: 'spew' with pid"))
             self.assertEqual(len(instance.pipes), 6)
             self.assertTrue(instance.pid)
-            self.assertTrueEqual(instance.pid, result)
+            self.assertEqual(instance.pid, result)
             origpid = instance.pid
             import errno
             while 1:
@@ -622,7 +622,7 @@ class SubprocessTests(unittest.TestCase):
             self.assertEqual(msg, None)
             pid, sts = os.waitpid(-1, os.WNOHANG)
             data = os.popen('ps').read()
-            self.assertEqual(data.find(`origpid`), -1) # dubious
+            self.assertEqual(data.find(repr(origpid)), -1) # dubious
         finally:
             try:
                 os.remove(executable)
