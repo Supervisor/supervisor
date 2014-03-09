@@ -477,6 +477,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 elif e.faultCode == xmlrpc.Faults.BAD_NAME:
                     self.ctl.output(template % (name,
                                              'no such process name'))
+                else:
+                    raise
             else:
                 self.ctl.output(output)
 
@@ -532,6 +534,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
             elif e.faultCode == xmlrpc.Faults.FAILED:
                 self.ctl.output(template % ('supervisord',
                                          'unknown error reading log'))
+            else:
+                raise
         else:
             self.ctl.output(output)
 
@@ -630,8 +634,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                         self.ctl.output('No such process %s' % name)
                     else:
                         raise
-                    continue
-                self.ctl.output(str(info['pid']))
+                else:
+                    self.ctl.output(str(info['pid']))
 
     def help_pid(self):
         self.ctl.output("pid\t\t\tGet the PID of supervisord.")
@@ -851,6 +855,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
             except xmlrpclib.Fault, e:
                 if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                     self.ctl.output('ERROR: already shutting down')
+                else:
+                    raise
             else:
                 self.ctl.output('Restarted supervisord')
 
@@ -899,6 +905,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
         except xmlrpclib.Fault, e:
             if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                 self.ctl.output('ERROR: supervisor shutting down')
+            else:
+                raise
         else:
             for pinfo in configinfo:
                 self.ctl.output(self._formatConfigInfo(pinfo))
