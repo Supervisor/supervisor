@@ -428,6 +428,13 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(lines[0], 'Error: tail requires process name')
 
+    def test_tail_bad_modifier(self):
+        plugin = self._makeOne()
+        result = plugin.do_tail('-z foo')
+        self.assertEqual(result, None)
+        lines = plugin.ctl.stdout.getvalue().split('\n')
+        self.assertEqual(lines[0], 'Error: bad argument -z')
+
     def test_tail_defaults(self):
         plugin = self._makeOne()
         result = plugin.do_tail('foo')
@@ -1267,6 +1274,13 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'http://localhost:65532/mainlogtail')
         for msg in ('Cannot connect', 'socket.error'):
             self.assertTrue(msg in error[1])
+
+    def test_maintail_bad_modifier(self):
+        plugin = self._makeOne()
+        result = plugin.do_maintail('-z')
+        self.assertEqual(result, None)
+        lines = plugin.ctl.stdout.getvalue().split('\n')
+        self.assertEqual(lines[0], 'Error: bad argument -z')
 
     def test_maintail_nobytes(self):
         plugin = self._makeOne()
