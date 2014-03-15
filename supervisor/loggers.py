@@ -198,7 +198,7 @@ class RotatingFileHandler(FileHandler):
         except OSError, why:
             # catch exceptional condition (source deleted)
             # E.g. cleanup script removes active log.
-            if why[0] != errno.ENOENT:
+            if why.args[0] != errno.ENOENT:
                 raise
 
     def doRollover(self):
