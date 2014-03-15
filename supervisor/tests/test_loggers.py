@@ -177,6 +177,23 @@ class RotatingFileHandlerTests(FileHandlerTests):
         two = open(self.filename+ '.2','r').read()
         self.assertEqual(two, 'a'*12)
 
+    def test_current_logfile_removed(self):
+        handler = self._makeOne(self.filename, maxBytes=6, backupCount=1)
+        record = self._makeLogRecord('a' * 4)
+
+        handler.emit(record) # 4 bytes
+        self.assert_(os.path.exists(self.filename))
+        self.assertFalse(os.path.exists(self.filename + '.1'))
+
+        # Someone removes the active log file! :-(
+        os.unlink(self.filename)
+        self.assertFalse(os.path.exists(self.filename))
+
+        handler.emit(record) # 8 bytes, do rollover
+        self.assert_(os.path.exists(self.filename))
+        self.assertFalse(os.path.exists(self.filename + '.1'))
+
+
 class BoundIOTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.loggers import BoundIO
