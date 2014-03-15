@@ -56,6 +56,9 @@
   name like "group:*" would cause a 500 Internal Server Error rather than
   returning a BAD_NAME fault.
 
+- Fixed a hang that could occur in ``supervisord`` if log rotation is used
+  and an outside program deletes an active log file.  Patch by Magnus Lycka.
+
 3.0 (2013-07-30)
 ----------------
 
