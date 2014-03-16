@@ -333,6 +333,7 @@ class DummySocket:
 class DummySocketConfig:
     def __init__(self, fd):
         self.fd = fd
+        self.url = 'unix:///sock'
 
     def addr(self):
         return 'dummy addr'
