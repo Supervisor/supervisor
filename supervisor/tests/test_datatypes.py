@@ -508,8 +508,21 @@ class TestOctalType(unittest.TestCase):
         from supervisor.datatypes import octal_type
         return octal_type(arg)
 
-    def test_it_success(self):
+    def test_success(self):
         self.assertEqual(self._callFUT('10'), 8)
 
-    def test_test_it_failure(self):
-        self.assertRaises(ValueError, self._callFUT, 'noo')
+    def test_raises_for_non_numeric(self):
+        try:
+            self._callFUT('bad')
+            self.fail()
+        except ValueError, e:
+            expected = 'bad can not be converted to an octal type'
+            self.assertEqual(e.args[0], expected)
+
+    def test_raises_for_unconvertable_numeric(self):
+        try:
+            self._callFUT('1.2')
+            self.fail()
+        except ValueError, e:
+            expected = '1.2 can not be converted to an octal type'
+            self.assertEqual(e.args[0], expected)

@@ -332,7 +332,7 @@ def gid_for_uid(uid):
 def octal_type(arg):
     try:
         return int(arg, 8)
-    except TypeError:
+    except (TypeError, ValueError):
         raise ValueError('%s can not be converted to an octal type' % arg)
 
 def existing_directory(v):
