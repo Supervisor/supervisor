@@ -763,6 +763,9 @@ class DummySupervisorRPCNamespace:
             raise Fault(xmlrpc.Faults.ALREADY_STARTED, 'ALREADY_STARTED')
         if name == 'SPAWN_ERROR':
             raise Fault(xmlrpc.Faults.SPAWN_ERROR, 'SPAWN_ERROR')
+        if name == 'ABNORMAL_TERMINATION':
+            raise Fault(xmlrpc.Faults.ABNORMAL_TERMINATION,
+                        'ABNORMAL_TERMINATION')
         return True
 
     def startProcessGroup(self, name):

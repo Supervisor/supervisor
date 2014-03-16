@@ -664,6 +664,13 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'SPAWN_ERROR: ERROR (spawn error)\n')
 
+    def test_start_abnormaltermination(self):
+        plugin = self._makeOne()
+        result = plugin.do_start('ABNORMAL_TERMINATION')
+        self.assertEqual(result, None)
+        expected = 'ABNORMAL_TERMINATION: ERROR (abnormal termination)\n'
+        self.assertEqual(plugin.ctl.stdout.getvalue(), expected)
+
     def test_start_one_success(self):
         plugin = self._makeOne()
         result = plugin.do_start('foo')
