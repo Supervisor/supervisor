@@ -6,11 +6,12 @@
 *.swp
 .DS_Store
 .coverage
+.tox/
 build/
 docs/.build/
 dist/
-.tox/
-nosetests.xml
-supervisor/coverage.xml
-tmp/
 env*/
+htmlcov/
+tmp/
+coverage.xml
+nosetests.xml
