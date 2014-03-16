@@ -879,10 +879,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             self.ctl.output("No config updates to processes")
 
     def _formatConfigInfo(self, configinfo):
-        if configinfo['group'] == configinfo['name']:
-            name = configinfo['group']
-        else:
-            name = "%s:%s" % (configinfo['group'], configinfo['name'])
+        name = make_namespec(configinfo['group'], configinfo['name'])
         formatted = { 'name': name }
         if configinfo['inuse']:
             formatted['inuse'] = 'in use'
