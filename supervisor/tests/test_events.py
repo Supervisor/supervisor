@@ -498,6 +498,16 @@ class TestUtilityFunctions(unittest.TestCase):
         for name, value in events.EventTypes.__dict__.items():
             self.assertEqual(events.getEventNameByType(value), name)
 
+    def test_register(self):
+        from supervisor import events
+        self.assertFalse(hasattr(events.EventTypes, 'FOO'))
+        class FooEvent(events.Event):
+            pass
+        try:
+            events.register('FOO', FooEvent)
+            self.assertTrue(events.EventTypes.FOO is FooEvent)
+        finally:
+            del events.EventTypes.FOO
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
