@@ -396,17 +396,22 @@ def url(value):
         return value
     raise ValueError("value %s is not a URL" % value)
 
+# all valid signal numbers
+SIGNUMS = [ getattr(signal, k) for k in dir(signal) if k.startswith('SIG') ]
+
 def signal_number(value):
-    result = None
     try:
-        result = int(value)
+        num = int(value)
     except (ValueError, TypeError):
-        result = getattr(signal, 'SIG'+value, None)
-    try:
-        result = int(result)
-        return result
-    except (ValueError, TypeError):
-        raise ValueError('value %s is not a signal name/number' % value)
+        name = value.strip().upper()
+        if not name.startswith('SIG'):
+            name = 'SIG' + name
+        num = getattr(signal, name, None)
+        if num is None:
+            raise ValueError('value %s is not a valid signal name' % value)
+    if num not in SIGNUMS:
+        raise ValueError('value %s is not a valid signal number' % value)
+    return num
 
 class RestartWhenExitUnexpected:
     pass

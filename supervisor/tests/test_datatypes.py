@@ -526,3 +526,36 @@ class TestOctalType(unittest.TestCase):
         except ValueError, e:
             expected = '1.2 can not be converted to an octal type'
             self.assertEqual(e.args[0], expected)
+
+class TestSignalNumber(unittest.TestCase):
+    def _callFUT(self, arg):
+        from supervisor.datatypes import signal_number
+        return signal_number(arg)
+
+    def test_converts_number(self):
+        import signal
+        self.assertEqual(self._callFUT(signal.SIGTERM), signal.SIGTERM)
+
+    def test_converts_name(self):
+        import signal
+        self.assertEqual(self._callFUT(' term '), signal.SIGTERM)
+
+    def test_converts_signame(self):
+        import signal
+        self.assertEqual(self._callFUT('SIGTERM'), signal.SIGTERM)
+
+    def test_raises_for_bad_number(self):
+        try:
+            self._callFUT('12345678')
+            self.fail()
+        except ValueError, e:
+            expected = "value 12345678 is not a valid signal number"
+            self.assertEqual(e.args[0], expected)
+
+    def test_raises_for_bad_name(self):
+        try:
+            self._callFUT('BADSIG')
+            self.fail()
+        except ValueError, e:
+            expected = "value BADSIG is not a valid signal name"
+            self.assertEqual(e.args[0], expected)
