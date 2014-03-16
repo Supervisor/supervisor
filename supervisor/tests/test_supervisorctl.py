@@ -1138,7 +1138,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ERROR: process/group still running: STILL_RUNNING\n')
 
-    def test_add_update(self):
+    def test_update_help(self):
         plugin = self._makeOne()
         plugin.help_update()
         out = plugin.ctl.stdout.getvalue()
