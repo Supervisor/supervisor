@@ -135,6 +135,23 @@ class SupervisordTests(unittest.TestCase):
         supervisord.reap(once=True)
         self.assertEqual(process.finished, (1,1))
 
+    def test_reap_unknown_pid(self):
+        options = DummyOptions()
+        options.waitpid_return = 2, 0 # pid, status
+        pconfig = DummyPConfig(options, 'process', 'process', '/bin/process1')
+        process = DummyProcess(pconfig)
+        process.drained = False
+        process.killing = True
+        process.laststop = None
+        process.waitstatus = None, None
+        options.pidhistory = {1: process}
+        supervisord = self._makeOne(options)
+
+        supervisord.reap(once=True)
+        self.assertEqual(process.finished, None)
+        self.assertEqual(options.logger.data[0],
+                         'reaped unknown pid 2')
+
     def test_handle_sigterm(self):
         options = DummyOptions()
         options._signal = signal.SIGTERM
