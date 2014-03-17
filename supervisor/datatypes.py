@@ -32,10 +32,8 @@ def process_or_group_name(name):
 def integer(value):
     try:
         return int(value)
-    except ValueError:
-        return long(value) # why does this help? (CM)
-    except OverflowError:
-        return long(value)
+    except (ValueError, OverflowError):
+        return long(value) # why does this help ValueError? (CM)
 
 TRUTHY_STRINGS = ('yes', 'true', 'on', '1')
 FALSY_STRINGS  = ('no', 'false', 'off', '0')
