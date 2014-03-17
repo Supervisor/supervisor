@@ -557,3 +557,31 @@ class SignalNumberTests(unittest.TestCase):
         except ValueError, e:
             expected = "value BADSIG is not a valid signal name"
             self.assertEqual(e.args[0], expected)
+
+class AutoRestartTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        from supervisor.datatypes import auto_restart
+        return auto_restart(arg)
+
+    def test_converts_truthy(self):
+        from supervisor.datatypes import RestartUnconditionally
+        from supervisor.datatypes import TRUTHY_STRINGS
+        for s in TRUTHY_STRINGS:
+            self.assertEqual(self._callFUT(s), RestartUnconditionally)
+
+    def test_converts_falsy(self):
+        from supervisor.datatypes import FALSY_STRINGS
+        for s in FALSY_STRINGS:
+            self.assertFalse(self._callFUT(s))
+
+    def test_converts_unexpected(self):
+        from supervisor.datatypes import RestartWhenExitUnexpected
+        for s in ('unexpected', 'UNEXPECTED'):
+            self.assertEqual(self._callFUT(s), RestartWhenExitUnexpected)
+
+    def test_raises_for_bad_value(self):
+        try:
+            self.assertEqual(self._callFUT('bad'))
+            self.fail()
+        except ValueError, e:
+            self.assertEqual(e.args[0], "invalid 'autorestart' value 'bad'")
