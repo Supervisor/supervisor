@@ -605,3 +605,43 @@ class ProfileOptionsTests(unittest.TestCase):
         sort_options, callers = self._callFUT('cumulative, callers')
         self.assertEqual(['cumulative'], sort_options)
         self.assertTrue(callers)
+
+class ExistingDirectoryTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        from supervisor.datatypes import existing_directory
+        return existing_directory(arg)
+
+    def test_dir_exists(self):
+        path = os.path.dirname(__file__)
+        self.assertEqual(path, self._callFUT(path))
+
+    def test_dir_does_not_exist(self):
+        path = os.path.join(os.path.dirname(__file__), 'nonexistant')
+        try:
+            self._callFUT(path)
+            self.fail()
+        except ValueError, e:
+            expected = "%s is not an existing directory" % path
+            self.assertEqual(e.args[0], expected)
+
+    def test_not_a_directory(self):
+        path = __file__
+        try:
+            self._callFUT(path)
+            self.fail()
+        except ValueError, e:
+            expected = "%s is not an existing directory" % path
+            self.assertEqual(e.args[0], expected)
+
+    def test_expands_home(self):
+        home = os.path.expanduser('~')
+        if os.path.exists(home):
+            path = self._callFUT('~')
+            self.assertEqual(home, path)
+
+    def test_expands_here(self):
+        datatypes.here = os.path.dirname(__file__)
+        try:
+            self.assertEqual(datatypes.here, self._callFUT('%(here)s'))
+        finally:
+            datatypes.here = None
