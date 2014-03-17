@@ -441,7 +441,7 @@ class InetAddressTests(unittest.TestCase):
         self.assertEqual(host, 'localhost')
         self.assertEqual(port, 80)
 
-class TestSocketAddress(unittest.TestCase):
+class SocketAddressTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.datatypes import SocketAddress
         return SocketAddress
@@ -461,7 +461,7 @@ class TestSocketAddress(unittest.TestCase):
         self.assertEqual(addr.family, socket.AF_INET)
         self.assertEqual(addr.address, ('localhost', 8080))
 
-class TestColonSeparatedUserGroup(unittest.TestCase):
+class ColonSeparatedUserGroupTests(unittest.TestCase):
     def _callFUT(self, arg):
         from supervisor.datatypes import colon_separated_user_group
         return colon_separated_user_group(arg)
@@ -504,7 +504,7 @@ class TestColonSeparatedUserGroup(unittest.TestCase):
         self.assertEqual(42, uid)
         self.assertEqual(-1, gid)
 
-class TestOctalType(unittest.TestCase):
+class OctalTypeTests(unittest.TestCase):
     def _callFUT(self, arg):
         from supervisor.datatypes import octal_type
         return octal_type(arg)
@@ -528,7 +528,7 @@ class TestOctalType(unittest.TestCase):
             expected = '1.2 can not be converted to an octal type'
             self.assertEqual(e.args[0], expected)
 
-class TestSignalNumber(unittest.TestCase):
+class SignalNumberTests(unittest.TestCase):
     def _callFUT(self, arg):
         from supervisor.datatypes import signal_number
         return signal_number(arg)
