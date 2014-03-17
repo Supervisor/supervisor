@@ -345,6 +345,51 @@ class ExistingDirectoryTests(unittest.TestCase):
         finally:
             datatypes.here = None
 
+class ExistingDirpathTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.existing_dirpath(arg)
+
+    def test_returns_existing_dirpath(self):
+        self.assertEqual(self._callFUT(__file__), __file__)
+
+    def test_returns_dirpath_if_relative(self):
+        self.assertEqual(self._callFUT('foo'), 'foo')
+
+    def test_raises_if_dir_does_not_exist(self):
+        path = os.path.join(os.path.dirname(__file__), 'nonexistant', 'foo')
+        try:
+            self._callFUT(path)
+            self.fail()
+        except ValueError, e:
+            expected = ('The directory named as part of the path %s '
+                        'does not exist.' % path)
+            self.assertEqual(e.args[0], expected)
+
+    def test_raises_if_exists_but_not_a_dir(self):
+        path = os.path.join(os.path.dirname(__file__),
+                            os.path.basename(__file__), 'foo')
+        try:
+            self._callFUT(path)
+            self.fail()
+        except ValueError, e:
+            expected = ('The directory named as part of the path %s '
+                        'does not exist.' % path)
+            self.assertEqual(e.args[0], expected)
+
+    def test_expands_home(self):
+        home = os.path.expanduser('~')
+        if os.path.exists(home):
+            path = self._callFUT('~/foo')
+            self.assertEqual(os.path.join(home, 'foo'), path)
+
+    def test_expands_here(self):
+        datatypes.here = os.path.dirname(__file__)
+        try:
+            expected = os.path.join(datatypes.here, 'foo')
+            self.assertEqual(self._callFUT('%(here)s/foo'), expected)
+        finally:
+            datatypes.here = None
+
 class LoggingLevelTests(unittest.TestCase):
     def _callFUT(self, arg):
         return datatypes.logging_level(arg)
