@@ -171,6 +171,15 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(options.logger.data[0],
                          'received SIGHUP indicating restart request')
 
+    def test_handle_sigchld(self):
+        options = DummyOptions()
+        options._signal = signal.SIGCHLD
+        supervisord = self._makeOne(options)
+        supervisord.handle_signal()
+        self.assertEqual(supervisord.options.mood, 1)
+        self.assertEqual(options.logger.data[0],
+                         'received SIGCHLD indicating a child quit')
+
     def test_handle_sigusr2(self):
         options = DummyOptions()
         options._signal = signal.SIGUSR2
