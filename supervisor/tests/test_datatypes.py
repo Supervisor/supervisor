@@ -1,10 +1,11 @@
 """Test suite for supervisor.datatypes"""
 
-import sys
 import os
-import unittest
+import signal
 import socket
+import sys
 import tempfile
+import unittest
 from mock import Mock, patch, sentinel
 from supervisor import datatypes
 
@@ -533,15 +534,12 @@ class TestSignalNumber(unittest.TestCase):
         return signal_number(arg)
 
     def test_converts_number(self):
-        import signal
         self.assertEqual(self._callFUT(signal.SIGTERM), signal.SIGTERM)
 
     def test_converts_name(self):
-        import signal
         self.assertEqual(self._callFUT(' term '), signal.SIGTERM)
 
     def test_converts_signame(self):
-        import signal
         self.assertEqual(self._callFUT('SIGTERM'), signal.SIGTERM)
 
     def test_raises_for_bad_number(self):
