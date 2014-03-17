@@ -549,6 +549,44 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
         self.assertEqual(tf_name, path_arg)
         self.assertEqual(mode, mode_arg)
 
+    def test_create_and_bind_when_chown_fails(self):
+        (tf_fd, tf_name) = tempfile.mkstemp()
+        owner = (sentinel.uid, sentinel.gid)
+        mode = sentinel.mode
+        conf = self._makeOne(tf_name, owner=owner, mode=mode)
+
+        @patch('os.chown', Mock(side_effect=OSError("msg")))
+        @patch('os.chmod', Mock())
+        def call_create_and_bind(conf):
+            return conf.create_and_bind()
+
+        try:
+            call_create_and_bind(conf)
+            self.fail()
+        except ValueError, e:
+            expected = "Could not change ownership of socket file: msg"
+            self.assertEqual(e.args[0], expected)
+            self.assertFalse(os.path.exists(tf_name))
+
+    def test_create_and_bind_when_chmod_fails(self):
+        (tf_fd, tf_name) = tempfile.mkstemp()
+        owner = (sentinel.uid, sentinel.gid)
+        mode = sentinel.mode
+        conf = self._makeOne(tf_name, owner=owner, mode=mode)
+
+        @patch('os.chown', Mock())
+        @patch('os.chmod', Mock(side_effect=OSError("msg")))
+        def call_create_and_bind(conf):
+            return conf.create_and_bind()
+
+        try:
+            call_create_and_bind(conf)
+            self.fail()
+        except ValueError, e:
+            expected = "Could not change permissions of socket file: msg"
+            self.assertEqual(e.args[0], expected)
+            self.assertFalse(os.path.exists(tf_name))
+
     def test_same_paths_are_equal(self):
         conf1 = self._makeOne('/tmp/foo.sock')
         conf2 = self._makeOne('/tmp/foo.sock')
