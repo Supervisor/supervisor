@@ -581,7 +581,27 @@ class AutoRestartTests(unittest.TestCase):
 
     def test_raises_for_bad_value(self):
         try:
-            self.assertEqual(self._callFUT('bad'))
+            self._callFUT('bad')
             self.fail()
         except ValueError, e:
             self.assertEqual(e.args[0], "invalid 'autorestart' value 'bad'")
+
+class ProfileOptionsTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        from supervisor.datatypes import profile_options
+        return profile_options(arg)
+
+    def test_empty(self):
+        sort_options, callers = self._callFUT('')
+        self.assertEqual([], sort_options)
+        self.assertFalse(callers)
+
+    def test_without_callers(self):
+        sort_options, callers = self._callFUT('CUMULATIVE,calls')
+        self.assertEqual(['cumulative', 'calls'], sort_options)
+        self.assertFalse(callers)
+
+    def test_with_callers(self):
+        sort_options, callers = self._callFUT('cumulative, callers')
+        self.assertEqual(['cumulative'], sort_options)
+        self.assertTrue(callers)
