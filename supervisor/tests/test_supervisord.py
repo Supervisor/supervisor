@@ -177,8 +177,11 @@ class SupervisordTests(unittest.TestCase):
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
         self.assertEqual(supervisord.options.mood, 1)
-        self.assertEqual(options.logger.data[0],
-                         'received SIGCHLD indicating a child quit')
+        # supervisor.options.signame(signal.SIGCHLD) may return "SIGCLD"
+        # on linux or other systems where SIGCHLD = SIGCLD.
+        msgs = ('received SIGCHLD indicating a child quit',
+                'received SIGCLD indicating a child quit')
+        self.assertTrue(options.logger.data[0] in msgs)
 
     def test_handle_sigusr2(self):
         options = DummyOptions()
