@@ -63,7 +63,12 @@ These also includes various event listeners.
 `supervisor-serialrestart <https://github.com/native2k/supervisor-serialrestart>`_
     Adds a ``serialrestart`` command to ``supervisorctl`` that restarts
     processes one after another rather than all at once.
-
+`supervisor-quick <http://lxyu.github.io/supervisor-quick/>`_
+    Adds ``quickstart``, ``quickstop``, and ``quickrestart`` commands to
+    ``supervisorctl`` that can be faster than the built-in commands.  It
+    works by using the non-blocking mode of the XML-RPC methods and then
+    polling ``supervisord``.  The built-in commands use the blocking mode,
+    which can be slower due to ``supervisord`` implementation details.
 
 Libraries that integrate Third Party Applications with Supervisor
 -----------------------------------------------------------------
