@@ -1546,6 +1546,14 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                              interface.sendProcessStdin,
                              'process1', thing_not_chars)
 
+    def test_sendProcessStdin_raises_bad_name_when_bad_process(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        from supervisor import xmlrpc
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
+                             interface.sendProcessStdin,
+                             'nonexistant', 'chars for stdin')
+
     def test_sendProcessStdin_raises_bad_name_when_no_process(self):
         options = DummyOptions()
         supervisord = PopulatedDummySupervisor(options, 'foo')
@@ -1553,7 +1561,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         from supervisor import xmlrpc
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
                              interface.sendProcessStdin,
-                             'nonexistant_process_name', 'chars for stdin')
+                             'foo:*', 'chars for stdin')
 
     def test_sendProcessStdin_raises_not_running_when_not_process_pid(self):
         options = DummyOptions()
@@ -1590,6 +1598,19 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self._assertRPCError(xmlrpc.Faults.NO_FILE,
                              interface.sendProcessStdin,
                              'process1', 'chars for stdin')
+
+    def test_sendProcessStdin_reraises_other_oserrors(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'foo')
+        supervisord = PopulatedDummySupervisor(options, 'process1', pconfig1)
+        supervisord.set_procattr('process1', 'pid', 42)
+        supervisord.set_procattr('process1', 'killing', False)
+        supervisord.set_procattr('process1', 'write_error', errno.EINTR)
+        interface   = self._makeOne(supervisord)
+        from supervisor import xmlrpc
+        self.assertRaises(OSError,
+                          interface.sendProcessStdin,
+                          'process1', 'chars for stdin')
 
     def test_sendProcessStdin_writes_chars_and_returns_true(self):
         options = DummyOptions()
