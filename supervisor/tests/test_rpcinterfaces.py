@@ -994,9 +994,19 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = DummySupervisor(process_groups={'foo':pgroup})
         interface = self._makeOne(supervisord)
         data = interface.getProcessInfo('foo')
-
         self.assertEqual(data['logfile'], '')
         self.assertEqual(data['stdout_logfile'], '')
+
+    def test_getProcessInfo_unknown_state(self):
+        from supervisor.states import ProcessStates
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        supervisord.set_procattr('foo', 'state', ProcessStates.UNKNOWN)
+        interface = self._makeOne(supervisord)
+        data = interface.getProcessInfo('foo')
+        self.assertEqual(data['statename'], 'UNKNOWN')
+        self.assertEqual(data['description'], '')
 
     def test_getProcessInfo_bad_name_when_bad_process(self):
         from supervisor import xmlrpc
