@@ -659,13 +659,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(result[1]['status'],  Faults.SUCCESS)
         self.assertEqual(result[1]['description'], 'OK')
 
-    def test_stopProcess_badname(self):
-        from supervisor import xmlrpc
-        supervisord = DummySupervisor()
-        interface = self._makeOne(supervisord)
-        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
-                             interface.stopProcess, 'foo')
-
     def test_stopProcess(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo')
@@ -698,6 +691,35 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         self.assertEqual(process.stop_called, True)
         self.assertEqual(interface.update_text, 'stopProcess')
+
+    def test_stopProcess_bad_name(self):
+        from supervisor.xmlrpc import Faults
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(Faults.BAD_NAME,
+                             interface.stopProcess, 'foo')
+
+    def test_stopProcess_not_running(self):
+        from supervisor.states import ProcessStates
+        from supervisor.xmlrpc import Faults
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        supervisord.set_procattr('foo', 'state', ProcessStates.EXITED)
+        interface = self._makeOne(supervisord)
+        callback = interface.stopProcess('foo')
+        self._assertRPCError(Faults.NOT_RUNNING, callback)
+
+    def test_stopProcess_failed(self):
+        from supervisor.states import ProcessStates
+        from supervisor.xmlrpc import Faults
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        supervisord.set_procattr('foo', 'stop', lambda: 'unstoppable')
+        interface = self._makeOne(supervisord)
+        callback = interface.stopProcess('foo')
+        self._assertRPCError(Faults.FAILED, callback)
 
     def test_stopProcessGroup(self):
         options = DummyOptions()
