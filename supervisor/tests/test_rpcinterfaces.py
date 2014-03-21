@@ -1537,6 +1537,14 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
                           'status':xmlrpc.Faults.SUCCESS,
                           'description':'OK'})
 
+    def test_clearAllProcessLogs_no_processes(self):
+        supervisord = DummySupervisor()
+        self.assertEqual(supervisord.process_groups, {})
+        interface = self._makeOne(supervisord)
+        callback = interface.clearAllProcessLogs()
+        results = callback()
+        self.assertEqual(results, [])
+
     def test_sendProcessStdin_raises_incorrect_params_when_not_chars(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', 'foo')
