@@ -410,7 +410,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not self.ctl.upcheck():
             return
 
-        args = arg.strip().split()
+        args = arg.split()
 
         if len(args) < 1:
             self.ctl.output('Error: too few arguments')
@@ -496,7 +496,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not self.ctl.upcheck():
             return
 
-        args = arg.strip().split()
+        args = arg.split()
 
         if len(args) > 1:
             self.ctl.output('Error: too many arguments')
@@ -579,7 +579,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
         all_infos = supervisor.getAllProcessInfo()
 
-        names = arg.strip().split()
+        names = arg.split()
         if not names or "all" in names:
             matching_infos = all_infos
         else:
@@ -618,7 +618,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
         if not self.ctl.upcheck():
             return
-        names = arg.strip().split()
+        names = arg.split()
         if not names:
             pid = supervisor.getPID()
             self.ctl.output(str(pid))
@@ -669,7 +669,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not self.ctl.upcheck():
             return
 
-        names = arg.strip().split()
+        names = arg.split()
         supervisor = self.ctl.get_supervisor()
 
         if not names:
@@ -738,7 +738,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not self.ctl.upcheck():
             return
 
-        names = arg.strip().split()
+        names = arg.split()
         supervisor = self.ctl.get_supervisor()
 
         if not names:
@@ -790,7 +790,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not self.ctl.upcheck():
             return
 
-        names = arg.strip().split()
+        names = arg.split()
 
         if not names:
             self.ctl.output('Error: restart requires a process name')
@@ -929,7 +929,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output("reread \t\t\tReload the daemon's configuration files")
 
     def do_add(self, arg):
-        names = arg.strip().split()
+        names = arg.split()
 
         supervisor = self.ctl.get_supervisor()
         for name in names:
@@ -953,7 +953,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                         "for process/group")
 
     def do_remove(self, arg):
-        names = arg.strip().split()
+        names = arg.split()
 
         supervisor = self.ctl.get_supervisor()
         for name in names:
@@ -990,7 +990,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 raise e
 
         added, changed, removed = result[0]
-        valid_gnames = set(arg.strip().split())
+        valid_gnames = set(arg.split())
 
         # If all is specified treat it as if nothing was specified.
         if "all" in valid_gnames:
@@ -1061,7 +1061,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not self.ctl.upcheck():
             return
 
-        names = arg.strip().split()
+        names = arg.split()
 
         if not names:
             self.ctl.output('Error: clear requires a process name')
