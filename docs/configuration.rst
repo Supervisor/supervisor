@@ -17,7 +17,7 @@ file it finds.
 #. :file:`/etc/supervisord.conf`
 
 :file:`supervisord.conf` is a Windows-INI-style (Python ConfigParser)
-file.  It has sections (each denoted by a ``[header]``)and key / value
+file.  It has sections (each denoted by a ``[header]``) and key / value
 pairs within the sections.  The sections and their allowable values
 are described below.
 
