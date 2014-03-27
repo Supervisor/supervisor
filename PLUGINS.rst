@@ -116,3 +116,5 @@ with third party applications:
     `Chef <http://www.opscode.com/chef/>`_ cookbook install and configure supervisord.
 `PHP Supervisor <https://github.com/indigophp/supervisor>`_
     PHP client for the supervisord XML-RPC interface. Configuration generator. Event listener work in progress.
+`Supervisord-Client <http://search.cpan.org/~skaufman/Supervisord-Client>`_
+    Perl client for the supervisord XML-RPC interface.
