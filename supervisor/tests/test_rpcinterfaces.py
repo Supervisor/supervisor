@@ -711,7 +711,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self._assertRPCError(Faults.NOT_RUNNING, callback)
 
     def test_stopProcess_failed(self):
-        from supervisor.states import ProcessStates
         from supervisor.xmlrpc import Faults
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo')
@@ -1627,7 +1626,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.set_procattr('process1', 'killing', False)
         supervisord.set_procattr('process1', 'write_error', errno.EINTR)
         interface   = self._makeOne(supervisord)
-        from supervisor import xmlrpc
         self.assertRaises(OSError,
                           interface.sendProcessStdin,
                           'process1', 'chars for stdin')
