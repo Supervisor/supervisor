@@ -48,7 +48,7 @@ Primary Authors and Maintainers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - `Chris McDonough <http://plope.com>`_ is the original author of Supervisor
-and the primary maintainer.
+  and the primary maintainer.
 
 Contributors
 ~~~~~~~~~~~~

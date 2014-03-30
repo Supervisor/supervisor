@@ -53,7 +53,7 @@
   for reporting this issue.
 
 - Fixed an XML-RPC bug where calling supervisor.clearProcessLogs() with a
-  name like "group:*" would cause a 500 Internal Server Error rather than
+  name like ``group:*`` would cause a 500 Internal Server Error rather than
   returning a BAD_NAME fault.
 
 - Fixed a hang that could occur in ``supervisord`` if log rotation is used

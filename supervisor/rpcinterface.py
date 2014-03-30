@@ -248,7 +248,7 @@ class SupervisorNamespaceRPCInterface:
     def startProcess(self, name, wait=True):
         """ Start a process
 
-        @param string name Process name (or 'group:name', or 'group:*')
+        @param string name Process name (or ``group:name``, or ``group:*``)
         @param boolean wait Wait for process to be fully started
         @return boolean result     Always true unless error
 
