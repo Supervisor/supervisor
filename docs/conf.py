@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# supervisor documentation build configuration file
+# Supervisor documentation build configuration file
 #
 # This file is execfile()d with the current directory set to its containing
 # dir.
@@ -51,7 +51,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General substitutions.
-project = 'supervisor'                                              
+project = 'Supervisor'
 year = date.today().year
 copyright = '2004-%d, Agendaless Consulting and Contributors' % year
 
