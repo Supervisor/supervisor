@@ -118,3 +118,6 @@ with third party applications:
     PHP client for the supervisord XML-RPC interface. Configuration generator. Event listener work in progress.
 `Supervisord-Client <http://search.cpan.org/~skaufman/Supervisord-Client>`_
     Perl client for the supervisord XML-RPC interface.
+`Supermann <https://github.com/borntyping/supermann>`_
+    Supermann monitors processes running under Supervisor and sends metrics
+    to `Riemann <http://riemann.io/>`_.
