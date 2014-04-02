@@ -55,8 +55,6 @@ class PidProxy:
             print "Can't read child pidfile %s!" % self.pidfile
             return
         os.kill(pid, sig)
-        if sig in [signal.SIGTERM, signal.SIGINT, signal.SIGQUIT]:
-            sys.exit(0)
 
 def main():
     pp = PidProxy(sys.argv)
