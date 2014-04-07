@@ -793,6 +793,7 @@ class EventListenerPool(ProcessGroupBase):
             self.event_buffer.append(event)
 
     def _dispatchEvent(self, event):
+        return_value = True
         pool_serial = event.pool_serials[self.config.name]
 
         for process in self.processes.values():
@@ -809,6 +810,7 @@ class EventListenerPool(ProcessGroupBase):
                 except OSError, why:
                     if why.args[0] != errno.EPIPE:
                         raise
+                    return_value = False
                     continue
 
                 process.listener_state = EventListenerStates.BUSY
@@ -816,9 +818,8 @@ class EventListenerPool(ProcessGroupBase):
                 self.config.options.logger.debug(
                     'event %s sent to listener %s' % (
                     event.serial, process.config.name))
-                return True
 
-        return False
+        return return_value
 
     def _eventEnvelope(self, event_type, serial, pool_serial, payload):
         event_name = events.getEventNameByType(event_type)
