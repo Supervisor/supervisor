@@ -987,7 +987,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 self.ctl.output('ERROR: already shutting down')
                 return
             else:
-                raise e
+                raise
 
         added, changed, removed = result[0]
         valid_gnames = set(arg.split())
