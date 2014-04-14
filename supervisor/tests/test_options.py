@@ -137,6 +137,19 @@ class OptionTests(unittest.TestCase):
         options._set('foo', 'gazonk', 1)
         self.assertEqual(options.foo, 'gazonk')
 
+    def test_missing_default_config(self):
+        options = self._makeOptions()
+        options.searchpaths = [missing_but_potential_file()]
+        options.exit = dummy_exit()
+        options.stderr = StringIO()
+        try:
+            options.default_configfile()
+        except DummyExitException as e:
+            self.assertEqual(e.exitcode, 2)
+        else:
+            self.fail("expected exception")
+        self.assertTrue(options.stderr.getvalue().startswith("Error: No config file found at default paths"))
+
 class ClientOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ClientOptions
