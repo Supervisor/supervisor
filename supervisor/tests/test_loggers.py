@@ -192,7 +192,7 @@ class RotatingFileHandlerTests(FileHandlerTests):
         record = self._makeLogRecord('a' * 4)
 
         handler.emit(record) # 4 bytes
-        self.assert_(os.path.exists(self.filename))
+        self.assertTrue(os.path.exists(self.filename))
         self.assertFalse(os.path.exists(self.filename + '.1'))
 
         # Someone removes the active log file! :-(
@@ -200,7 +200,7 @@ class RotatingFileHandlerTests(FileHandlerTests):
         self.assertFalse(os.path.exists(self.filename))
 
         handler.emit(record) # 8 bytes, do rollover
-        self.assert_(os.path.exists(self.filename))
+        self.assertTrue(os.path.exists(self.filename))
         self.assertFalse(os.path.exists(self.filename + '.1'))
 
 
