@@ -69,6 +69,18 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.handle_read_event(), None)
         self.assertEqual(dispatcher.output_buffer, 'abc')
 
+    def test_handle_read_event_no_data_closes(self):
+        options = DummyOptions()
+        options.readfd_result = ''
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_capture_maxbytes=100)
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertFalse(dispatcher.closed)
+        self.assertEqual(dispatcher.handle_read_event(), None)
+        self.assertEqual(dispatcher.output_buffer, '')
+        self.assertTrue(dispatcher.closed)
+
     def test_handle_error(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test')

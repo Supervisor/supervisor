@@ -1,5 +1,7 @@
 import base64
 import os
+import socket
+import stat
 import sys
 import supervisor.medusa.text_socket as socket
 import tempfile
@@ -55,7 +57,6 @@ class LogtailHandlerTests(HandlerTests, unittest.TestCase):
         self.assertEqual(request._error, 410)
 
     def test_handle_request(self):
-        import stat
         f = tempfile.NamedTemporaryFile()
         t = f.name
         options = DummyOptions()
@@ -94,9 +95,6 @@ class MainLogTailHandlerTests(HandlerTests, unittest.TestCase):
 
     def test_handle_request(self):
         supervisor = DummySupervisor()
-        import tempfile
-        import os
-        import stat
         f = tempfile.NamedTemporaryFile()
         t = f.name
         supervisor.options.logfile = t
@@ -122,7 +120,6 @@ class TailFProducerTests(unittest.TestCase):
 
     def test_handle_more(self):
         request = DummyRequest('/logtail/foo', None, None, None)
-        import tempfile
         from supervisor import http
         f = tempfile.NamedTemporaryFile()
         f.write(as_bytes('a' * 80))

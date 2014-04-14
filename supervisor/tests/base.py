@@ -4,6 +4,11 @@ _TIMEFORMAT = '%b %d %I:%M %p'
 from supervisor.compat import total_ordering
 from supervisor.compat import Fault
 
+try:
+    import xmlrpclib
+except ImportError:
+    import xmlrpc.client as xmlrpclib
+
 class DummyOptions:
 
     make_pipes_error = None
@@ -334,6 +339,7 @@ class DummySocket:
 class DummySocketConfig:
     def __init__(self, fd):
         self.fd = fd
+        self.url = 'unix:///sock'
 
     def addr(self):
         return 'dummy addr'
@@ -769,10 +775,15 @@ class DummySupervisorRPCNamespace:
             raise Fault(xmlrpc.Faults.ALREADY_STARTED, 'ALREADY_STARTED')
         if name == 'SPAWN_ERROR':
             raise Fault(xmlrpc.Faults.SPAWN_ERROR, 'SPAWN_ERROR')
+        if name == 'ABNORMAL_TERMINATION':
+            raise Fault(xmlrpc.Faults.ABNORMAL_TERMINATION,
+                        'ABNORMAL_TERMINATION')
         return True
 
     def startProcessGroup(self, name):
         from supervisor import xmlrpc
+        if name == 'BAD_NAME':
+            raise xmlrpclib.Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
         return [
             {'name':'foo_00', 'group':'foo',
              'status': xmlrpc.Faults.SUCCESS,
@@ -798,6 +809,8 @@ class DummySupervisorRPCNamespace:
 
     def stopProcessGroup(self, name):
         from supervisor import xmlrpc
+        if name == 'BAD_NAME':
+            raise xmlrpclib.Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
         return [
             {'name':'foo_00', 'group':'foo',
              'status': xmlrpc.Faults.SUCCESS,

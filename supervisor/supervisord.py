@@ -284,7 +284,7 @@ class Supervisor:
         if pid:
             process = self.options.pidhistory.get(pid, None)
             if process is None:
-                self.options.logger.critical('reaped unknown pid %s)' % pid)
+                self.options.logger.critical('reaped unknown pid %s' % pid)
             else:
                 process.finish(pid, sts)
                 del self.options.pidhistory[pid]

@@ -9,6 +9,36 @@
 3.1.0-dev (Next 3.x Release)
 ----------------------------
 
+- The output of the ``start``, ``stop``, ``restart``, and ``clear`` commands
+  in ``supervisorctl`` has been changed to be consistent with the ``status``
+  command.  Previously, the ``status`` command would show a process like
+  ``foo:foo_01`` but starting that process would show ``foo_01: started``
+  (note the group prefix ``foo:`` was missing).  Now, starting the process
+  will show ``foo:foo_01: started``.  Suggested by Chris Wood.
+
+- The ``status`` command in ``supervisorctl`` now supports group name
+  syntax: ``status group:*``.
+
+- The process column in the table output by the ``status`` command in
+  ``supervisorctl`` now expands to fit the widest name.
+
+- The ``update`` command in ``supervisorctl`` now accepts optional group
+  names.  When group names are specified, only those groups will be
+  updated.  Patch by Gary M. Josack.
+
+- Tab completion in ``supervisorctl`` has been improved and now works for
+  more cases.  Thanks to Mathieu Longtin and Marc Abramowitz for the patches.
+
+- Attempting to start or stop a process group in ``supervisorctl`` with the
+  ``group:*`` syntax will now show the same error message as the ``process``
+  syntax if the name does not exist.  Previously, it would show a Python
+  exception.  Patch by George Ang.
+
+- Added new ``PROCESS_GROUP_ADDED`` and ``PROCESS_GROUP_REMOVED`` events.
+  These events are fired when process groups are added or removed from
+  Supervisor's runtime configuration when using the ``add`` and ``remove``
+  commands in ``supervisorctl``.  Patch by Brent Tubbs.
+
 - Stopping a process in the backoff state now changes it to the stopped
   state.  Previously, an attempt to stop a process in backoff would be
   ignored.  Patch by Pascal Varet.
@@ -30,29 +60,12 @@
   exception if the password contained a colon.  Thanks to Thomas Guttler
   for reporting this issue.
 
-- The ``update`` command in ``supervisorctl`` now accepts optional group
-  names.  When group names are specified, only those groups will be
-  updated.  Patch by Gary M. Josack.
-
-- Added new ``PROCESS_GROUP_ADDED`` and ``PROCESS_GROUP_REMOVED`` events.
-  These events are fired when process groups are added or removed from
-  Supervisor's runtime configuration when using the ``add`` and ``remove``
-  commands in ``supervisorctl``.  Patch by Brent Tubbs.
-
-- The ``status`` command in ``supervisorctl`` now supports group name
-  syntax: ``status group:*``.
-
 - Fixed an XML-RPC bug where calling supervisor.clearProcessLogs() with a
-  name like "group:*" would cause a 500 Internal Server Error rather than
+  name like ``group:*`` would cause a 500 Internal Server Error rather than
   returning a BAD_NAME fault.
 
-- Tab completion in ``supervisorctl`` has been improved and now works for
-  more cases.  Thanks to Mathieu Longtin and Marc Abramowitz for the patches.
-
-- Attempting to start or stop a process group in ``supervisorctl`` with the
-  ``group:*`` syntax will now show the same error message as the ``process``
-  syntax if the name does not exist.  Previously, it would show a Python
-  exception.  Patch by George Ang.
+- Fixed a hang that could occur in ``supervisord`` if log rotation is used
+  and an outside program deletes an active log file.  Patch by Magnus Lycka.
 
 3.0 (2013-07-30)
 ----------------

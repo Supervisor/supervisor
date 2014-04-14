@@ -14,7 +14,7 @@ def main(max):
     i = 0
     while 1:
         childutils.pcomm.stdout('the_data')
-        data = sys.stdin.readline()
+        sys.stdin.readline()
         report.write(str(i) + ' @ %s\n' % childutils.get_asctime())
         report.flush()
         i+=1
@@ -28,5 +28,5 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         max = int(sys.argv[1])
     main(max)
-        
+
 

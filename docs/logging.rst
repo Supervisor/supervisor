@@ -90,7 +90,7 @@ blather             BLAT          Messages useful for developers trying to
 Activity Log Rotation
 ~~~~~~~~~~~~~~~~~~~~~
 
-The activity log is "rotated" by :program:`supervisord`` based on the
+The activity log is "rotated" by :program:`supervisord` based on the
 combination of the ``logfile_maxbytes`` and the ``logfile_backups``
 parameters in the ``[supervisord]`` section of the configuration file.
 When the activity log reaches ``logfile_maxbytes`` bytes, the current

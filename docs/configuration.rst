@@ -17,7 +17,7 @@ file it finds.
 #. :file:`/etc/supervisord.conf`
 
 :file:`supervisord.conf` is a Windows-INI-style (Python ConfigParser)
-file.  It has sections (each denoted by a ``[header]``)and key / value
+file.  It has sections (each denoted by a ``[header]``) and key / value
 pairs within the sections.  The sections and their allowable values
 are described below.
 
@@ -379,10 +379,10 @@ follows.
   Values containing non-alphanumeric characters should be quoted
   (e.g. ``KEY="val:123",KEY2="val,456"``).  Otherwise, quoting the
   values is optional but recommended.  To escape percent characters,
-  simply use two. (e.g. ``URI="/first%%20name"``) **Note** that 
-  subprocesses will inherit the environment variables of the shell 
+  simply use two. (e.g. ``URI="/first%%20name"``) **Note** that
+  subprocesses will inherit the environment variables of the shell
   used to start :program:`supervisord` except for the ones overridden
-  here and within the program's ``environment`` option.  See 
+  here and within the program's ``environment`` option.  See
   :ref:`subprocess_environment`.
 
   *Default*: no values
@@ -538,7 +538,7 @@ where specified.
    will have a single process named ``x`` in it.  This provides a
    modicum of backwards compatibility with older supervisor releases,
    which did not treat program sections as homogeneous process group
-   defnitions.
+   definitions.
 
    But for instance, if you have a ``[program:foo]`` section with a
    ``numprocs`` of 3 and a ``process_name`` expression of

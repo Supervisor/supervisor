@@ -37,6 +37,7 @@ from supervisor.compat import unicode
 from supervisor.medusa import asyncore_25 as asyncore
 
 from supervisor.options import ClientOptions
+from supervisor.options import make_namespec
 from supervisor.options import split_namespec
 from supervisor import xmlrpc
 from supervisor import states
@@ -414,7 +415,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not self.ctl.upcheck():
             return
 
-        args = arg.strip().split()
+        args = arg.split()
 
         if len(args) < 1:
             self.ctl.output('Error: too few arguments')
@@ -481,6 +482,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 elif e.faultCode == xmlrpc.Faults.BAD_NAME:
                     self.ctl.output(template % (name,
                                              'no such process name'))
+                else:
+                    raise
             else:
                 self.ctl.output(output)
 
@@ -498,7 +501,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not self.ctl.upcheck():
             return
 
-        args = arg.strip().split()
+        args = arg.split()
 
         if len(args) > 1:
             self.ctl.output('Error: too many arguments')
@@ -536,6 +539,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
             elif e.faultCode == xmlrpc.Faults.FAILED:
                 self.ctl.output(template % ('supervisord',
                                          'unknown error reading log'))
+            else:
+                raise
         else:
             self.ctl.output(output)
 
@@ -558,15 +563,19 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def help_exit(self):
         self.ctl.output("exit\tExit the supervisor shell.")
 
-    def _procrepr(self, info):
-        template = '%(name)-32s %(state)-10s %(desc)s'
-        if info['name'] == info['group']:
-            name = info['name']
-        else:
-            name = '%s:%s' % (info['group'], info['name'])
+    def _show_statuses(self, process_infos):
+        namespecs, maxlen = [], 30
+        for i, info in enumerate(process_infos):
+            namespecs.append(make_namespec(info['group'], info['name']))
+            if len(namespecs[i]) > maxlen:
+                maxlen = len(namespecs[i])
 
-        return template % {'name':name, 'state':info['statename'],
-                           'desc':info['description']}
+        template = '%(namespec)-' + str(maxlen+3) + 's%(state)-10s%(desc)s'
+        for i, info in enumerate(process_infos):
+            line = template % {'namespec': namespecs[i],
+                               'state': info['statename'],
+                               'desc': info['description']}
+            self.ctl.output(line)
 
     def do_status(self, arg):
         if not self.ctl.upcheck():
@@ -575,7 +584,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
         all_infos = supervisor.getAllProcessInfo()
 
-        names = arg.strip().split()
+        names = arg.split()
         if not names or "all" in names:
             matching_infos = all_infos
         else:
@@ -600,9 +609,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     else:
                         msg = "%s: ERROR (no such process)" % name
                     self.ctl.output(msg)
-
-        for info in matching_infos:
-            self.ctl.output(self._procrepr(info))
+        self._show_statuses(matching_infos)
 
     def help_status(self):
         self.ctl.output("status <name>\t\tGet status for a single process")
@@ -616,7 +623,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
         if not self.ctl.upcheck():
             return
-        names = arg.strip().split()
+        names = arg.split()
         if not names:
             pid = supervisor.getPID()
             self.ctl.output(str(pid))
@@ -632,8 +639,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                         self.ctl.output('No such process %s' % name)
                     else:
                         raise
-                    continue
-                self.ctl.output(str(info['pid']))
+                else:
+                    self.ctl.output(str(info['pid']))
 
     def help_pid(self):
         self.ctl.output("pid\t\t\tGet the PID of supervisord.")
@@ -643,7 +650,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             "process, one per line.")
 
     def _startresult(self, result):
-        name = result['name']
+        name = make_namespec(result['group'], result['name'])
         code = result['status']
         template = '%s: ERROR (%s)'
         if code == xmlrpc.Faults.BAD_NAME:
@@ -667,7 +674,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not self.ctl.upcheck():
             return
 
-        names = arg.strip().split()
+        names = arg.split()
         supervisor = self.ctl.get_supervisor()
 
         if not names:
@@ -691,19 +698,22 @@ class DefaultControllerPlugin(ControllerPluginBase):
                             result = self._startresult(result)
                             self.ctl.output(result)
                     except xmlrpclib.Fault as e:
-                        error = self._startresult({'status': e.faultCode,
-                                                   'name': name,
-                                                   'description': e.faultString})
-                        self.ctl.output(error)
+                        if e.faultCode == xmlrpc.Faults.BAD_NAME:
+                            error = "%s: ERROR (no such group)" % group_name
+                            self.ctl.output(error)
+                        else:
+                            raise
                 else:
                     try:
                         result = supervisor.startProcess(name)
                     except xmlrpclib.Fault as e:
                         error = self._startresult({'status': e.faultCode,
-                                                   'name': name,
+                                                   'name': process_name,
+                                                   'group': group_name,
                                                    'description': e.faultString})
                         self.ctl.output(error)
                     else:
+                        name = make_namespec(group_name, process_name)
                         self.ctl.output('%s: started' % name)
 
     def help_start(self):
@@ -714,7 +724,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output("start all\t\tStart all processes")
 
     def _stopresult(self, result):
-        name = result['name']
+        name = make_namespec(result['group'], result['name'])
         code = result['status']
         fault_string = result['description']
         template = '%s: ERROR (%s)'
@@ -733,7 +743,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not self.ctl.upcheck():
             return
 
-        names = arg.strip().split()
+        names = arg.split()
         supervisor = self.ctl.get_supervisor()
 
         if not names:
@@ -757,19 +767,22 @@ class DefaultControllerPlugin(ControllerPluginBase):
                             result = self._stopresult(result)
                             self.ctl.output(result)
                     except xmlrpclib.Fault as e:
-                        error = self._startresult({'status': e.faultCode,
-                                                   'name': name,
-                                                   'description': e.faultString})
-                        self.ctl.output(error)
+                        if e.faultCode == xmlrpc.Faults.BAD_NAME:
+                            error = "%s: ERROR (no such group)" % group_name
+                            self.ctl.output(error)
+                        else:
+                            raise
                 else:
                     try:
-                        supervisor.stopProcess(name)
+                        result = supervisor.stopProcess(name)
                     except xmlrpclib.Fault as e:
-                        error = self._stopresult({'status':e.faultCode,
-                                                  'name':name,
+                        error = self._stopresult({'status': e.faultCode,
+                                                  'name': process_name,
+                                                  'group': group_name,
                                                   'description':e.faultString})
                         self.ctl.output(error)
                     else:
+                        name = make_namespec(group_name, process_name)
                         self.ctl.output('%s: stopped' % name)
 
     def help_stop(self):
@@ -782,7 +795,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not self.ctl.upcheck():
             return
 
-        names = arg.strip().split()
+        names = arg.split()
 
         if not names:
             self.ctl.output('Error: restart requires a process name')
@@ -847,6 +860,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
             except xmlrpclib.Fault as e:
                 if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                     self.ctl.output('ERROR: already shutting down')
+                else:
+                    raise
             else:
                 self.ctl.output('Restarted supervisord')
 
@@ -870,10 +885,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             self.ctl.output("No config updates to processes")
 
     def _formatConfigInfo(self, configinfo):
-        if configinfo['group'] == configinfo['name']:
-            name = configinfo['group']
-        else:
-            name = "%s:%s" % (configinfo['group'], configinfo['name'])
+        name = make_namespec(configinfo['group'], configinfo['name'])
         formatted = { 'name': name }
         if configinfo['inuse']:
             formatted['inuse'] = 'in use'
@@ -896,6 +908,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
         except xmlrpclib.Fault as e:
             if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                 self.ctl.output('ERROR: supervisor shutting down')
+            else:
+                raise
         else:
             for pinfo in configinfo:
                 self.ctl.output(self._formatConfigInfo(pinfo))
@@ -921,7 +935,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output("reread \t\t\tReload the daemon's configuration files")
 
     def do_add(self, arg):
-        names = arg.strip().split()
+        names = arg.split()
 
         supervisor = self.ctl.get_supervisor()
         for name in names:
@@ -945,7 +959,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                         "for process/group")
 
     def do_remove(self, arg):
-        names = arg.strip().split()
+        names = arg.split()
 
         supervisor = self.ctl.get_supervisor()
         for name in names:
@@ -979,10 +993,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 self.ctl.output('ERROR: already shutting down')
                 return
             else:
-                raise e
+                raise
 
         added, changed, removed = result[0]
-        valid_gnames = set(arg.strip().split())
+        valid_gnames = set(arg.split())
 
         # If all is specified treat it as if nothing was specified.
         if "all" in valid_gnames:
@@ -1038,7 +1052,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output("update <gname> [...]\tUpdate specific groups")
 
     def _clearresult(self, result):
-        name = result['name']
+        name = make_namespec(result['group'], result['name'])
         code = result['status']
         template = '%s: ERROR (%s)'
         if code == xmlrpc.Faults.BAD_NAME:
@@ -1053,7 +1067,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not self.ctl.upcheck():
             return
 
-        names = arg.strip().split()
+        names = arg.split()
 
         if not names:
             self.ctl.output('Error: clear requires a process name')
@@ -1067,18 +1081,19 @@ class DefaultControllerPlugin(ControllerPluginBase):
             for result in results:
                 result = self._clearresult(result)
                 self.ctl.output(result)
-
         else:
-
             for name in names:
+                group_name, process_name = split_namespec(name)
                 try:
-                    supervisor.clearProcessLogs(name)
+                    result = supervisor.clearProcessLogs(name)
                 except xmlrpclib.Fault as e:
-                    error = self._clearresult({'status':e.faultCode,
-                                               'name':name,
-                                               'description':e.faultString})
+                    error = self._clearresult({'status': e.faultCode,
+                                               'name': process_name,
+                                               'group': group_name,
+                                               'description': e.faultString})
                     self.ctl.output(error)
                 else:
+                    name = make_namespec(group_name, process_name)
                     self.ctl.output('%s: cleared' % name)
 
     def help_clear(self):

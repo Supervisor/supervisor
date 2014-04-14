@@ -34,10 +34,8 @@ def process_or_group_name(name):
 def integer(value):
     try:
         return int(value)
-    except ValueError:
-        return long(value) # why does this help? (CM)
-    except OverflowError:
-        return long(value)
+    except (ValueError, OverflowError):
+        return long(value) # why does this help ValueError? (CM)
 
 TRUTHY_STRINGS = ('yes', 'true', 'on', '1')
 FALSY_STRINGS  = ('no', 'false', 'off', '0')
@@ -333,7 +331,7 @@ def gid_for_uid(uid):
 def octal_type(arg):
     try:
         return int(arg, 8)
-    except TypeError:
+    except (TypeError, ValueError):
         raise ValueError('%s can not be converted to an octal type' % arg)
 
 def existing_directory(v):
@@ -397,14 +395,22 @@ def url(value):
         return value
     raise ValueError("value %s is not a URL" % value)
 
+# all valid signal numbers
+SIGNUMS = [ getattr(signal, k) for k in dir(signal) if k.startswith('SIG') ]
+
 def signal_number(value):
     try:
-        return int(value)
+        num = int(value)
     except (ValueError, TypeError):
-        try:
-            return int(getattr(signal, 'SIG'+value, None))
-        except (ValueError, TypeError):
-            raise ValueError('value %s is not a signal name/number' % value)
+        name = value.strip().upper()
+        if not name.startswith('SIG'):
+            name = 'SIG' + name
+        num = getattr(signal, name, None)
+        if num is None:
+            raise ValueError('value %s is not a valid signal name' % value)
+    if num not in SIGNUMS:
+        raise ValueError('value %s is not a valid signal number' % value)
+    return num
 
 class RestartWhenExitUnexpected:
     pass

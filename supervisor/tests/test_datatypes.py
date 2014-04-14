@@ -3,263 +3,432 @@
 import os
 import unittest
 import tempfile
-
+import signal
+import socket
+import sys
+import tempfile
+import unittest
 from supervisor.compat import Mock, patch, sentinel
 from supervisor.compat import maxint
-
 from supervisor import datatypes
 import supervisor.medusa.text_socket as socket
 
-class DatatypesTest(unittest.TestCase):
-    def test_boolean_returns_true_for_truthy_values(self):
+class ProcessOrGroupName(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.process_or_group_name(arg)
+
+    def test_strips_surrounding_whitespace(self):
+        name = " foo\t"
+        self.assertEqual(self._callFUT(name), "foo")
+
+    def test_disallows_inner_spaces(self):
+        name = "foo bar"
+        self.assertRaises(ValueError, self._callFUT, name)
+
+    def test_disallows_colons(self):
+        name = "foo:bar"
+        self.assertRaises(ValueError, self._callFUT, name)
+
+class IntegerTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.integer(arg)
+
+    def test_converts_numeric(self):
+        self.assertEqual(self._callFUT('1'), 1)
+
+    def test_converts_numeric_overflowing_int(self):
+        self.assertEqual(self._callFUT(str(maxint+1)), maxint+1)
+
+    def test_raises_for_non_numeric(self):
+        self.assertRaises(ValueError, self._callFUT, 'abc')
+
+class BooleanTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.boolean(arg)
+
+    def test_returns_true_for_truthy_values(self):
         for s in datatypes.TRUTHY_STRINGS:
-            actual = datatypes.boolean(s)
-            self.assertEqual(actual, True)
+            self.assertEqual(self._callFUT(s), True)
 
-    def test_boolean_returns_true_for_upper_truthy_values(self):
+    def test_returns_true_for_upper_truthy_values(self):
         for s in map(str.upper, datatypes.TRUTHY_STRINGS):
-            actual = datatypes.boolean(s)
-            self.assertEqual(actual, True)
+            self.assertEqual(self._callFUT(s), True)
 
-    def test_boolean_returns_false_for_falsy_values(self):
+    def test_returns_false_for_falsy_values(self):
         for s in datatypes.FALSY_STRINGS:
-            actual = datatypes.boolean(s)
-            self.assertEqual(actual, False)
+            self.assertEqual(self._callFUT(s), False)
 
-    def test_boolean_returns_false_for_upper_falsy_values(self):
+    def test_returns_false_for_upper_falsy_values(self):
         for s in map(str.upper, datatypes.FALSY_STRINGS):
-            actual = datatypes.boolean(s)
-            self.assertEqual(actual, False)
+            self.assertEqual(self._callFUT(s), False)
 
-    def test_boolean_raises_value_error_for_bad_value(self):
+    def test_braises_value_error_for_bad_value(self):
         self.assertRaises(ValueError,
-                          datatypes.boolean, 'not-a-value')
+                          self._callFUT, 'not-a-value')
 
-    def test_list_of_strings_returns_empty_list_for_empty_string(self):
-        actual = datatypes.list_of_strings('')
-        self.assertEqual(actual, [])
+class ListOfStringsTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.list_of_strings(arg)
 
-    def test_list_of_strings_returns_list_of_strings_by_comma_split(self):
-        actual = datatypes.list_of_strings('foo,bar')
-        self.assertEqual(actual, ['foo', 'bar'])
+    def test_returns_empty_list_for_empty_string(self):
+        self.assertEqual(self._callFUT(''), [])
 
-    def test_list_of_strings_returns_strings_with_whitespace_stripped(self):
-        actual = datatypes.list_of_strings(' foo , bar ')
-        self.assertEqual(actual, ['foo', 'bar'])
+    def test_returns_list_of_strings_by_comma_split(self):
+        self.assertEqual(self._callFUT('foo,bar'), ['foo', 'bar'])
 
-    def test_list_of_strings_raises_value_error_when_comma_split_fails(self):
+    def test_returns_strings_with_whitespace_stripped(self):
+        self.assertEqual(self._callFUT(' foo , bar '), ['foo', 'bar'])
+
+    def test_raises_value_error_when_comma_split_fails(self):
         self.assertRaises(ValueError,
-                          datatypes.list_of_strings, 42)
+                          self._callFUT, 42)
 
-    def test_list_of_ints_returns_empty_list_for_empty_string(self):
-        actual = datatypes.list_of_ints('')
-        self.assertEqual(actual, [])
+class ListOfIntsTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.list_of_ints(arg)
 
-    def test_list_of_ints_returns_list_of_ints_by_comma_split(self):
-        actual = datatypes.list_of_ints('1,42')
-        self.assertEqual(actual, [1,42])
+    def test_returns_empty_list_for_empty_string(self):
+        self.assertEqual(self._callFUT(''), [])
 
-    def test_list_of_ints_returns_ints_even_if_whitespace_in_string(self):
-        actual = datatypes.list_of_ints(' 1 , 42 ')
-        self.assertEqual(actual, [1,42])
+    def test_returns_list_of_ints_by_comma_split(self):
+        self.assertEqual(self._callFUT('1,42'), [1,42])
 
-    def test_list_of_ints_raises_value_error_when_comma_split_fails(self):
+    def test_returns_ints_even_if_whitespace_in_string(self):
+        self.assertEqual(self._callFUT(' 1 , 42 '), [1,42])
+
+    def test_raises_value_error_when_comma_split_fails(self):
         self.assertRaises(ValueError,
-                          datatypes.list_of_ints, 42)
+                          self._callFUT, 42)
 
-    def test_list_of_ints_raises_value_error_when_one_value_is_bad(self):
+    def test_raises_value_error_when_one_value_is_bad(self):
         self.assertRaises(ValueError,
-                          datatypes.list_of_ints, '1, bad, 42')
+                          self._callFUT, '1, bad, 42')
 
-    def test_list_of_exitcodes(self):
-        vals = datatypes.list_of_exitcodes('1,2,3')
-        self.assertEqual(vals, [1,2,3])
-        vals = datatypes.list_of_exitcodes('1')
-        self.assertEqual(vals, [1])
-        self.assertRaises(ValueError, datatypes.list_of_exitcodes, 'a,b,c')
-        self.assertRaises(ValueError, datatypes.list_of_exitcodes, '1024')
-        self.assertRaises(ValueError, datatypes.list_of_exitcodes, '-1,1')
+class ListOfExitcodesTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.list_of_exitcodes(arg)
 
-    def test_hasattr_automatic(self):
-        datatypes.Automatic
+    def test_returns_list_of_ints_from_csv(self):
+        self.assertEqual(self._callFUT('1,2,3'), [1,2,3])
 
-    def test_dict_of_key_value_pairs_returns_empty_dict_for_empty_str(self):
-        actual = datatypes.dict_of_key_value_pairs('')
+    def test_returns_list_of_ints_from_one(self):
+        self.assertEqual(self._callFUT('1'), [1])
+
+    def test_raises_for_invalid_exitcode_values(self):
+        self.assertRaises(ValueError, self._callFUT, 'a,b,c')
+        self.assertRaises(ValueError, self._callFUT, '1024')
+        self.assertRaises(ValueError, self._callFUT, '-1,1')
+
+class DictOfKeyValuePairsTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.dict_of_key_value_pairs(arg)
+
+    def test_returns_empty_dict_for_empty_str(self):
+        actual = self._callFUT('')
         self.assertEqual({}, actual)
 
-    def test_dict_of_key_value_pairs_returns_dict_from_single_pair_str(self):
-        actual = datatypes.dict_of_key_value_pairs('foo=bar')
+    def test_returns_dict_from_single_pair_str(self):
+        actual = self._callFUT('foo=bar')
         expected = {'foo': 'bar'}
         self.assertEqual(actual, expected)
 
-    def test_dict_of_key_value_pairs_returns_dict_from_multi_pair_str(self):
-        actual = datatypes.dict_of_key_value_pairs('foo=bar,baz=qux')
+    def test_returns_dict_from_multi_pair_str(self):
+        actual = self._callFUT('foo=bar,baz=qux')
         expected = {'foo': 'bar', 'baz': 'qux'}
         self.assertEqual(actual, expected)
 
-    def test_dict_of_key_value_pairs_returns_dict_even_if_whitespace(self):
-        actual = datatypes.dict_of_key_value_pairs(' foo = bar , baz = qux ')
+    def test_returns_dict_even_if_whitespace(self):
+        actual = self._callFUT(' foo = bar , baz = qux ')
         expected = {'foo': 'bar', 'baz': 'qux'}
         self.assertEqual(actual, expected)
 
-    def test_dict_of_key_value_pairs_returns_dict_even_if_newlines(self):
-        actual = datatypes.dict_of_key_value_pairs('foo\n=\nbar\n,\nbaz\n=\nqux')
+    def test_returns_dict_even_if_newlines(self):
+        actual = self._callFUT('foo\n=\nbar\n,\nbaz\n=\nqux')
         expected = {'foo': 'bar', 'baz': 'qux'}
         self.assertEqual(actual, expected)
 
-    def test_dict_of_key_value_pairs_handles_commas_inside_apostrophes(self):
-        actual = datatypes.dict_of_key_value_pairs("foo='bar,baz',baz='q,ux'")
+    def test_handles_commas_inside_apostrophes(self):
+        actual = self._callFUT("foo='bar,baz',baz='q,ux'")
         expected = {'foo': 'bar,baz', 'baz': 'q,ux'}
         self.assertEqual(actual, expected)
 
-    def test_dict_of_key_value_pairs_handles_commas_inside_quotes(self):
-        actual = datatypes.dict_of_key_value_pairs('foo="bar,baz",baz="q,ux"')
+    def test_handles_commas_inside_quotes(self):
+        actual = self._callFUT('foo="bar,baz",baz="q,ux"')
         expected = {'foo': 'bar,baz', 'baz': 'q,ux'}
         self.assertEqual(actual, expected)
 
-    def test_dict_of_key_value_pairs_handles_unquoted_non_alphanum(self):
-        actual = datatypes.dict_of_key_value_pairs(
+    def test_handles_unquoted_non_alphanum(self):
+        actual = self._callFUT(
             'HOME=/home/auser,FOO=/.foo+(1.2)-_/,'
             'SUPERVISOR_SERVER_URL=http://127.0.0.1:9001')
         expected = {'HOME': '/home/auser', 'FOO': '/.foo+(1.2)-_/',
                     'SUPERVISOR_SERVER_URL': 'http://127.0.0.1:9001'}
         self.assertEqual(actual, expected)
 
-    def test_dict_of_key_value_pairs_allows_trailing_comma(self):
-        actual = datatypes.dict_of_key_value_pairs('foo=bar,')
+    def test_allows_trailing_comma(self):
+        actual = self._callFUT('foo=bar,')
         expected = {'foo': 'bar'}
         self.assertEqual(actual, expected)
 
-    def test_dict_of_key_value_pairs_raises_value_error_on_too_short(self):
+    def test_raises_value_error_on_too_short(self):
         self.assertRaises(ValueError,
-                          datatypes.dict_of_key_value_pairs, 'foo')
+                          self._callFUT, 'foo')
         self.assertRaises(ValueError,
-                          datatypes.dict_of_key_value_pairs, 'foo=')
+                          self._callFUT, 'foo=')
         self.assertRaises(ValueError,
-                          datatypes.dict_of_key_value_pairs, 'foo=bar,baz')
+                          self._callFUT, 'foo=bar,baz')
         self.assertRaises(ValueError,
-                          datatypes.dict_of_key_value_pairs, 'foo=bar,baz=')
+                          self._callFUT, 'foo=bar,baz=')
 
-    def test_dict_of_key_value_pairs_raises_when_comma_is_missing(self):
+    def test_raises_when_comma_is_missing(self):
         kvp = 'KEY1=no-comma KEY2=ends-with-comma,'
         self.assertRaises(ValueError,
-                          datatypes.dict_of_key_value_pairs, kvp)
+                          self._callFUT, kvp)
 
-    def test_process_or_group_name_strips_surrounding_whitespace(self):
-        name = " foo\t"
-        self.assertEqual("foo", datatypes.process_or_group_name(name))
+class LogfileNameTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.logfile_name(arg)
 
-    def test_process_or_group_name_disallows_inner_spaces(self):
-        name = "foo bar"
-        self.assertRaises(ValueError, datatypes.process_or_group_name, name)
-
-    def test_process_or_group_name_disallows_colons(self):
-        name = "foo:bar"
-        self.assertRaises(ValueError, datatypes.process_or_group_name, name)
-
-    def test_logfile_name_returns_none_for_none_values(self):
+    def test_returns_none_for_none_values(self):
         for thing in datatypes.LOGFILE_NONES:
-            actual = datatypes.logfile_name(thing)
+            actual = self._callFUT(thing)
             self.assertEqual(actual, None)
 
-    def test_logfile_name_returns_none_for_uppered_none_values(self):
+    def test_returns_none_for_uppered_none_values(self):
         for thing in datatypes.LOGFILE_NONES:
             if hasattr(thing, 'upper'):
                 thing = thing.upper()
-            actual = datatypes.logfile_name(thing)
+            actual = self._callFUT(thing)
             self.assertEqual(actual, None)
 
-    def test_logfile_name_returns_automatic_for_auto_values(self):
+    def test_returns_automatic_for_auto_values(self):
         for thing in datatypes.LOGFILE_AUTOS:
-            actual = datatypes.logfile_name(thing)
+            actual = self._callFUT(thing)
             self.assertEqual(actual, datatypes.Automatic)
 
-    def test_logfile_name_returns_automatic_for_uppered_auto_values(self):
+    def test_returns_automatic_for_uppered_auto_values(self):
         for thing in datatypes.LOGFILE_AUTOS:
             if hasattr(thing, 'upper'):
                 thing = thing.upper()
-            actual = datatypes.logfile_name(thing)
+            actual = self._callFUT(thing)
             self.assertEqual(actual, datatypes.Automatic)
 
-    def test_logfile_name_returns_existing_dirpath_for_other_values(self):
+    def test_returns_existing_dirpath_for_other_values(self):
         func = datatypes.existing_dirpath
         datatypes.existing_dirpath = lambda path: path
         try:
             path = '/path/to/logfile/With/Case/Preserved'
-            actual = datatypes.logfile_name(path)
+            actual = self._callFUT(path)
             self.assertEqual(actual, path)
         finally:
             datatypes.existing_dirpath = func
 
-    def test_logging_level_returns_level_from_name_case_insensitive(self):
-        from supervisor.loggers import LevelsByName
-        self.assertEqual(datatypes.logging_level("wArN"), LevelsByName.WARN)
+class RangeCheckedConversionTests(unittest.TestCase):
+    def _getTargetClass(self):
+        return datatypes.RangeCheckedConversion
 
-    def test_logging_level_raises_for_bad_level_name(self):
-        self.assertRaises(ValueError,
-                          datatypes.logging_level, "foo")
+    def _makeOne(self, conversion, rmin=None, rmax=None):
+        return self._getTargetClass()(conversion, rmin, rmax)
 
-    def test_integer(self):
-        from supervisor.datatypes import integer
-        self.assertRaises(ValueError, integer, 'abc')
-        self.assertEqual(integer('1'), 1)
-        self.assertEqual(integer(str(maxint+1)), maxint+1)
+    def test_below_lower_bound(self):
+        conversion = self._makeOne(lambda *arg: -1, 0)
+        self.assertRaises(ValueError, conversion, None)
 
-    def test_url_accepts_urlparse_recognized_scheme_with_netloc(self):
-        good_url = 'http://localhost:9001'
-        self.assertEqual(datatypes.url(good_url), good_url)
+    def test_above_upper_lower_bound(self):
+        conversion = self._makeOne(lambda *arg: 1, 0, 0)
+        self.assertRaises(ValueError, conversion, None)
 
-    def test_url_rejects_urlparse_recognized_scheme_but_no_netloc(self):
-        bad_url = 'http://'
-        self.assertRaises(ValueError, datatypes.url, bad_url)
+    def test_passes(self):
+        conversion = self._makeOne(lambda *arg: 0, 0, 0)
+        self.assertEqual(conversion(0), 0)
 
-    def test_url_accepts_unix_scheme_with_path(self):
-        good_url = "unix://somepath"
-        self.assertEqual(good_url, datatypes.url(good_url))
 
-    def test_url_rejects_unix_scheme_with_no_slashes_or_path(self):
-        bad_url = "unix:"
-        self.assertRaises(ValueError, datatypes.url, bad_url)
-
-    def test_url_rejects_unix_scheme_with_slashes_but_no_path(self):
-        bad_url = "unix://"
-        self.assertRaises(ValueError, datatypes.url, bad_url)
-
-    @patch("pwd.getpwnam", Mock(return_value=[0,0,42]))
-    def test_name_to_uid_gets_uid_from_username(self):
-        uid = datatypes.name_to_uid("foo")
-        self.assertEqual(uid, 42)
-
-    @patch("pwd.getpwuid", Mock(return_value=[0,0,42]))
-    def test_name_to_uid_gets_uid_from_user_id(self):
-        uid = datatypes.name_to_uid("42")
-        self.assertEqual(uid, 42)
-
-    @patch("pwd.getpwnam", Mock(side_effect=KeyError("bad username")))
-    def test_name_to_uid_raises_for_bad_username(self):
-        self.assertRaises(ValueError, datatypes.name_to_uid, "foo")
-
-    @patch("pwd.getpwuid", Mock(side_effect=KeyError("bad user id")))
-    def test_name_to_uid_raises_for_bad_user_id(self):
-        self.assertRaises(ValueError, datatypes.name_to_uid, "42")
+class NameToGidTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.name_to_gid(arg)
 
     @patch("grp.getgrnam", Mock(return_value=[0,0,42]))
-    def test_name_to_gid_gets_gid_from_group_name(self):
-        gid = datatypes.name_to_gid("foo")
+    def test_gets_gid_from_group_name(self):
+        gid = self._callFUT("foo")
         self.assertEqual(gid, 42)
 
     @patch("grp.getgrgid", Mock(return_value=[0,0,42]))
-    def test_name_to_gid_gets_gid_from_group_id(self):
-        gid = datatypes.name_to_gid("42")
+    def test_gets_gid_from_group_id(self):
+        gid = self._callFUT("42")
         self.assertEqual(gid, 42)
 
     @patch("grp.getgrnam", Mock(side_effect=KeyError("bad group name")))
-    def test_name_to_gid_raises_for_bad_group_name(self):
-        self.assertRaises(ValueError, datatypes.name_to_gid, "foo")
+    def test_raises_for_bad_group_name(self):
+        self.assertRaises(ValueError, self._callFUT, "foo")
 
     @patch("grp.getgrgid", Mock(side_effect=KeyError("bad group id")))
-    def test_name_to_gid_raises_for_bad_group_id(self):
-        self.assertRaises(ValueError, datatypes.name_to_gid, "42")
+    def test_raises_for_bad_group_id(self):
+        self.assertRaises(ValueError, self._callFUT, "42")
+
+class NameToUidTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.name_to_uid(arg)
+
+    @patch("pwd.getpwnam", Mock(return_value=[0,0,42]))
+    def test_gets_uid_from_username(self):
+        uid = self._callFUT("foo")
+        self.assertEqual(uid, 42)
+
+    @patch("pwd.getpwuid", Mock(return_value=[0,0,42]))
+    def test_gets_uid_from_user_id(self):
+        uid = self._callFUT("42")
+        self.assertEqual(uid, 42)
+
+    @patch("pwd.getpwnam", Mock(side_effect=KeyError("bad username")))
+    def test_raises_for_bad_username(self):
+        self.assertRaises(ValueError, self._callFUT, "foo")
+
+    @patch("pwd.getpwuid", Mock(side_effect=KeyError("bad user id")))
+    def test_raises_for_bad_user_id(self):
+        self.assertRaises(ValueError, self._callFUT, "42")
+
+class OctalTypeTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.octal_type(arg)
+
+    def test_success(self):
+        self.assertEqual(self._callFUT('10'), 8)
+
+    def test_raises_for_non_numeric(self):
+        try:
+            self._callFUT('bad')
+            self.fail()
+        except ValueError as e:
+            expected = 'bad can not be converted to an octal type'
+            self.assertEqual(e.args[0], expected)
+
+    def test_raises_for_unconvertable_numeric(self):
+        try:
+            self._callFUT('1.2')
+            self.fail()
+        except ValueError as e:
+            expected = '1.2 can not be converted to an octal type'
+            self.assertEqual(e.args[0], expected)
+
+class ExistingDirectoryTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.existing_directory(arg)
+
+    def test_dir_exists(self):
+        path = os.path.dirname(__file__)
+        self.assertEqual(path, self._callFUT(path))
+
+    def test_dir_does_not_exist(self):
+        path = os.path.join(os.path.dirname(__file__), 'nonexistant')
+        try:
+            self._callFUT(path)
+            self.fail()
+        except ValueError as e:
+            expected = "%s is not an existing directory" % path
+            self.assertEqual(e.args[0], expected)
+
+    def test_not_a_directory(self):
+        path = __file__
+        try:
+            self._callFUT(path)
+            self.fail()
+        except ValueError as e:
+            expected = "%s is not an existing directory" % path
+            self.assertEqual(e.args[0], expected)
+
+    def test_expands_home(self):
+        home = os.path.expanduser('~')
+        if os.path.exists(home):
+            path = self._callFUT('~')
+            self.assertEqual(home, path)
+
+    def test_expands_here(self):
+        datatypes.here = os.path.dirname(__file__)
+        try:
+            self.assertEqual(self._callFUT('%(here)s'), datatypes.here)
+        finally:
+            datatypes.here = None
+
+class ExistingDirpathTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.existing_dirpath(arg)
+
+    def test_returns_existing_dirpath(self):
+        self.assertEqual(self._callFUT(__file__), __file__)
+
+    def test_returns_dirpath_if_relative(self):
+        self.assertEqual(self._callFUT('foo'), 'foo')
+
+    def test_raises_if_dir_does_not_exist(self):
+        path = os.path.join(os.path.dirname(__file__), 'nonexistant', 'foo')
+        try:
+            self._callFUT(path)
+            self.fail()
+        except ValueError as e:
+            expected = ('The directory named as part of the path %s '
+                        'does not exist.' % path)
+            self.assertEqual(e.args[0], expected)
+
+    def test_raises_if_exists_but_not_a_dir(self):
+        path = os.path.join(os.path.dirname(__file__),
+                            os.path.basename(__file__), 'foo')
+        try:
+            self._callFUT(path)
+            self.fail()
+        except ValueError as e:
+            expected = ('The directory named as part of the path %s '
+                        'does not exist.' % path)
+            self.assertEqual(e.args[0], expected)
+
+    def test_expands_home(self):
+        home = os.path.expanduser('~')
+        if os.path.exists(home):
+            path = self._callFUT('~/foo')
+            self.assertEqual(os.path.join(home, 'foo'), path)
+
+    def test_expands_here(self):
+        datatypes.here = os.path.dirname(__file__)
+        try:
+            expected = os.path.join(datatypes.here, 'foo')
+            self.assertEqual(self._callFUT('%(here)s/foo'), expected)
+        finally:
+            datatypes.here = None
+
+class LoggingLevelTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.logging_level(arg)
+
+    def test_returns_level_from_name_case_insensitive(self):
+        from supervisor.loggers import LevelsByName
+        self.assertEqual(self._callFUT("wArN"), LevelsByName.WARN)
+
+    def test_raises_for_bad_level_name(self):
+        self.assertRaises(ValueError,
+                          self._callFUT, "foo")
+
+class UrlTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.url(arg)
+
+    def test_accepts_urlparse_recognized_scheme_with_netloc(self):
+        good_url = 'http://localhost:9001'
+        self.assertEqual(self._callFUT(good_url), good_url)
+
+    def test_rejects_urlparse_recognized_scheme_but_no_netloc(self):
+        bad_url = 'http://'
+        self.assertRaises(ValueError, self._callFUT, bad_url)
+
+    def test_accepts_unix_scheme_with_path(self):
+        good_url = "unix://somepath"
+        self.assertEqual(good_url, self._callFUT(good_url))
+
+    def test_rejects_unix_scheme_with_no_slashes_or_path(self):
+        bad_url = "unix:"
+        self.assertRaises(ValueError, self._callFUT, bad_url)
+
+    def test_rejects_unix_scheme_with_slashes_but_no_path(self):
+        bad_url = "unix://"
+        self.assertRaises(ValueError, self._callFUT, bad_url)
 
 class InetStreamSocketConfigTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -350,9 +519,9 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
         mode = sentinel.mode
         conf = self._makeOne(tf_name, owner=owner, mode=mode)
 
-        #Patch os.chmod and os.chown functions with mocks
-        #objects so that the test does not depend on
-        #any specific system users or permissions
+        # Patch os.chmod and os.chown functions with mocks
+        # objects so that the test does not depend on
+        # any specific system users or permissions
         chown_mock = Mock()
         chmod_mock = Mock()
         @patch('os.chown', chown_mock)
@@ -362,11 +531,12 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
 
         sock = call_create_and_bind(conf)
         self.assertTrue(os.path.exists(tf_name))
-        self.assertEqual(conf.addr(), sock.getsockname()) #verifies that bind was called
+        # verifies that bind was called
+        self.assertEqual(conf.addr(), sock.getsockname())
         sock.close()
         self.assertTrue(os.path.exists(tf_name))
         os.unlink(tf_name)
-        #Verify that os.chown was called with correct args
+        # Verify that os.chown was called with correct args
         self.assertEqual(1, chown_mock.call_count)
         path_arg = chown_mock.call_args[0][0]
         uid_arg = chown_mock.call_args[0][1]
@@ -374,12 +544,50 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
         self.assertEqual(tf_name, path_arg)
         self.assertEqual(owner[0], uid_arg)
         self.assertEqual(owner[1], gid_arg)
-        #Verify that os.chmod was called with correct args
+        # Verify that os.chmod was called with correct args
         self.assertEqual(1, chmod_mock.call_count)
         path_arg = chmod_mock.call_args[0][0]
         mode_arg = chmod_mock.call_args[0][1]
         self.assertEqual(tf_name, path_arg)
         self.assertEqual(mode, mode_arg)
+
+    def test_create_and_bind_when_chown_fails(self):
+        (tf_fd, tf_name) = tempfile.mkstemp()
+        owner = (sentinel.uid, sentinel.gid)
+        mode = sentinel.mode
+        conf = self._makeOne(tf_name, owner=owner, mode=mode)
+
+        @patch('os.chown', Mock(side_effect=OSError("msg")))
+        @patch('os.chmod', Mock())
+        def call_create_and_bind(conf):
+            return conf.create_and_bind()
+
+        try:
+            call_create_and_bind(conf)
+            self.fail()
+        except ValueError as e:
+            expected = "Could not change ownership of socket file: msg"
+            self.assertEqual(e.args[0], expected)
+            self.assertFalse(os.path.exists(tf_name))
+
+    def test_create_and_bind_when_chmod_fails(self):
+        (tf_fd, tf_name) = tempfile.mkstemp()
+        owner = (sentinel.uid, sentinel.gid)
+        mode = sentinel.mode
+        conf = self._makeOne(tf_name, owner=owner, mode=mode)
+
+        @patch('os.chown', Mock())
+        @patch('os.chmod', Mock(side_effect=OSError("msg")))
+        def call_create_and_bind(conf):
+            return conf.create_and_bind()
+
+        try:
+            call_create_and_bind(conf)
+            self.fail()
+        except ValueError as e:
+            expected = "Could not change permissions of socket file: msg"
+            self.assertEqual(e.args[0], expected)
+            self.assertFalse(os.path.exists(tf_name))
 
     def test_same_paths_are_equal(self):
         conf1 = self._makeOne('/tmp/foo.sock')
@@ -399,30 +607,9 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
         self.assertTrue(conf1 != conf2)
         self.assertFalse(conf1 == conf2)
 
-class RangeCheckedConversionTests(unittest.TestCase):
-    def _getTargetClass(self):
-        from supervisor.datatypes import RangeCheckedConversion
-        return RangeCheckedConversion
-
-    def _makeOne(self, conversion, rmin=None, rmax=None):
-        return self._getTargetClass()(conversion, rmin, rmax)
-
-    def test_below_lower_bound(self):
-        conversion = self._makeOne(lambda *arg: -1, 0)
-        self.assertRaises(ValueError, conversion, None)
-
-    def test_above_upper_lower_bound(self):
-        conversion = self._makeOne(lambda *arg: 1, 0, 0)
-        self.assertRaises(ValueError, conversion, None)
-
-    def test_passes(self):
-        conversion = self._makeOne(lambda *arg: 0, 0, 0)
-        self.assertEqual(conversion(0), 0)
-
 class InetAddressTests(unittest.TestCase):
     def _callFUT(self, s):
-        from supervisor.datatypes import inet_address
-        return inet_address(s)
+        return datatypes.inet_address(s)
 
     def test_no_port_number(self):
         self.assertRaises(ValueError, self._callFUT, 'a:')
@@ -440,10 +627,9 @@ class InetAddressTests(unittest.TestCase):
         self.assertEqual(host, 'localhost')
         self.assertEqual(port, 80)
 
-class TestSocketAddress(unittest.TestCase):
+class SocketAddressTests(unittest.TestCase):
     def _getTargetClass(self):
-        from supervisor.datatypes import SocketAddress
-        return SocketAddress
+        return datatypes.SocketAddress
 
     def _makeOne(self, s):
         return self._getTargetClass()(s)
@@ -458,10 +644,9 @@ class TestSocketAddress(unittest.TestCase):
         self.assertEqual(addr.family, socket.AF_INET)
         self.assertEqual(addr.address, ('localhost', 8080))
 
-class TestColonSeparatedUserGroup(unittest.TestCase):
+class ColonSeparatedUserGroupTests(unittest.TestCase):
     def _callFUT(self, arg):
-        from supervisor.datatypes import colon_separated_user_group
-        return colon_separated_user_group(arg)
+        return datatypes.colon_separated_user_group(arg)
 
     def test_ok_username(self):
         self.assertEqual(self._callFUT('root')[0], 0)
@@ -501,13 +686,75 @@ class TestColonSeparatedUserGroup(unittest.TestCase):
         self.assertEqual(42, uid)
         self.assertEqual(-1, gid)
 
-class TestOctalType(unittest.TestCase):
+class SignalNumberTests(unittest.TestCase):
     def _callFUT(self, arg):
-        from supervisor.datatypes import octal_type
-        return octal_type(arg)
+        return datatypes.signal_number(arg)
 
-    def test_it_success(self):
-        self.assertEqual(self._callFUT('10'), 8)
+    def test_converts_number(self):
+        self.assertEqual(self._callFUT(signal.SIGTERM), signal.SIGTERM)
 
-    def test_test_it_failure(self):
-        self.assertRaises(ValueError, self._callFUT, 'noo')
+    def test_converts_name(self):
+        self.assertEqual(self._callFUT(' term '), signal.SIGTERM)
+
+    def test_converts_signame(self):
+        self.assertEqual(self._callFUT('SIGTERM'), signal.SIGTERM)
+
+    def test_raises_for_bad_number(self):
+        try:
+            self._callFUT('12345678')
+            self.fail()
+        except ValueError as e:
+            expected = "value 12345678 is not a valid signal number"
+            self.assertEqual(e.args[0], expected)
+
+    def test_raises_for_bad_name(self):
+        try:
+            self._callFUT('BADSIG')
+            self.fail()
+        except ValueError as e:
+            expected = "value BADSIG is not a valid signal name"
+            self.assertEqual(e.args[0], expected)
+
+class AutoRestartTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.auto_restart(arg)
+
+    def test_converts_truthy(self):
+        for s in datatypes.TRUTHY_STRINGS:
+            result = self._callFUT(s)
+            self.assertEqual(result, datatypes.RestartUnconditionally)
+
+    def test_converts_falsy(self):
+        for s in datatypes.FALSY_STRINGS:
+            self.assertFalse(self._callFUT(s))
+
+    def test_converts_unexpected(self):
+        for s in ('unexpected', 'UNEXPECTED'):
+            result = self._callFUT(s)
+            self.assertEqual(result, datatypes.RestartWhenExitUnexpected)
+
+    def test_raises_for_bad_value(self):
+        try:
+            self._callFUT('bad')
+            self.fail()
+        except ValueError as e:
+            self.assertEqual(e.args[0], "invalid 'autorestart' value 'bad'")
+
+class ProfileOptionsTests(unittest.TestCase):
+    def _callFUT(self, arg):
+        return datatypes.profile_options(arg)
+
+    def test_empty(self):
+        sort_options, callers = self._callFUT('')
+        self.assertEqual([], sort_options)
+        self.assertFalse(callers)
+
+    def test_without_callers(self):
+        sort_options, callers = self._callFUT('CUMULATIVE,calls')
+        self.assertEqual(['cumulative', 'calls'], sort_options)
+        self.assertFalse(callers)
+
+    def test_with_callers(self):
+        sort_options, callers = self._callFUT('cumulative, callers')
+        self.assertEqual(['cumulative'], sort_options)
+        self.assertTrue(callers)

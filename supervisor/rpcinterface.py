@@ -253,7 +253,7 @@ class SupervisorNamespaceRPCInterface:
     def startProcess(self, name, wait=True):
         """ Start a process
 
-        @param string name Process name (or 'group:name', or 'group:*')
+        @param string name Process name (or ``group:name``, or ``group:*``)
         @param boolean wait Wait for process to be fully started
         @return boolean result     Always true unless error
 
@@ -677,7 +677,7 @@ class SupervisorNamespaceRPCInterface:
     def clearAllProcessLogs(self):
         """ Clear all process log files
 
-        @return boolean result      Always return true
+        @return array result   An array of process status info structs
         """
         self._update('clearAllProcessLogs')
         results  = []

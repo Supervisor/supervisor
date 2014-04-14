@@ -63,7 +63,12 @@ These also includes various event listeners.
 `supervisor-serialrestart <https://github.com/native2k/supervisor-serialrestart>`_
     Adds a ``serialrestart`` command to ``supervisorctl`` that restarts
     processes one after another rather than all at once.
-
+`supervisor-quick <http://lxyu.github.io/supervisor-quick/>`_
+    Adds ``quickstart``, ``quickstop``, and ``quickrestart`` commands to
+    ``supervisorctl`` that can be faster than the built-in commands.  It
+    works by using the non-blocking mode of the XML-RPC methods and then
+    polling ``supervisord``.  The built-in commands use the blocking mode,
+    which can be slower due to ``supervisord`` implementation details.
 
 Libraries that integrate Third Party Applications with Supervisor
 -----------------------------------------------------------------
@@ -111,3 +116,8 @@ with third party applications:
     `Chef <http://www.opscode.com/chef/>`_ cookbook install and configure supervisord.
 `PHP Supervisor <https://github.com/indigophp/supervisor>`_
     PHP client for the supervisord XML-RPC interface. Configuration generator. Event listener work in progress.
+`Supervisord-Client <http://search.cpan.org/~skaufman/Supervisord-Client>`_
+    Perl client for the supervisord XML-RPC interface.
+`Supermann <https://github.com/borntyping/supermann>`_
+    Supermann monitors processes running under Supervisor and sends metrics
+    to `Riemann <http://riemann.io/>`_.

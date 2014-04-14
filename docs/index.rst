@@ -38,6 +38,14 @@ API Documentation
 
    api.rst
 
+Plugins
+-------
+
+.. toctree::
+   :maxdepth: 2
+
+   plugins.rst
+
 Indices and tables
 ------------------
 

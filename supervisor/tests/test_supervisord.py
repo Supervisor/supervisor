@@ -138,6 +138,23 @@ class SupervisordTests(unittest.TestCase):
         supervisord.reap(once=True)
         self.assertEqual(process.finished, (1,1))
 
+    def test_reap_unknown_pid(self):
+        options = DummyOptions()
+        options.waitpid_return = 2, 0 # pid, status
+        pconfig = DummyPConfig(options, 'process', 'process', '/bin/process1')
+        process = DummyProcess(pconfig)
+        process.drained = False
+        process.killing = True
+        process.laststop = None
+        process.waitstatus = None, None
+        options.pidhistory = {1: process}
+        supervisord = self._makeOne(options)
+
+        supervisord.reap(once=True)
+        self.assertEqual(process.finished, None)
+        self.assertEqual(options.logger.data[0],
+                         'reaped unknown pid 2')
+
     def test_handle_sigterm(self):
         options = DummyOptions()
         options._signal = signal.SIGTERM
@@ -173,6 +190,18 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(supervisord.options.mood, 0)
         self.assertEqual(options.logger.data[0],
                          'received SIGHUP indicating restart request')
+
+    def test_handle_sigchld(self):
+        options = DummyOptions()
+        options._signal = signal.SIGCHLD
+        supervisord = self._makeOne(options)
+        supervisord.handle_signal()
+        self.assertEqual(supervisord.options.mood, 1)
+        # supervisor.options.signame(signal.SIGCHLD) may return "SIGCLD"
+        # on linux or other systems where SIGCHLD = SIGCLD.
+        msgs = ('received SIGCHLD indicating a child quit',
+                'received SIGCLD indicating a child quit')
+        self.assertTrue(options.logger.data[0] in msgs)
 
     def test_handle_sigusr2(self):
         options = DummyOptions()
@@ -437,7 +466,6 @@ class SupervisordTests(unittest.TestCase):
         options = DummyOptions()
         supervisord = self._makeOne(options)
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
-        process = DummyProcess(pconfig)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
         pgroup = DummyProcessGroup(gconfig)
         readable = DummyDispatcher(readable=True)
@@ -457,7 +485,6 @@ class SupervisordTests(unittest.TestCase):
         options = DummyOptions()
         supervisord = self._makeOne(options)
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
-        process = DummyProcess(pconfig)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
         pgroup = DummyProcessGroup(gconfig)
         from supervisor.medusa import asyncore_25 as asyncore
@@ -493,7 +520,6 @@ class SupervisordTests(unittest.TestCase):
         options = DummyOptions()
         supervisord = self._makeOne(options)
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
-        process = DummyProcess(pconfig)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
         pgroup = DummyProcessGroup(gconfig)
         L = []
