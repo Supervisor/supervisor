@@ -212,7 +212,7 @@ class SocketManagerTest(unittest.TestCase):
         try:
             sock_manager._close()
             self.fail()
-        except Exception, e:
+        except Exception as e:
             self.assertEqual(e.args[0], 'Socket has not been prepared')
 
 def test_suite():

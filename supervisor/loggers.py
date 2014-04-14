@@ -201,7 +201,7 @@ class RotatingFileHandler(FileHandler):
                     raise
         try:
             os.rename(sfn, dfn)
-        except OSError, why:
+        except OSError as why:
             # catch exceptional condition (source deleted)
             # E.g. cleanup script removes active log.
             if why.args[0] != errno.ENOENT:
