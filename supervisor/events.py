@@ -218,4 +218,4 @@ def getEventNameByType(requested):
             return name
 
 def register(name, event):
-    EventTypes.__dict__[name] = event
+    setattr(EventTypes, name, event)
