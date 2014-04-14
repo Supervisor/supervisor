@@ -1,6 +1,7 @@
 language: python
 env:
     - TOXENV=cover
+    - TOXENV=cover3
     - TOXENV=py26
     - TOXENV=py27
     # - TOXENV=pypy
