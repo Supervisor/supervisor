@@ -36,7 +36,7 @@ class IntegerTests(unittest.TestCase):
         self.assertEqual(self._callFUT('1'), 1)
 
     def test_converts_numeric_overflowing_int(self):
-        self.assertEqual(self._callFUT(str(sys.maxint+1)), sys.maxint+1)
+        self.assertEqual(self._callFUT(str(maxint+1)), maxint+1)
 
     def test_raises_for_non_numeric(self):
         self.assertRaises(ValueError, self._callFUT, 'abc')
