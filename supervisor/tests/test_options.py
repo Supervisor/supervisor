@@ -150,6 +150,14 @@ class OptionTests(unittest.TestCase):
             self.fail("expected exception")
         self.assertTrue(options.stderr.getvalue().startswith("Error: No config file found at default paths"))
 
+    def test_default_config(self):
+        options = self._makeOptions()
+        tempf = tempfile.NamedTemporaryFile()
+        options.searchpaths = [tempf.name]
+        config = options.default_configfile()
+        self.assertEqual(config, tempf.name)
+        tempf.close()
+
 class ClientOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ClientOptions
