@@ -181,6 +181,13 @@ class RotatingFileHandler(FileHandler):
         self.counter = 0
         self.every = 10
 
+    def __del__(self):
+        if self.stream:
+            try:
+                self.stream.close()
+            except OSError as exc:
+                pass
+
     def emit(self, record):
         """
         Emit a record.
