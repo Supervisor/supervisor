@@ -46,8 +46,9 @@ method) up to the terminator, and then control will be returned to
 you - by calling your self.found_terminator() method.
 """
 
-import socket
+import supervisor.medusa.text_socket as socket
 from supervisor.medusa import asyncore_25 as asyncore
+from supervisor.compat import long
 
 class async_chat (asyncore.dispatcher):
     """This is an abstract class.  You must derive from this class, and add
@@ -71,7 +72,7 @@ class async_chat (asyncore.dispatcher):
         raise NotImplementedError("must be implemented in subclass")
 
     def set_terminator (self, term):
-        "Set the input delimiter.  Can be a fixed string of any length, an integer, or None"
+        """Set the input delimiter.  Can be a fixed string of any length, an integer, or None"""
         self.terminator = term
 
     def get_terminator (self):
@@ -90,7 +91,7 @@ class async_chat (asyncore.dispatcher):
             self.handle_error()
             return
 
-        self.ac_in_buffer = self.ac_in_buffer + data
+        self.ac_in_buffer += data
 
         # Continue to search for self.terminator in self.ac_in_buffer,
         # while calling self.collect_incoming_data.  The while loop
@@ -110,7 +111,7 @@ class async_chat (asyncore.dispatcher):
                 if lb < n:
                     self.collect_incoming_data (self.ac_in_buffer)
                     self.ac_in_buffer = ''
-                    self.terminator = self.terminator - lb
+                    self.terminator -= lb
                 else:
                     self.collect_incoming_data (self.ac_in_buffer[:n])
                     self.ac_in_buffer = self.ac_in_buffer[n:]
@@ -163,11 +164,11 @@ class async_chat (asyncore.dispatcher):
         self.initiate_send()
 
     def readable (self):
-        "predicate for inclusion in the readable for select()"
-        return (len(self.ac_in_buffer) <= self.ac_in_buffer_size)
+        """predicate for inclusion in the readable for select()"""
+        return len(self.ac_in_buffer) <= self.ac_in_buffer_size
 
     def writable (self):
-        "predicate for inclusion in the writable for select()"
+        """predicate for inclusion in the writable for select()"""
         # return len(self.ac_out_buffer) or len(self.producer_fifo) or (not self.connected)
         # this is about twice as fast, though not as clear.
         return not (
@@ -177,7 +178,7 @@ class async_chat (asyncore.dispatcher):
                 )
 
     def close_when_done (self):
-        "automatically close this channel once the outgoing queue is empty"
+        """automatically close this channel once the outgoing queue is empty"""
         self.producer_fifo.push (None)
 
     # refill the outgoing buffer by calling the more() method
@@ -195,7 +196,7 @@ class async_chat (asyncore.dispatcher):
                     return
                 elif isinstance(p, str):
                     self.producer_fifo.pop()
-                    self.ac_out_buffer = self.ac_out_buffer + p
+                    self.ac_out_buffer += p
                     return
                 data = p.more()
                 if data:
@@ -209,7 +210,7 @@ class async_chat (asyncore.dispatcher):
     def initiate_send (self):
         obs = self.ac_out_buffer_size
         # try to refill the buffer
-        if (len (self.ac_out_buffer) < obs):
+        if len (self.ac_out_buffer) < obs:
             self.refill_buffer()
 
         if self.ac_out_buffer and self.connected:
@@ -268,9 +269,9 @@ class fifo:
 
     def pop (self):
         if self.list:
-            return (1, self.list.pop(0))
+            return 1, self.list.pop(0)
         else:
-            return (0, None)
+            return 0, None
 
 # Given 'haystack', see if any prefix of 'needle' is at its end.  This
 # assumes an exact match has already been checked.  Return the number of

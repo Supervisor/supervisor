@@ -13,14 +13,18 @@ from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummyProcessGroup
 from supervisor.tests.base import DummyDispatcher
 
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
 class EntryPointTests(unittest.TestCase):
     def test_main_noprofile(self):
         from supervisor.supervisord import main
         conf = os.path.join(
             os.path.abspath(os.path.dirname(__file__)), 'fixtures',
             'donothing.conf')
-        import StringIO
-        new_stdout = StringIO.StringIO()
+        new_stdout = StringIO()
         old_stdout = sys.stdout
         try:
             tempdir = tempfile.mkdtemp()
@@ -41,8 +45,7 @@ class EntryPointTests(unittest.TestCase):
             conf = os.path.join(
                 os.path.abspath(os.path.dirname(__file__)), 'fixtures',
                 'donothing.conf')
-            import StringIO
-            new_stdout = StringIO.StringIO()
+            new_stdout = StringIO()
             old_stdout = sys.stdout
             try:
                 tempdir = tempfile.mkdtemp()
@@ -344,7 +347,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(supervisord.process_groups, {})
 
         result = supervisord.add_process_group(gconfig)
-        self.assertEqual(supervisord.process_groups.keys(), ['foo'])
+        self.assertEqual(list(supervisord.process_groups.keys()), ['foo'])
         self.assertTrue(result)
 
         group = supervisord.process_groups['foo']
@@ -386,7 +389,7 @@ class SupervisordTests(unittest.TestCase):
         supervisord.add_process_group(gconfig)
         supervisord.process_groups['foo'].unstopped_processes = [DummyProcess(None)]
         result = supervisord.remove_process_group('foo')
-        self.assertEqual(supervisord.process_groups.keys(), ['foo'])
+        self.assertEqual(list(supervisord.process_groups.keys()), ['foo'])
         self.assertTrue(not result)
 
     def test_remove_process_group_event(self):

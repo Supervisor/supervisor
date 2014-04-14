@@ -2,6 +2,11 @@ import os
 import time
 import datetime
 import errno
+import sys
+
+from supervisor.compat import as_string
+from supervisor.compat import unicode
+from supervisor.compat import basestring
 
 from supervisor.options import readFile
 from supervisor.options import tailFile
@@ -33,7 +38,7 @@ class SupervisorNamespaceRPCInterface:
 
     def _update(self, text):
         self.update_text = text # for unit tests, mainly
-        if self.supervisord.options.mood < SupervisorStates.RUNNING:
+        if isinstance(self.supervisord.options.mood, int) and self.supervisord.options.mood < SupervisorStates.RUNNING:
             raise RPCError(Faults.SHUTDOWN_STATE)
 
     # RPC API methods
@@ -57,7 +62,7 @@ class SupervisorNamespaceRPCInterface:
         return VERSION
 
     def getIdentification(self):
-        """ Return identifiying string of supervisord
+        """ Return identifying string of supervisord
 
         @return string identifier identifying string
         """
@@ -102,8 +107,8 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.NO_FILE, logfile)
 
         try:
-            return readFile(logfile, int(offset), int(length))
-        except ValueError, inst:
+            return as_string(readFile(logfile, int(offset), int(length)))
+        except ValueError as inst:
             why = inst.args[0]
             raise RPCError(getattr(Faults, why))
 
@@ -160,7 +165,7 @@ class SupervisorNamespaceRPCInterface:
         self._update('reloadConfig')
         try:
             self.supervisord.options.process_config(do_usage=False)
-        except ValueError, msg:
+        except ValueError as msg:
             raise RPCError(Faults.CANT_REREAD, msg)
 
         added, changed, removed = self.supervisord.diff_to_active()
@@ -190,7 +195,7 @@ class SupervisorNamespaceRPCInterface:
         """ Remove a stopped process from the active configuration.
 
         @param string name         name of process group to remove
-        @return boolean result     Indicates wether the removal was successful
+        @return boolean result     Indicates whether the removal was successful
         """
         self._update('removeProcessGroup')
         if name not in self.supervisord.process_groups:
@@ -207,21 +212,21 @@ class SupervisorNamespaceRPCInterface:
         all_processes = []
 
         if lexical:
-            group_names = self.supervisord.process_groups.keys()
+            group_names = list(self.supervisord.process_groups.keys())
             group_names.sort()
             for group_name in group_names:
                 group = self.supervisord.process_groups[group_name]
-                process_names = group.processes.keys()
+                process_names = list(group.processes.keys())
                 process_names.sort()
                 for process_name in process_names:
                     process = group.processes[process_name]
                     all_processes.append((group, process))
         else:
-            groups = self.supervisord.process_groups.values()
+            groups = list(self.supervisord.process_groups.values())
             groups.sort() # asc by priority
 
             for group in groups:
-                processes = group.processes.values()
+                processes = list(group.processes.values())
                 processes.sort() # asc by priority
                 for process in processes:
                     all_processes.append((group, process))
@@ -263,9 +268,9 @@ class SupervisorNamespaceRPCInterface:
         # eventually fail
         try:
             filename, argv = process.get_execv_args()
-        except NotFound, why:
+        except NotFound as why:
             raise RPCError(Faults.NO_FILE, why.args[0])
-        except (NotExecutable, NoPermission), why:
+        except (NotExecutable, NoPermission) as why:
             raise RPCError(Faults.NOT_EXECUTABLE, why.args[0])
 
         started = []
@@ -326,7 +331,7 @@ class SupervisorNamespaceRPCInterface:
         if group is None:
             raise RPCError(Faults.BAD_NAME, name)
 
-        processes = group.processes.values()
+        processes = list(group.processes.values())
         processes.sort()
         processes = [ (group, process) for process in processes ]
 
@@ -413,7 +418,7 @@ class SupervisorNamespaceRPCInterface:
         if group is None:
             raise RPCError(Faults.BAD_NAME, name)
 
-        processes = group.processes.values()
+        processes = list(group.processes.values())
         processes.sort()
         processes = [ (group, process) for process in processes ]
 
@@ -461,7 +466,7 @@ class SupervisorNamespaceRPCInterface:
                       'group_prio': gconfig.priority,
                       'process_prio': pconfig.priority })
 
-        configinfo.sort()
+        configinfo.sort(key=lambda r: r['name'])
         return configinfo
 
     def _interpretProcessInfo(self, info):
@@ -560,8 +565,8 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.NO_FILE, logfile)
 
         try:
-            return readFile(logfile, int(offset), int(length))
-        except ValueError, inst:
+            return as_string(readFile(logfile, int(offset), int(length)))
+        except ValueError as inst:
             why = inst.args[0]
             raise RPCError(getattr(Faults, why))
 
@@ -691,7 +696,7 @@ class SupervisorNamespaceRPCInterface:
             name = make_namespec(group.config.name, process.config.name)
             try:
                 callback(name)
-            except RPCError, e:
+            except RPCError as e:
                 results.append(
                     {'name':process.config.name,
                      'group':group.config.name,
@@ -745,7 +750,7 @@ class SupervisorNamespaceRPCInterface:
 
         try:
             process.write(chars)
-        except OSError, why:
+        except OSError as why:
             if why.args[0] == errno.EPIPE:
                 raise RPCError(Faults.NO_FILE, name)
             else:
@@ -790,7 +795,7 @@ def make_allfunc(processes, predicate, func, **extra_kwargs):
                     try:
                         callback = func(name, **extra_kwargs)
                         callbacks.append((group, process, callback))
-                    except RPCError, e:
+                    except RPCError as e:
                         results.append({'name':process.config.name,
                                         'group':group.config.name,
                                         'status':e.code,
@@ -804,7 +809,7 @@ def make_allfunc(processes, predicate, func, **extra_kwargs):
 
         try:
             value = callback()
-        except RPCError, e:
+        except RPCError as e:
             results.append(
                 {'name':process.config.name,
                  'group':group.config.name,

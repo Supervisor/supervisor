@@ -5,9 +5,15 @@ from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import DummyRequest
 from supervisor.tests.base import DummySupervisorRPCNamespace
 
+try:
+    import xmlrpclib
+    import httplib
+except ImportError:
+    import xmlrpc.client as xmlrpclib
+    import http.client as httplib
+
 class XMLRPCMarshallingTests(unittest.TestCase):
     def test_xmlrpc_marshal(self):
-        import xmlrpclib
         from supervisor import xmlrpc
         data = xmlrpc.xmlrpc_marshal(1)
         self.assertEqual(data, xmlrpclib.dumps((1,), methodresponse=True))
@@ -45,7 +51,6 @@ class XMLRPCHandlerTests(unittest.TestCase):
         supervisor = DummySupervisor()
         subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
         handler = self._makeOne(supervisor, subinterfaces)
-        import xmlrpclib
         data = xmlrpclib.dumps(('a', 'b'), 'supervisor.noSuchMethod')
         request = DummyRequest('/what/ever', None, None, None)
         handler.continue_request(data, request)
@@ -57,9 +62,9 @@ class XMLRPCHandlerTests(unittest.TestCase):
             expected = 3
         self.assertEqual(len(logdata), expected)
         self.assertEqual(logdata[-2],
-                         u'XML-RPC method called: supervisor.noSuchMethod()')
+                         'XML-RPC method called: supervisor.noSuchMethod()')
         self.assertEqual(logdata[-1],
-           (u'XML-RPC method supervisor.noSuchMethod() returned fault: '
+           ('XML-RPC method supervisor.noSuchMethod() returned fault: '
             '[1] UNKNOWN_METHOD'))
         self.assertEqual(len(request.producers), 1)
         xml_response = request.producers[0]
@@ -69,7 +74,6 @@ class XMLRPCHandlerTests(unittest.TestCase):
         supervisor = DummySupervisor()
         subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
         handler = self._makeOne(supervisor, subinterfaces)
-        import xmlrpclib
         data = xmlrpclib.dumps((), 'supervisor.getAPIVersion')
         request = DummyRequest('/what/ever', None, None, None)
         handler.continue_request(data, request)
@@ -81,9 +85,9 @@ class XMLRPCHandlerTests(unittest.TestCase):
             expected = 3
         self.assertEqual(len(logdata), expected)
         self.assertEqual(logdata[-2],
-               u'XML-RPC method called: supervisor.getAPIVersion()')
+               'XML-RPC method called: supervisor.getAPIVersion()')
         self.assertEqual(logdata[-1],
-            u'XML-RPC method supervisor.getAPIVersion() returned successfully')
+            'XML-RPC method supervisor.getAPIVersion() returned successfully')
         self.assertEqual(len(request.producers), 1)
         xml_response = request.producers[0]
         response = xmlrpclib.loads(xml_response)
@@ -111,12 +115,11 @@ class XMLRPCHandlerTests(unittest.TestCase):
             expected = 3
         self.assertEqual(len(logdata), expected)
         self.assertEqual(logdata[-2],
-               u'XML-RPC method called: supervisor.getAPIVersion()')
+               'XML-RPC method called: supervisor.getAPIVersion()')
         self.assertEqual(logdata[-1],
-            u'XML-RPC method supervisor.getAPIVersion() returned successfully')
+            'XML-RPC method supervisor.getAPIVersion() returned successfully')
         self.assertEqual(len(request.producers), 1)
         xml_response = request.producers[0]
-        import xmlrpclib
         response = xmlrpclib.loads(xml_response)
         from supervisor.rpcinterface import API_VERSION
         self.assertEqual(response[0][0], API_VERSION)
@@ -140,7 +143,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
             expected = 2
         self.assertEqual(len(logdata), expected)
         self.assertEqual(logdata[-1],
-               u'XML-RPC request received with no method name')
+               'XML-RPC request received with no method name')
         self.assertEqual(len(request.producers), 0)
         self.assertEqual(request._error, 400)
 
@@ -148,7 +151,6 @@ class XMLRPCHandlerTests(unittest.TestCase):
         supervisor = DummySupervisor()
         subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
         handler = self._makeOne(supervisor, subinterfaces)
-        import xmlrpclib
         data = xmlrpclib.dumps((), 'supervisor.raiseError')
         request = DummyRequest('/what/ever', None, None, None)
         handler.continue_request(data, request)
@@ -160,7 +162,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
             expected = 3
         self.assertEqual(len(logdata), expected)
         self.assertEqual(logdata[-2],
-               u'XML-RPC method called: supervisor.raiseError()')
+               'XML-RPC method called: supervisor.raiseError()')
         self.assertTrue(logdata[-1].startswith('Traceback'))
         self.assertTrue(logdata[-1].endswith('ValueError: error\n'))
         self.assertEqual(len(request.producers), 0)
@@ -207,7 +209,6 @@ class SupervisorTransportTests(unittest.TestCase):
         self.assertEqual(conn.socketfile, '/foo/bar')
 
     def test__get_connection_http_9001(self):
-        import httplib
         transport = self._makeOne('user', 'pass', 'http://127.0.0.1:9001/')
         conn = transport._get_connection()
         self.assertTrue(isinstance(conn, httplib.HTTPConnection))
@@ -215,7 +216,6 @@ class SupervisorTransportTests(unittest.TestCase):
         self.assertEqual(conn.port, 9001)
 
     def test__get_connection_http_80(self):
-        import httplib
         transport = self._makeOne('user', 'pass', 'http://127.0.0.1/')
         conn = transport._get_connection()
         self.assertTrue(isinstance(conn, httplib.HTTPConnection))
@@ -223,7 +223,6 @@ class SupervisorTransportTests(unittest.TestCase):
         self.assertEqual(conn.port, 80)
 
     def test_request_non_200_response(self):
-        import xmlrpclib
         transport = self._makeOne('user', 'pass', 'http://127.0.0.1/')
         dummy_conn = DummyConnection(400, '')
         def getconn():
@@ -235,7 +234,6 @@ class SupervisorTransportTests(unittest.TestCase):
         self.assertEqual(dummy_conn.closed, True)
 
     def test_request_400_response(self):
-        import xmlrpclib
         transport = self._makeOne('user', 'pass', 'http://127.0.0.1/')
         dummy_conn = DummyConnection(400, '')
         def getconn():

@@ -1,8 +1,9 @@
 # -*- Mode: Python -*-
 
+from supervisor.compat import as_bytes
+
 import asyncore
 import socket
-import string
 import sys
 
 def blurt (thing):
@@ -28,18 +29,18 @@ class http_client (asyncore.dispatcher_with_send):
     def handle_connect (self):
         self.connected = 1
 #               blurt ('o')
-        self.send ('GET %s HTTP/1.0\r\n\r\n' % self.uri)
+        self.send (as_bytes('GET %s HTTP/1.0\r\n\r\n' % self.uri))
 
     def handle_read (self):
 #               blurt ('.')
         d = self.recv (8192)
-        self.bytes = self.bytes + len(d)
+        self.bytes += len(d)
 
     def handle_close (self):
         global total_sessions
 #               blurt ('(%d)' % (self.bytes))
         self.close()
-        total_sessions = total_sessions + 1
+        total_sessions += 1
         if self.num:
             http_client (self.host, self.port, self.uri, self.num-1)
 
@@ -63,14 +64,14 @@ def loop (timeout=30.0):
 
 if __name__ == '__main__':
     if len(sys.argv) < 6:
-        print 'usage: %s <host> <port> <uri> <hits> <num_clients>' % sys.argv[0]
+        print('usage: %s <host> <port> <uri> <hits> <num_clients>' % sys.argv[0])
     else:
         [host, port, uri, hits, num] = sys.argv[1:]
         hits = int(hits)
         num = int(num)
         port = int(port)
         t = timer()
-        clients = map (lambda x: http_client (host, port, uri, hits-1), range(num))
+        clients = [http_client(host, port, uri, hits-1) for x in range(num)]
         #import profile
         #profile.run ('loop')
         loop()
@@ -85,7 +86,7 @@ if __name__ == '__main__':
                         total_sessions / total_time
                         )
                 )
-        print 'Max. number of concurrent sessions: %d' % (MAX)
+        print('Max. number of concurrent sessions: %d' % MAX)
 
 
 # linux 2.x, talking to medusa

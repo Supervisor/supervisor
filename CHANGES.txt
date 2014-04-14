@@ -1,5 +1,13 @@
-3.1a1 (Next Release)
---------------------
+4.0.0-dev (Next 4.x Release)
+----------------------------
+
+- The ``supervisor`` package is no longer a namespace package.
+
+- Support for Python 2.5 has been dropped.  On Python 2, Supervisor
+  now requires Python 2.6 or later.
+
+3.1.0-dev (Next 3.x Release)
+----------------------------
 
 - The output of the ``start``, ``stop``, ``restart``, and ``clear`` commands
   in ``supervisorctl`` has been changed to be consistent with the ``status``

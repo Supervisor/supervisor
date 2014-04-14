@@ -3,9 +3,11 @@ import os
 import pwd
 import signal
 import sys
-import socket
+import supervisor.medusa.text_socket as socket
 import shlex
-import urlparse
+
+from supervisor.compat import urlparse
+from supervisor.compat import long
 from supervisor.loggers import getLevelNumByDescription
 
 # I dont know why we bother, this doesn't run on Windows, but just
@@ -61,7 +63,7 @@ def list_of_ints(arg):
         return []
     else:
         try:
-            return map(int, arg.split(","))
+            return list(map(int, arg.split(",")))
         except:
             raise ValueError("not a valid list of ints: " + repr(arg))
 
@@ -79,7 +81,7 @@ def dict_of_key_value_pairs(arg):
     """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'}
         Quotes can be used to allow commas in the value
     """
-    lexer = shlex.shlex(arg)
+    lexer = shlex.shlex(str(arg))
     lexer.wordchars += '/.+-():'
 
     tokens = list(lexer)
@@ -137,7 +139,6 @@ port_number = RangeCheckedConversion(integer, rmin=1, rmax=0xffff).__call__
 def inet_address(s):
     # returns (host, port) tuple
     host = ''
-    port = None
     if ":" in s:
         host, s = s.split(":", 1)
         if not s:
@@ -207,12 +208,16 @@ class InetStreamSocketConfig(SocketConfig):
         self.url = 'tcp://%s:%d' % (self.host, self.port)
 
     def addr(self):
-        return (self.host, self.port)
+        return self.host, self.port
 
     def create_and_bind(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(self.addr())
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind(self.addr())
+        except:
+            sock.close()
+            raise
         return sock
 
 class UnixStreamSocketConfig(SocketConfig):
@@ -225,7 +230,7 @@ class UnixStreamSocketConfig(SocketConfig):
 
     def __init__(self, path, **kwargs):
         self.path = path
-        self.url = 'unix://%s' % (path)
+        self.url = 'unix://%s' % path
         self.mode = kwargs.get('mode', None)
         self.owner = kwargs.get('owner', None)
 
@@ -236,13 +241,14 @@ class UnixStreamSocketConfig(SocketConfig):
         if os.path.exists(self.path):
             os.unlink(self.path)
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.bind(self.addr())
         try:
+            sock.bind(self.addr())
             self._chown()
             self._chmod()
         except:
             sock.close()
-            os.unlink(self.path)
+            if os.path.exists(self.path):
+                os.unlink(self.path)
             raise
         return sock
 
@@ -256,17 +262,17 @@ class UnixStreamSocketConfig(SocketConfig):
         if self.mode is not None:
             try:
                 os.chmod(self.path, self.mode)
-            except Exception, e:
+            except Exception as e:
                 raise ValueError("Could not change permissions of socket "
-                                    + "file: %s" % (e))
+                                    + "file: %s" % e)
 
     def _chown(self):
         if self.owner is not None:
             try:
                 os.chown(self.path, self.owner[0], self.owner[1])
-            except Exception, e:
+            except Exception as e:
                 raise ValueError("Could not change ownership of socket file: "
-                                    + "%s" % (e))
+                                    + "%s" % e)
 
 def colon_separated_user_group(arg):
     """ Find a user ID and group ID from a string like 'user:group'.  Returns
@@ -383,7 +389,7 @@ class SuffixMultiplier:
 
 byte_size = SuffixMultiplier({'kb': 1024,
                               'mb': 1024*1024,
-                              'gb': 1024*1024*1024L,})
+                              'gb': 1024*1024*long(1024),})
 
 def url(value):
     # earlier Python 2.6 urlparse (2.6.4 and under) can't parse unix:// URLs,

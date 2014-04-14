@@ -17,7 +17,8 @@ class sample_input_collector:
         self.length = length
 
     def collect_incoming_data (self, data):
-        print 'data from %s: <%s>' % (self.request, repr(data))
+        print('data from %s: <%s>' % (self.request, repr(data)))
+
 
 class post_script_handler (script_handler.script_handler):
 
@@ -26,7 +27,7 @@ class post_script_handler (script_handler.script_handler):
             cl = default_handler.get_header(CONTENT_LENGTH, request.header)
             ic = sample_input_collector(request, cl)
             request.collector = ic
-            print request.header
+            print(request.header)
 
         return script_handler.script_handler.handle_request (self, request)
 

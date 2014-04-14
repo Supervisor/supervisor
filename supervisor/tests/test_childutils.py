@@ -1,7 +1,7 @@
 import sys
 import time
 import unittest
-from StringIO import StringIO
+from supervisor.compat import StringIO
 
 class ChildUtilsTests(unittest.TestCase):
     def test_getRPCInterface(self):
