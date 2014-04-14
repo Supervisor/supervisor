@@ -1,6 +1,9 @@
 _NOW = 1151365354
 _TIMEFORMAT = '%b %d %I:%M %p'
 
+from supervisor.compat import total_ordering
+from supervisor.compat import Fault
+
 class DummyOptions:
 
     make_pipes_error = None
@@ -151,9 +154,7 @@ class DummyOptions:
     def make_pipes(self, stderr=True):
         if self.make_pipes_error:
             raise OSError(self.make_pipes_error)
-        pipes = {}
-        pipes['child_stdin'], pipes['stdin'] = (3, 4)
-        pipes['stdout'], pipes['child_stdout'] = (5, 6)
+        pipes = {'child_stdin': 3, 'stdin': 4, 'stdout': 5, 'child_stdout': 6}
         if stderr:
             pipes['stderr'], pipes['child_stderr'] = (7, 8)
         else:
@@ -357,7 +358,7 @@ class DummySocketManager:
     def get_socket(self):
         return DummySocket(self._config.fd)
 
-class DummyProcess:
+class DummyProcess(object):
     # Initial state; overridden by instance variables
     pid = 0 # Subprocess pid; 0 when not running
     laststart = 0 # Last time the subprocess was started; 0 if never
@@ -438,9 +439,6 @@ class DummyProcess:
     def drain(self):
         self.drained = True
 
-    def __cmp__(self, other):
-        return cmp(self.config.priority, other.config.priority)
-
     def readable_fds(self):
         return []
 
@@ -479,6 +477,14 @@ class DummyProcess:
 
     def transition(self):
         self.transitioned = True
+
+    def __eq__(self, other):
+        return self.config.priority == other.config.priority
+
+    def __lt__(self, other):
+        return self.config.priority < other.config.priority
+
+DummyProcess = total_ordering(DummyProcess)
 
 class DummyPConfig:
     def __init__(self, options, name, command, directory=None, umask=None,
@@ -567,7 +573,7 @@ def makeExecutable(file, substitutions=None):
     f = open(tmpnam, 'w')
     f.write(data)
     f.close()
-    os.chmod(tmpnam, 0755)
+    os.chmod(tmpnam, 493) # 0755 on Py2, 0o755 on Py3
     return tmpnam
 
 def makeSpew(unkillable=False):
@@ -631,7 +637,10 @@ class DummyRequest:
         self.headers[header] = value
 
     def has_key(self, header):
-        return self.headers.has_key(header)
+        return header in self.headers
+
+    def __contains__(self, item):
+        return item in self.headers
 
     def done(self):
         self._done = True
@@ -719,13 +728,12 @@ class DummySupervisorRPCNamespace:
 
     def readProcessStdoutLog(self, name, offset, length):
         from supervisor import xmlrpc
-        import xmlrpclib
         if name == 'BAD_NAME':
-            raise xmlrpclib.Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
         elif name == 'FAILED':
-            raise xmlrpclib.Fault(xmlrpc.Faults.FAILED, 'FAILED')
+            raise Fault(xmlrpc.Faults.FAILED, 'FAILED')
         elif name == 'NO_FILE':
-            raise xmlrpclib.Fault(xmlrpc.Faults.NO_FILE, 'NO_FILE')
+            raise Fault(xmlrpc.Faults.NO_FILE, 'NO_FILE')
         a = 'output line\n' * 10
         return a[offset:]
 
@@ -737,21 +745,19 @@ class DummySupervisorRPCNamespace:
 
     def getProcessInfo(self, name):
         from supervisor import xmlrpc
-        import xmlrpclib
         for i in self.all_process_info:
             if i['name']==name:
                 info=i
                 return info
         if name == 'BAD_NAME':
-            raise xmlrpclib.Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
         if name == 'FAILED':
-            raise xmlrpclib.Fault(xmlrpc.Faults.FAILED, 'FAILED')
+            raise Fault(xmlrpc.Faults.FAILED, 'FAILED')
         if name == 'NO_FILE':
-            raise xmlrpclib.Fault(xmlrpc.Faults.NO_FILE, 'NO_FILE')
+            raise Fault(xmlrpc.Faults.NO_FILE, 'NO_FILE')
 
     def startProcess(self, name):
         from supervisor import xmlrpc
-        from xmlrpclib import Fault
         if name == 'BAD_NAME:BAD_NAME':
             raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME:BAD_NAME')
         if name == 'BAD_NAME':
@@ -813,7 +819,6 @@ class DummySupervisorRPCNamespace:
 
     def stopProcess(self, name):
         from supervisor import xmlrpc
-        from xmlrpclib import Fault
         if name == 'BAD_NAME:BAD_NAME':
             raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME:BAD_NAME')
         if name == 'BAD_NAME':
@@ -842,7 +847,6 @@ class DummySupervisorRPCNamespace:
         if self._restartable:
             self._restarted = True
             return
-        from xmlrpclib import Fault
         from supervisor import xmlrpc
         raise Fault(xmlrpc.Faults.SHUTDOWN_STATE, '')
 
@@ -850,7 +854,6 @@ class DummySupervisorRPCNamespace:
         if self._restartable:
             self._shutdown = True
             return
-        from xmlrpclib import Fault
         from supervisor import xmlrpc
         raise Fault(xmlrpc.Faults.SHUTDOWN_STATE, '')
 
@@ -858,7 +861,6 @@ class DummySupervisorRPCNamespace:
         return [[['added'], ['changed'], ['removed']]]
 
     def addProcessGroup(self, name):
-        from xmlrpclib import Fault
         from supervisor import xmlrpc
         if name == 'ALREADY_ADDED':
             raise Fault(xmlrpc.Faults.ALREADY_ADDED, '')
@@ -870,7 +872,6 @@ class DummySupervisorRPCNamespace:
             self.processes = [name]
 
     def removeProcessGroup(self, name):
-        from xmlrpclib import Fault
         from supervisor import xmlrpc
         if name == 'STILL_RUNNING':
             raise Fault(xmlrpc.Faults.STILL_RUNNING, '')
@@ -879,7 +880,6 @@ class DummySupervisorRPCNamespace:
         self.processes.remove(name)
 
     def clearProcessStdoutLog(self, name):
-        from xmlrpclib import Fault
         from supervisor import xmlrpc
         if name == 'BAD_NAME':
             raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
@@ -911,7 +911,6 @@ class DummySupervisorRPCNamespace:
 
     def readLog(self, whence, offset):
         if self._readlog_error:
-            from xmlrpclib import Fault
             raise Fault(self._readlog_error, '')
         return 'mainlogdata'
 
@@ -942,7 +941,7 @@ class DummyFCGIGroupConfig(DummyPGroupConfig):
         DummyPGroupConfig.__init__(self, options, name, priority, pconfigs)
         self.socket_config = socket_config
 
-class DummyProcessGroup:
+class DummyProcessGroup(object):
     def __init__(self, config):
         self.config = config
         self.transitioned = False
@@ -961,6 +960,14 @@ class DummyProcessGroup:
 
     def get_dispatchers(self):
         return self.dispatchers
+
+    def __lt__(self, other):
+        return self.config.priority < other.config.priority
+
+    def __eq__(self, other):
+        return self.config.priority == other.config.priority
+
+DummyProcessGroup = total_ordering(DummyProcessGroup)
 
 class DummyFCGIProcessGroup(DummyProcessGroup):
 

@@ -3,7 +3,6 @@
 #
 #       Author: Sam Rushing <rushing@nightmare.com>
 #
-
 RCS_ID =  '$Id: resolver.py,v 1.4 2002/03/20 17:37:48 amk Exp $'
 
 
@@ -12,12 +11,13 @@ RCS_ID =  '$Id: resolver.py,v 1.4 2002/03/20 17:37:48 amk Exp $'
 
 # see rfc1035 for details
 
-import string
-import asyncore_25 as asyncore
-import socket
+from supervisor.compat import reduce
+
+import supervisor.medusa.asyncore_25 as asyncore
+import supervisor.medusa.text_socket as socket
 import sys
 import time
-from counter import counter
+from supervisor.medusa.counter import counter
 
 VERSION = RCS_ID.split()[2]
 
@@ -57,46 +57,40 @@ def fast_address_request (host, id=0):
     return (
             '%c%c' % (chr((id>>8)&0xff),chr(id&0xff))
             + '\001\000\000\001\000\000\000\000\000\000%s\000\000\001\000\001' % (
-                    ''.join(
-                            map(lambda part: '%c%s' % (chr(len(part)),part), host.split('.'))
-                            )
+                    ''.join (['%c%s' % (chr(len(part)),part) for part in host.split('.')])
                     )
             )
 
 def fast_ptr_request (host, id=0):
     return (
             '%c%c' % (chr((id>>8)&0xff),chr(id&0xff))
-            + '\001\000\000\001\000\000\000\000\000\000%s\000\000\014\000\001' % (
-                    ''.join(
-                            map(lambda part: '%c%s' % (chr(len(part)),part), host.split('.'))
-                            )
-                    )
+            + '\001\000\000\001\000\000\000\000\000\000%s\000\000\014\000\001' %
+            ''.join(['%c%s' % (chr(len(part)),part) for part in host.split('.')])
             )
 
 def unpack_name (r,pos):
     n = []
     while 1:
         ll = ord(r[pos])
-        if (ll&0xc0):
+        if ll&0xc0:
             # compression
             pos = (ll&0x3f << 8) + (ord(r[pos+1]))
         elif ll == 0:
             break
         else:
-            pos = pos + 1
+            pos += 1
             n.append (r[pos:pos+ll])
-            pos = pos + ll
-    return '.'.join(n)
+            pos += ll
+    return '.'.join (n)
 
 def skip_name (r,pos):
-    s = pos
     while 1:
         ll = ord(r[pos])
-        if (ll&0xc0):
+        if ll&0xc0:
             # compression
             return pos + 2
         elif ll == 0:
-            pos = pos + 1
+            pos += 1
             break
         else:
             pos = pos + ll + 1
@@ -146,7 +140,7 @@ def unpack_address_reply (r):
                         '%d.%d.%d.%d' % tuple(map(ord,r[pos+10:pos+14]))
                         )
             # skip over TYPE, CLASS, TTL, RDLENGTH, RDATA
-            pos = pos + 8
+            pos += 8
             rdlength = (ord(r[pos])<<8) + (ord(r[pos+1]))
             pos = pos + 2 + rdlength
         return 0, None
@@ -169,7 +163,7 @@ def unpack_ptr_reply (r):
                         unpack_name (r, pos+10)
                         )
             # skip over TYPE, CLASS, TTL, RDLENGTH, RDATA
-            pos = pos + 8
+            pos += 8
             rdlength = (ord(r[pos])<<8) + (ord(r[pos+1]))
             pos = pos + 2 + rdlength
         return 0, None
@@ -210,25 +204,25 @@ class resolver (asyncore.dispatcher):
         self.close()
 
     def handle_error (self):      # don't close the connection on error
-        (file,fun,line), t, v, tbinfo = asyncore.compact_traceback()
+        file_fun_line, t, v, tbinfo = asyncore.compact_traceback()
         self.log_info(
                         'Problem with DNS lookup (%s:%s %s)' % (t, v, tbinfo),
                         'error')
 
     def get_id (self):
-        return (self.id.as_long() % (1<<16))
+        return self.id.as_long() % (1<<16)
 
     def reap (self):          # find DNS requests that have timed out
         now = int(time.time())
         if now - self.last_reap_time > 180:        # reap every 3 minutes
             self.last_reap_time = now              # update before we forget
-            for k,(host,unpack,callback,when) in self.request_map.items():
+            for k,(host,unpack,callback,when) in list(self.request_map.items()):
                 if now - when > 180:               # over 3 minutes old
                     del self.request_map[k]
                     try:                           # same code as in handle_read
                         callback (host, 0, None)   # timeout val is (0,None)
                     except:
-                        (file,fun,line), t, v, tbinfo = asyncore.compact_traceback()
+                        file_fun_line, t, v, tbinfo = asyncore.compact_traceback()
                         self.log_info('%s %s %s' % (t,v,tbinfo), 'error')
 
     def resolve (self, host, callback):
@@ -245,7 +239,7 @@ class resolver (asyncore.dispatcher):
         self.reap()                                # first, get rid of old guys
         ip = host.split('.')
         ip.reverse()
-        ip = ip.join('.') + '.in-addr.arpa'
+        ip = '.'.join(ip) + '.in-addr.arpa'
         self.socket.sendto (
                 fast_ptr_request (ip, self.get_id()),
                 (self.server, 53)
@@ -259,14 +253,14 @@ class resolver (asyncore.dispatcher):
         # for security reasons we may want to double-check
         # that <whence> is the server we sent the request to.
         id = (ord(reply[0])<<8) + ord(reply[1])
-        if self.request_map.has_key (id):
+        if id in self.request_map:
             host, unpack, callback, when = self.request_map[id]
             del self.request_map[id]
             ttl, answer = unpack (reply)
             try:
                 callback (host, ttl, answer)
             except:
-                (file,fun,line), t, v, tbinfo = asyncore.compact_traceback()
+                file_fun_line, t, v, tbinfo = asyncore.compact_traceback()
                 self.log_info('%s %s %s' % ( t,v,tbinfo), 'error')
 
 class rbl (resolver):
@@ -274,7 +268,7 @@ class rbl (resolver):
     def resolve_maps (self, host, callback):
         ip = host.split('.')
         ip.reverse()
-        ip = ip.join('.') + '.rbl.maps.vix.com'
+        ip = '.'.join(ip) + '.rbl.maps.vix.com'
         self.socket.sendto (
                 fast_ptr_request (ip, self.get_id()),
                 (self.server, 53)
@@ -294,15 +288,14 @@ class hooked_callback:
         self.hook, self.callback = hook, callback
 
     def __call__ (self, *args):
-        apply (self.hook, args)
-        apply (self.callback, args)
+        self.hook(*args)
+        self.callback(*args)
 
 class caching_resolver (resolver):
-    "Cache DNS queries.  Will need to honor the TTL value in the replies"
+    """Cache DNS queries.  Will need to honor the TTL value in the replies"""
 
-    def __init__ (*args):
-        apply (resolver.__init__, args)
-        self = args[0]
+    def __init__ (self, server='127.0.0.1'):
+        resolver.__init__(self, server)
         self.cache = {}
         self.forward_requests = counter()
         self.reverse_requests = counter()
@@ -310,7 +303,7 @@ class caching_resolver (resolver):
 
     def resolve (self, host, callback):
         self.forward_requests.increment()
-        if self.cache.has_key (host):
+        if host in self.cache:
             when, ttl, answer = self.cache[host]
             # ignore TTL for now
             callback (host, ttl, answer)
@@ -327,7 +320,7 @@ class caching_resolver (resolver):
 
     def resolve_ptr (self, host, callback):
         self.reverse_requests.increment()
-        if self.cache.has_key (host):
+        if host in self.cache:
             when, ttl, answer = self.cache[host]
             # ignore TTL for now
             callback (host, ttl, answer)
@@ -348,7 +341,7 @@ class caching_resolver (resolver):
     SERVER_IDENT = 'Caching DNS Resolver (V%s)' % VERSION
 
     def status (self):
-        import producers
+        import supervisor.medusa.producers as producers
         return producers.simple_producer (
                 '<h2>%s</h2>'                                   % self.SERVER_IDENT
                 + '<br>Server: %s'                              % self.server
@@ -384,23 +377,23 @@ class caching_resolver (resolver):
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
-        print 'usage: %s [-r] [-s <server_IP>] host [host ...]' % sys.argv[0]
+        print('usage: %s [-r] [-s <server_IP>] host [host ...]' % sys.argv[0])
         sys.exit(0)
-    elif ('-s' in sys.argv):
+    elif '-s' in sys.argv:
         i = sys.argv.index('-s')
         server = sys.argv[i+1]
         del sys.argv[i:i+2]
     else:
         server = '127.0.0.1'
 
-    if ('-r' in sys.argv):
+    if '-r' in sys.argv:
         reverse = 1
         i = sys.argv.index('-r')
         del sys.argv[i]
     else:
         reverse = 0
 
-    if ('-m' in sys.argv):
+    if '-m' in sys.argv:
         maps = 1
         sys.argv.remove ('-m')
     else:
@@ -415,8 +408,8 @@ if __name__ == '__main__':
 
     def print_it (host, ttl, answer):
         global count
-        print '%s: %s' % (host, answer)
-        count = count - 1
+        print('%s: %s' % (host, answer))
+        count -= 1
         if not count:
             r.close()
 
@@ -431,4 +424,4 @@ if __name__ == '__main__':
     # hooked asyncore.loop()
     while asyncore.socket_map:
         asyncore.poll (30.0)
-        print 'requests outstanding: %d' % len(r.request_map)
+        print('requests outstanding: %d' % len(r.request_map))

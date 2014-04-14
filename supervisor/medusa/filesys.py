@@ -14,12 +14,14 @@
 # opening files for reading, and listing directories, should
 # return a producer.
 
+from supervisor.compat import long
+
 class abstract_filesystem:
     def __init__ (self):
         pass
 
     def current_directory (self):
-        "Return a string representing the current directory."
+        """Return a string representing the current directory."""
         pass
 
     def listdir (self, path, long=0):
@@ -30,27 +32,27 @@ class abstract_filesystem:
         pass
 
     def open (self, path, mode):
-        "Return an open file object"
+        """Return an open file object"""
         pass
 
     def stat (self, path):
-        "Return the equivalent of os.stat() on the given path."
+        """Return the equivalent of os.stat() on the given path."""
         pass
 
     def isdir (self, path):
-        "Does the path represent a directory?"
+        """Does the path represent a directory?"""
         pass
 
     def isfile (self, path):
-        "Does the path represent a plain file?"
+        """Does the path represent a plain file?"""
         pass
 
     def cwd (self, path):
-        "Change the working directory."
+        """Change the working directory."""
         pass
 
     def cdup (self):
-        "Change to the parent of the current directory."
+        """Change to the parent of the current directory."""
         pass
 
 
@@ -72,15 +74,12 @@ class abstract_filesystem:
 import os
 import stat
 import re
-import string
 
 def safe_stat (path):
     try:
-        return (path, os.stat (path))
+        return path, os.stat (path)
     except:
         return None
-
-import glob
 
 class os_filesystem:
     path_module = os.path
@@ -113,8 +112,8 @@ class os_filesystem:
             old_dir = os.getcwd()
             # temporarily change to that directory, in order
             # to see if we have permission to do so.
+            can = 0
             try:
-                can = 0
                 try:
                     os.chdir (translated_path)
                     can = 1
@@ -141,7 +140,7 @@ class os_filesystem:
             try:
                 os.chdir (p)
                 # if os.stat fails we ignore that file.
-                result = filter (None, map (safe_stat, ld))
+                result = [_f for _f in map (safe_stat, ld) if _f]
             finally:
                 os.chdir (old_dir)
             return list_producer (result, self.longify)
@@ -190,7 +189,8 @@ class os_filesystem:
         p = self.normalize (self.path_module.join (self.root, p[1:]))
         return p
 
-    def longify (self, (path, stat_info)):
+    def longify (self, path_stat_info_tuple):
+        (path, stat_info) = path_stat_info_tuple
         return unix_longify (path, stat_info)
 
     def __repr__ (self):
@@ -205,9 +205,9 @@ if os.name == 'posix':
         pass
 
     class schizophrenic_unix_filesystem (os_filesystem):
-        PROCESS_UID             = os.getuid()
+        PROCESS_UID     = os.getuid()
         PROCESS_EUID    = os.geteuid()
-        PROCESS_GID             = os.getgid()
+        PROCESS_GID     = os.getgid()
         PROCESS_EGID    = os.getegid()
 
         def __init__ (self, root, wd='/', persona=(None, None)):
@@ -234,7 +234,7 @@ if os.name == 'posix':
             finally:
                 self.become_nobody()
 
-        def cdup (self, path):
+        def cdup (self):
             try:
                 self.become_persona()
                 return os_filesystem.cdup (self)
@@ -260,7 +260,8 @@ if os.name == 'posix':
 # [yes, I think something like this "\\.\c\windows"]
 
 class msdos_filesystem (os_filesystem):
-    def longify (self, (path, stat_info)):
+    def longify (self, path_stat_info_tuple):
+        (path, stat_info) = path_stat_info_tuple
         return msdos_longify (path, stat_info)
 
 # A merged filesystem will let you plug other filesystems together.
@@ -300,7 +301,7 @@ def msdos_date (t):
     hour = info[3]
     if hour > 11:
         merid = 'PM'
-        hour = hour - 12
+        hour -= 12
     else:
         merid = 'AM'
     return '%02d-%02d-%02d  %02d:%02d%s' % (
@@ -331,8 +332,7 @@ import time
 def unix_longify (file, stat_info):
     # for now, only pay attention to the lower bits
     mode = ('%o' % stat_info[stat.ST_MODE])[-3:]
-    mode = ''.join(map(lambda x: mode_table[x], mode))
-
+    mode = ''.join([mode_table[x] for x in mode])
     if stat.S_ISDIR (stat_info[stat.ST_MODE]):
         dirchar = 'd'
     else:

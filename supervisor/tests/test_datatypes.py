@@ -2,12 +2,15 @@
 
 import os
 import signal
-import socket
 import sys
 import tempfile
 import unittest
-from mock import Mock, patch, sentinel
+
+from supervisor.compat import Mock, patch, sentinel
+from supervisor.compat import maxint
+
 from supervisor import datatypes
+import supervisor.medusa.text_socket as socket
 
 class ProcessOrGroupName(unittest.TestCase):
     def _callFUT(self, arg):
@@ -444,8 +447,7 @@ class InetStreamSocketConfigTests(unittest.TestCase):
     def test_repr(self):
         conf = self._makeOne('127.0.0.1', 8675)
         s = repr(conf)
-        self.assertTrue(s.startswith(
-            '<supervisor.datatypes.InetStreamSocketConfig at'), s)
+        self.assertTrue('supervisor.datatypes.InetStreamSocketConfig' in s)
         self.assertTrue(s.endswith('for tcp://127.0.0.1:8675>'), s)
 
     def test_addr(self):
@@ -502,8 +504,7 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
     def test_repr(self):
         conf = self._makeOne('/tmp/foo.sock')
         s = repr(conf)
-        self.assertTrue(s.startswith(
-            '<supervisor.datatypes.UnixStreamSocketConfig at'), s)
+        self.assertTrue('supervisor.datatypes.UnixStreamSocketConfig' in s)
         self.assertTrue(s.endswith('for unix:///tmp/foo.sock>'), s)
 
     def test_get_addr(self):
@@ -633,13 +634,11 @@ class SocketAddressTests(unittest.TestCase):
         return self._getTargetClass()(s)
 
     def test_unix_socket(self):
-        import socket
         addr = self._makeOne('/foo/bar')
         self.assertEqual(addr.family, socket.AF_UNIX)
         self.assertEqual(addr.address, '/foo/bar')
 
     def test_inet_socket(self):
-        import socket
         addr = self._makeOne('localhost:8080')
         self.assertEqual(addr.family, socket.AF_INET)
         self.assertEqual(addr.address, ('localhost', 8080))

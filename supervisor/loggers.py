@@ -13,11 +13,8 @@ import sys
 import time
 import traceback
 
-try:
-    import syslog
-except ImportError:
-    # only required when 'syslog' is specified as the log filename
-    pass
+from supervisor.compat import syslog
+from supervisor.compat import long
 
 class LevelsByName:
     CRIT = 50   # messages that probably require immediate user attention
@@ -53,6 +50,10 @@ def getLevelNumByDescription(description):
 class Handler:
     fmt = '%(message)s'
     level = LevelsByName.INFO
+    def __init__(self, stream=None):
+        self.stream = stream
+        self.closed = False
+
     def setFormat(self, fmt):
         self.fmt = fmt
 
@@ -62,17 +63,19 @@ class Handler:
     def flush(self):
         try:
             self.stream.flush()
-        except IOError, why:
+        except IOError as why:
             # if supervisor output is piped, EPIPE can be raised at exit
             if why.args[0] != errno.EPIPE:
                 raise
 
     def close(self):
-        if hasattr(self.stream, 'fileno'):
-            fd = self.stream.fileno()
-            if fd < 3: # don't ever close stdout or stderr
-                return
-        self.stream.close()
+        if not self.closed:
+            if hasattr(self.stream, 'fileno'):
+                fd = self.stream.fileno()
+                if fd < 3: # don't ever close stdout or stderr
+                    return
+            self.stream.close()
+            self.closed = True
 
     def emit(self, record):
         try:
@@ -95,24 +98,26 @@ class FileHandler(Handler):
     """
 
     def __init__(self, filename, mode="a"):
-        self.stream = open(filename, mode)
+        Handler.__init__(self, open(filename, mode))
         self.baseFilename = filename
         self.mode = mode
 
     def reopen(self):
         self.close()
         self.stream = open(self.baseFilename, self.mode)
+        self.closed = False
 
     def remove(self):
+        self.close()
         try:
             os.remove(self.baseFilename)
-        except OSError, why:
+        except OSError as why:
             if why.args[0] != errno.ENOENT:
                 raise
 
 class StreamHandler(Handler):
     def __init__(self, strm=None):
-        self.stream = strm
+        Handler.__init__(self, strm)
 
     def remove(self):
         if hasattr(self.stream, 'clear'):
@@ -167,6 +172,7 @@ class RotatingFileHandler(FileHandler):
 
         If maxBytes is zero, rollover never occurs.
         """
+#        FileHandler.__init__(self, filename, mode)
         if maxBytes > 0:
             mode = 'a' # doesn't make sense otherwise!
         FileHandler.__init__(self, filename, mode)
@@ -189,7 +195,7 @@ class RotatingFileHandler(FileHandler):
         if os.path.exists(dfn):
             try:
                 os.remove(dfn)
-            except OSError, why:
+            except OSError as why:
                 # catch race condition (destination already deleted)
                 if why.args[0] != errno.ENOENT:
                     raise
@@ -300,7 +306,8 @@ class Logger:
 
 class SyslogHandler(Handler):
     def __init__(self):
-        assert 'syslog' in globals(), "Syslog module not present"
+        Handler.__init__(self)
+        assert syslog is not None, "Syslog module not present"
 
     def close(self):
         pass

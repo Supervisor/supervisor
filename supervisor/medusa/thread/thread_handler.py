@@ -1,19 +1,15 @@
 # -*- Mode: Python -*-
 
 import re
-import string
-import StringIO
+try:
+    from StringIO import StringIO
+except:
+    from io import StringIO
 import sys
 
-import os
-import sys
-import time
-
-import select_trigger
+import supervisor.medusa.thread.select_trigger as select_trigger
 from supervisor.medusa import counter
-from supervisor.medusa import producers
-
-from supervisor.medusa.default_handler import unquote, get_header
+from supervisor.medusa.default_handler import unquote
 
 import threading
 
@@ -53,7 +49,7 @@ header2env= {
         }
 
 # convert keys to lower case for case-insensitive matching
-for (key,value) in header2env.items():
+for (key,value) in list(header2env.items()):
     del header2env[key]
     key = key.lower()
     header2env[key]=value
@@ -87,7 +83,7 @@ class script_handler:
         if i != -1:
             uri = uri[:i]
 
-        if self.modules.has_key (uri):
+        if uri in self.modules:
             request.module = self.modules[uri]
             return 1
         else:
@@ -137,16 +133,16 @@ class script_handler:
             key, value = header.split(": ", 1)
             key = key.lower()
 
-            if header2env.has_key(key):
+            if key in header2env:
                 if header2env[key]:
                     env[header2env[key]]=value
             else:
-                key = 'HTTP_' + key.split("-").join("_").upper()
+                key = 'HTTP_' + "_".join(key.split ("-")).upper()
                 env[key] = value
 
         ## remove empty environment variables
         for key in env.keys():
-            if env[key]=="" or env[key]==None:
+            if env[key]=="" or env[key] is None:
                 del env[key]
 
         try:
@@ -162,7 +158,7 @@ class script_handler:
             request.collector = collector (self, request, env)
             request.channel.set_terminator (None)
         else:
-            sin = StringIO.StringIO ('')
+            sin = StringIO ('')
             self.continue_request (sin, request, env)
 
     def continue_request (self, stdin, request, env):
@@ -267,13 +263,13 @@ class header_scanning_file:
 
 class collector:
 
-    "gathers input for PUT requests"
+    """gathers input for PUT requests"""
 
     def __init__ (self, handler, request, env):
         self.handler    = handler
         self.env = env
         self.request    = request
-        self.data = StringIO.StringIO()
+        self.data = StringIO()
 
         # make sure there's a content-length header
         self.cl = request.get_header ('content-length')
@@ -322,11 +318,11 @@ if __name__ == '__main__':
     import sys
 
     if len(sys.argv) < 2:
-        print 'Usage: %s <worker_threads>' % sys.argv[0]
+        print('Usage: %s <worker_threads>' % sys.argv[0])
     else:
         nthreads = int(sys.argv[1])
 
-        import asyncore_25 as asyncore
+        import supervisor.medusa.asyncore_25 as asyncore
         from supervisor.medusa import http_server
         # create a generic web server
         hs = http_server.http_server ('', 7080)
@@ -341,8 +337,8 @@ if __name__ == '__main__':
         hs.install_handler (sh)
 
         # get a couple of CGI modules
-        import test_module
-        import pi_module
+        import supervisor.medusa.thread.test_module as test_module
+        import supervisor.medusa.thread.pi_module as pi_module
 
         # install the module on the script handler
         sh.add_module (test_module, 'test')

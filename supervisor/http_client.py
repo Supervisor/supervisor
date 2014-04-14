@@ -1,10 +1,13 @@
 # this code based on Daniel Krech's RDFLib HTTP client code (see rdflib.net)
 
 import sys
-import socket
-import base64
-from urlparse import urlparse
+import supervisor.medusa.text_socket as socket
 
+from supervisor.compat import print_function
+from supervisor.compat import urlparse
+from supervisor.compat import as_bytes
+from supervisor.compat import as_string
+from supervisor.compat import encodestring
 from supervisor.medusa import asynchat_25 as asynchat
 
 CR="\x0d"
@@ -17,7 +20,7 @@ class Listener(object):
         pass
 
     def error(self, url, error):
-        print url, error
+        print_function(url, error)
 
     def response_header(self, url, name, value):
         pass
@@ -32,9 +35,8 @@ class Listener(object):
     def close(self, url):
         pass
 
-class HTTPHandler(object, asynchat.async_chat):
+class HTTPHandler(asynchat.async_chat):
     def __init__(self, listener, username='', password=None):
-        super(HTTPHandler, self).__init__()
         asynchat.async_chat.__init__(self)
         self.listener = listener
         self.user_agent = 'Supervisor HTTP Client'
@@ -52,11 +54,12 @@ class HTTPHandler(object, asynchat.async_chat):
         self.url = None
         self.error_handled = False
 
-    def get(self, serverurl, path):
-        if self.url != None:
+    def get(self, serverurl, path=''):
+        if self.url is not None:
             raise AssertionError('Already doing a get')
         self.url = serverurl + path
-        scheme, host, path_ignored, params, query, fragment = urlparse(self.url)
+        scheme, host, path_ignored, params, query, fragment = urlparse.urlparse(
+            self.url)
         if not scheme in ("http", "unix"):
             raise NotImplementedError
         self.host = host
@@ -91,7 +94,7 @@ class HTTPHandler(object, asynchat.async_chat):
         self.push(CRLF)
 
     def handle_error (self):
-        if self.error_handled == True:
+        if self.error_handled:
             return
         if 1 or self.connected:
             t,v,tb = sys.exc_info()
@@ -116,9 +119,9 @@ class HTTPHandler(object, asynchat.async_chat):
         self.header('Accept', '*/*')
         self.header('User-agent', self.user_agent)
         if self.password:
-            unencoded = '%s:%s' % (self.username, self.password)
-            encoded = base64.encodestring(unencoded).replace('\n', '')
-            self.header('Authorization', 'Basic %s' % encoded)
+            auth = '%s:%s' % (self.username, self.password)
+            auth = as_string(encodestring(as_bytes(auth))).strip()
+            self.header('Authorization', 'Basic %s' % auth)
         self.push(CRLF)
         self.push(CRLF)
 

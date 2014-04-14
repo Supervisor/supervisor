@@ -33,7 +33,7 @@ else:
     # This is the IP address of the network interface you want
     # your servers to be visible from.  This can be changed to ''
     # to listen on all interfaces.
-    IP_ADDRESS                      = '205.160.176.5'
+    IP_ADDRESS                      = ''
 
     # Root of the http and ftp server's published filesystems.
     PUBLISHING_ROOT         = '/home/www'
@@ -183,12 +183,15 @@ sh = status_handler.status_extension(status_objects)
 hs.install_handler (sh)
 
 # become 'nobody'
-if os.name == 'posix':
-    if hasattr (os, 'seteuid'):
-        import pwd
-        [uid, gid] = pwd.getpwnam ('nobody')[2:4]
-        os.setegid (gid)
-        os.seteuid (uid)
+try:
+    if os.name == 'posix':
+        if hasattr (os, 'seteuid'):
+            import pwd
+            [uid, gid] = pwd.getpwnam ('nobody')[2:4]
+            os.setegid (gid)
+            os.seteuid (uid)
+except Exception:
+    pass
 
 # Finally, start up the server loop!  This loop will not exit until
 # all clients and servers are closed.  You may cleanly shut the system
