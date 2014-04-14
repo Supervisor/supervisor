@@ -162,6 +162,19 @@ class OptionTests(unittest.TestCase):
         self.assertEqual(config, tempf.name)
         tempf.close()
 
+    def test_help(self):
+        options = self._makeOptions()
+        options.exit = dummy_exit()
+        options.stdout = StringIO()
+        options.progname = 'test_help'
+        options.doc = 'A sample docstring for %s'
+        try:
+            options.help('Argument ignored?')
+        except DummyExitException:
+            self.assertEqual(options.stdout.getvalue(), 'A sample docstring for test_help\n')
+        else:
+            self.fail('help() did not try to exit.')
+
 class ClientOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ClientOptions
