@@ -1,12 +1,12 @@
 language: python
 env:
+    - TOXENV=cover
     - TOXENV=py26
     - TOXENV=py27
-    - TOXENV=cover
     # - TOXENV=pypy
-    # - TOXENV=py32
-    # - TOXENV=py33
-    # - TOXENV=py34
+    # - TOXENV=py32 # no u"" support
+    - TOXENV=py33
+    - TOXENV=py34
 install:
     - travis_retry pip install tox==1.6.1
 script:
