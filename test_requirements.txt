@@ -1,3 +1,0 @@
-# Requirements used for testing
-mock >= 0.5.0
-meld3 >= 1.0.0
