@@ -1636,6 +1636,8 @@ class TestProcessConfig(unittest.TestCase):
     def test_make_dispatchers_stderr_not_redirected(self):
         options = DummyOptions()
         instance = self._makeOne(options)
+        instance.stdout_logfile = tempfile.mktemp(prefix='stdout_logfile_')
+        instance.stderr_logfile = tempfile.mktemp(prefix='stderr_logfile_')
         instance.redirect_stderr = False
         process1 = DummyProcess(instance)
         dispatchers, pipes = instance.make_dispatchers(process1)
@@ -1653,6 +1655,7 @@ class TestProcessConfig(unittest.TestCase):
     def test_make_dispatchers_stderr_redirected(self):
         options = DummyOptions()
         instance = self._makeOne(options)
+        instance.stdout_logfile = tempfile.mktemp(prefix='stdout_logfile_')
         process1 = DummyProcess(instance)
         dispatchers, pipes = instance.make_dispatchers(process1)
         self.assertEqual(dispatchers[5].channel, 'stdout')
@@ -1697,6 +1700,8 @@ class FastCGIProcessConfigTest(unittest.TestCase):
     def test_make_dispatchers(self):
         options = DummyOptions()
         instance = self._makeOne(options)
+        instance.stdout_logfile = tempfile.mktemp(prefix='stdout_logfile_')
+        instance.stderr_logfile = tempfile.mktemp(prefix='stderr_logfile_')
         instance.redirect_stderr = False
         process1 = DummyProcess(instance)
         dispatchers, pipes = instance.make_dispatchers(process1)
