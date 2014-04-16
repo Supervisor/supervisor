@@ -23,7 +23,7 @@ else:
     def as_string(s): return s if isinstance(s, unicode) else s.decode('utf-8')
     reduce = reduce
 
-def print_function(*args,**kwargs): sys.stdout.write(' '.join(str(i) for i in args)+kwargs.get('end','\n'))
+def print_function(*args,**kwargs): kwargs.get('file', sys.stdout).write(' '.join(str(i) for i in args)+kwargs.get('end','\n'))
 
 def total_ordering(cls): # pragma: no cover
     """Class decorator that fills in missing ordering methods"""

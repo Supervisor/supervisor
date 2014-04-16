@@ -135,7 +135,7 @@ class Options:
         help = self.doc + "\n"
         if help.find("%s") > 0:
             help = help.replace("%s", self.progname)
-        print_function(help, end='')
+        print_function(help, end='', file=self.stdout)
         self.exit(0)
 
     def usage(self, msg):
