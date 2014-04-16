@@ -1,5 +1,6 @@
 """Test suite for supervisor.options"""
 
+import logging
 import os
 import sys
 import tempfile
@@ -39,6 +40,12 @@ def dummy_exit():
     def dummy_exit(_exitcode=0):
         raise DummyExitException(exitcode=_exitcode)
     return dummy_exit
+
+def _getTempFile(name):
+    prefix = 'supervisor.{0}.'.format(name)
+    return tempfile.NamedTemporaryFile(prefix=prefix)
+
+logger = logging.getLogger(__name__)
 
 
 class OptionTests(unittest.TestCase):
@@ -1660,28 +1667,40 @@ class TestProcessConfig(unittest.TestCase):
     def test_make_dispatchers_stderr_not_redirected(self):
         options = DummyOptions()
         instance = self._makeOne(options)
-        instance.redirect_stderr = False
-        process1 = DummyProcess(instance)
-        dispatchers, pipes = instance.make_dispatchers(process1)
-        self.assertEqual(dispatchers[5].channel, 'stdout')
-        from supervisor.events import ProcessCommunicationStdoutEvent
-        self.assertEqual(dispatchers[5].event_type,
-                         ProcessCommunicationStdoutEvent)
-        self.assertEqual(pipes['stdout'], 5)
-        self.assertEqual(dispatchers[7].channel, 'stderr')
-        from supervisor.events import ProcessCommunicationStderrEvent
-        self.assertEqual(dispatchers[7].event_type,
-                         ProcessCommunicationStderrEvent)
-        self.assertEqual(pipes['stderr'], 7)
+        with _getTempFile('stderr_logfile') as stdout_logfile:
+            with _getTempFile('stderr_logfile') as stderr_logfile:
+                instance.stdout_logfile = stdout_logfile.name
+                instance.stderr_logfile = stderr_logfile.name
+                logger.debug('instance.stdout_logfile = %r',
+                             instance.stdout_logfile)
+                logger.debug('instance.stderr_logfile = %r',
+                             instance.stderr_logfile)
+                instance.redirect_stderr = False
+                process1 = DummyProcess(instance)
+                dispatchers, pipes = instance.make_dispatchers(process1)
+                self.assertEqual(dispatchers[5].channel, 'stdout')
+                from supervisor.events import ProcessCommunicationStdoutEvent
+                self.assertEqual(dispatchers[5].event_type,
+                                 ProcessCommunicationStdoutEvent)
+                self.assertEqual(pipes['stdout'], 5)
+                self.assertEqual(dispatchers[7].channel, 'stderr')
+                from supervisor.events import ProcessCommunicationStderrEvent
+                self.assertEqual(dispatchers[7].event_type,
+                                 ProcessCommunicationStderrEvent)
+                self.assertEqual(pipes['stderr'], 7)
 
     def test_make_dispatchers_stderr_redirected(self):
         options = DummyOptions()
         instance = self._makeOne(options)
-        process1 = DummyProcess(instance)
-        dispatchers, pipes = instance.make_dispatchers(process1)
-        self.assertEqual(dispatchers[5].channel, 'stdout')
-        self.assertEqual(pipes['stdout'], 5)
-        self.assertEqual(pipes['stderr'], None)
+        with _getTempFile('stderr_logfile') as stdout_logfile:
+            instance.stdout_logfile = stdout_logfile.name
+            logger.debug('instance.stdout_logfile = %r',
+                         instance.stdout_logfile)
+            process1 = DummyProcess(instance)
+            dispatchers, pipes = instance.make_dispatchers(process1)
+            self.assertEqual(dispatchers[5].channel, 'stdout')
+            self.assertEqual(pipes['stdout'], 5)
+            self.assertEqual(pipes['stderr'], None)
 
 class FastCGIProcessConfigTest(unittest.TestCase):
     def _getTargetClass(self):
@@ -1723,21 +1742,29 @@ class FastCGIProcessConfigTest(unittest.TestCase):
     def test_make_dispatchers(self):
         options = DummyOptions()
         instance = self._makeOne(options)
-        instance.redirect_stderr = False
-        process1 = DummyProcess(instance)
-        dispatchers, pipes = instance.make_dispatchers(process1)
-        self.assertEqual(dispatchers[4].channel, 'stdin')
-        self.assertEqual(dispatchers[4].closed, True)
-        self.assertEqual(dispatchers[5].channel, 'stdout')
-        from supervisor.events import ProcessCommunicationStdoutEvent
-        self.assertEqual(dispatchers[5].event_type,
-                         ProcessCommunicationStdoutEvent)
-        self.assertEqual(pipes['stdout'], 5)
-        self.assertEqual(dispatchers[7].channel, 'stderr')
-        from supervisor.events import ProcessCommunicationStderrEvent
-        self.assertEqual(dispatchers[7].event_type,
-                         ProcessCommunicationStderrEvent)
-        self.assertEqual(pipes['stderr'], 7)
+        with _getTempFile('stderr_logfile') as stdout_logfile:
+            with _getTempFile('stderr_logfile') as stderr_logfile:
+                instance.stdout_logfile = stdout_logfile.name
+                instance.stderr_logfile = stderr_logfile.name
+                logger.debug('instance.stdout_logfile = %r',
+                             instance.stdout_logfile)
+                logger.debug('instance.stderr_logfile = %r',
+                             instance.stderr_logfile)
+                instance.redirect_stderr = False
+                process1 = DummyProcess(instance)
+                dispatchers, pipes = instance.make_dispatchers(process1)
+                self.assertEqual(dispatchers[4].channel, 'stdin')
+                self.assertEqual(dispatchers[4].closed, True)
+                self.assertEqual(dispatchers[5].channel, 'stdout')
+                from supervisor.events import ProcessCommunicationStdoutEvent
+                self.assertEqual(dispatchers[5].event_type,
+                                 ProcessCommunicationStdoutEvent)
+                self.assertEqual(pipes['stdout'], 5)
+                self.assertEqual(dispatchers[7].channel, 'stderr')
+                from supervisor.events import ProcessCommunicationStderrEvent
+                self.assertEqual(dispatchers[7].event_type,
+                                 ProcessCommunicationStderrEvent)
+                self.assertEqual(pipes['stderr'], 7)
 
 class ProcessGroupConfigTests(unittest.TestCase):
     def _getTargetClass(self):
