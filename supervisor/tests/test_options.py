@@ -311,6 +311,12 @@ class ServerOptionsTests(unittest.TestCase):
         numprocs_start = 1
         command = /bin/cat
         directory = /some/path/foo_%%(process_num)02d
+
+        [program:cat6]
+        priority=6
+        process_name = cat6
+        command = /bin/cat
+        environment_file = supervisor/tests/fixtures/test_env
         """ % {'tempdir':tempfile.gettempdir()})
 
         from supervisor import datatypes
@@ -341,7 +347,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(options.minfds, 2048)
         self.assertEqual(options.minprocs, 300)
         self.assertEqual(options.nocleanup, True)
-        self.assertEqual(len(options.process_group_configs), 5)
+        self.assertEqual(len(options.process_group_configs), 6)
         self.assertEqual(options.environment, dict(FAKE_ENV_VAR='/some/path'))
 
         cat1 = options.process_group_configs[0]
@@ -492,6 +498,16 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.nocleanup, True)
         self.assertEqual(instance.minfds, 2048)
         self.assertEqual(instance.minprocs, 300)
+
+        cat6 = options.process_group_configs[5]
+        self.assertEqual(cat6.name, 'cat6')
+        self.assertEqual(cat6.priority, 6)
+        self.assertEqual(len(cat6.process_configs), 1)
+
+        proc6 = cat6.process_configs[0]
+        self.assertEqual(proc6.name, 'cat6')
+        self.assertEqual(proc6.environment['TEST_ENV_VAR_0'], 'something')
+        self.assertEqual(proc6.environment['TEST_ENV_VAR_1'], 'something else')
 
     def test_no_config_file_exits(self):
         instance = self._makeOne()

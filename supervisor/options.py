@@ -791,6 +791,7 @@ class ServerOptions(Options):
         numprocs = integer(get(section, 'numprocs', 1))
         numprocs_start = integer(get(section, 'numprocs_start', 0))
         environment_str = get(section, 'environment', '')
+        environment_file = get(section, 'environment_file', None)
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
         stdout_events = boolean(get(section, 'stdout_events_enabled','false'))
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
@@ -830,6 +831,12 @@ class ServerOptions(Options):
             raise ValueError("Cannot set stopasgroup=true and killasgroup=false")
 
         host_node_name = platform.node()
+        if environment_file:
+            try:
+                env_fd = open(environment_file)
+            except IOError as e:
+                raise ValueError("Unable to open environment_file={}".format(environment_file))
+            environment_str += ','.join(env_fd.read().strip().split("\n"))
         for process_num in range(numprocs_start, numprocs + numprocs_start):
             expansions = {'here':self.here,
                           'process_num':process_num,
