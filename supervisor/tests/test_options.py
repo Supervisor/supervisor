@@ -22,6 +22,25 @@ from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import lstrip
 
+
+def missing_but_potential_file():
+    """Quick and dirty way of coming up with a decent filename that might exist"""
+    tempf = tempfile.NamedTemporaryFile()
+    fname = tempf.name
+    tempf.close()
+    return fname
+
+class DummyExitException(Exception):
+    def __init__(self, exitcode):
+        self.exitcode = exitcode
+
+def dummy_exit():
+    """Dummy out exit so we don't actually exit"""
+    def dummy_exit(_exitcode=0):
+        raise DummyExitException(exitcode=_exitcode)
+    return dummy_exit
+
+
 class OptionTests(unittest.TestCase):
 
     def _makeOptions(self, read_error=False):
@@ -118,6 +137,40 @@ class OptionTests(unittest.TestCase):
         options._set('foo', 'gazonk', 1)
         self.assertEqual(options.foo, 'gazonk')
 
+    def test_missing_default_config(self):
+        options = self._makeOptions()
+        options.searchpaths = [missing_but_potential_file()]
+        options.exit = dummy_exit()
+        options.stderr = StringIO()
+        try:
+            options.default_configfile()
+        except DummyExitException as e:
+            self.assertEqual(e.exitcode, 2)
+        else:
+            self.fail("expected exception")
+        self.assertTrue(options.stderr.getvalue().startswith("Error: No config file found at default paths"))
+
+    def test_default_config(self):
+        options = self._makeOptions()
+        tempf = tempfile.NamedTemporaryFile()
+        options.searchpaths = [tempf.name]
+        config = options.default_configfile()
+        self.assertEqual(config, tempf.name)
+        tempf.close()
+
+    def test_help(self):
+        options = self._makeOptions()
+        options.exit = dummy_exit()
+        options.stdout = StringIO()
+        options.progname = 'test_help'
+        options.doc = 'A sample docstring for %s'
+        try:
+            options.help('Argument ignored?')
+        except DummyExitException:
+            self.assertEqual(options.stdout.getvalue(), 'A sample docstring for test_help\n')
+        else:
+            self.fail('help() did not try to exit.')
+
 class ClientOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ClientOptions
@@ -134,11 +187,7 @@ class ClientOptionsTests(unittest.TestCase):
         self.assertTrue(len(instance.searchpaths) > 0)
         instance.searchpaths = []
 
-        class DummyException(Exception):
-            pass
-        def dummy_exit(self, _exitcode=0):
-            raise DummyException()
-        instance.exit = dummy_exit
+        instance.exit = dummy_exit()
 
         instance.realize(args=['-s', 'http://localhost:9001', '-u', 'chris',
                                '-p', '123'])
@@ -173,25 +222,16 @@ class ClientOptionsTests(unittest.TestCase):
         self.assertEqual(options.history_file, history_file)
 
     def test_unreadable_config_file(self):
-        # Quick and dirty way of coming up with a decent filename
-        tempf = tempfile.NamedTemporaryFile()
-        fname = tempf.name
-        tempf.close()
+        fname = missing_but_potential_file()
         self.assertFalse(os.path.exists(fname))
 
         instance = self._makeOne()
         instance.stderr = StringIO()
 
-        class DummyException(Exception):
-            def __init__(self, exitcode):
-                self.exitcode = exitcode
-        def dummy_exit(self, exitcode=2):
-            # Important default exitcode=2 like sys.exit.
-            raise DummyException(exitcode)
-        instance.exit = dummy_exit
+        instance.exit = dummy_exit()
         try:
             instance.realize(args=['-c', fname])
-        except DummyException as e:
+        except DummyExitException as e:
             self.assertEqual(e.exitcode, 2)
         else:
             self.fail("expected exception")
@@ -492,20 +532,14 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertTrue(len(instance.searchpaths) > 0)
         instance.searchpaths = []
 
-        class DummyException(Exception):
-            def __init__(self, exitcode):
-                self.exitcode = exitcode
-        def dummy_exit(exitcode=2):
-            # Important default exitcode=2 like sys.exit.
-            raise DummyException(exitcode)
-        instance.exit = dummy_exit
+        instance.exit = dummy_exit()
 
         # Making sure we capture stdout and stderr
         instance.stderr = StringIO()
 
         try:
             instance.realize()
-        except DummyException as e:
+        except DummyExitException as e:
             # Caught expected exception
             import traceback
             self.assertEqual(
@@ -513,7 +547,7 @@ class ServerOptionsTests(unittest.TestCase):
                 "Wrong exitcode for: %s" % traceback.format_exc()
                 )
         else:
-            self.fail("Did not get a DummyException.")
+            self.fail("Did not get a DummyExitException.")
 
     def test_reload(self):
         text = lstrip("""\
@@ -609,16 +643,10 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         instance.stderr = StringIO()
 
-        class DummyException(Exception):
-            def __init__(self, exitcode):
-                self.exitcode = exitcode
-        def dummy_exit(self, exitcode=2):
-            # Important default exitcode=2 like sys.exit.
-            raise DummyException(exitcode)
-        instance.exit = dummy_exit
+        instance.exit = dummy_exit()
         try:
             instance.realize(args=['-c', fname])
-        except DummyException as e:
+        except DummyExitException as e:
             self.assertEqual(e.exitcode, 2)
         else:
             self.fail("expected exception")
