@@ -161,6 +161,20 @@ class DeferringChunkedProducerTests(unittest.TestCase):
         producer = self._makeOne(wrapped, footers=['a', 'b'])
         self.assertEqual(producer.more(), '0\r\na\r\nb\r\n\r\n')
 
+    def test_more_nodata_footers(self):
+        wrapped = DummyProducer('')
+        producer = self._makeOne(wrapped, footers=['a', 'b'])
+        self.assertEqual(producer.more(), '0\r\na\r\nb\r\n\r\n')
+
+    def test_more_nodata_nofooters(self):
+        wrapped = DummyProducer('')
+        producer = self._makeOne(wrapped)
+        self.assertEqual(producer.more(), '0\r\n\r\n')
+
+    def test_more_noproducer(self):
+        producer = self._makeOne(None)
+        self.assertEqual(producer.more(), '')
+        
 class DeferringCompositeProducerTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.http import deferring_composite_producer
