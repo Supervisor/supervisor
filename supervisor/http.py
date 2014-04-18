@@ -141,24 +141,6 @@ class deferring_http_request(http_server.http_request):
     about deferred responses, so we override various methods here.  This was
     added to support tail -f like behavior on the logtail handler """
 
-    def get_header(self, header):
-        # this is overridden purely for speed (the base class doesn't
-        # use string methods
-        header = header.lower()
-        hc = self._header_cache
-        if not hc.has_key(header):
-            h = header + ': '
-            for line in self.header:
-                if line.lower().startswith(h):
-                    hl = len(h)
-                    r = line[hl:]
-                    hc[header] = r
-                    return r
-            hc[header] = None
-            return None
-        else:
-            return hc[header]
-
     def done(self, *arg, **kw):
 
         """ I didn't want to override this, but there's no way around
@@ -181,7 +163,7 @@ class deferring_http_request(http_server.http_request):
 
         if self.version == '1.0':
             if connection == 'keep-alive':
-                if not self.has_key ('Content-Length'):
+                if not 'Content-Length' in self:
                     close_it = 1
                 else:
                     self['Connection'] = 'Keep-Alive'
@@ -190,8 +172,8 @@ class deferring_http_request(http_server.http_request):
         elif self.version == '1.1':
             if connection == 'close':
                 close_it = 1
-            elif not self.has_key('Content-Length'):
-                if self.has_key('Transfer-Encoding'):
+            elif not 'Content-Length' in self:
+                if 'Transfer-Encoding' in self:
                     if not self['Transfer-Encoding'] == 'chunked':
                         close_it = 1
                 elif self.use_chunked:

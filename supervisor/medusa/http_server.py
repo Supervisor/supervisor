@@ -82,6 +82,9 @@ class http_request:
     def __getitem__ (self, key):
         return self.reply_headers[key]
 
+    def __contains__(self, key):
+        return key in self.reply_headers
+
     def has_key (self, key):
         return self.reply_headers.has_key (key)
 
@@ -448,6 +451,9 @@ class http_request:
              ''
              )
             )
+
+    def log_info(self, msg, level):
+        pass
 
 
 # ===========================================================================
