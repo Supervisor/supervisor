@@ -25,7 +25,7 @@ else: # pragma: no cover
     reduce = reduce
 
 def print_function(*args,**kwargs): # pragma: no cover
-    kwargs.get('file', sys.stdout).write(' '.join(str(i) for i in args)+kwargs.get('end','\n'))
+    kwargs.get('file', sys.stdout).write(as_string(' ').join(as_string(i) for i in args)+kwargs.get('end','\n'))
 
 def total_ordering(cls): # pragma: no cover
     """Class decorator that fills in missing ordering methods"""
