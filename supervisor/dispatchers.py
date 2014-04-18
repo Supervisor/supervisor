@@ -1,5 +1,4 @@
 import warnings
-import sys
 import errno
 from supervisor.medusa.asyncore_25 import compact_traceback
 
