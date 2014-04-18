@@ -54,6 +54,7 @@ test/test_lb.py
 test/test_medusa.py
 test/test_single_11.py
 test/tests.txt
+text_socket.py
 thread/pi_module.py
 thread/select_trigger.py
 thread/test_module.py

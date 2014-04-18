@@ -8,9 +8,8 @@
 RCS_ID =  '$Id: put_handler.py,v 1.4 2002/08/01 18:15:45 akuchling Exp $'
 
 import re
-import string
 
-import default_handler
+import supervisor.medusa.default_handler as default_handler
 unquote         = default_handler.unquote
 get_header      = default_handler.get_header
 
@@ -89,7 +88,7 @@ class put_collector:
             self.file.close()
 
             if chunk != ld:
-                print 'orphaned %d bytes: <%s>' % (ld - chunk, repr(data[chunk:]))
+                print('orphaned %d bytes: <%s>' % (ld - chunk, repr(data[chunk:])))
 
             # do some housekeeping
             r = self.request
@@ -106,7 +105,7 @@ class put_collector:
             del self.request
         else:
             self.file.write (data)
-            self.bytes_in = self.bytes_in + ld
+            self.bytes_in += ld
 
     def found_terminator (self):
         # shouldn't be called

@@ -19,6 +19,7 @@ class Event:
 
 class ProcessLogEvent(Event):
     """ Abstract """
+    channel = None
     def __init__(self, process, pid, data):
         self.process = process
         self.pid = pid
@@ -108,10 +109,8 @@ class ProcessStateEvent(Event):
         groupname = ''
         if self.process.group is not None:
             groupname = self.process.group.config.name
-        L = []
-        L.append(('processname',  self.process.config.name))
-        L.append(('groupname', groupname))
-        L.append(('from_state', getProcessStateDescription(self.from_state)))
+        L = [('processname', self.process.config.name), ('groupname', groupname),
+             ('from_state', getProcessStateDescription(self.from_state))]
         L.extend(self.extra_values)
         s = ' '.join( [ '%s:%s' % (name, val) for (name, val) in L ] )
         return s
@@ -218,4 +217,4 @@ def getEventNameByType(requested):
             return name
 
 def register(name, event):
-    EventTypes.__dict__[name] = event
+    setattr(EventTypes, name, event)

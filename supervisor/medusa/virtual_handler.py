@@ -1,7 +1,7 @@
 # -*- Mode: Python -*-
 
-import socket
-import default_handler
+import supervisor.medusa.text_socket as socket
+import supervisor.medusa.default_handler as default_handler
 import re
 
 HOST = re.compile ('Host: ([^:/]+).*', re.IGNORECASE)
@@ -22,7 +22,7 @@ class virtual_handler:
             raise ValueError("Virtual Hostname %s does not appear to be registered in the DNS" % hostname)
 
     def match (self, request):
-        if (request.channel.addr[0] == self.ip):
+        if request.channel.addr[0] == self.ip:
             return 1
         else:
             return 0

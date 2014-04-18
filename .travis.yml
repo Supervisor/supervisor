@@ -1,15 +1,14 @@
 language: python
 env:
+    - TOXENV=cover
+    - TOXENV=cover3
     - TOXENV=py26
     - TOXENV=py27
-    - TOXENV=cover
     # - TOXENV=pypy
-    # - TOXENV=py32
-    # - TOXENV=py33
-    # - TOXENV=py34
+    - TOXENV=py32 # no u"" support
+    - TOXENV=py33
+    # - TOXENV=py34 # No support on Travis-Ci at this time
 install:
     - travis_retry pip install tox==1.6.1
 script:
     - travis_retry tox
-notifications:
-    email: false

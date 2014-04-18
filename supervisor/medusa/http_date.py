@@ -1,7 +1,6 @@
 # -*- Mode: Python -*-
 
 import re
-import string
 import time
 
 def concat (*args):
@@ -101,7 +100,7 @@ def unpack_rfc850(m):
             0
             )
 
-# parsdate.parsedate    - ~700/sec.
+# parsedate.parsedate    - ~700/sec.
 # parse_http_date       - ~1333/sec.
 
 def build_http_date (when):
@@ -122,5 +121,5 @@ def parse_http_date (d):
     # Thanks to Craig Silverstein <csilvers@google.com> for pointing
     # out the DST discrepancy
     if time.daylight and time.localtime(retval)[-1] == 1: # DST correction
-        retval = retval + (tz - time.altzone)
+        retval += tz - time.altzone
     return retval

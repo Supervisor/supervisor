@@ -22,10 +22,12 @@
 # CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import marshal
-import socket
-import string
-import exceptions
-import string
+import supervisor.medusa.text_socket as socket
+
+try:
+    from exceptions import StandardError
+except ImportError:
+    StandardError = Exception
 import sys
 
 #
@@ -40,7 +42,7 @@ import sys
 # again in the near future.
 #
 
-class RPC_Error (exceptions.StandardError):
+class RPC_Error(StandardError):
     pass
 
 # ===========================================================================
@@ -89,12 +91,7 @@ class rpc_proxy:
         return self.__send_request__ (2, (attr, value))
 
     def __del__ (self):
-        try:
-            self.__send_request__ (4, None)
-        except:
-            import who_calls
-            info = who_calls.compact_traceback()
-            print info
+        self.__send_request__ (4, None)
 
     def __remote_repr__ (self):
         r = self.__send_request__ (3, None)
@@ -133,20 +130,20 @@ class rpc_proxy:
         # types of response:
         # 0: proxy
         # 1: error
-        # 2: marshal'd data
+        # 2: marshall'd data
 
         kind, value = marshal.loads (data)
 
         if kind == 0:
             # proxy (value == oid)
             if self.DEBUG:
-                print 'RPC: <== proxy(%08x)' % (value)
+                print('RPC: <== proxy(%08x)' % value)
             return rpc_proxy (self.conn, value)
         elif kind == 1:
             raise RPC_Error(value)
         else:
             if self.DEBUG:
-                print 'RPC: <== %s' % (repr(value))
+                print('RPC: <== %s' % (repr(value)))
             return value
 
 class rpc_connection:
@@ -168,14 +165,14 @@ class rpc_connection:
         while packet_len:
             data = self.socket.recv (8192)
             packet.append (data)
-            packet_len = packet_len - len(data)
+            packet_len -= len(data)
         return ''.join(packet)
 
     def send_packet (self, packet):
         self.socket.send ('%08x%s' % (len(packet), packet))
 
 def rpc_connect (address = ('localhost', 8746)):
-    if not rpc_connection.cache.has_key (address):
+    if address not in rpc_connection.cache:
         conn = rpc_connection (address)
         # get oid of remote object
         data = conn.receive_packet()
@@ -212,10 +209,10 @@ class fastrpc_proxy:
             raise RPC_Error(error)
 
     def __repr__ (self):
-        return '<remote-method-%s at %x>' % ('.'.join(self.path), id(self))
+        return '<remote-method-%s at %x>' % ('.'.join(self.path), id (self))
 
 def fastrpc_connect (address = ('localhost', 8748)):
-    if not rpc_connection.cache.has_key (address):
+    if address not in rpc_connection.cache:
         conn = rpc_connection (address)
         rpc_connection.cache[address] = fastrpc_proxy (conn)
     return rpc_connection.cache[address]
@@ -224,7 +221,7 @@ def fastrpc_connect (address = ('localhost', 8748)):
 #                                                async fastrpc client
 # ===========================================================================
 
-import asynchat_25 as asynchat
+import supervisor.medusa.asynchat_25 as asynchat
 
 class async_fastrpc_client (asynchat.async_chat):
 
@@ -304,9 +301,9 @@ if __name__ == '__main__':
     else:
         connect = rpc_connect
 
-    print 'connecting...'
+    print('connecting...')
     c = connect()
-    print 'calling <remote>.calc.sum (1,2,3)'
-    print c.calc.sum (1,2,3)
-    print 'calling <remote>.calc.nonexistent(), expect an exception!'
-    print c.calc.nonexistent()
+    print('calling <remote>.calc.sum (1,2,3)')
+    print(c.calc.sum(1, 2, 3))
+    print('calling <remote>.calc.nonexistent(), expect an exception!')
+    print(c.calc.nonexistent())

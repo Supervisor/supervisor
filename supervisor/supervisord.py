@@ -31,6 +31,7 @@ Options:
 """
 
 import os
+import sys
 import time
 import errno
 import select
@@ -135,16 +136,14 @@ class Supervisor:
 
     def get_process_map(self):
         process_map = {}
-        pgroups = self.process_groups.values()
-        for group in pgroups:
+        for group in self.process_groups.values():
             process_map.update(group.get_dispatchers())
         return process_map
 
     def shutdown_report(self):
         unstopped = []
 
-        pgroups = self.process_groups.values()
-        for group in pgroups:
+        for group in self.process_groups.values():
             unstopped.extend(group.get_unstopped_processes())
 
         if unstopped:
@@ -190,7 +189,7 @@ class Supervisor:
             combined_map.update(socket_map)
             combined_map.update(self.get_process_map())
 
-            pgroups = self.process_groups.values()
+            pgroups = list(self.process_groups.values())
             pgroups.sort()
 
             if self.options.mood < SupervisorStates.RUNNING:
@@ -218,7 +217,7 @@ class Supervisor:
 
             try:
                 r, w, x = self.options.select(r, w, x, timeout)
-            except select.error, err:
+            except select.error as err:
                 r = w = x = []
                 if err.args[0] == errno.EINTR:
                     self.options.logger.blather('EINTR encountered in select')
@@ -226,7 +225,7 @@ class Supervisor:
                     raise
 
             for fd in r:
-                if combined_map.has_key(fd):
+                if fd in combined_map:
                     try:
                         dispatcher = combined_map[fd]
                         self.options.logger.blather(
@@ -239,7 +238,7 @@ class Supervisor:
                         combined_map[fd].handle_error()
 
             for fd in w:
-                if combined_map.has_key(fd):
+                if fd in combined_map:
                     try:
                         dispatcher = combined_map[fd]
                         self.options.logger.blather(
@@ -327,7 +326,7 @@ def profile(cmd, globals, locals, sort_order, callers):
     try:
         import cProfile as profile
     except ImportError:
-        import profile # python < 2.5
+        import profile
     import pstats
     import tempfile
     fd, fn = tempfile.mkstemp()

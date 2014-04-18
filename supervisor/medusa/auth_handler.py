@@ -7,23 +7,22 @@
 
 RCS_ID =  '$Id: auth_handler.py,v 1.6 2002/11/25 19:40:23 akuchling Exp $'
 
-# support for 'basic' authenticaion.
+# support for 'basic' authentication.
 
-import base64
-try:
-    from hashlib import md5
-except ImportError:
-    from md5 import new as md5
 import re
-import string
 import time
-import counter
 
-import default_handler
+from supervisor.compat import encodestring, decodestring
+from supervisor.compat import md5
+from supervisor.compat import as_string, as_bytes
+from supervisor.compat import print_function
+
+import supervisor.medusa.counter as counter
+import supervisor.medusa.default_handler as default_handler
 
 get_header = default_handler.get_header
 
-import producers
+import supervisor.medusa.producers as producers
 
 # This is a 'handler' that wraps an authorization method
 # around access to the resources normally served up by
@@ -52,9 +51,9 @@ class auth_handler:
             if scheme == 'basic':
                 cookie = get_header (AUTHORIZATION, request.header, 2)
                 try:
-                    decoded = base64.decodestring (cookie)
+                    decoded = as_string(decodestring(as_bytes(cookie)))
                 except:
-                    print 'malformed authorization info <%s>' % cookie
+                    print_function('malformed authorization info <%s>' % cookie)
                     request.error (400)
                     return
                 auth_info = decoded.split(':', 1)
@@ -67,7 +66,7 @@ class auth_handler:
             #elif scheme == 'digest':
             #       print 'digest: ',AUTHORIZATION.group(2)
             else:
-                print 'unknown/unsupported auth method: %s' % scheme
+                print('unknown/unsupported auth method: %s' % scheme)
                 self.handle_unauthorized(request)
         else:
             # list both?  prefer one or the other?
@@ -89,7 +88,7 @@ class auth_handler:
         request.error (401)
 
     def make_nonce (self, request):
-        "A digest-authentication <nonce>, constructed as suggested in RFC 2069"
+        """A digest-authentication <nonce>, constructed as suggested in RFC 2069"""
         ip = request.channel.server.ip
         now = str(long(time.time()))
         if now[-1:] == 'L':
@@ -99,12 +98,12 @@ class auth_handler:
         return self.apply_hash (nonce)
 
     def apply_hash (self, s):
-        "Apply MD5 to a string <s>, then wrap it in base64 encoding."
+        """Apply MD5 to a string <s>, then wrap it in base64 encoding."""
         m = md5()
         m.update (s)
         d = m.digest()
         # base64.encodestring tacks on an extra linefeed.
-        return base64.encodestring (d)[:-1]
+        return encodestring (d)[:-1]
 
     def status (self):
         # Thanks to mwm@contessa.phone.net (Mike Meyer)
@@ -127,7 +126,7 @@ class dictionary_authorizer:
 
     def authorize (self, auth_info):
         [username, password] = auth_info
-        if (self.dict.has_key (username)) and (self.dict[username] == password):
+        if username in self.dict and self.dict[username] == password:
             return 1
         else:
             return 0

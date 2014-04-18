@@ -2,12 +2,15 @@
 
 import os
 import signal
-import socket
 import sys
 import tempfile
 import unittest
-from mock import Mock, patch, sentinel
+
+from supervisor.compat import Mock, patch, sentinel
+from supervisor.compat import maxint
+
 from supervisor import datatypes
+import supervisor.medusa.text_socket as socket
 
 class ProcessOrGroupName(unittest.TestCase):
     def _callFUT(self, arg):
@@ -33,7 +36,7 @@ class IntegerTests(unittest.TestCase):
         self.assertEqual(self._callFUT('1'), 1)
 
     def test_converts_numeric_overflowing_int(self):
-        self.assertEqual(self._callFUT(str(sys.maxint+1)), sys.maxint+1)
+        self.assertEqual(self._callFUT(str(maxint+1)), maxint+1)
 
     def test_raises_for_non_numeric(self):
         self.assertRaises(ValueError, self._callFUT, 'abc')
@@ -294,7 +297,7 @@ class OctalTypeTests(unittest.TestCase):
         try:
             self._callFUT('bad')
             self.fail()
-        except ValueError, e:
+        except ValueError as e:
             expected = 'bad can not be converted to an octal type'
             self.assertEqual(e.args[0], expected)
 
@@ -302,7 +305,7 @@ class OctalTypeTests(unittest.TestCase):
         try:
             self._callFUT('1.2')
             self.fail()
-        except ValueError, e:
+        except ValueError as e:
             expected = '1.2 can not be converted to an octal type'
             self.assertEqual(e.args[0], expected)
 
@@ -319,7 +322,7 @@ class ExistingDirectoryTests(unittest.TestCase):
         try:
             self._callFUT(path)
             self.fail()
-        except ValueError, e:
+        except ValueError as e:
             expected = "%s is not an existing directory" % path
             self.assertEqual(e.args[0], expected)
 
@@ -328,7 +331,7 @@ class ExistingDirectoryTests(unittest.TestCase):
         try:
             self._callFUT(path)
             self.fail()
-        except ValueError, e:
+        except ValueError as e:
             expected = "%s is not an existing directory" % path
             self.assertEqual(e.args[0], expected)
 
@@ -360,7 +363,7 @@ class ExistingDirpathTests(unittest.TestCase):
         try:
             self._callFUT(path)
             self.fail()
-        except ValueError, e:
+        except ValueError as e:
             expected = ('The directory named as part of the path %s '
                         'does not exist.' % path)
             self.assertEqual(e.args[0], expected)
@@ -371,7 +374,7 @@ class ExistingDirpathTests(unittest.TestCase):
         try:
             self._callFUT(path)
             self.fail()
-        except ValueError, e:
+        except ValueError as e:
             expected = ('The directory named as part of the path %s '
                         'does not exist.' % path)
             self.assertEqual(e.args[0], expected)
@@ -444,8 +447,7 @@ class InetStreamSocketConfigTests(unittest.TestCase):
     def test_repr(self):
         conf = self._makeOne('127.0.0.1', 8675)
         s = repr(conf)
-        self.assertTrue(s.startswith(
-            '<supervisor.datatypes.InetStreamSocketConfig at'), s)
+        self.assertTrue('supervisor.datatypes.InetStreamSocketConfig' in s)
         self.assertTrue(s.endswith('for tcp://127.0.0.1:8675>'), s)
 
     def test_addr(self):
@@ -502,8 +504,7 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
     def test_repr(self):
         conf = self._makeOne('/tmp/foo.sock')
         s = repr(conf)
-        self.assertTrue(s.startswith(
-            '<supervisor.datatypes.UnixStreamSocketConfig at'), s)
+        self.assertTrue('supervisor.datatypes.UnixStreamSocketConfig' in s)
         self.assertTrue(s.endswith('for unix:///tmp/foo.sock>'), s)
 
     def test_get_addr(self):
@@ -563,7 +564,7 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
         try:
             call_create_and_bind(conf)
             self.fail()
-        except ValueError, e:
+        except ValueError as e:
             expected = "Could not change ownership of socket file: msg"
             self.assertEqual(e.args[0], expected)
             self.assertFalse(os.path.exists(tf_name))
@@ -582,7 +583,7 @@ class UnixStreamSocketConfigTests(unittest.TestCase):
         try:
             call_create_and_bind(conf)
             self.fail()
-        except ValueError, e:
+        except ValueError as e:
             expected = "Could not change permissions of socket file: msg"
             self.assertEqual(e.args[0], expected)
             self.assertFalse(os.path.exists(tf_name))
@@ -633,13 +634,11 @@ class SocketAddressTests(unittest.TestCase):
         return self._getTargetClass()(s)
 
     def test_unix_socket(self):
-        import socket
         addr = self._makeOne('/foo/bar')
         self.assertEqual(addr.family, socket.AF_UNIX)
         self.assertEqual(addr.address, '/foo/bar')
 
     def test_inet_socket(self):
-        import socket
         addr = self._makeOne('localhost:8080')
         self.assertEqual(addr.family, socket.AF_INET)
         self.assertEqual(addr.address, ('localhost', 8080))
@@ -703,7 +702,7 @@ class SignalNumberTests(unittest.TestCase):
         try:
             self._callFUT('12345678')
             self.fail()
-        except ValueError, e:
+        except ValueError as e:
             expected = "value 12345678 is not a valid signal number"
             self.assertEqual(e.args[0], expected)
 
@@ -711,7 +710,7 @@ class SignalNumberTests(unittest.TestCase):
         try:
             self._callFUT('BADSIG')
             self.fail()
-        except ValueError, e:
+        except ValueError as e:
             expected = "value BADSIG is not a valid signal name"
             self.assertEqual(e.args[0], expected)
 
@@ -737,7 +736,7 @@ class AutoRestartTests(unittest.TestCase):
         try:
             self._callFUT('bad')
             self.fail()
-        except ValueError, e:
+        except ValueError as e:
             self.assertEqual(e.args[0], "invalid 'autorestart' value 'bad'")
 
 class ProfileOptionsTests(unittest.TestCase):

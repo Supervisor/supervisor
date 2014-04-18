@@ -3,7 +3,7 @@
 import sys
 import os
 import unittest
-import socket
+import supervisor.medusa.text_socket as socket
 import tempfile
 
 from supervisor.tests.base import DummySocketConfig
@@ -120,7 +120,7 @@ class SocketManagerTest(unittest.TestCase):
         self.assertEqual(sock.getsockname(), ('127.0.0.1', 51041))
 
     def test_unix(self):
-        (tf_fd, tf_name) = tempfile.mkstemp();
+        (tf_fd, tf_name) = tempfile.mkstemp()
         conf = UnixStreamSocketConfig(tf_name)
         sock_manager = self._makeOne(conf)
         self.assertEqual(sock_manager.socket_config, conf)
@@ -212,7 +212,7 @@ class SocketManagerTest(unittest.TestCase):
         try:
             sock_manager._close()
             self.fail()
-        except Exception, e:
+        except Exception as e:
             self.assertEqual(e.args[0], 'Socket has not been prepared')
 
 def test_suite():
