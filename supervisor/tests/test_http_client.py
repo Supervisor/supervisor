@@ -1,4 +1,3 @@
-import io
 import sys
 import unittest
 
@@ -10,6 +9,18 @@ class ListenerTests(unittest.TestCase):
     def _makeOne(self):
         return self._getTargetClass()()
 
+    def _makeFakeStdout(self):
+        class Stdout(object):
+            def __init__(self):
+                self.things = []
+                self.flushed = False
+            def write(self, thing):
+                self.things.append(thing)
+            def flush(self):
+                self.flushed = True
+        stdout = Stdout()
+        return stdout
+
     def test_status(self):
         inst = self._makeOne()
         self.assertEqual(inst.status(None, None), None)
@@ -18,10 +29,10 @@ class ListenerTests(unittest.TestCase):
         inst = self._makeOne()
         try:
             old_stdout = sys.stdout
-            f = io.StringIO()
-            sys.stdout = f
+            stdout = self._makeFakeStdout()
+            sys.stdout = stdout
             self.assertEqual(inst.error('url', 'error'), None)
-            self.assertEqual(f.getvalue(), 'url error\n')
+            self.assertEqual(stdout.things, ['url error\n'])
         finally:
             sys.stdout = old_stdout
         
@@ -34,14 +45,13 @@ class ListenerTests(unittest.TestCase):
         self.assertEqual(inst.done(None), None)
 
     def test_feed(self):
-        from supervisor.compat import as_string
         inst = self._makeOne()
         try:
             old_stdout = sys.stdout
-            f = io.StringIO()
-            sys.stdout = f
-            inst.feed(as_string('url'), as_string('data'))
-            self.assertEqual(f.getvalue(), 'data')
+            stdout = self._makeFakeStdout()
+            sys.stdout = stdout
+            inst.feed('url', 'data')
+            self.assertEqual(stdout.things, ['data'])
         finally:
             sys.stdout = old_stdout
 
