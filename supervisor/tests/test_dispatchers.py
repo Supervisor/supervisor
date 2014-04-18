@@ -1113,6 +1113,23 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.closed, True)
 
 
+class stripEscapeTests(unittest.TestCase):
+    def _callFUT(self, s):
+        from supervisor.dispatchers import stripEscapes
+        return stripEscapes(s)
+
+    def test_zero_length_string(self):
+        self.assertEqual(self._callFUT(''), '')
+
+    def test_ansi(self):
+        ansi = '\x1b[34mHello world... this is longer than a token!\x1b[0m'
+        noansi = 'Hello world... this is longer than a token!'
+        self.assertEqual(self._callFUT(ansi), noansi)
+
+    def test_noansi(self):
+        noansi = 'Hello world... this is longer than a token!'
+        self.assertEqual(self._callFUT(noansi), noansi)
+
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
 
