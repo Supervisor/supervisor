@@ -2,7 +2,8 @@ from __future__ import absolute_import
 
 import sys
 PY3 = sys.version>'3'
-if PY3:
+
+if PY3: # pragma: no cover
     long = int
     basestring = str
     unichr = chr
@@ -14,7 +15,7 @@ if PY3:
     def as_string(s): return s if isinstance(s,str) else s.decode('utf8')
     from functools import reduce
 
-else:
+else: # pragma: no cover
     long = long
     raw_input = raw_input
     unicode = unicode
@@ -23,7 +24,8 @@ else:
     def as_string(s): return s if isinstance(s, unicode) else s.decode('utf-8')
     reduce = reduce
 
-def print_function(*args,**kwargs): kwargs.get('file', sys.stdout).write(' '.join(str(i) for i in args)+kwargs.get('end','\n'))
+def print_function(*args,**kwargs): # pragma: no cover
+    kwargs.get('file', sys.stdout).write(' '.join(str(i) for i in args)+kwargs.get('end','\n'))
 
 def total_ordering(cls): # pragma: no cover
     """Class decorator that fills in missing ordering methods"""
@@ -57,73 +59,73 @@ def total_ordering(cls): # pragma: no cover
             setattr(cls, opname, opfunc)
     return cls
 
-try:
+try: # pragma: no cover
     import xmlrpc.client as xmlrpclib
-except ImportError:
+except ImportError: # pragma: no cover
     import xmlrpclib
 
-try:
+try: # pragma: no cover
     import urllib.parse as urlparse
     import urllib.parse as urllib
-except ImportError:
+except ImportError: # pragma: no cover
     import urlparse
     import urllib
 
-if PY3:
+if PY3: # pragma: no cover
     from base64 import encodebytes as encodestring
-else:
+else: # pragma: no cover
     from base64 import encodestring
 
-try:
+try: # pragma: no cover
     from hashlib import sha1
-except ImportError:
+except ImportError: # pragma: no cover
     from sha import new as sha1
 
-try:
+try: # pragma: no cover
     import syslog
-except ImportError:
+except ImportError: # pragma: no cover
     syslog = None
 
-try:
+try: # pragma: no cover
     import configparser as ConfigParser
-except ImportError:
+except ImportError: # pragma: no cover
    import ConfigParser
 
-try:
+try: # pragma: no cover
     from StringIO import StringIO
-except ImportError:
+except ImportError: # pragma: no cover
     from io import StringIO
 
-try:
+try: # pragma: no cover
     from sys import maxint
-except ImportError:
+except ImportError: # pragma: no cover
     from sys import maxsize as maxint
 
-try:
+try: # pragma: no cover
     from urllib.parse import parse_qs, parse_qsl
-except ImportError:
+except ImportError: # pragma: no cover
     from cgi import parse_qs, parse_qsl
 
-try:
+try: # pragma: no cover
     import http.client as httplib
-except ImportError:
+except ImportError: # pragma: no cover
     import httplib
 
-try:
+try: # pragma: no cover
     from base64 import decodebytes as decodestring, encodebytes as encodestring
-except ImportError:
+except ImportError: # pragma: no cover
     from base64 import decodestring, encodestring
 
 
-if PY3:
+if PY3: # pragma: no cover
     func_attribute = '__func__'
-else:
+else: # pragma: no cover
     func_attribute = 'im_func'
 
-try:
+try: # pragma: no cover
     # Python 2.6 contains a version of cElementTree inside it.
     from xml.etree.ElementTree import iterparse
-except ImportError:
+except ImportError: # pragma: no cover
     try:
         # Failing that, try cElementTree instead.
         from cElementTree import iterparse
@@ -131,32 +133,32 @@ except ImportError:
         iterparse = None
 
 
-try:
+try: # pragma: no cover
     from unittest.mock import Mock, patch, sentinel
-except ImportError:
+except ImportError: # pragma: no cover
     from mock import Mock, patch, sentinel
 
-try:
+try: # pragma: no cover
     import unittest.mock as mock
-except ImportError:
+except ImportError: # pragma: no cover
     import mock
 
-try:
+try: # pragma: no cover
     from xmlrpc.client import Fault
-except ImportError:
+except ImportError: # pragma: no cover
     from xmlrpclib import Fault
 
-try:
+try: # pragma: no cover
     from string import ascii_letters as letters
-except ImportError:
+except ImportError: # pragma: no cover
     from string import letters
 
-try:
+try: # pragma: no cover
     from hashlib import md5
-except ImportError:
+except ImportError: # pragma: no cover
     from md5 import md5
 
-try:
+try: # pragma: no cover
     import thread
-except ImportError:
+except ImportError: # pragma: no cover
     import _thread as thread
