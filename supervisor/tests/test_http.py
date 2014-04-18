@@ -261,6 +261,126 @@ class DeferringHookedProducerTests(unittest.TestCase):
         self.assertEqual(producer.more(), '')
         self.assertEqual(L, [0])
 
+    def test_more_noproducer(self):
+        producer = self._makeOne(None, None)
+        self.assertEqual(producer.more(), '')
+
+class Test_deferring_http_request(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.http import deferring_http_request
+        return deferring_http_request
+
+    def _makeOne(
+        self,
+        channel=None,
+        req='GET / HTTP/1.0',
+        command='GET',
+        uri='/',
+        version='1.0',
+        header=(),
+        ):
+        return self._getTargetClass()(
+            channel, req, command, uri, version, header
+            )
+
+    def _makeChannel(self):
+        class Channel:
+            closed = False
+            def close_when_done(self):
+                self.closed = True
+            def push_with_producer(self, producer):
+                self.producer = producer
+        return Channel()
+    
+    def test_done_http_10_nokeepalive(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(channel=channel, version='1.0')
+        inst.done()
+        self.assertTrue(channel.closed)
+
+    def test_done_http_10_keepalive_no_content_length(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version='1.0',
+            header=['Connection: Keep-Alive'],
+            )
+        
+        inst.done()
+        self.assertTrue(channel.closed)
+        
+    def test_done_http_10_keepalive_and_content_length(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version='1.0',
+            header=['Connection: Keep-Alive'],
+            )
+        inst.reply_headers['Content-Length'] = 1
+        inst.done()
+        self.assertEqual(inst['Connection'], 'Keep-Alive')
+        self.assertFalse(channel.closed)
+
+    def test_done_http_11_connection_close(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version='1.1',
+            header=['Connection: close']
+            )
+        inst.done()
+        self.assertTrue(channel.closed)
+
+    def test_done_http_11_unknown_transfer_encoding(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version='1.1',
+            )
+        inst.reply_headers['Transfer-Encoding'] = 'notchunked'
+        inst.done()
+        self.assertTrue(channel.closed)
+
+    def test_done_http_11_chunked_transfer_encoding(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version='1.1',
+            )
+        inst.reply_headers['Transfer-Encoding'] = 'chunked'
+        inst.done()
+        self.assertFalse(channel.closed)
+
+    def test_done_http_11_use_chunked(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version='1.1',
+            )
+        inst.use_chunked = True
+        inst.done()
+        self.assertTrue('Transfer-Encoding' in inst)
+        self.assertFalse(channel.closed)
+
+    def test_done_http_11_wo_content_length_no_te_no_use_chunked_close(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version='1.1',
+            )
+        inst.use_chunked = False
+        inst.done()
+        self.assertTrue(channel.closed)
+
+    def test_done_http_09(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version=None,
+            )
+        inst.done()
+        self.assertTrue(channel.closed)
+        
 class EncryptedDictionaryAuthorizedTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.http import encrypted_dictionary_authorizer
