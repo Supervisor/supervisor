@@ -427,8 +427,6 @@ class PEventListenerDispatcher(PDispatcher):
             if self.state_buffer:
                 # keep going til its too short
                 self.handle_listener_state_change()
-            else:
-                return
 
     def handle_result(self, result):
         process = self.process

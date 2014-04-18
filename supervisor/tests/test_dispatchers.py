@@ -9,6 +9,34 @@ from supervisor.tests.base import DummyLogger
 from supervisor.tests.base import DummyEvent
 from supervisor import read_file
 
+class PDispatcherTests(unittest.TestCase):
+    def setUp(self):
+        from supervisor.events import clear
+        clear()
+
+    def tearDown(self):
+        from supervisor.events import clear
+        clear()
+
+    def _getTargetClass(self):
+        from supervisor.dispatchers import PDispatcher
+        return PDispatcher
+
+    def _makeOne(self, process=None, channel='stdout', fd=0):
+        return self._getTargetClass()(process, channel, fd)
+    
+    def test_readable(self):
+        inst = self._makeOne()
+        self.assertRaises(NotImplementedError, inst.readable)
+        
+    def test_writable(self):
+        inst = self._makeOne()
+        self.assertRaises(NotImplementedError, inst.writable)
+
+    def test_flush(self):
+        inst = self._makeOne()
+        self.assertEqual(inst.flush(), None)
+        
 class POutputDispatcherTests(unittest.TestCase):
     def setUp(self):
         from supervisor.events import clear
@@ -466,6 +494,19 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.closed, True)
         dispatcher.close() # make sure we don't error if we try to close twice
         self.assertEqual(dispatcher.closed, True)
+
+
+    def test_syslog_logfile_deprecated(self):
+        import warnings
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        config.stdout_logfile = 'syslog'
+        process = DummyProcess(config)
+        with warnings.catch_warnings(record=True) as w:
+            self._makeOne(process)
+            self.assertEqual(len(w), 1)
+        
+        
 
 
 class PInputDispatcherTests(unittest.TestCase):
