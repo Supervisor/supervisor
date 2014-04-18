@@ -503,6 +503,7 @@ class POutputDispatcherTests(unittest.TestCase):
         config.stdout_logfile = 'syslog'
         process = DummyProcess(config)
         with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
             self._makeOne(process)
             self.assertEqual(len(w), 1)
         
