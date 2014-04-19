@@ -1,9 +1,12 @@
-import signal
-import unittest
-import sys
 import errno
+import os
+import signal
+import sys
+import time
+import unittest
 
 from supervisor.compat import Mock, patch, sentinel
+from supervisor.compat import as_bytes
 from supervisor.compat import maxint
 
 from supervisor.tests.base import DummyOptions
