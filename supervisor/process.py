@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 import errno
 import shlex

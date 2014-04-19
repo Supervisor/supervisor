@@ -2,7 +2,6 @@ import os
 import time
 import datetime
 import errno
-import sys
 
 from supervisor.compat import as_string
 from supervisor.compat import unicode
