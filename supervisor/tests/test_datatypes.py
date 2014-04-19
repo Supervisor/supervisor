@@ -156,8 +156,31 @@ class DictOfKeyValuePairsTests(unittest.TestCase):
         expected = {'foo': 'bar,baz', 'baz': 'q,ux'}
         self.assertEqual(actual, expected)
 
+    def test_handles_newlines_inside_quotes(self):
+        actual = datatypes.dict_of_key_value_pairs('foo="a\nb\nc"')
+        expected = {'foo': 'a\nb\nc'}
+        self.assertEqual(actual, expected)
+
+    def test_handles_quotes_inside_quotes(self):
+        actual = datatypes.dict_of_key_value_pairs('foo="\'\\""')
+        expected = {'foo': '\'"'}
+        self.assertEqual(actual, expected)
+
+    def test_handles_empty_inside_quotes(self):
+        actual = datatypes.dict_of_key_value_pairs('foo=""')
+        expected = {'foo': ''}
+        self.assertEqual(actual, expected)
+
     def test_handles_unquoted_non_alphanum(self):
         actual = self._callFUT(
+            'HOME=/home/auser,FOO=/.foo+(1.2)-_/,'
+            'SUPERVISOR_SERVER_URL=http://127.0.0.1:9001')
+        expected = {'HOME': '/home/auser', 'FOO': '/.foo+(1.2)-_/',
+                    'SUPERVISOR_SERVER_URL': 'http://127.0.0.1:9001'}
+        self.assertEqual(actual, expected)
+
+    def test_handles_unquoted_non_alphanum(self):
+        actual = datatypes.dict_of_key_value_pairs(
             'HOME=/home/auser,FOO=/.foo+(1.2)-_/,'
             'SUPERVISOR_SERVER_URL=http://127.0.0.1:9001')
         expected = {'HOME': '/home/auser', 'FOO': '/.foo+(1.2)-_/',
