@@ -2,7 +2,6 @@
 
 import os
 import signal
-import sys
 import tempfile
 import unittest
 
@@ -173,14 +172,6 @@ class DictOfKeyValuePairsTests(unittest.TestCase):
 
     def test_handles_unquoted_non_alphanum(self):
         actual = self._callFUT(
-            'HOME=/home/auser,FOO=/.foo+(1.2)-_/,'
-            'SUPERVISOR_SERVER_URL=http://127.0.0.1:9001')
-        expected = {'HOME': '/home/auser', 'FOO': '/.foo+(1.2)-_/',
-                    'SUPERVISOR_SERVER_URL': 'http://127.0.0.1:9001'}
-        self.assertEqual(actual, expected)
-
-    def test_handles_unquoted_non_alphanum(self):
-        actual = datatypes.dict_of_key_value_pairs(
             'HOME=/home/auser,FOO=/.foo+(1.2)-_/,'
             'SUPERVISOR_SERVER_URL=http://127.0.0.1:9001')
         expected = {'HOME': '/home/auser', 'FOO': '/.foo+(1.2)-_/',
