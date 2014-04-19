@@ -126,7 +126,7 @@ class http_request:
 
         # Remove things from the old dict as well
         if (name in self.reply_headers and
-            (value is None or 
+            (value is None or
              self.reply_headers[name] == value)):
             del self.reply_headers[name]
             found_it = 1
@@ -820,7 +820,6 @@ def crack_request (r):
         return None, None, None
 
 if __name__ == '__main__':
-    import sys
     if len(sys.argv) < 2:
         print('usage: %s <root> <port>' % (sys.argv[0]))
     else:
@@ -831,7 +830,6 @@ if __name__ == '__main__':
         import supervisor.medusa.ftp_server as ftp_server
         import supervisor.medusa.chat_server as chat_server
         import supervisor.medusa.resolver as resolver
-        import supervisor.medusa.logger as logger
         rs = resolver.caching_resolver ('127.0.0.1')
         lg = logger.file_logger (sys.stdout)
         ms = monitor.secure_monitor_server ('fnord', '127.0.0.1', 9999)
