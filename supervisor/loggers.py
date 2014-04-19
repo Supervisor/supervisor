@@ -185,7 +185,7 @@ class RotatingFileHandler(FileHandler):
         if self.stream:
             try:
                 self.stream.close()
-            except OSError as exc:
+            except OSError:
                 pass
 
     def emit(self, record):
