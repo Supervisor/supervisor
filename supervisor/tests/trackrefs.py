@@ -41,7 +41,6 @@ def doit():
 
 import sys
 import gc
-import types
 
 class TrackRefs(object):
     """Object to track reference counts across test runs."""
