@@ -59,11 +59,11 @@ class async_chat (asyncore.dispatcher):
     ac_in_buffer_size       = 4096
     ac_out_buffer_size      = 4096
 
-    def __init__ (self, conn=None):
+    def __init__ (self, conn=None, map=None):
         self.ac_in_buffer = ''
         self.ac_out_buffer = ''
         self.producer_fifo = fifo()
-        asyncore.dispatcher.__init__ (self, conn)
+        asyncore.dispatcher.__init__ (self, conn, map)
 
     def collect_incoming_data(self, data):
         raise NotImplementedError("must be implemented in subclass")
