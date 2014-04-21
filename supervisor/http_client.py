@@ -36,8 +36,15 @@ class Listener(object):
         pass
 
 class HTTPHandler(asynchat.async_chat):
-    def __init__(self, listener, username='', password=None):
-        asynchat.async_chat.__init__(self)
+    def __init__(
+        self,
+        listener,
+        username='',
+        password=None,
+        conn=None,
+        map=None
+        ):
+        asynchat.async_chat.__init__(self, conn, map)
         self.listener = listener
         self.user_agent = 'Supervisor HTTP Client'
         self.buffer = ''
@@ -82,7 +89,7 @@ class HTTPHandler(asynchat.async_chat):
             self.create_socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.connect(socketname)
 
-    def close (self):
+    def close(self):
         self.listener.close(self.url)
         self.connected = 0
         self.del_channel()
@@ -93,7 +100,7 @@ class HTTPHandler(asynchat.async_chat):
         self.push('%s: %s' % (name, value))
         self.push(CRLF)
 
-    def handle_error (self):
+    def handle_error(self):
         if self.error_handled:
             return
         if 1 or self.connected:
