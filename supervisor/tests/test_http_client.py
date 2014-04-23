@@ -221,6 +221,67 @@ class HTTPHandlerTests(unittest.TestCase):
         inst = self._makeOne()
         inst.feed('data')
         self.assertEqual(inst.listener.fed_data, ['data'])
+
+    def test_collect_incoming_data_part_is_body(self):
+        inst = self._makeOne()
+        inst.part = inst.body
+        inst.buffer = 'abc'
+        inst.collect_incoming_data('foo')
+        self.assertEqual(inst.listener.fed_data, ['abcfoo'])
+        self.assertEqual(inst.buffer, '')
+
+    def test_collect_incoming_data_part_is_not_body(self):
+        inst = self._makeOne()
+        inst.part = None
+        inst.buffer = 'abc'
+        inst.collect_incoming_data('foo')
+        self.assertEqual(inst.listener.fed_data, [])
+        self.assertEqual(inst.buffer, 'abcfoo')
+
+    def test_found_terminator(self):
+        inst = self._makeOne()
+        parted = []
+        inst.part = lambda: parted.append(True)
+        inst.buffer = None
+        inst.found_terminator()
+        self.assertEqual(parted, [True])
+        self.assertEqual(inst.buffer, '')
+
+    def test_ignore(self):
+        inst = self._makeOne()
+        inst.buffer = None
+        inst.ignore()
+        self.assertEqual(inst.buffer, '')
+
+    def test_status_line_not_startswith_http(self):
+        inst = self._makeOne()
+        inst.buffer = 'NOTHTTP/1.0 200 OK'
+        self.assertRaises(ValueError, inst.status_line)
+
+    def test_status_line_200(self):
+        inst = self._makeOne()
+        inst.buffer = 'HTTP/1.0 200 OK'
+        version, status, reason = inst.status_line()
+        self.assertEqual(version, 'HTTP/1.0')
+        self.assertEqual(status, 200)
+        self.assertEqual(reason, 'OK')
+        self.assertEqual(inst.part, inst.headers)
+
+    def test_status_line_not_200(self):
+        inst = self._makeOne()
+        inst.buffer = 'HTTP/1.0 201 OK'
+        closed = []
+        inst.close = lambda: closed.append(True)
+        version, status, reason = inst.status_line()
+        self.assertEqual(version, 'HTTP/1.0')
+        self.assertEqual(status, 201)
+        self.assertEqual(reason, 'OK')
+        self.assertEqual(inst.part, inst.ignore)
+        self.assertEqual(
+            inst.listener.error_msg,
+            'Cannot read, status code 201'
+            )
+        self.assertEqual(closed, [True])
         
 class DummyListener(object):
     closed = None
@@ -238,6 +299,10 @@ class DummyListener(object):
 
     def feed(self, url, data):
         self.fed_data.append(data)
+
+    def status(self, url, int):
+        self.status_url = url
+        self.status_int = int
 
 class DummySocket(object):
     closed = False
