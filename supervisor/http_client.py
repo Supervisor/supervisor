@@ -181,9 +181,9 @@ class HTTPHandler(asynchat.async_chat):
             if name and value:
                 name = name.lower()
                 value = value.strip()
-                if name=="Transfer-Encoding".lower():
+                if name=="transfer-encoding":
                     self.encoding = value
-                elif name=="Content-Length".lower():
+                elif name=="content-length":
                     self.length = int(value)
                 self.response_header(name, value)
 

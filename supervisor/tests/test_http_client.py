@@ -282,11 +282,136 @@ class HTTPHandlerTests(unittest.TestCase):
             'Cannot read, status code 201'
             )
         self.assertEqual(closed, [True])
+
+    def test_headers_empty_line_nonchunked(self):
+        inst = self._makeOne()
+        inst.buffer = ''
+        inst.encoding = 'not chunked'
+        inst.length = 3
+        terms = []
+        inst.set_terminator = lambda L: terms.append(L)
+        inst.headers()
+        self.assertEqual(inst.part, inst.body)
+        self.assertEqual(terms, [3])
+        
+    def test_headers_empty_line_chunked(self):
+        inst = self._makeOne()
+        inst.buffer = ''
+        inst.encoding = 'chunked'
+        inst.headers()
+        self.assertEqual(inst.part, inst.chunked_size)
+
+    def test_headers_nonempty_line_no_name_no_value(self):
+        inst = self._makeOne()
+        inst.buffer = ':'
+        self.assertEqual(inst.headers(), None)
+
+    def test_headers_nonempty_line_transfer_encoding(self):
+        inst = self._makeOne()
+        inst.buffer = 'Transfer-Encoding: chunked'
+        responses = []
+        inst.response_header = lambda n, v: responses.append((n, v))
+        inst.headers()
+        self.assertEqual(inst.encoding, 'chunked')
+        self.assertEqual(responses, [('transfer-encoding', 'chunked')])
+
+    def test_headers_nonempty_line_content_length(self):
+        inst = self._makeOne()
+        inst.buffer = 'Content-Length: 3'
+        responses = []
+        inst.response_header = lambda n, v: responses.append((n, v))
+        inst.headers()
+        self.assertEqual(inst.length, 3)
+        self.assertEqual(responses, [('content-length', '3')])
+
+    def test_headers_nonempty_line_arbitrary(self):
+        inst = self._makeOne()
+        inst.buffer = 'X-Test: abc'
+        responses = []
+        inst.response_header = lambda n, v: responses.append((n, v))
+        inst.headers()
+        self.assertEqual(responses, [('x-test', 'abc')])
+
+    def test_response_header(self):
+        inst = self._makeOne()
+        inst.response_header('a', 'b')
+        self.assertEqual(inst.listener.response_header_name, 'a')
+        self.assertEqual(inst.listener.response_header_value, 'b')
+
+    def test_body(self):
+        inst = self._makeOne()
+        closed = []
+        inst.close = lambda: closed.append(True)
+        inst.body()
+        self.assertEqual(closed, [True])
+        self.assertTrue(inst.listener.done)
+
+    def test_done(self):
+        inst = self._makeOne()
+        inst.done()
+        self.assertTrue(inst.listener.done)
+
+    def test_chunked_size_empty_line(self):
+        inst = self._makeOne()
+        inst.buffer = ''
+        inst.length = 1
+        self.assertEqual(inst.chunked_size(), None)
+        self.assertEqual(inst.length, 1)
+        
+    def test_chunked_size_zero_size(self):
+        inst = self._makeOne()
+        inst.buffer = '0'
+        inst.length = 1
+        self.assertEqual(inst.chunked_size(), None)
+        self.assertEqual(inst.length, 1)
+        self.assertEqual(inst.part, inst.trailer)
+
+    def test_chunked_size_nonzero_size(self):
+        inst = self._makeOne()
+        inst.buffer = '10'
+        inst.length = 1
+        terms = []
+        inst.set_terminator = lambda sz: terms.append(sz)
+        self.assertEqual(inst.chunked_size(), None)
+        self.assertEqual(inst.part, inst.chunked_body)
+        self.assertEqual(inst.length, 17)
+        self.assertEqual(terms, [16])
+
+    def test_chunked_body(self):
+        from supervisor.http_client import CRLF
+        inst = self._makeOne()
+        inst.buffer = 'buffer'
+        terms = []
+        lines = []
+        inst.set_terminator = lambda v: terms.append(v)
+        inst.feed = lambda v: lines.append(v)
+        inst.chunked_body()
+        self.assertEqual(terms, [CRLF])
+        self.assertEqual(lines, ['buffer'])
+        self.assertEqual(inst.part, inst.chunked_size)
+
+    def test_trailer_line_not_crlf(self):
+        inst = self._makeOne()
+        inst.buffer = ''
+        self.assertEqual(inst.trailer(), None)
+
+    def test_trailer_line_crlf(self):
+        from supervisor.http_client import CRLF
+        inst = self._makeOne()
+        inst.buffer = CRLF
+        dones = []
+        closes = []
+        inst.done = lambda: dones.append(True)
+        inst.close = lambda: closes.append(True)
+        self.assertEqual(inst.trailer(), None)
+        self.assertEqual(dones, [True])
+        self.assertEqual(closes, [True])
         
 class DummyListener(object):
     closed = None
     error_url = None
     error_msg = None
+    done = False
     def __init__(self):
         self.fed_data = []
         
@@ -303,6 +428,13 @@ class DummyListener(object):
     def status(self, url, int):
         self.status_url = url
         self.status_int = int
+
+    def response_header(self, url, name, value):
+        self.response_header_name = name
+        self.response_header_value = value
+
+    def done(self, url):
+        self.done = True
 
 class DummySocket(object):
     closed = False
