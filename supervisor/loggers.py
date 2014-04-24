@@ -198,16 +198,28 @@ class RotatingFileHandler(FileHandler):
         FileHandler.emit(self, record)
         self.doRollover()
 
+    def _remove(self, fn): # pragma: no cover
+        # this is here to service stubbing in unit tests
+        return os.remove(fn)
+
+    def _rename(self, src, tgt): # pragma: no cover
+        # this is here to service stubbing in unit tests
+        return os.rename(src, tgt)
+
+    def _exists(self, fn): # pragma: no cover
+        # this is here to service stubbing in unit tests
+        return os.path.exists(fn)
+
     def removeAndRename(self, sfn, dfn):
-        if os.path.exists(dfn):
+        if self._exists(dfn):
             try:
-                os.remove(dfn)
+                self._remove(dfn)
             except OSError as why:
                 # catch race condition (destination already deleted)
                 if why.args[0] != errno.ENOENT:
                     raise
         try:
-            os.rename(sfn, dfn)
+            self._rename(sfn, dfn)
         except OSError as why:
             # catch exceptional condition (source deleted)
             # E.g. cleanup script removes active log.
@@ -322,6 +334,10 @@ class SyslogHandler(Handler):
     def reopen(self):
         pass
 
+    def _syslog(self, msg): # pragma: no cover
+        # this exists only for unit test stubbing
+        syslog.syslog(msg)
+
     def emit(self, record):
         try:
             params = record.asdict()
@@ -330,9 +346,9 @@ class SyslogHandler(Handler):
                 params['message'] = line
                 msg = self.fmt % params
                 try:
-                    syslog.syslog(msg)
+                    self._syslog(msg)
                 except UnicodeError:
-                    syslog.syslog(msg.encode("UTF-8"))
+                    self._syslog(msg.encode("UTF-8"))
         except:
             self.handleError()
 

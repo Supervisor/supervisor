@@ -37,9 +37,11 @@ class HandlerTests:
 
     def _makeLogRecord(self, msg):
         from supervisor import loggers
-        record = loggers.LogRecord(level=loggers.LevelsByName.INFO,
-                                   msg=msg,
-                                   exc_info=None)
+        record = loggers.LogRecord(
+            level=loggers.LevelsByName.INFO,
+            msg=msg,
+            exc_info=None
+            )
         return record
 
 class BareHandlerTests(HandlerTests, unittest.TestCase):
@@ -265,7 +267,69 @@ class RotatingFileHandlerTests(FileHandlerTests):
         self.assertTrue(os.path.exists(self.filename))
         self.assertFalse(os.path.exists(self.filename + '.1'))
 
+    def test_removeAndRename_destination_does_not_exist(self):
+        inst = self._makeOne(self.filename)
+        renames = []
+        removes = []
+        inst._remove = lambda v: removes.append(v)
+        inst._exists = lambda v: False
+        inst._rename = lambda s, t: renames.append((s, t))
+        inst.removeAndRename('foo', 'bar')
+        self.assertEqual(renames, [('foo', 'bar')])
+        self.assertEqual(removes, [])
 
+    def test_removeAndRename_destination_exists(self):
+        inst = self._makeOne(self.filename)
+        renames = []
+        removes = []
+        inst._remove = lambda v: removes.append(v)
+        inst._exists = lambda v: True
+        inst._rename = lambda s, t: renames.append((s, t))
+        inst.removeAndRename('foo', 'bar')
+        self.assertEqual(renames, [('foo', 'bar')])
+        self.assertEqual(removes, ['bar'])
+
+    def test_removeAndRename_remove_raises_ENOENT(self):
+        def remove(fn):
+            raise OSError(errno.ENOENT)
+        inst = self._makeOne(self.filename)
+        renames = []
+        inst._remove = remove
+        inst._exists = lambda v: True
+        inst._rename = lambda s, t: renames.append((s, t))
+        inst.removeAndRename('foo', 'bar')
+        self.assertEqual(renames, [('foo', 'bar')])
+
+    def test_removeAndRename_remove_raises_other_than_ENOENT(self):
+        def remove(fn):
+            raise OSError(errno.EAGAIN)
+        inst = self._makeOne(self.filename)
+        inst._remove = remove
+        inst._exists = lambda v: True
+        self.assertRaises(OSError, inst.removeAndRename, 'foo', 'bar')
+
+    def test_removeAndRename_rename_raises_ENOENT(self):
+        def rename(s, d):
+            raise OSError(errno.ENOENT)
+        inst = self._makeOne(self.filename)
+        inst._rename = rename
+        inst._exists = lambda v: False
+        self.assertEqual(inst.removeAndRename('foo', 'bar'), None)
+
+    def test_removeAndRename_rename_raises_other_than_ENOENT(self):
+        def rename(s, d):
+            raise OSError(errno.EAGAIN)
+        inst = self._makeOne(self.filename)
+        inst._rename = rename
+        inst._exists = lambda v: False
+        self.assertRaises(OSError, inst.removeAndRename, 'foo', 'bar')
+
+    def test_doRollover_maxbytes_lte_zero(self):
+        inst = self._makeOne(self.filename)
+        inst.maxBytes = 0
+        self.assertEqual(inst.doRollover(), None)
+        
+        
 class BoundIOTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.loggers import BoundIO
@@ -377,6 +441,13 @@ class LoggerTests(unittest.TestCase):
         logger.close()
         self.assertEqual(handler.closed, True)
 
+    def test_getvalue(self):
+        from supervisor.loggers import LevelsByName
+        handler = DummyHandler(LevelsByName.CRIT)
+        logger = self._makeOne(LevelsByName.CRIT, (handler,))
+        self.assertRaises(NotImplementedError, logger.getvalue)
+        
+
 class MockSysLog(mock.Mock):
     def __call__(self, *args, **kwargs):
         message = args[-1]
@@ -399,6 +470,18 @@ class SyslogHandlerTests(HandlerTests, unittest.TestCase):
 
     def _makeOne(self):
         return self._getTargetClass()()
+
+    def test_emit_record_asdict_raises(self):
+        class Record(object):
+            def asdict(self):
+                raise TypeError
+        record = Record()
+        handler = self._makeOne()
+        handled = []
+        handler.handleError = lambda: handled.append(True)
+        handler.emit(record)
+        self.assertEqual(handled, [True])
+        
 
     @mock.patch('syslog.syslog', MockSysLog())
     def test_emit_ascii_noerror(self):
@@ -424,6 +507,17 @@ class SyslogHandlerTests(HandlerTests, unittest.TestCase):
             record = self._makeLogRecord('fií')
             handler.emit(record)
             syslog.syslog.assert_called_with('fií')
+        def test_emit_unicode_witherror(self):
+            handler = self._makeOne()
+            called = []
+            def fake_syslog(msg):
+                if not called:
+                    called.append(msg)
+                    raise UnicodeError
+            handler._syslog = fake_syslog
+            record = self._makeLogRecord('fií')
+            handler.emit(record)
+            self.assertEqual(called, ['fií'])
     else:
         @mock.patch('syslog.syslog', MockSysLog())
         def test_emit_unicode_noerror(self):
@@ -432,6 +526,17 @@ class SyslogHandlerTests(HandlerTests, unittest.TestCase):
             record = self._makeLogRecord(inp)
             handler.emit(record)
             syslog.syslog.assert_called_with('fi\xc3\xad')
+        def test_emit_unicode_witherror(self):
+            handler = self._makeOne()
+            called = []
+            def fake_syslog(msg):
+                if not called:
+                    called.append(msg)
+                    raise UnicodeError
+            handler._syslog = fake_syslog
+            record = self._makeLogRecord(as_string('fií'))
+            handler.emit(record)
+            self.assertEqual(called, [as_string('fi\xc3\xad')])
 
 class DummyHandler:
     close = False
