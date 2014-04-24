@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import errno
 import sys
 import unittest
 import tempfile
@@ -41,6 +42,67 @@ class HandlerTests:
                                    exc_info=None)
         return record
 
+class BareHandlerTests(HandlerTests, unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.loggers import Handler
+        return Handler
+
+    def test_flush_stream_flush_raises_IOError_EPIPE(self):
+        stream = DummyStream(error=IOError(errno.EPIPE))
+        inst = self._makeOne(stream=stream)
+        self.assertEqual(inst.flush(), None) # does not raise
+
+    def test_flush_stream_flush_raises_IOError_not_EPIPE(self):
+        stream = DummyStream(error=IOError(errno.EALREADY))
+        inst = self._makeOne(stream=stream)
+        self.assertRaises(IOError, inst.flush) # non-EPIPE IOError raises
+
+    def test_close_already_closed(self):
+        stream = DummyStream()
+        inst = self._makeOne(stream=stream)
+        inst.closed = True
+        self.assertEqual(inst.close(), None)
+        
+    def test_close_stream_fileno_above_3(self):
+        stream = DummyStream(fileno=50)
+        inst = self._makeOne(stream=stream)
+        self.assertEqual(inst.close(), None)
+        self.assertTrue(inst.closed)
+        self.assertTrue(inst.stream.closed)
+
+    def test_close_stream_fileno_below_3(self):
+        stream = DummyStream(fileno=0)
+        inst = self._makeOne(stream=stream)
+        self.assertEqual(inst.close(), None)
+        self.assertFalse(inst.closed)
+        self.assertFalse(inst.stream.closed)
+
+    def test_emit_gardenpath(self):
+        stream = DummyStream()
+        inst = self._makeOne(stream=stream)
+        record = self._makeLogRecord('foo')
+        inst.emit(record)
+        self.assertEqual(stream.flushed, True)
+        self.assertEqual(stream.written, 'foo')
+
+    def test_emit_unicode_error(self):
+        stream = DummyStream(error=UnicodeError)
+        inst = self._makeOne(stream=stream)
+        record = self._makeLogRecord('foo')
+        inst.emit(record)
+        self.assertEqual(stream.flushed, True)
+        self.assertEqual(stream.written, 'foo')
+
+    def test_emit_other_error(self):
+        stream = DummyStream(error=TypeError)
+        inst = self._makeOne(stream=stream)
+        handled = []
+        inst.handleError = lambda: handled.append(True)
+        record = self._makeLogRecord('foo')
+        inst.emit(record)
+        self.assertEqual(stream.flushed, False)
+        self.assertEqual(stream.written, '')
+        
 class FileHandlerTests(HandlerTests, unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.loggers import FileHandler

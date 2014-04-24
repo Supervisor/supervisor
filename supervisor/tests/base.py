@@ -3,6 +3,7 @@ _TIMEFORMAT = '%b %d %I:%M %p'
 
 from supervisor.compat import total_ordering
 from supervisor.compat import Fault
+from supervisor.compat import as_string
 
 class DummyOptions:
 
@@ -1040,25 +1041,32 @@ class DummyDispatcher:
         self.flushed = True
 
 class DummyStream:
-    def __init__(self, error=None):
+    def __init__(self, error=None, fileno=20):
         self.error = error
         self.closed = False
         self.flushed = False
         self.written = ''
+        self._fileno = fileno
     def close(self):
         if self.error:
             raise self.error
         self.closed = True
     def flush(self):
+        if self.error:
+            raise self.error
         self.flushed = True
     def write(self, msg):
         if self.error:
-            raise self.error
-        self.written +=msg
+            error = self.error
+            self.error = None
+            raise error
+        self.written += as_string(msg)
     def seek(self, num, whence=0):
         pass
     def tell(self):
         return len(self.written)
+    def fileno(self):
+        return self._fileno
 
 class DummyEvent:
     def __init__(self, serial='abc'):
