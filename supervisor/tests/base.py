@@ -868,6 +868,10 @@ class DummySupervisorRPCNamespace:
             raise Fault(xmlrpc.Faults.ALREADY_ADDED, '')
         if name == 'BAD_NAME':
             raise Fault(xmlrpc.Faults.BAD_NAME, '')
+        if name == 'FAILED':
+            raise Fault(xmlrpc.Faults.FAILED, '')
+        if name == 'SHUTDOWN_STATE':
+            raise Fault(xmlrpc.Faults.SHUTDOWN_STATE, '')
         if hasattr(self, 'processes'):
             self.processes.append(name)
         else:
@@ -880,6 +884,8 @@ class DummySupervisorRPCNamespace:
             raise Fault(xmlrpc.Faults.STILL_RUNNING, '')
         if name == 'BAD_NAME':
             raise Fault(xmlrpc.Faults.BAD_NAME, '')
+        if name == 'FAILED':
+            raise Fault(xmlrpc.Faults.FAILED, '')
         self.processes.remove(name)
 
     def clearProcessStdoutLog(self, name):

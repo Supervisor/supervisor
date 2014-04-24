@@ -1166,16 +1166,33 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(calls[0], [['added'], ['changed'], ['removed']])
 
-    def test_reread_Fault(self):
+    def test_reread_cant_reread(self):
         plugin = self._makeOne()
         from supervisor import xmlrpc
-        import xmlrpclib
-        def raise_fault(*arg, **kw):
+        def reloadConfig(*arg, **kw):
             raise xmlrpclib.Fault(xmlrpc.Faults.CANT_REREAD, 'cant')
-        plugin.ctl.options._server.supervisor.reloadConfig = raise_fault
+        plugin.ctl.options._server.supervisor.reloadConfig = reloadConfig
         plugin.do_reread(None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ERROR: cant\n')
+
+    def test_reread_shutdown_state(self):
+        plugin = self._makeOne()
+        from supervisor import xmlrpc
+        def reloadConfig(*arg, **kw):
+            raise xmlrpclib.Fault(xmlrpc.Faults.SHUTDOWN_STATE, '')
+        plugin.ctl.options._server.supervisor.reloadConfig = reloadConfig
+        plugin.do_reread(None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: supervisor shutting down\n')
+
+    def test_reread_reraises_other_faults(self):
+        plugin = self._makeOne()
+        from supervisor import xmlrpc
+        def reloadConfig(*arg, **kw):
+            raise xmlrpclib.Fault(xmlrpc.Faults.FAILED, '')
+        plugin.ctl.options._server.supervisor.reloadConfig = reloadConfig
+        self.assertRaises(xmlrpclib.Fault, plugin.do_reread, '')
 
     def test__formatConfigInfo(self):
         info = { 'group': 'group1',
@@ -1217,6 +1234,31 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         result = plugin.do_avail('')
         self.assertEqual(result, None)
 
+    def test_avail_shutdown_state(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+
+        def getAllConfigInfo():
+            from supervisor import xmlrpc
+            raise xmlrpclib.Fault(xmlrpc.Faults.SHUTDOWN_STATE, '')
+        supervisor.getAllConfigInfo = getAllConfigInfo
+
+        result = plugin.do_avail('')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: supervisor shutting down\n')
+
+    def test_avail_reraises_other_faults(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+
+        def getAllConfigInfo():
+            from supervisor import xmlrpc
+            raise xmlrpclib.Fault(xmlrpc.Faults.FAILED, '')
+        supervisor.getAllConfigInfo = getAllConfigInfo
+
+        self.assertRaises(xmlrpclib.Fault, plugin.do_avail, '')
+
     def test_add_help(self):
         plugin = self._makeOne()
         plugin.help_add()
@@ -1243,6 +1285,17 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ERROR: no such process/group: BAD_NAME\n')
+
+    def test_add_shutdown_state(self):
+        plugin = self._makeOne()
+        result = plugin.do_add('SHUTDOWN_STATE')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: shutting down\n')
+
+    def test_add_reraises_other_faults(self):
+        plugin = self._makeOne()
+        self.assertRaises(xmlrpclib.Fault, plugin.do_add, 'FAILED')
 
     def test_remove_help(self):
         plugin = self._makeOne()
@@ -1275,6 +1328,10 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ERROR: process/group still running: STILL_RUNNING\n')
+
+    def test_remove_reraises_other_faults(self):
+        plugin = self._makeOne()
+        self.assertRaises(xmlrpclib.Fault, plugin.do_remove, 'FAILED')
 
     def test_update_help(self):
         plugin = self._makeOne()
@@ -1431,6 +1488,17 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
         plugin.do_update('')
         self.assertEqual(supervisor.processes, ['removed_group'])
+
+    def test_update_reraises_other_faults(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+
+        def reloadConfig():
+            from supervisor import xmlrpc
+            raise xmlrpclib.Fault(xmlrpc.Faults.FAILED, 'FAILED')
+        supervisor.reloadConfig = reloadConfig
+
+        self.assertRaises(xmlrpclib.Fault, plugin.do_update, '')
 
     def test_pid_help(self):
         plugin = self._makeOne()
