@@ -502,11 +502,31 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         value = plugin.ctl.stdout.getvalue().strip()
         self.assertEqual(value, "Error: bad channel 'fudge'")
 
+    def test_tail_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        plugin.ctl.options._server.supervisor.readProcessStdoutLog = f
+        plugin.do_tail('foo')
+        self.assertEqual(called, [])
+
     def test_status_help(self):
         plugin = self._makeOne()
         plugin.help_status()
         out = plugin.ctl.stdout.getvalue()
         self.assertTrue("status <name>" in out)
+
+    def test_status_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        plugin.ctl.options._server.supervisor.getAllProcessInfo = f
+        plugin.do_status('')
+        self.assertEqual(called, [])
 
     def test_status_table_process_column_min_width(self):
         plugin = self._makeOne()
@@ -721,6 +741,18 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'foo2: started\n'
                          'failed_group:failed: ERROR (spawn error)\n')
 
+    def test_start_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.startAllProcesses = f
+        supervisor.startProcessGroup = f
+        plugin.do_start('foo')
+        self.assertEqual(called, [])
+
     def test_stop_help(self):
         plugin = self._makeOne()
         plugin.help_stop()
@@ -800,6 +832,18 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'foo2: stopped\n'
                          'failed_group:failed: ERROR (no such process)\n')
 
+    def test_stop_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.stopAllProcesses = f
+        supervisor.stopProcessGroup = f
+        plugin.do_stop('foo')
+        self.assertEqual(called, [])
+
     def test_restart_help(self):
         plugin = self._makeOne()
         plugin.help_restart()
@@ -829,6 +873,18 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'failed_group:failed: ERROR (no such process)\n'
                          'foo: started\nfoo2: started\n'
                          'failed_group:failed: ERROR (spawn error)\n')
+
+    def test_restart_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.stopAllProcesses = f
+        supervisor.stopProcessGroup = f
+        plugin.do_restart('foo')
+        self.assertEqual(called, [])
 
     def test_clear_help(self):
         plugin = self._makeOne()
@@ -881,6 +937,18 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'foo2: cleared\n'
                          'failed_group:failed: ERROR (failed)\n')
 
+    def test_clear_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.clearAllProcessLogs = f
+        supervisor.clearProcessLogs = f
+        plugin.do_clear('foo')
+        self.assertEqual(called, [])
+
     def test_open_help(self):
         plugin = self._makeOne()
         plugin.help_open()
@@ -916,6 +984,16 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin = self._makeOne()
         plugin.do_version(None)
         self.assertEqual(plugin.ctl.stdout.getvalue(), '3000\n')
+
+    def test_version_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        plugin.ctl.options._server.supervisor.getSupervisorVersion = f
+        plugin.do_version('')
+        self.assertEqual(called, [])
 
     def test_reload_help(self):
         plugin = self._makeOne()
@@ -1405,6 +1483,16 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue().strip(), '11')
 
+    def test_pid_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        plugin.ctl.options._server.supervisor.getPID = f
+        plugin.do_pid('')
+        self.assertEqual(called, [])
+
     def test_maintail_help(self):
         plugin = self._makeOne()
         plugin.help_maintail()
@@ -1485,6 +1573,16 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'supervisord: ERROR (unknown error reading log)\n')
 
+    def test_maintail_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        plugin.ctl.options._server.supervisor.readLog = f
+        plugin.do_maintail('')
+        self.assertEqual(called, [])
+
     def test_fg_help(self):
         plugin = self._makeOne()
         plugin.help_fg()
@@ -1522,6 +1620,16 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(result, None)
         self.assertEqual(lines[-2], 'Error: process not running')
+
+    def test_fg_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        plugin.ctl.options._server.supervisor.getProcessInfo = f
+        plugin.do_fg('foo')
+        self.assertEqual(called, [])
 
     def test_exit_help(self):
         plugin = self._makeOne()
