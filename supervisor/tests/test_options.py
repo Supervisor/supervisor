@@ -50,8 +50,12 @@ logger = logging.getLogger(__name__)
 
 class OptionTests(unittest.TestCase):
 
-    def _makeOptions(self, read_error=False):
+    def _getTargetClass(self):
         from supervisor.options import Options
+        return Options
+
+    def _makeOptions(self, read_error=False):
+        Options = self._getTargetClass()
         from supervisor.datatypes import integer
 
         class MyOptions(Options):
@@ -78,6 +82,106 @@ class OptionTests(unittest.TestCase):
                     short='p:', long='other=', handler=integer)
         return options
 
+    def test_add_flag_not_None_handler_not_None(self):
+        cls = self._getTargetClass()
+        inst = cls()
+        self.assertRaises(ValueError, inst.add, flag=True, handler=True)
+
+    def test_add_flag_not_None_long_false_short_false(self):
+        cls = self._getTargetClass()
+        inst = cls()
+        self.assertRaises(
+            ValueError,
+            inst.add,
+            flag=True,
+            long=False,
+            short=False,
+            )
+
+    def test_add_flag_not_None_short_endswith_colon(self):
+        cls = self._getTargetClass()
+        inst = cls()
+        self.assertRaises(
+            ValueError,
+            inst.add,
+            flag=True,
+            long=False,
+            short=":",
+            )
+        
+    def test_add_flag_not_None_long_endswith_equal(self):
+        cls = self._getTargetClass()
+        inst = cls()
+        self.assertRaises(
+            ValueError,
+            inst.add,
+            flag=True,
+            long='=',
+            short=False,
+            )
+        
+    def test_add_inconsistent_short_long_options(self):
+        cls = self._getTargetClass()
+        inst = cls()
+        self.assertRaises(
+            ValueError,
+            inst.add,
+            long='=',
+            short='abc',
+            )
+        
+    def test_add_short_option_startswith_dash(self):
+        cls = self._getTargetClass()
+        inst = cls()
+        self.assertRaises(
+            ValueError,
+            inst.add,
+            long=False,
+            short='-abc',
+            )
+
+    def test_add_short_option_too_long(self):
+        cls = self._getTargetClass()
+        inst = cls()
+        self.assertRaises(
+            ValueError,
+            inst.add,
+            long=False,
+            short='abc',
+            )
+
+    def test_add_duplicate_short_option_key(self):
+        cls = self._getTargetClass()
+        inst = cls()
+        inst.options_map = {'-a':True}
+        self.assertRaises(
+            ValueError,
+            inst.add,
+            long=False,
+            short='a',
+            )
+
+    def test_add_long_option_startswith_dash(self):
+        cls = self._getTargetClass()
+        inst = cls()
+        self.assertRaises(
+            ValueError,
+            inst.add,
+            long='-abc',
+            short=False,
+            )
+
+    def test_add_duplicate_long_option_key(self):
+        cls = self._getTargetClass()
+        inst = cls()
+        inst.options_map = {'--abc':True}
+        self.assertRaises(
+            ValueError,
+            inst.add,
+            long='abc',
+            short=False,
+            )
+        
     def test_searchpaths(self):
         options = self._makeOptions()
         self.assertEqual(len(options.searchpaths), 5)
