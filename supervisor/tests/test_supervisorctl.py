@@ -58,6 +58,16 @@ class ControllerTests(unittest.TestCase):
                          ' enabled in the configuration file'
                          ' (see sample.conf).\n')
 
+    def test__upcheck_reraises_other_xmlrpc_faults(self):
+        options = DummyClientOptions()
+        from supervisor.xmlrpc import Faults
+        def f(*arg, **kw):
+            raise xmlrpclib.Fault(Faults.FAILED, '')
+        options._server.supervisor.getVersion = f
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        self.assertRaises(xmlrpclib.Fault, controller.upcheck)
+
     def test__upcheck_catches_socket_error_ECONNREFUSED(self):
         options = DummyClientOptions()
         import supervisor.medusa.text_socket as socket
@@ -91,6 +101,17 @@ class ControllerTests(unittest.TestCase):
 
         output = controller.stdout.getvalue()
         self.assertTrue('no such file' in output)
+
+    def test__upcheck_reraises_other_socket_faults(self):
+        options = DummyClientOptions()
+        import supervisor.medusa.text_socket as socket
+        import errno
+        def f(*arg, **kw):
+            raise socket.error(errno.EBADF, '')
+        options._server.supervisor.getVersion = f
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        self.assertRaises(socket.error, controller.upcheck)
 
     def test_onecmd(self):
         options = DummyClientOptions()
