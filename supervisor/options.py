@@ -850,7 +850,9 @@ class ServerOptions(Options):
                     'numprocs > 1')
 
         if stopasgroup and not killasgroup:
-            raise ValueError("Cannot set stopasgroup=true and killasgroup=false")
+            raise ValueError(
+                "Cannot set stopasgroup=true and killasgroup=false"
+                )
 
         host_node_name = platform.node()
         for process_num in range(numprocs_start, numprocs + numprocs_start):
@@ -1313,7 +1315,6 @@ class ServerOptions(Options):
             lmin = limit['min']
             res = limit['resource']
             msg = limit['msg']
-            name = limit['name']
 
             soft, hard = resource.getrlimit(res)
 
@@ -1420,7 +1421,8 @@ class ServerOptions(Options):
         elif stat.S_ISDIR(st[stat.ST_MODE]):
             raise NotExecutable("command at %r is a directory" % filename)
 
-        elif not (stat.S_IMODE(st[stat.ST_MODE]) & 73): #0111 in py2, 0o111 in py3
+        elif not (stat.S_IMODE(st[stat.ST_MODE]) & 73):
+            # 73 is spelled 0111 in py2, 0o111 in py3
             raise NotExecutable("command at %r is not executable" % filename)
 
         elif not os.access(filename, os.X_OK):
@@ -1825,9 +1827,14 @@ class EventListenerPoolConfig(Config):
         return EventListenerPool(self)
 
 class FastCGIGroupConfig(ProcessGroupConfig):
-    def __init__(self, options, name, priority, process_configs,
-                 socket_config):
-        ProcessGroupConfig.__init__(self, options, name, priority, process_configs)
+    def __init__(self, options, name, priority, process_configs, socket_config):
+        ProcessGroupConfig.__init__(
+            self,
+            options,
+            name,
+            priority,
+            process_configs,
+            )
         self.socket_config = socket_config
 
     def __eq__(self, other):
