@@ -411,9 +411,6 @@ class DefaultControllerPlugin(ControllerPluginBase):
     name = 'default'
     listener = None # for unit tests
     def _tailf(self, path):
-        if not self.ctl.upcheck():
-            return
-
         self.ctl.output('==> Press Ctrl-C to exit <==')
 
         username = self.ctl.options.username
