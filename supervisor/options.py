@@ -288,7 +288,8 @@ class Options:
                     self._set(name, value, 1)
 
         if self.configfile is None:
-            if os.getuid() == 0 and self.progname.find("supervisord") > -1: # pragma: no cover
+            uid = os.getuid()
+            if uid == 0 and "supervisord" in self.progname: # pragma: no cover
                 self.warnings.warn(
                     'Supervisord is running as root and it is searching '
                     'for its configuration file in default locations '
@@ -875,7 +876,7 @@ class ServerOptions(Options):
             get(section, 'process_name', '%(program_name)s', do_expand=False))
 
         if numprocs > 1:
-            if process_name.find('%(process_num)') == -1:
+            if not '%(process_num)' in process_name:
                 # process_name needs to include process_num when we
                 # represent a group of processes
                 raise ValueError(
