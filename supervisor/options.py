@@ -883,7 +883,9 @@ class ServerOptions(Options):
                     'numprocs > 1')
 
         if stopasgroup and not killasgroup:
-            raise ValueError("Cannot set stopasgroup=true and killasgroup=false")
+            raise ValueError(
+                "Cannot set stopasgroup=true and killasgroup=false"
+                )
 
         for process_num in range(numprocs_start, numprocs + numprocs_start):
             expansions = common_expansions
@@ -1879,12 +1881,14 @@ class EventListenerPoolConfig(Config):
         return EventListenerPool(self)
 
 class FastCGIGroupConfig(ProcessGroupConfig):
-    def __init__(self, options, name, priority, process_configs,
-                 socket_config):
-        self.options = options
-        self.name = name
-        self.priority = priority
-        self.process_configs = process_configs
+    def __init__(self, options, name, priority, process_configs, socket_config):
+        ProcessGroupConfig.__init__(
+            self,
+            options,
+            name,
+            priority,
+            process_configs,
+            )
         self.socket_config = socket_config
 
     def __eq__(self, other):
