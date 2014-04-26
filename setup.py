@@ -27,6 +27,11 @@ tests_require = []
 if sys.version_info[:2] < (3, 3):
     tests_require.append('mock')
 
+testing_extras = tests_require + [
+    'nose',
+    'coverage',
+    ]
+    
 from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
 try:
@@ -66,7 +71,10 @@ dist = setup(
     maintainer_email="chrism@plope.com",
     packages=find_packages(),
     install_requires=requires,
-    extras_require={'iterparse':['cElementTree >= 1.0.2']},
+    extras_require={
+        'iterparse':['cElementTree >= 1.0.2'],
+        'testing':testing_extras,
+        },
     tests_require=tests_require,
     include_package_data=True,
     zip_safe=False,
