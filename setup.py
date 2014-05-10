@@ -48,6 +48,12 @@ CLASSIFIERS = [
     'Topic :: System :: Boot',
     'Topic :: System :: Monitoring',
     'Topic :: System :: Systems Administration',
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 2",
+    "Programming Language :: Python :: 2.4",
+    "Programming Language :: Python :: 2.5",
+    "Programming Language :: Python :: 2.6",
+    "Programming Language :: Python :: 2.7",
 ]
 
 version_txt = os.path.join(here, 'supervisor/version.txt')
