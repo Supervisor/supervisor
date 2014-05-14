@@ -59,6 +59,9 @@
 - Fixed a hang that could occur in ``supervisord`` if log rotation is used
   and an outside program deletes an active log file.  Patch by Magnus Lycka.
 
+- A warning is now logged if a glob pattern in an ``[include]`` section does
+  not match any files.  Patch by Daniel Hahler.
+
 3.0 (2013-07-30)
 ----------------
 

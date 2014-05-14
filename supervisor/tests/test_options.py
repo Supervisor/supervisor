@@ -657,6 +657,20 @@ class ServerOptionsTests(unittest.TestCase):
         else:
             raise AssertionError("Didn't raise")
 
+    def test_include_with_no_matching_files_logs_warning(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+        user=root
+
+        [include]
+        files=nonexistant/*
+        """)
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        self.assertEqual(instance.parse_warnings,
+                         ['No file matches via include "./nonexistant/*"'])
+
     def test_get_pid(self):
         instance = self._makeOne()
         self.assertEqual(os.getpid(), instance.get_pid())
