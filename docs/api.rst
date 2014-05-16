@@ -257,11 +257,11 @@ Process Control
 
         .. describe:: state
 
-            State code, see table below.
+            State code, see :ref:`process_states`.
 
         .. describe:: statename
 
-            String description of `state`, see table below.
+            String description of `state`, see :ref:`process_states`.
 
         .. describe:: stdout_logfile
 
