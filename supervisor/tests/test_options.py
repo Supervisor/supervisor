@@ -2401,6 +2401,42 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(factory[1], sys.modules[__name__])
         self.assertEqual(factory[2], {'foo': 'cat'})
 
+    def test_rpcinterfaces_from_parser_factory_missing(self):
+        text = lstrip("""\
+        [rpcinterface:dummy]
+        # note: no supervisor.rpcinterface_factory here
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        try:
+            instance.get_plugins(config,
+                                 'supervisor.rpcinterface_factory',
+                                 'rpcinterface:')
+            self.fail('nothing raised')
+        except ValueError as exc:
+            self.assertEqual(exc.args[0], 'section [rpcinterface:dummy] '
+                'does not specify a supervisor.rpcinterface_factory')
+
+    def test_rpcinterfaces_from_parser_factory_not_importable(self):
+        text = lstrip("""\
+        [rpcinterface:dummy]
+        supervisor.rpcinterface_factory = nonexistant
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        try:
+            instance.get_plugins(config,
+                                 'supervisor.rpcinterface_factory',
+                                 'rpcinterface:')
+            self.fail('nothing raised')
+        except ValueError as exc:
+            self.assertEqual(exc.args[0], 'nonexistant cannot be resolved '
+                'within [rpcinterface:dummy]')
+
     def test_clear_autochildlogdir(self):
         dn = tempfile.mkdtemp()
         try:
