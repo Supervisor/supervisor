@@ -576,6 +576,23 @@ class SubprocessTests(unittest.TestCase):
         instance.dispatchers[stdin_fd].close()
         self.assertRaises(OSError, instance.write, sent)
 
+    def test_write_stdin_fd_none(self):
+        executable = '/bin/cat'
+        options = DummyOptions()
+        config = DummyPConfig(options, 'output', executable)
+        instance = self._makeOne(config)
+        options.forkpid = 1
+        instance.spawn()
+        stdin_fd = instance.pipes['stdin']
+        instance.dispatchers[stdin_fd].close()
+        instance.pipes['stdin'] = None
+        try:
+            instance.write('foo')
+            self.fail('nothing raised')
+        except OSError as exc:
+            self.assertEqual(exc.args[0], errno.EPIPE)
+            self.assertEqual(exc.args[1], 'Process has no stdin channel')
+
     def test_write_dispatcher_flush_raises_epipe(self):
         executable = '/bin/cat'
         options = DummyOptions()
