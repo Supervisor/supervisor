@@ -123,3 +123,6 @@ with third party applications:
     to `Riemann <http://riemann.io/>`_.
 `gulp-supervisor <https://github.com/leny/gulp-supervisor>`_
     Run Supervisor as a `Gulp <http://gulpjs.com/>`_ task.
+`Yeebase.Supervisor <https://github.com/yeebase/Yeebase.Supervisor>`_
+    Control and monitor Supervisor from a TYPO3 Flow application.
+
