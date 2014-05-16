@@ -83,7 +83,7 @@ class OptionTests(unittest.TestCase):
             long=False,
             short=":",
             )
-        
+
     def test_add_flag_not_None_long_endswith_equal(self):
         cls = self._getTargetClass()
         inst = cls()
@@ -94,7 +94,7 @@ class OptionTests(unittest.TestCase):
             long='=',
             short=False,
             )
-        
+
     def test_add_inconsistent_short_long_options(self):
         cls = self._getTargetClass()
         inst = cls()
@@ -104,7 +104,7 @@ class OptionTests(unittest.TestCase):
             long='=',
             short='abc',
             )
-        
+
     def test_add_short_option_startswith_dash(self):
         cls = self._getTargetClass()
         inst = cls()
@@ -156,7 +156,7 @@ class OptionTests(unittest.TestCase):
             long='abc',
             short=False,
             )
-        
+
     def test_searchpaths(self):
         options = self._makeOptions()
         self.assertEqual(len(options.searchpaths), 5)
