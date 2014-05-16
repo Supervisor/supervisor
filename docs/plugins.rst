@@ -121,3 +121,5 @@ with third party applications:
 `Supermann <https://github.com/borntyping/supermann>`_
     Supermann monitors processes running under Supervisor and sends metrics
     to `Riemann <http://riemann.io/>`_.
+`gulp-supervisor <https://github.com/leny/gulp-supervisor>`_
+    Run Supervisor as a `Gulp <http://gulpjs.com/>`_ task.
