@@ -665,6 +665,22 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.killing, 1)
         self.assertEqual(options.kills[11], signal.SIGTERM)
 
+    def test_stop_not_in_stoppable_state_error(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        instance.pid = 11
+        dispatcher = DummyDispatcher(writable=True)
+        instance.dispatchers = {'foo':dispatcher}
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.STOPPED
+        try:
+            instance.stop()
+            fail('nothing raised')
+        except AssertionError as exc:
+            self.assertEqual(exc.args[0], 'Assertion failed for test: '
+                'STOPPED not in RUNNING STARTING STOPPING')
+
     def test_give_up(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test')
