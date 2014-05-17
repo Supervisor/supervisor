@@ -383,6 +383,76 @@ class IterparseLoadsTests(unittest.TestCase):
         self.assertEqual(params[8], [12, 34])
         self.assertEqual(params[9], {'k': [1]})
 
+class TestDeferredXMLRPCResponse(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.xmlrpc import DeferredXMLRPCResponse
+        return DeferredXMLRPCResponse
+
+    def _makeOne(self, request=None, callback=None):
+        if request is None:
+            request = DummyRequest(None, None, None, None, None)
+        if callback is None:
+            callback = Dummy()
+            callback.delay = 1
+        return self._getTargetClass()(request, callback)
+
+    def test_ctor(self):
+        callback = Dummy()
+        callback.delay = 1
+        inst = self._makeOne(request='request', callback=callback)
+        self.assertEqual(inst.callback, callback)
+        self.assertEqual(inst.delay, 1.0)
+        self.assertEqual(inst.request, 'request')
+        self.assertEqual(inst.finished, False)
+
+    def test_more_finished(self):
+        inst = self._makeOne()
+        inst.finished = True
+        result = inst.more()
+        self.assertEqual(result,  '')
+
+    def test_more_callback_returns_not_done_yet(self):
+        from supervisor.http import NOT_DONE_YET
+        def callback():
+            return NOT_DONE_YET
+        callback.delay = 1
+        inst = self._makeOne(callback=callback)
+        self.assertEqual(inst.more(), NOT_DONE_YET)
+
+    def test_more_callback_raises_RPCError(self):
+        from supervisor.xmlrpc import RPCError, Faults
+        def callback():
+            raise RPCError(Faults.UNKNOWN_METHOD)
+        callback.delay = 1
+        inst = self._makeOne(callback=callback)
+        self.assertEqual(inst.more(), None)
+        self.assertEqual(len(inst.request.producers), 1)
+        self.assertTrue('UNKNOWN_METHOD' in inst.request.producers[0])
+        self.assertTrue(inst.finished)
+
+    def test_more_callback_returns_value(self):
+        def callback():
+            return 'abc'
+        callback.delay = 1
+        inst = self._makeOne(callback=callback)
+        self.assertEqual(inst.more(), None)
+        self.assertEqual(len(inst.request.producers), 1)
+        self.assertTrue('abc' in inst.request.producers[0])
+        self.assertTrue(inst.finished)
+
+    def test_more_callback_raises_unexpected_exception(self):
+        def callback():
+            raise ValueError('foo')
+        callback.delay = 1
+        inst = self._makeOne(callback=callback)
+        inst.traceback = Dummy()
+        called = []
+        inst.traceback.print_exc = lambda: called.append(True)
+        self.assertEqual(inst.more(), None)
+        self.assertEqual(inst.request._error, 500)
+        self.assertTrue(inst.finished)
+        self.assertTrue(called)
+        
 class DummyResponse:
     def __init__(self, status=200, body='', reason='reason'):
         self.status = status
@@ -391,6 +461,9 @@ class DummyResponse:
 
     def read(self):
         return self.body
+
+class Dummy(object):
+    pass
 
 class DummyConnection:
     closed = False
