@@ -315,8 +315,6 @@ class request_loop_thread (threading.Thread):
 
 if __name__ == '__main__':
 
-    import sys
-
     if len(sys.argv) < 2:
         print('Usage: %s <worker_threads>' % sys.argv[0])
     else:
