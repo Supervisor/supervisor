@@ -676,7 +676,7 @@ class SubprocessTests(unittest.TestCase):
         instance.state = ProcessStates.STOPPED
         try:
             instance.stop()
-            fail('nothing raised')
+            self.fail('nothing raised')
         except AssertionError as exc:
             self.assertEqual(exc.args[0], 'Assertion failed for test: '
                 'STOPPED not in RUNNING STARTING STOPPING')
