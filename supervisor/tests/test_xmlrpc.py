@@ -67,14 +67,14 @@ class XMLRPCHandlerTests(unittest.TestCase):
         self.assertEqual(handler.rpcinterface.__class__, RootRPCInterface)
 
     def test_match(self):
-        class DummyRequest:
+        class DummyRequest2:
             def __init__(self, uri):
                 self.uri = uri
         supervisor = DummySupervisor()
         subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
         handler = self._makeOne(supervisor, subinterfaces)
-        self.assertEqual(handler.match(DummyRequest('/RPC2')), True)
-        self.assertEqual(handler.match(DummyRequest('/nope')), False)
+        self.assertEqual(handler.match(DummyRequest2('/RPC2')), True)
+        self.assertEqual(handler.match(DummyRequest2('/nope')), False)
 
     def test_continue_request_nosuchmethod(self):
         supervisor = DummySupervisor()
