@@ -119,7 +119,7 @@ if __name__ == '__main__':
 
         def handle_accept (self):
             conn, addr = self.accept()
-            tp = thread_parent (conn, addr)
+            thread_parent(conn, addr)
 
     thread_server()
     #asyncore.loop(1.0, use_poll=1)
