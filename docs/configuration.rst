@@ -854,16 +854,6 @@ where specified.
 
   *Introduced*: 3.0a7
 
-``stdout_syslog``
-
-  If true, stdout will be directed to syslog along with the process name.
-
-  *Default*: False
-
-  *Required*:  No.
-
-  *Introduced*: 3.1a1
-
 ``stderr_logfile``
 
   Put process stderr output in this file unless ``redirect_stderr`` is
@@ -930,16 +920,6 @@ where specified.
   *Required*:  No.
 
   *Introduced*: 3.0a7
-
-``stderr_syslog``
-
-  If true, stderr will be directed to syslog along with the process name.
-
-  *Default*: False
-
-  *Required*:  No.
-
-  *Introduced*: 3.1a1
 
 ``environment``
 

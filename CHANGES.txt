@@ -39,12 +39,6 @@
   a homogeneous process group.  This allows each process to have its own
   working directory.  Patch by Perttu Ranta-aho.
 
-- Added new ``stdout_syslog`` and ``stderr_syslog`` options to the config
-  file.  These are boolean options that indicate whether process output will
-  be sent to syslog.  Supervisor can now log to both files and syslog at the
-  same time.  Specifying a log filename of ``syslog`` is still supported
-  but deprecated.  Patch by Jason R. Coombs.
-
 - Removed ``setuptools`` from the ``requires`` list in ``setup.py`` because
   it caused installation issues on some systems.
 

@@ -322,45 +322,36 @@ class SyslogHandler(Handler):
         except:
             self.handleError()
 
-def getLogger(level=None):
-    return Logger(level)
+def getLogger(filename, level, fmt, rotating=False, maxbytes=0, backups=0,
+              stdout=False):
 
-_2MB = 1<<21
+    handlers = []
 
-def handle_boundIO(logger, fmt, maxbytes=_2MB):
-    io = BoundIO(maxbytes)
-    handler = StreamHandler(io)
-    handler.setLevel(logger.level)
-    handler.setFormat(fmt)
-    logger.addHandler(handler)
-    logger.getvalue = io.getvalue
+    logger = Logger(level)
 
-    return logger
+    if filename is None:
+        if not maxbytes:
+            maxbytes = 1<<21 #2MB
+        io = BoundIO(maxbytes)
+        handlers.append(StreamHandler(io))
+        logger.getvalue = io.getvalue
 
-def handle_stdout(logger, fmt):
-    handler = StreamHandler(sys.stdout)
-    handler.setFormat(fmt)
-    handler.setLevel(logger.level)
-    logger.addHandler(handler)
-
-def handle_syslog(logger, fmt):
-    handler = SyslogHandler()
-    handler.setFormat(fmt)
-    handler.setLevel(logger.level)
-    logger.addHandler(handler)
-
-def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
-    if filename == 'syslog':
-        handler = SyslogHandler()
+    elif filename == 'syslog':
+        handlers.append(SyslogHandler())
 
     else:
         if rotating is False:
-            handler = FileHandler(filename)
+            handlers.append(FileHandler(filename))
         else:
-            handler = RotatingFileHandler(filename, 'a', maxbytes, backups)
+            handlers.append(RotatingFileHandler(filename,'a',maxbytes,backups))
 
-    handler.setFormat(fmt)
-    handler.setLevel(logger.level)
-    logger.addHandler(handler)
+    if stdout:
+        handlers.append(StreamHandler(sys.stdout))
+
+    for handler in handlers:
+        handler.setFormat(fmt)
+        handler.setLevel(level)
+        logger.addHandler(handler)
 
     return logger
+

@@ -102,7 +102,7 @@ class POutputDispatcherTests(unittest.TestCase):
         process.pid = 4000
         dispatcher = self._makeOne(process)
         dispatcher.capturemode = True
-        dispatcher.capturelog.getvalue = lambda: 'hallooo'
+        dispatcher.capturelog.data = ['hallooo']
         L = []
         def doit(event):
             L.append(event)
