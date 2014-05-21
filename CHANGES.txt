@@ -1,10 +1,13 @@
 4.0.0-dev (Next 4.x Release)
 ----------------------------
 
-- The ``supervisor`` package is no longer a namespace package.
+- Support for Python 3 has been added.  On Python 3, Supervisor requires
+  Python 3.2 or later.
 
 - Support for Python 2.5 has been dropped.  On Python 2, Supervisor
   now requires Python 2.6 or later.
+
+- The ``supervisor`` package is no longer a namespace package.
 
 - Parsing ``environment=`` has been improved to allow escaped quotes
   inside quotes and quoted empty values.  Patch by Stefan Friesel.
