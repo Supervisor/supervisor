@@ -829,8 +829,6 @@ class ServerOptions(Options):
         redirect_stderr = boolean(get(section, 'redirect_stderr','false'))
         numprocs = integer(get(section, 'numprocs', 1))
         numprocs_start = integer(get(section, 'numprocs_start', 0))
-        process_name = get(section, 'process_name', '%(program_name)s', 
-                            do_expand=False)
         environment_str = get(section, 'environment', '', do_expand=False)
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
         stdout_events = boolean(get(section, 'stdout_events_enabled','false'))
@@ -857,7 +855,7 @@ class ServerOptions(Options):
                 'program section %s does not specify a command' % section)
 
         process_name = process_or_group_name(
-            get(section, 'process_name', '%(program_name)s'))
+            get(section, 'process_name', '%(program_name)s', do_expand=False))
 
         if numprocs > 1:
             if not '%(process_num)' in process_name:
