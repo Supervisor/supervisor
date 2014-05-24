@@ -5,6 +5,20 @@ from supervisor.compat import total_ordering
 from supervisor.compat import Fault
 from supervisor.compat import as_string
 
+# mock is imported here for py2/3 compat.  we only declare mock as a dependency
+# via tests_require so it is not available on all supervisor installs.  the
+# modules imported in supervisor.compat must always be available.
+
+try: # pragma: no cover
+    from unittest.mock import Mock, patch, sentinel
+except ImportError: # pragma: no cover
+    from mock import Mock, patch, sentinel
+
+try: # pragma: no cover
+    import unittest.mock as mock
+except ImportError: # pragma: no cover
+    import mock
+
 class DummyOptions:
 
     make_pipes_error = None

@@ -5,7 +5,7 @@ import signal
 import tempfile
 import unittest
 
-from supervisor.compat import Mock, patch, sentinel
+from supervisor.tests.base import Mock, patch, sentinel
 from supervisor.compat import maxint
 
 from supervisor import datatypes

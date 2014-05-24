@@ -13,8 +13,8 @@ import errno
 from supervisor import read_file
 from supervisor.compat import StringIO
 from supervisor.compat import as_bytes
-from supervisor.compat import Mock, sentinel, patch
 
+from supervisor.tests.base import Mock, sentinel, patch
 from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import DummyLogger
 from supervisor.tests.base import DummyOptions

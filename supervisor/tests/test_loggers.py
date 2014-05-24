@@ -7,10 +7,10 @@ import shutil
 import os
 import syslog
 
-from supervisor.compat import mock
 from supervisor.compat import PY3
 from supervisor.compat import as_string
 
+from supervisor.tests.base import mock
 from supervisor.tests.base import DummyStream
 from supervisor import read_file
 
@@ -64,7 +64,7 @@ class BareHandlerTests(HandlerTests, unittest.TestCase):
         inst = self._makeOne(stream=stream)
         inst.closed = True
         self.assertEqual(inst.close(), None)
-        
+
     def test_close_stream_fileno_above_3(self):
         stream = DummyStream(fileno=50)
         inst = self._makeOne(stream=stream)
@@ -104,7 +104,7 @@ class BareHandlerTests(HandlerTests, unittest.TestCase):
         inst.emit(record)
         self.assertEqual(stream.flushed, False)
         self.assertEqual(stream.written, '')
-        
+
 class FileHandlerTests(HandlerTests, unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.loggers import FileHandler
@@ -328,8 +328,8 @@ class RotatingFileHandlerTests(FileHandlerTests):
         inst = self._makeOne(self.filename)
         inst.maxBytes = 0
         self.assertEqual(inst.doRollover(), None)
-        
-        
+
+
 class BoundIOTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.loggers import BoundIO
@@ -446,7 +446,7 @@ class LoggerTests(unittest.TestCase):
         handler = DummyHandler(LevelsByName.CRIT)
         logger = self._makeOne(LevelsByName.CRIT, (handler,))
         self.assertRaises(NotImplementedError, logger.getvalue)
-        
+
 
 class MockSysLog(mock.Mock):
     def __call__(self, *args, **kwargs):
@@ -481,7 +481,7 @@ class SyslogHandlerTests(HandlerTests, unittest.TestCase):
         handler.handleError = lambda: handled.append(True)
         handler.emit(record)
         self.assertEqual(handled, [True])
-        
+
 
     @mock.patch('syslog.syslog', MockSysLog())
     def test_emit_ascii_noerror(self):

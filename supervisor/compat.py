@@ -132,17 +132,6 @@ except ImportError: # pragma: no cover
     except ImportError:
         iterparse = None
 
-
-try: # pragma: no cover
-    from unittest.mock import Mock, patch, sentinel
-except ImportError: # pragma: no cover
-    from mock import Mock, patch, sentinel
-
-try: # pragma: no cover
-    import unittest.mock as mock
-except ImportError: # pragma: no cover
-    import mock
-
 try: # pragma: no cover
     from xmlrpc.client import Fault
 except ImportError: # pragma: no cover

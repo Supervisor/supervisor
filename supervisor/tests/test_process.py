@@ -5,10 +5,10 @@ import sys
 import time
 import unittest
 
-from supervisor.compat import Mock, patch, sentinel
 from supervisor.compat import as_bytes
 from supervisor.compat import maxint
 
+from supervisor.tests.base import Mock, patch, sentinel
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyProcess
