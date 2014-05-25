@@ -379,7 +379,14 @@ class Options:
             except ImportError:
                 raise ValueError('%s cannot be resolved within [%s]' % (
                     factory_spec, section))
-            items = parser.items(section)
+            items_tmp = parser.items(section)
+            items = [ ]
+            for ikv in items_tmp:
+                ik, iv_tmp = ikv
+                iexpansions = { }
+                iexpansions.update(environ_expansions(env=None))
+                iv = expand(iv_tmp, iexpansions, ik)
+                items.append((ik, iv))
             items.remove((factory_key, factory_spec))
             factories.append((name, factory, dict(items)))
 
@@ -1175,7 +1182,7 @@ class ServerOptions(Options):
                                (help, errorname, why.args[0]))
             self.unlink_socketfiles = False
         except ValueError as why:
-            self.usage(why.args[0])
+            self.usage(why) #why.args[0])
 
     def get_autochildlog_name(self, name, identifier, channel):
         prefix='%s-%s---%s-' % (name, channel, identifier)
