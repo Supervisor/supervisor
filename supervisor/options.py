@@ -1182,7 +1182,7 @@ class ServerOptions(Options):
                                (help, errorname, why.args[0]))
             self.unlink_socketfiles = False
         except ValueError as why:
-            self.usage(why) #why.args[0])
+            self.usage(why.args[0])
 
     def get_autochildlog_name(self, name, identifier, channel):
         prefix='%s-%s---%s-' % (name, channel, identifier)
