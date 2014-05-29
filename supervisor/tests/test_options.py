@@ -403,6 +403,16 @@ class ClientOptionsTests(unittest.TestCase):
         instance.realize(args=['--serverurl', 'unix:///dev/null'])
         self.assertEqual(instance.serverurl, 'unix:///dev/null')
 
+    def test_options_unixsocket_configfile(self):
+        s = lstrip("""[supervisorctl]
+        serverurl=unix:///dev/null
+        """)
+        fp = StringIO(s)
+        instance = self._makeOne()
+        instance.configfile = fp
+        instance.realize()
+        self.assertEqual(instance.serverurl, 'unix:///dev/null')
+
 class ServerOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ServerOptions
@@ -866,6 +876,56 @@ class ServerOptionsTests(unittest.TestCase):
                           instance.check_execv_args, '/',
                           ['/'], os.stat('/'))
 
+    def test_options_afunix(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [unix_http_server]
+        file=/tmp/supvtest.sock
+        username=johndoe
+        password=passwordhere
+
+        [supervisord]
+        ; ...
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance.configfile = StringIO(text)
+        conf = instance.read_config(StringIO(text))
+        instance.realize(args=[])
+        # unix_http_server
+        options = instance.configroot.supervisord
+        self.assertEqual(options.server_configs[0]['family'], socket.AF_UNIX)
+        self.assertEqual(options.server_configs[0]['file'], '/tmp/supvtest.sock')
+        self.assertEqual(options.server_configs[0]['chmod'], 448) # defaults
+        self.assertEqual(options.server_configs[0]['chown'], (-1,-1)) # defaults
+
+    def test_options_afunix_chxxx_values_valid(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [unix_http_server]
+        file=/tmp/supvtest.sock
+        username=johndoe
+        password=passwordhere
+        chown=root:root
+        chmod=0755
+
+        [supervisord]
+        ; ...
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance.configfile = StringIO(text)
+        conf = instance.read_config(StringIO(text))
+        instance.realize(args=[])
+        # unix_http_server
+        options = instance.configroot.supervisord
+        self.assertEqual(options.server_configs[0]['family'], socket.AF_UNIX)
+        self.assertEqual(options.server_configs[0]['file'], '/tmp/supvtest.sock')
+        self.assertEqual(options.server_configs[0]['chmod'], 493)
+        self.assertEqual(options.server_configs[0]['chown'], (0,0))
+
     def test_cleanup_afunix_unlink(self):
         fn = tempfile.mktemp()
         f = open(fn, 'w')
@@ -1115,8 +1175,10 @@ class ServerOptionsTests(unittest.TestCase):
         conf = instance.read_config(StringIO(text))
         instance.realize(args=[])
         # supervisord
-        self.assertEqual(instance.logfile, '%(HOME)s/supervisord.log' % os.environ)
-        self.assertEqual(instance.identifier, 'supervisor_%(USER)s' % os.environ)
+        self.assertEqual(instance.logfile, 
+                         '%(HOME)s/supervisord.log' % os.environ)
+        self.assertEqual(instance.identifier, 
+                         'supervisor_%(USER)s' % os.environ)
         self.assertEqual(instance.logfile_maxbytes, 53477376)
         self.assertEqual(instance.logfile_backups, 10)
         self.assertEqual(instance.loglevel, LevelsByName.INFO)
@@ -1140,7 +1202,8 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(len(cat1.process_configs), 1)
         proc1 = cat1.process_configs[0]
         self.assertEqual(proc1.name, 'cat1')
-        self.assertEqual(proc1.command, '/bin/customcat --logdir=/path/to/logs')
+        self.assertEqual(proc1.command, 
+                         '/bin/customcat --logdir=/path/to/logs')
         self.assertEqual(proc1.priority, 3)
         self.assertEqual(proc1.autostart, True)
         self.assertEqual(proc1.autorestart, datatypes.RestartWhenExitUnexpected)
