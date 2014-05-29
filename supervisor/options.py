@@ -384,7 +384,7 @@ class Options:
             for ikv in items_tmp:
                 ik, iv_tmp = ikv
                 iexpansions = { }
-                iexpansions.update(environ_expansions(env=None))
+                iexpansions.update(environ_expansions())
                 iv = expand(iv_tmp, iexpansions, ik)
                 items.append((ik, iv))
             items.remove((factory_key, factory_spec))
@@ -410,12 +410,10 @@ class ServerOptions(Options):
     unlink_socketfiles = True
     mood = states.SupervisorStates.RUNNING
 
-    def __init__(self, expansions_env=None):
+    def __init__(self):
         Options.__init__(self)
         self.configroot = Dummy()
         self.configroot.supervisord = Dummy()
-
-        self.expansions_env = expansions_env
 
         self.add(None, None, "v", "version", self.version)
         self.add("nodaemon", "supervisord.nodaemon", "n", "nodaemon", flag=1,
@@ -565,7 +563,7 @@ class ServerOptions(Options):
                 fp.close()
 
         expansions = {'here':self.here}
-        expansions.update(environ_expansions(env=self.expansions_env))
+        expansions.update(environ_expansions())
         if parser.has_section('include'):
             if not parser.has_option('include', 'files'):
                 raise ValueError(".ini file has [include] section, but no "
@@ -601,7 +599,6 @@ class ServerOptions(Options):
             expansions = kwargs.get('expansions', {})
             expansions.update(common_expansions)
             kwargs['expansions'] = expansions
-            kwargs['expansions_env'] = self.expansions_env
             return parser.getdefault(opt, default, **kwargs)
 
         section.minfds = integer(get('minfds', 1024))
@@ -658,7 +655,6 @@ class ServerOptions(Options):
             expansions = kwargs.get('expansions', {})
             expansions.update(common_expansions)
             kwargs['expansions'] = expansions
-            kwargs['expansions_env'] = self.expansions_env
             return parser.saneget(section, opt, default, **kwargs)
 
 
@@ -837,7 +833,6 @@ class ServerOptions(Options):
             expansions = kwargs.get('expansions', {})
             expansions.update(common_expansions)
             kwargs['expansions'] = expansions
-            kwargs['expansions_env'] = self.expansions_env
             return parser.saneget(section, opt, *args, **kwargs)
 
         priority = integer(get(section, 'priority', 999))
@@ -897,7 +892,7 @@ class ServerOptions(Options):
         for process_num in range(numprocs_start, numprocs + numprocs_start):
             expansions = common_expansions
             expansions.update({'process_num': process_num})
-            expansions.update(environ_expansions(env=self.expansions_env))
+            expansions.update(environ_expansions())
 
             environment = dict_of_key_value_pairs(
                 expand(environment_str, expansions, 'environment'))
@@ -1652,8 +1647,8 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
             return self.readfp(s)
 
     def saneget(self, section, option, default=_marker, do_expand=True, 
-                expansions={}, expansions_env=None):
-        expansions.update(environ_expansions(env=expansions_env))
+                expansions={}):
+        expansions.update(environ_expansions())
         try:
             optval = self.get(section, option)
             if isinstance(optval, basestring) and do_expand:
@@ -1667,9 +1662,9 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
             else:
                 return default
 
-    def getdefault(self, option, default=_marker, expansions={}, expansions_env=None, **kwargs):
+    def getdefault(self, option, default=_marker, expansions={}, **kwargs):
         return self.saneget(self.mysection, option, default=default, 
-                            expansions=expansions, expansions_env=expansions_env, **kwargs)
+                            expansions=expansions, **kwargs)
 
 
 class Config(object):
@@ -2052,16 +2047,13 @@ def expand(s, expansions, name):
             'Format string %r for %r is badly formatted' % (s, name)
             )
 
-def environ_expansions(env=None):
+def environ_expansions():
     """Return dict of environment variables, suitable for use in string
     expansions.
 
     Every environment variable is prefixed by 'ENV_'.
     """
     osenv = os.environ
-    if env is not None:
-        osenv = env
-
     x = {}
     import sys
     for key, value in osenv.items():

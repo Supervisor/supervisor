@@ -378,8 +378,8 @@ class ServerOptionsTests(unittest.TestCase):
         from supervisor.options import ServerOptions
         return ServerOptions
 
-    def _makeOne(self, expansions_env=None):
-        return self._getTargetClass()(expansions_env=expansions_env)
+    def _makeOne(self):
+        return self._getTargetClass()()
 
     def test_version(self):
         from supervisor.options import VERSION
@@ -1009,22 +1009,22 @@ class ServerOptionsTests(unittest.TestCase):
         expected = "/bin/foo --path='%s'" % os.environ['PATH']
         self.assertEqual(pconfigs[0].command, expected)
 
+    @patch.dict('os.environ', { 'HOME': tempfile.gettempdir(),
+                                'USER': 'johndoe',
+                                'Z_LOGFILE_MAXBYTES': '51MB',
+                                'Z_LOGFILE_BACKUPS': '10',
+                                'Z_LOGLEVEL': 'info',
+                                'Z_NODAEMON': 'false',
+                                'Z_MINFDS': '1024',
+                                'Z_MINPROCS': '200',
+                                'Z_UMASK': '002',
+                                'Z_NOCLEANUP': 'true',
+                                'Z_STRIP_ANSI': 'false',
+                                })
     def test_supervisord_section_all_environment_variable_expansions(self):
         import tempfile
-        mock_env = dict(os.environ.copy())
-        mock_env['HOME'] = tempfile.gettempdir()
-        mock_env['USER'] = 'johndoe'
-        mock_env['Z_LOGFILE_MAXBYTES'] = '51MB'
-        mock_env['Z_LOGFILE_BACKUPS'] = '10'
-        mock_env['Z_LOGLEVEL'] = 'info'
-        mock_env['Z_NODAEMON'] = 'false'
-        mock_env['Z_MINFDS'] = '1024'
-        mock_env['Z_MINPROCS'] = '200'
-        mock_env['Z_UMASK'] = '002'
-        mock_env['Z_NOCLEANUP'] = 'true'
-        mock_env['Z_STRIP_ANSI'] = 'false'
         # ---
-        instance = self._makeOne(expansions_env=mock_env)
+        instance = self._makeOne()
         text = lstrip("""\
         [supervisord]
         logfile = %(ENV_HOME)s/supervisord.log
@@ -1047,8 +1047,8 @@ class ServerOptionsTests(unittest.TestCase):
         instance.configfile = StringIO(text)
         conf = instance.read_config(StringIO(text))
         instance.realize(args=[])
-        self.assertEqual(instance.logfile, '%(HOME)s/supervisord.log' % mock_env)
-        self.assertEqual(instance.identifier, 'supervisor_%(USER)s' % mock_env)
+        self.assertEqual(instance.logfile, '%(HOME)s/supervisord.log' % os.environ)
+        self.assertEqual(instance.identifier, 'supervisor_%(USER)s' % os.environ)
         self.assertEqual(instance.logfile_maxbytes, 53477376)
         self.assertEqual(instance.logfile_backups, 10)
         self.assertEqual(instance.loglevel, LevelsByName.INFO)
