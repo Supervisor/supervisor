@@ -22,7 +22,7 @@ if py_version < (2, 6):
 elif (3, 0) < py_version < (3, 2):
     raise RuntimeError('On Python 3, Supervisor requires Python 3.2 or later')
 
-requires = ['meld3 >= 1.0.0', 'mock >= 0.5.0']
+requires = ['meld3 >= 1.0.0']
 tests_require = []
 if sys.version_info[:2] < (3, 3):
     tests_require.append('mock')
