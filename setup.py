@@ -24,7 +24,7 @@ elif (3, 0) < py_version < (3, 2):
 
 requires = ['meld3 >= 1.0.0']
 tests_require = []
-if sys.version_info[:2] < (3, 3):
+if py_version < (3, 3):
     tests_require.append('mock')
 
 testing_extras = tests_require + [
