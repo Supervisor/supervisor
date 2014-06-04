@@ -13,10 +13,7 @@ from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummyProcessGroup
 from supervisor.tests.base import DummyDispatcher
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from supervisor.compat import StringIO
 
 class EntryPointTests(unittest.TestCase):
     def test_main_noprofile(self):

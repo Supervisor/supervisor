@@ -1225,10 +1225,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_tailProcessStdoutLog_all(self):
         # test entire log is returned when offset==0 and logsize < length
-        try:
-            from string import letters
-        except ImportError:
-            from string import ascii_letters as letters
+        from supervisor.compat import letters
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',
                                stdout_logfile='/tmp/fooooooo')
@@ -1253,10 +1250,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_tailProcessStdoutLog_none(self):
         # test nothing is returned when offset <= logsize
-        try:
-            from string import letters
-        except ImportError:
-            from string import ascii_letters as letters
+        from supervisor.compat import letters
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',
                                stdout_logfile='/tmp/fooooooo')
@@ -1291,10 +1285,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_tailProcessStdoutLog_overflow(self):
         # test buffer overflow occurs when logsize > offset+length
-        try:
-            from string import letters
-        except ImportError:
-            from string import ascii_letters as letters
+        from supervisor.compat import letters
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',
                               stdout_logfile='/tmp/fooooooo')
@@ -1348,10 +1339,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_tailProcessStderrLog_all(self):
         # test entire log is returned when offset==0 and logsize < length
-        try:
-            from string import letters
-        except ImportError:
-            from string import ascii_letters as letters
+        from supervisor.compat import letters
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',
                                stderr_logfile='/tmp/fooooooo')
@@ -1376,10 +1364,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_tailProcessStderrLog_none(self):
         # test nothing is returned when offset <= logsize
-        try:
-            from string import letters
-        except ImportError:
-            from string import ascii_letters as letters
+        from supervisor.compat import letters
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',
                                stderr_logfile='/tmp/fooooooo')
@@ -1414,10 +1399,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_tailProcessStderrLog_overflow(self):
         # test buffer overflow occurs when logsize > offset+length
-        try:
-            from string import letters
-        except ImportError:
-            from string import ascii_letters as letters
+        from supervisor.compat import letters
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',
                               stderr_logfile='/tmp/fooooooo')

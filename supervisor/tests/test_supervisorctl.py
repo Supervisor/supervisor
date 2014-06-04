@@ -1,12 +1,7 @@
 import sys
 import unittest
-try:
-    from StringIO import StringIO
-    import xmlrpclib
-except ImportError:
-    from io import StringIO
-    import xmlrpc.client as xmlrpclib
-
+from supervisor.compat import StringIO
+from supervisor.compat import xmlrpclib
 from supervisor.tests.base import DummyRPCServer
 
 class ControllerTests(unittest.TestCase):

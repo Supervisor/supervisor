@@ -5,12 +5,8 @@ from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import DummyRequest
 from supervisor.tests.base import DummySupervisorRPCNamespace
 
-try:
-    import xmlrpclib
-    import httplib
-except ImportError:
-    import xmlrpc.client as xmlrpclib
-    import http.client as httplib
+from supervisor.compat import xmlrpclib
+from supervisor.compat import httplib
 
 class GetFaultDescriptionTests(unittest.TestCase):
     def test_returns_description_for_known_fault(self):
@@ -452,7 +448,7 @@ class TestDeferredXMLRPCResponse(unittest.TestCase):
         self.assertEqual(inst.request._error, 500)
         self.assertTrue(inst.finished)
         self.assertTrue(called)
-        
+
 class DummyResponse:
     def __init__(self, status=200, body='', reason='reason'):
         self.status = status
