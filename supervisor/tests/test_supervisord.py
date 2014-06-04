@@ -15,6 +15,13 @@ from supervisor.tests.base import DummyDispatcher
 
 from supervisor.compat import StringIO
 
+try:
+    import pstats
+except ImportError: # pragma: no cover
+    # Debian-packaged pythons may not have the pstats module
+    # unless the "python-profiler" package is installed.
+    pstats = None
+
 class EntryPointTests(unittest.TestCase):
     def test_main_noprofile(self):
         from supervisor.supervisord import main
@@ -36,7 +43,7 @@ class EntryPointTests(unittest.TestCase):
         output = new_stdout.getvalue()
         self.assertTrue(output.find('supervisord started') != 1, output)
 
-    if sys.version_info[:2] >= (2, 4):
+    if pstats:
         def test_main_profile(self):
             from supervisor.supervisord import main
             conf = os.path.join(
