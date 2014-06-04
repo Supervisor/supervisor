@@ -13,6 +13,13 @@ from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummyProcessGroup
 from supervisor.tests.base import DummyDispatcher
 
+try:
+    import pstats
+except ImportError: # pragma: no cover
+    # Debian-packaged pythons may not have the pstats module
+    # unless the "python-profiler" package is installed.
+    pstats = None
+
 class EntryPointTests(unittest.TestCase):
     def test_main_noprofile(self):
         from supervisor.supervisord import main
@@ -35,7 +42,7 @@ class EntryPointTests(unittest.TestCase):
         output = new_stdout.getvalue()
         self.assertTrue(output.find('supervisord started') != 1, output)
 
-    if sys.version_info[:2] >= (2, 4):
+    if pstats:
         def test_main_profile(self):
             from supervisor.supervisord import main
             conf = os.path.join(
@@ -62,7 +69,7 @@ class SupervisordTests(unittest.TestCase):
     def tearDown(self):
         from supervisor.events import clear
         clear()
-        
+
     def _getTargetClass(self):
         from supervisor.supervisord import Supervisor
         return Supervisor
@@ -131,7 +138,7 @@ class SupervisordTests(unittest.TestCase):
         process.waitstatus = None, None
         options.pidhistory = {1:process}
         supervisord = self._makeOne(options)
-        
+
         supervisord.reap(once=True)
         self.assertEqual(process.finished, (1,1))
 
@@ -509,7 +516,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertTrue(isinstance(L[0], events.SupervisorStateChangeEvent))
         self.assertTrue(isinstance(L[1], events.SupervisorStoppingEvent))
         self.assertTrue(isinstance(L[1], events.SupervisorStateChangeEvent))
-        
+
     def test_exit(self):
         options = DummyOptions()
         supervisord = self._makeOne(options)
@@ -570,14 +577,14 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(supervisord.ticks[3600], 0)
         self.assertEqual(len(L), 1)
         self.assertEqual(L[-1].__class__, events.Tick5Event)
-        
+
         supervisord.tick(now=61)
         self.assertEqual(supervisord.ticks[5], 60)
         self.assertEqual(supervisord.ticks[60], 60)
         self.assertEqual(supervisord.ticks[3600], 0)
         self.assertEqual(len(L), 3)
         self.assertEqual(L[-1].__class__, events.Tick60Event)
-        
+
         supervisord.tick(now=3601)
         self.assertEqual(supervisord.ticks[5], 3600)
         self.assertEqual(supervisord.ticks[60], 3600)
