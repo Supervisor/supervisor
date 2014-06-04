@@ -379,7 +379,14 @@ class Options:
             except ImportError:
                 raise ValueError('%s cannot be resolved within [%s]' % (
                     factory_spec, section))
-            items = parser.items(section)
+            items_tmp = parser.items(section)
+            items = [ ]
+            for ikv in items_tmp:
+                ik, iv_tmp = ikv
+                iexpansions = { }
+                iexpansions.update(environ_expansions())
+                iv = expand(iv_tmp, iexpansions, ik)
+                items.append((ik, iv))
             items.remove((factory_key, factory_spec))
             factories.append((name, factory, dict(items)))
 
@@ -555,11 +562,14 @@ class ServerOptions(Options):
             if need_close:
                 fp.close()
 
+        expansions = {'here':self.here}
+        expansions.update(environ_expansions())
         if parser.has_section('include'):
             if not parser.has_option('include', 'files'):
                 raise ValueError(".ini file has [include] section, but no "
                 "files setting")
             files = parser.get('include', 'files')
+            files = expand(files, expansions, 'include.files')
             files = files.split()
             if hasattr(fp, 'name'):
                 base = os.path.dirname(os.path.abspath(fp.name))
@@ -583,7 +593,14 @@ class ServerOptions(Options):
         sections = parser.sections()
         if not 'supervisord' in sections:
             raise ValueError('.ini file does not include supervisord section')
-        get = parser.getdefault
+
+        common_expansions = {'here':self.here}
+        def get(opt, default, **kwargs):
+            expansions = kwargs.get('expansions', {})
+            expansions.update(common_expansions)
+            kwargs['expansions'] = expansions
+            return parser.getdefault(opt, default, **kwargs)
+
         section.minfds = integer(get('minfds', 1024))
         section.minprocs = integer(get('minprocs', 200))
 
@@ -608,8 +625,6 @@ class ServerOptions(Options):
         section.nocleanup = boolean(get('nocleanup', 'false'))
         section.strip_ansi = boolean(get('strip_ansi', 'false'))
 
-        expansions = {'here':self.here}
-        expansions.update(environ_expansions())
         environ_str = get('environment', '')
         environ_str = expand(environ_str, expansions, 'environment')
         section.environment = dict_of_key_value_pairs(environ_str)
@@ -634,7 +649,14 @@ class ServerOptions(Options):
         groups = []
         all_sections = parser.sections()
         homogeneous_exclude = []
-        get = parser.saneget
+
+        common_expansions = {'here':self.here}
+        def get(section, opt, default, **kwargs):
+            expansions = kwargs.get('expansions', {})
+            expansions.update(common_expansions)
+            kwargs['expansions'] = expansions
+            return parser.saneget(section, opt, default, **kwargs)
+
 
         # process heterogeneous groups
         for section in all_sections:
@@ -717,6 +739,7 @@ class ServerOptions(Options):
                 continue
             program_name = process_or_group_name(section.split(':', 1)[1])
             priority = integer(get(section, 'priority', 999))
+            fcgi_expansions = {'program_name': program_name}
 
             # find proc_uid from "user" option
             proc_user = get(section, 'user', None)
@@ -741,15 +764,11 @@ class ServerOptions(Options):
                     raise ValueError('Invalid socket_mode value %s'
                                                                 % socket_mode)
 
-            socket = get(section, 'socket', None)
+            socket = get(section, 'socket', None, expansions=fcgi_expansions)
             if not socket:
                 raise ValueError('[%s] section requires a "socket" line' %
                                  section)
 
-            expansions = {'here':self.here,
-                          'program_name':program_name}
-            expansions.update(environ_expansions())
-            socket = expand(socket, expansions, 'socket')
             try:
                 socket_config = self.parse_fcgi_socket(socket, proc_uid,
                                                     socket_owner, socket_mode)
@@ -803,8 +822,19 @@ class ServerOptions(Options):
         if klass is None:
             klass = ProcessConfig
         programs = []
-        get = parser.saneget
+
         program_name = process_or_group_name(section.split(':', 1)[1])
+        host_node_name = platform.node()
+        common_expansions = {'here':self.here,
+                      'program_name':program_name,
+                      'host_node_name':host_node_name,
+                      'group_name':group_name}
+        def get(section, opt, *args, **kwargs):
+            expansions = kwargs.get('expansions', {})
+            expansions.update(common_expansions)
+            kwargs['expansions'] = expansions
+            return parser.saneget(section, opt, *args, **kwargs)
+
         priority = integer(get(section, 'priority', 999))
         autostart = boolean(get(section, 'autostart', 'true'))
         autorestart = auto_restart(get(section, 'autorestart', 'unexpected'))
@@ -818,7 +848,7 @@ class ServerOptions(Options):
         redirect_stderr = boolean(get(section, 'redirect_stderr','false'))
         numprocs = integer(get(section, 'numprocs', 1))
         numprocs_start = integer(get(section, 'numprocs_start', 0))
-        environment_str = get(section, 'environment', '')
+        environment_str = get(section, 'environment', '', do_expand=False)
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
         stdout_events = boolean(get(section, 'stdout_events_enabled','false'))
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
@@ -844,7 +874,7 @@ class ServerOptions(Options):
                 'program section %s does not specify a command' % section)
 
         process_name = process_or_group_name(
-            get(section, 'process_name', '%(program_name)s'))
+            get(section, 'process_name', '%(program_name)s', do_expand=False))
 
         if numprocs > 1:
             if not '%(process_num)' in process_name:
@@ -859,13 +889,9 @@ class ServerOptions(Options):
                 "Cannot set stopasgroup=true and killasgroup=false"
                 )
 
-        host_node_name = platform.node()
         for process_num in range(numprocs_start, numprocs + numprocs_start):
-            expansions = {'here':self.here,
-                          'process_num':process_num,
-                          'program_name':program_name,
-                          'host_node_name':host_node_name,
-                          'group_name':group_name}
+            expansions = common_expansions
+            expansions.update({'process_num': process_num})
             expansions.update(environ_expansions())
 
             environment = dict_of_key_value_pairs(
@@ -1620,23 +1646,26 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
         except AttributeError:
             return self.readfp(s)
 
-    def getdefault(self, option, default=_marker):
+    def saneget(self, section, option, default=_marker, do_expand=True, 
+                expansions={}):
+        expansions.update(environ_expansions())
         try:
-            return self.get(self.mysection, option)
+            optval = self.get(section, option)
+            if isinstance(optval, basestring) and do_expand:
+                return expand(optval, 
+                              expansions, 
+                              "%s.%s" % (section, option))
+            return optval
         except ConfigParser.NoOptionError:
             if default is _marker:
                 raise
             else:
                 return default
 
-    def saneget(self, section, option, default=_marker):
-        try:
-            return self.get(section, option)
-        except ConfigParser.NoOptionError:
-            if default is _marker:
-                raise
-            else:
-                return default
+    def getdefault(self, option, default=_marker, expansions={}, **kwargs):
+        return self.saneget(self.mysection, option, default=default, 
+                            expansions=expansions, **kwargs)
+
 
 class Config(object):
     def __ne__(self, other):
@@ -2018,24 +2047,19 @@ def expand(s, expansions, name):
             'Format string %r for %r is badly formatted' % (s, name)
             )
 
-_environ_expansions = None
-
 def environ_expansions():
     """Return dict of environment variables, suitable for use in string
     expansions.
 
     Every environment variable is prefixed by 'ENV_'.
     """
-    global _environ_expansions
+    osenv = os.environ
+    x = {}
+    import sys
+    for key, value in osenv.items():
+        x['ENV_%s' % key] = value
 
-    if _environ_expansions:
-        return _environ_expansions
-
-    _environ_expansions = {}
-    for key, value in os.environ.items():
-        _environ_expansions['ENV_%s' % key] = value
-
-    return _environ_expansions
+    return x
 
 def make_namespec(group_name, process_name):
     # we want to refer to the process by its "short name" (a process named
