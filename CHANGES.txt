@@ -18,6 +18,9 @@
   same time.  Specifying a log filename of ``syslog`` is still supported
   but deprecated.  Patch by Jason R. Coombs.
 
+- Environment variables are now be expanded for all config file options.
+  Patch by Dexter Tad-y.
+
 3.1.0-dev (Next 3.x Release)
 ----------------------------
 
