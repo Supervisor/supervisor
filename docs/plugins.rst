@@ -125,4 +125,10 @@ with third party applications:
     Run Supervisor as a `Gulp <http://gulpjs.com/>`_ task.
 `Yeebase.Supervisor <https://github.com/yeebase/Yeebase.Supervisor>`_
     Control and monitor Supervisor from a TYPO3 Flow application.
-
+`dokku-supervisord <https://github.com/statianzo/dokku-supervisord>`_
+    `Dokku <https://github.com/progrium/dokku>`_ plugin that injects ``supervisord`` to run
+    applications.
+`dokku-logging-supervisord <https://github.com/sehrope/dokku-logging-supervisord>`_
+    `Dokku <https://github.com/progrium/dokku>`_ plugin that injects ``supervisord`` to run
+    applications.  It also redirects ``stdout`` and ``stderr`` from processes to log files
+    (rather than the Docker default per-container JSON files).
