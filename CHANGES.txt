@@ -5,7 +5,7 @@
   [spec naming lots of processes]" both now complete much more quickly.  See
   https://github.com/Supervisor/supervisor/issues/131 .
 
-- Environment variables are now be expanded for all config file options.
+- Environment variables are now expanded for all config file options.
   Patch by Dexter Tad-y.
 
 3.1.2 (2014-09-07)
