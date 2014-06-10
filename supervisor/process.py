@@ -531,6 +531,10 @@ class Subprocess(object):
     def get_state(self):
         return self.state
 
+    def _should_retry_spawn(self):
+        startretries = self.config.startretries
+        return startretries == -1 or self.backoff <= startretries
+
     def transition(self):
         now = time.time()
         state = self.state
@@ -553,10 +557,9 @@ class Subprocess(object):
                     # STOPPED -> STARTING
                     self.spawn()
             elif state == ProcessStates.BACKOFF:
-                if self.backoff <= self.config.startretries:
-                    if now > self.delay:
-                        # BACKOFF -> STARTING
-                        self.spawn()
+                if self._should_retry_spawn() and now > self.delay:
+                    # BACKOFF -> STARTING
+                    self.spawn()
 
         if state == ProcessStates.STARTING:
             if now - self.laststart > self.config.startsecs:
@@ -573,7 +576,7 @@ class Subprocess(object):
                 logger.info('success: %s %s' % (self.config.name, msg))
 
         if state == ProcessStates.BACKOFF:
-            if self.backoff > self.config.startretries:
+            if not self._should_retry_spawn():
                 # BACKOFF -> FATAL if the proc has exceeded its number
                 # of retries
                 self.give_up()
