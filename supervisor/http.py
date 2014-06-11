@@ -647,7 +647,7 @@ class tail_f_producer:
             return "==> File truncated <==\n"
         if bytes_added > 0:
             self.file.seek(-bytes_added, 2)
-            bytes = self.file.read(bytes_added)
+            bytes = '<p>{}</p>'.format(self.file.read(bytes_added))
             self.sz = newsz
             return bytes
         return NOT_DONE_YET
@@ -712,7 +712,7 @@ class logtail_handler:
 
         mtime = os.stat(logfile)[stat.ST_MTIME]
         request['Last-Modified'] = http_date.build_http_date(mtime)
-        request['Content-Type'] = 'text/plain'
+        request['Content-Type'] = 'text/html'
         # the lack of a Content-Length header makes the outputter
         # send a 'Transfer-Encoding: chunked' response
 
@@ -743,7 +743,7 @@ class mainlogtail_handler:
 
         mtime = os.stat(logfile)[stat.ST_MTIME]
         request['Last-Modified'] = http_date.build_http_date(mtime)
-        request['Content-Type'] = 'text/plain'
+        request['Content-Type'] = 'text/html'
         # the lack of a Content-Length header makes the outputter
         # send a 'Transfer-Encoding: chunked' response
 
