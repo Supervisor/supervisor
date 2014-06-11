@@ -19,6 +19,8 @@ from supervisor.tests.base import DummyRequest
 
 from supervisor.http import NOT_DONE_YET
 
+TAILF_LOG_WRAPPER = '<p>{0}</p>'
+
 class HandlerTests:
     def _makeOne(self, supervisord):
         return self._getTargetClass()(supervisord)
@@ -68,7 +70,7 @@ class LogtailHandlerTests(HandlerTests, unittest.TestCase):
         from supervisor.medusa import http_date
         self.assertEqual(request.headers['Last-Modified'],
                          http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
-        self.assertEqual(request.headers['Content-Type'], 'text/plain')
+        self.assertEqual(request.headers['Content-Type'], 'text/html')
         self.assertEqual(len(request.producers), 1)
         self.assertEqual(request._done, True)
 
@@ -104,7 +106,7 @@ class MainLogTailHandlerTests(HandlerTests, unittest.TestCase):
         from supervisor.medusa import http_date
         self.assertEqual(request.headers['Last-Modified'],
                          http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
-        self.assertEqual(request.headers['Content-Type'], 'text/plain')
+        self.assertEqual(request.headers['Content-Type'], 'text/html')
         self.assertEqual(len(request.producers), 1)
         self.assertEqual(request._done, True)
 
@@ -126,11 +128,11 @@ class TailFProducerTests(unittest.TestCase):
         t = f.name
         producer = self._makeOne(request, t, 80)
         result = producer.more()
-        self.assertEqual(result, as_bytes('a' * 80))
+        self.assertEqual(result, TAILF_LOG_WRAPPER.format(as_bytes('a' * 80)))
         f.write(as_bytes('w' * 100))
         f.flush()
         result = producer.more()
-        self.assertEqual(result, as_bytes('w' * 100))
+        self.assertEqual(result, TAILF_LOG_WRAPPER.format(as_bytes('w' * 100)))
         result = producer.more()
         self.assertEqual(result, http.NOT_DONE_YET)
         f.truncate(0)

@@ -647,9 +647,9 @@ class tail_f_producer:
             return "==> File truncated <==\n"
         if bytes_added > 0:
             self.file.seek(-bytes_added, 2)
-            bytes = '<p>{}</p>'.format(self.file.read(bytes_added))
+            bytes = self.file.read(bytes_added)
             self.sz = newsz
-            return bytes
+            return '<p>{0}</p>'.format(bytes)
         return NOT_DONE_YET
 
     def fsize(self):

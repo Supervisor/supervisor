@@ -15,3 +15,4 @@ htmlcov/
 tmp/
 coverage.xml
 nosetests.xml
+.idea/*
