@@ -1,3 +1,4 @@
+import cgi
 import os
 import stat
 import time
@@ -649,7 +650,7 @@ class tail_f_producer:
             self.file.seek(-bytes_added, 2)
             bytes = self.file.read(bytes_added)
             self.sz = newsz
-            return '<p>{0}</p>'.format(bytes)
+            return '<pre style="word-wrap: break-word;">{0}</pre>'.format(cgi.escape(bytes))
         return NOT_DONE_YET
 
     def fsize(self):

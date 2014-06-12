@@ -1,4 +1,5 @@
 import base64
+import cgi
 import os
 import stat
 import sys
@@ -19,7 +20,7 @@ from supervisor.tests.base import DummyRequest
 
 from supervisor.http import NOT_DONE_YET
 
-TAILF_LOG_WRAPPER = '<p>{0}</p>'
+TAILF_LOG_WRAPPER = '<pre style="word-wrap: break-word;">{0}</pre>'
 
 class HandlerTests:
     def _makeOne(self, supervisord):
@@ -128,11 +129,11 @@ class TailFProducerTests(unittest.TestCase):
         t = f.name
         producer = self._makeOne(request, t, 80)
         result = producer.more()
-        self.assertEqual(result, TAILF_LOG_WRAPPER.format(as_bytes('a' * 80)))
+        self.assertEqual(result, TAILF_LOG_WRAPPER.format(cgi.escape(as_bytes('a' * 80))))
         f.write(as_bytes('w' * 100))
         f.flush()
         result = producer.more()
-        self.assertEqual(result, TAILF_LOG_WRAPPER.format(as_bytes('w' * 100)))
+        self.assertEqual(result, TAILF_LOG_WRAPPER.format(cgi.escape(as_bytes('w' * 100))))
         result = producer.more()
         self.assertEqual(result, http.NOT_DONE_YET)
         f.truncate(0)
