@@ -650,7 +650,7 @@ class tail_f_producer:
             self.file.seek(-bytes_added, 2)
             bytes = self.file.read(bytes_added)
             self.sz = newsz
-            return '<pre style="word-wrap: break-word;">{0}</pre>'.format(cgi.escape(bytes))
+            return '<pre style="word-wrap: break-word;">{0}</pre>'.format(cgi.escape(bytes.decode('utf-8')))
         return NOT_DONE_YET
 
     def fsize(self):

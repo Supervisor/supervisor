@@ -129,11 +129,11 @@ class TailFProducerTests(unittest.TestCase):
         t = f.name
         producer = self._makeOne(request, t, 80)
         result = producer.more()
-        self.assertEqual(result, TAILF_LOG_WRAPPER.format(cgi.escape(as_bytes('a' * 80))))
+        self.assertEqual(result, TAILF_LOG_WRAPPER.format(cgi.escape(as_bytes('a' * 80).decode('utf-8'))))
         f.write(as_bytes('w' * 100))
         f.flush()
         result = producer.more()
-        self.assertEqual(result, TAILF_LOG_WRAPPER.format(cgi.escape(as_bytes('w' * 100))))
+        self.assertEqual(result, TAILF_LOG_WRAPPER.format(cgi.escape(as_bytes('w' * 100).decode('utf-8'))))
         result = producer.more()
         self.assertEqual(result, http.NOT_DONE_YET)
         f.truncate(0)
