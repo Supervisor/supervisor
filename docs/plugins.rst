@@ -69,6 +69,9 @@ These also includes various event listeners.
     works by using the non-blocking mode of the XML-RPC methods and then
     polling ``supervisord``.  The built-in commands use the blocking mode,
     which can be slower due to ``supervisord`` implementation details.
+`supervisor-logging <https://github.com/infoxchange/supervisor-logging>`_
+    An event listener that sends process log events to an external
+    Syslog instance (e.g. Logstash).
 
 Libraries that integrate Third Party Applications with Supervisor
 -----------------------------------------------------------------
