@@ -222,6 +222,7 @@ Process Control
 
             {'name':           'process name',
              'group':          'group name',
+             'description':    'pid 18806, uptime 0:03:12'
              'start':          1200361776,
              'stop':           0,
              'now':            1200361812,
@@ -240,6 +241,13 @@ Process Control
         .. describe:: group
 
             Name of the process' group
+
+        .. describe:: description
+
+            If process state is running description's value is process_id
+            and uptime. Example "pid 18806, uptime 0:03:12 ".
+            If process state is stopped description's value is stop time.
+            Example:"Jun 5 03:16 PM ". 
 
         .. describe:: start
 
