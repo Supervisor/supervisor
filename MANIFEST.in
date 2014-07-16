@@ -5,8 +5,8 @@ include README.rst
 include TODO.txt
 include tox.ini
 include supervisor/version.txt
-include supervisor/skel *.conf
-include supervisor/tests/fixtures *.conf
+include supervisor/skel/*.conf
+include supervisor/tests/fixtures/*.conf
 recursive-include supervisor/ui *.html *.css *.png
 recursive-include docs *.rst *.css *.gif *.png
 recursive-exclude docs/.build *
