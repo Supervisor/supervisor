@@ -230,6 +230,7 @@ Process Control
              'statename':      'RUNNING',
              'spawnerr':       '',
              'exitstatus':     0,
+             'logfile':        '/path/to/stdout-log', # deprecated, b/c only
              'stdout_logfile': '/path/to/stdout-log',
              'stderr_logfile': '/path/to/stderr-log',
              'pid':            1}
@@ -247,7 +248,7 @@ Process Control
             If process state is running description's value is process_id
             and uptime. Example "pid 18806, uptime 0:03:12 ".
             If process state is stopped description's value is stop time.
-            Example:"Jun 5 03:16 PM ". 
+            Example:"Jun 5 03:16 PM ".
 
         .. describe:: start
 
@@ -270,6 +271,12 @@ Process Control
         .. describe:: statename
 
             String description of `state`, see :ref:`process_states`.
+
+        .. describe:: logfile
+
+            Deprecated alias for ``stdout_logfile``.  This is provided only
+            for compatibility with clients written for Supervisor 2.x and
+            may be removed in the future.  Use ``stdout_logfile`` instead.
 
         .. describe:: stdout_logfile
 
