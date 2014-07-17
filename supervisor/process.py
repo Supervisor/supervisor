@@ -19,6 +19,7 @@ from supervisor.states import STOPPED_STATES
 from supervisor.options import decode_wait_status
 from supervisor.options import signame
 from supervisor.options import ProcessException, BadCommand
+from supervisor.options import make_namespec
 
 from supervisor.dispatchers import EventListenerStates
 
@@ -260,7 +261,7 @@ class Subprocess(object):
         self.pid = pid
         options = self.config.options
         options.close_child_pipes(self.pipes)
-        options.logger.info('spawned: %r with pid %s' % (self.config.name, pid))
+        options.logger.info('spawned: %r with pid %s' % (make_namespec(self.group.config.name, self.config.name), pid))
         self.spawnerr = None
         self.delay = time.time() + self.config.startsecs
         options.pidhistory[pid] = self
