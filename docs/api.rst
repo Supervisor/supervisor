@@ -230,6 +230,7 @@ Process Control
              'statename':      'RUNNING',
              'spawnerr':       '',
              'exitstatus':     0,
+             'logfile':        '/path/to/stdout-log',
              'stdout_logfile': '/path/to/stdout-log',
              'stderr_logfile': '/path/to/stderr-log',
              'pid':            1}
@@ -288,6 +289,10 @@ Process Control
 
             Exit status (errorlevel) of process, or 0 if the process is still
             running.
+
+        .. describe:: logfile
+
+            Alias for "stdout_logfile".
 
         .. describe:: pid
 
