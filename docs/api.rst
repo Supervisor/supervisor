@@ -296,6 +296,10 @@ Process Control
             Exit status (errorlevel) of process, or 0 if the process is still
             running.
 
+        .. describe:: logfile
+
+            Alias for "stdout_logfile".
+
         .. describe:: pid
 
             UNIX process ID (PID) of the process, or 0 if the process is not
