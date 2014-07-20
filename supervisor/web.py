@@ -11,6 +11,7 @@ from supervisor.compat import urllib
 from supervisor.compat import parse_qs
 from supervisor.compat import parse_qsl
 from supervisor.compat import as_string
+from supervisor.compat import PY3
 
 from supervisor.medusa import producers
 from supervisor.medusa.http_server import http_date
@@ -124,6 +125,12 @@ class DeferredWebProducer:
                 [outgoing_header, outgoing_producer]
                 )
         else:
+            # fix AttributeError: 'unicode' object has no attribute 'more'
+            if (not PY3) and (len(self.request.outgoing) > 0):
+                body = self.request.outgoing[0]
+                if isinstance(body, unicode):
+                    self.request.outgoing[0] = producers.simple_producer (body)
+
             # prepend the header
             self.request.outgoing.insert(0, outgoing_header)
             outgoing_producer = producers.composite_producer (
