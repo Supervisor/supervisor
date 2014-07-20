@@ -124,6 +124,11 @@ class DeferredWebProducer:
                 [outgoing_header, outgoing_producer]
                 )
         else:
+            # fix AttributeError: 'unicode' object has no attribute 'more'
+            body = self.request.outgoing[0]
+            if isinstance(body, unicode):
+                self.request.outgoing[0] = producers.simple_producer (body)
+                
             # prepend the header
             self.request.outgoing.insert(0, outgoing_header)
             outgoing_producer = producers.composite_producer (
