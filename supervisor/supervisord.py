@@ -179,7 +179,7 @@ class Supervisor:
 
     def runforever(self):
         events.notify(events.SupervisorRunningEvent())
-        timeout = 1 # this cannot be fewer than the smallest TickEvent (5)
+        timeout = 0.1
 
         socket_map = self.options.get_socket_map()
 

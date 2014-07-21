@@ -325,17 +325,15 @@ class deferring_http_channel(http_server.http_channel):
     # order to spew tail -f output faster (speculative)
     ac_out_buffer_size = 4096
 
-    delay = False
-    writable_check = time.time()
+    def __init__(self, *args, **kwargs):
+        self.delay_until = False
+        http_server.http_channel.__init__(self, *args, **kwargs)
 
-    def writable(self, t=time.time):
-        now = t()
-        if self.delay:
+    def writable(self):
+        if self.delay_until:
             # we called a deferred producer via this channel (see refill_buffer)
-            last_writable_check = self.writable_check
-            self.writable_check = now
-            elapsed = now - last_writable_check
-            if elapsed > self.delay:
+            if time.time() > self.delay_until:
+                self.delay_until = False
                 return True
             else:
                 return False
@@ -362,12 +360,12 @@ class deferring_http_channel(http_server.http_channel):
                 data = p.more()
 
                 if data is NOT_DONE_YET:
-                    self.delay = p.delay
+                    self.delay_until = time.time() + p.delay
                     return
 
                 elif data:
                     self.ac_out_buffer = self.ac_out_buffer + data
-                    self.delay = False
+                    self.delay_until = False
                     return
                 else:
                     self.producer_fifo.pop()
