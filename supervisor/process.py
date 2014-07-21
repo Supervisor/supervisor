@@ -1,11 +1,11 @@
 import os
-import time
 import errno
 import shlex
 import traceback
 import signal
 
 from supervisor.compat import maxint
+from supervisor.compat import monotonic_time
 from supervisor.compat import StringIO
 from supervisor.compat import total_ordering
 
@@ -167,7 +167,7 @@ class Subprocess(object):
             events.notify(event)
 
         if new_state == ProcessStates.BACKOFF:
-            now = time.time()
+            now = monotonic_time()
             self.backoff += 1
             self.delay = now + self.backoff
 
@@ -202,7 +202,7 @@ class Subprocess(object):
         self.system_stop = 0
         self.administrative_stop = 0
 
-        self.laststart = time.time()
+        self.laststart = monotonic_time()
 
         self._assertInState(ProcessStates.EXITED, ProcessStates.FATAL,
                             ProcessStates.BACKOFF, ProcessStates.STOPPED)
@@ -262,7 +262,7 @@ class Subprocess(object):
         options.close_child_pipes(self.pipes)
         options.logger.info('spawned: %r with pid %s' % (self.config.name, pid))
         self.spawnerr = None
-        self.delay = time.time() + self.config.startsecs
+        self.delay = monotonic_time() + self.config.startsecs
         options.pidhistory[pid] = self
         return pid
 
@@ -365,7 +365,7 @@ class Subprocess(object):
         Return None if the signal was sent, or an error message string
         if an error occurred or if the subprocess is not running.
         """
-        now = time.time()
+        now = monotonic_time()
         options = self.config.options
 
         # Properly stop processes in BACKOFF state.
@@ -438,7 +438,7 @@ class Subprocess(object):
 
         es, msg = decode_wait_status(sts)
 
-        now = time.time()
+        now = monotonic_time()
         self.laststop = now
         processname = self.config.name
 
@@ -532,7 +532,7 @@ class Subprocess(object):
         return self.state
 
     def transition(self):
-        now = time.time()
+        now = monotonic_time()
         state = self.state
 
         logger = self.config.options.logger
@@ -760,7 +760,7 @@ class EventListenerPool(ProcessGroupBase):
                     dispatch_capable = True
         if dispatch_capable:
             if self.dispatch_throttle:
-                now = time.time()
+                now = monotonic_time()
                 if now - self.last_dispatch < self.dispatch_throttle:
                     return
             self.dispatch()
@@ -775,7 +775,7 @@ class EventListenerPool(ProcessGroupBase):
                 # to process any further events in the buffer
                 self._acceptEvent(event, head=True)
                 break
-        self.last_dispatch = time.time()
+        self.last_dispatch = monotonic_time()
 
     def _acceptEvent(self, event, head=False):
         # events are required to be instances
