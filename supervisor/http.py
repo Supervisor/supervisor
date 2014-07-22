@@ -10,6 +10,7 @@ import weakref
 from supervisor.compat import urllib
 from supervisor.compat import sha1
 from supervisor.compat import as_bytes
+from supervisor.compat import PY3
 from supervisor.medusa import asyncore_25 as asyncore
 from supervisor.medusa import http_date
 from supervisor.medusa import http_server
@@ -92,6 +93,9 @@ class deferring_globbing_producer:
             if data is NOT_DONE_YET:
                 return NOT_DONE_YET
             if data:
+                if PY3:
+                    data = as_bytes(data)
+                    self.buffer = as_bytes(self.buffer)    
                 self.buffer = self.buffer + data
             else:
                 break
@@ -366,6 +370,12 @@ class deferring_http_channel(http_server.http_channel):
                     return
 
                 elif data:
+                    if not PY3:
+                        if isinstance(data, unicode):
+                            data = as_bytes(data)
+                    else:
+                        self.ac_out_buffer = as_bytes(self.ac_out_buffer)
+                        data = as_bytes(data)
                     self.ac_out_buffer = self.ac_out_buffer + data
                     self.delay = False
                     return
