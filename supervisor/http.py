@@ -344,6 +344,13 @@ class deferring_http_channel(http_server.http_channel):
             else:
                 return False
 
+        # It is possible that self.ac_out_buffer is equal b''
+        # and in Python3 b'' is not equal ''. This cause
+        # http_server.http_channel.writable(self) is always True.
+        # To avoid this case, we need to force self.ac_out_buffer = ''
+        if len(self.ac_out_buffer) == 0:
+            self.ac_out_buffer = ''
+
         return http_server.http_channel.writable(self)
 
     def refill_buffer (self):
