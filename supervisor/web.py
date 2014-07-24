@@ -126,8 +126,8 @@ class DeferredWebProducer:
                 )
         else:
             # fix AttributeError: 'unicode' object has no attribute 'more'
-            body = self.request.outgoing[0]
-            if not PY3:
+            if (not PY3) and (len(self.request.outgoing) > 0):
+                body = self.request.outgoing[0]
                 if isinstance(body, unicode):
                     self.request.outgoing[0] = producers.simple_producer (body)
                 
