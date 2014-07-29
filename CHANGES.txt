@@ -1,5 +1,5 @@
-3.1a1 (Next Release)
---------------------
+3.1.0-dev (Next Release)
+------------------------
 
 - The output of the ``start``, ``stop``, ``restart``, and ``clear`` commands
   in ``supervisorctl`` has been changed to be consistent with the ``status``
