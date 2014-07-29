@@ -22,11 +22,12 @@ if sys.version_info[:2] < (2, 4) or sys.version_info[0] > 2:
     sys.stderr.write(msg)
     sys.exit(1)
 
-requires = ['meld3 >= 0.6.5']
-
 if sys.version_info[:2] < (2, 5):
-    # for meld3 (it's a distutils package)
-    requires.append('elementtree')
+    # meld3 1.0.0 dropped python 2.4 support
+    # meld3 requires elementree on python 2.4 only
+    requires = ['meld3 < 1.0.0', 'elementtree']
+else:
+    requires = ['meld3 >= 0.6.5']
 
 from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
