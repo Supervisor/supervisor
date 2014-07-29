@@ -177,46 +177,34 @@ class ClientOptionsTests(unittest.TestCase):
         self.assertEqual(options.password, '123')
         self.assertEqual(options.history_file, history_file)
 
-    def test_unreadable_config_file(self):
-        # Quick and dirty way of coming up with a decent filename
-        tempf = tempfile.NamedTemporaryFile()
-        fname = tempf.name
-        tempf.close()
-        self.assertFalse(os.path.exists(fname))
-
+    def test_read_config_not_found(self):
         instance = self._makeOne()
-        instance.stderr = StringIO()
-
-        class DummyException(Exception):
-            def __init__(self, exitcode):
-                self.exitcode = exitcode
-        def dummy_exit(self, exitcode=2):
-            # Important default exitcode=2 like sys.exit.
-            raise DummyException(exitcode)
-        instance.exit = dummy_exit
-        try:
-            instance.realize(args=['-c', fname])
-        except DummyException, e:
-            self.assertEqual(e.exitcode, 2)
-        else:
-            self.fail("expected exception")
+        def dummy_exists(fn):
+            return False
+        instance.exists = dummy_exists
 
         try:
-            instance.read_config(fname)
+            instance.read_config('filename')
         except ValueError, e:
             self.assertTrue("could not find config file" in str(e))
         else:
             self.fail("expected exception")
 
-        tempf = tempfile.NamedTemporaryFile()
-        os.chmod(tempf.name, 0) # Removing read perms
+    def test_read_config_unreadable(self):
+        instance = self._makeOne()
+        def dummy_exists(fn):
+            return True
+        instance.exists = dummy_exists
+        def dummy_open(fn, mode):
+            raise IOError(errno.EACCES, 'Permission denied: %s' % fn)
+        instance.open = dummy_open
+
         try:
-            instance.read_config(tempf.name)
+            instance.read_config('filename')
         except ValueError, e:
             self.assertTrue("could not read config file" in str(e))
         else:
             self.fail("expected exception")
-        tempf.close()
 
     def test_options_unixsocket_cli(self):
         from StringIO import StringIO
@@ -607,46 +595,34 @@ class ServerOptionsTests(unittest.TestCase):
         instance.realize(args=[])
         self.assertFalse(old_warning in instance.parse_warnings)
 
-    def test_unreadable_config_file(self):
-        # Quick and dirty way of coming up with a decent filename
-        tempf = tempfile.NamedTemporaryFile()
-        fname = tempf.name
-        tempf.close()
-        self.assertFalse(os.path.exists(fname))
-
+    def test_read_config_not_found(self):
         instance = self._makeOne()
-        instance.stderr = StringIO()
-
-        class DummyException(Exception):
-            def __init__(self, exitcode):
-                self.exitcode = exitcode
-        def dummy_exit(self, exitcode=2):
-            # Important default exitcode=2 like sys.exit.
-            raise DummyException(exitcode)
-        instance.exit = dummy_exit
-        try:
-            instance.realize(args=['-c', fname])
-        except DummyException, e:
-            self.assertEqual(e.exitcode, 2)
-        else:
-            self.fail("expected exception")
+        def dummy_exists(fn):
+            return False
+        instance.exists = dummy_exists
 
         try:
-            instance.read_config(fname)
+            instance.read_config('filename')
         except ValueError, e:
             self.assertTrue("could not find config file" in str(e))
         else:
             self.fail("expected exception")
 
-        tempf = tempfile.NamedTemporaryFile()
-        os.chmod(tempf.name, 0) # Removing read perms
+    def test_read_config_unreadable(self):
+        instance = self._makeOne()
+        def dummy_exists(fn):
+            return True
+        instance.exists = dummy_exists
+        def dummy_open(fn, mode):
+            raise IOError(errno.EACCES, 'Permission denied: %s' % fn)
+        instance.open = dummy_open
+
         try:
-            instance.read_config(tempf.name)
+            instance.read_config('filename')
         except ValueError, e:
             self.assertTrue("could not read config file" in str(e))
         else:
             self.fail("expected exception")
-        tempf.close()
 
     def test_readFile_failed(self):
         from supervisor.options import readFile
@@ -978,7 +954,7 @@ class ServerOptionsTests(unittest.TestCase):
         pconfig = pconfigs[0]
         self.assertEqual(pconfig.stopasgroup, True)
         self.assertEqual(pconfig.killasgroup, True)
-    
+
     def test_processes_from_section_killasgroup_mismatch_w_stopasgroup(self):
         instance = self._makeOne()
         text = lstrip("""\
