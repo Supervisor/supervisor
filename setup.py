@@ -25,7 +25,7 @@ if sys.version_info[:2] < (2, 4) or sys.version_info[0] > 2:
 if sys.version_info[:2] < (2, 5):
     # meld3 1.0.0 dropped python 2.4 support
     # meld3 requires elementree on python 2.4 only
-    requires = ['meld3 < 1.0.0', 'elementtree']
+    requires = ['meld3 >= 0.6.5 , < 1.0.0', 'elementtree']
 else:
     requires = ['meld3 >= 0.6.5']
 
