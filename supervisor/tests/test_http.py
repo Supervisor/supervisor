@@ -126,7 +126,7 @@ class TailFProducerTests(unittest.TestCase):
         t = f.name
         producer = self._makeOne(request, t, 80)
         result = producer.more()
-        self.assertEqual(result, as_bytes('a' * 80))
+        self.assertEqual(result, as_string('a' * 80))
         f.write(as_bytes('w' * 100))
         f.flush()
         result = producer.more()
