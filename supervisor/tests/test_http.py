@@ -130,7 +130,7 @@ class TailFProducerTests(unittest.TestCase):
         f.write(as_bytes('w' * 100))
         f.flush()
         result = producer.more()
-        self.assertEqual(result, as_bytes('w' * 100))
+        self.assertEqual(result, as_string('w' * 100))
         result = producer.more()
         self.assertEqual(result, http.NOT_DONE_YET)
         f.truncate(0)
