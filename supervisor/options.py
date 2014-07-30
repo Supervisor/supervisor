@@ -363,6 +363,12 @@ class Options:
                 # if this is called from an RPC method, raise an error
                 raise ValueError(msg)
 
+    def exists(self, path):
+        return os.path.exists(path)
+
+    def open(self, fn, mode='r'):
+        return open(fn, mode)
+
     def get_plugins(self, parser, factory_key, section_prefix):
         factories = []
 
@@ -540,10 +546,10 @@ class ServerOptions(Options):
         section = self.configroot.supervisord
         need_close = False
         if not hasattr(fp, 'read'):
-            if not os.path.exists(fp):
+            if not self.exists(fp):
                 raise ValueError("could not find config file %s" % fp)
             try:
-                fp = open(fp, 'r')
+                fp = self.open(fp, 'r')
                 need_close = True
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)
@@ -1426,9 +1432,6 @@ class ServerOptions(Options):
     def remove(self, path):
         os.remove(path)
 
-    def exists(self, path):
-        return os.path.exists(path)
-
     def _exit(self, code):
         os._exit(code)
 
@@ -1478,9 +1481,6 @@ class ServerOptions(Options):
 
     def process_environment(self):
         os.environ.update(self.environment or {})
-
-    def open(self, fn, mode='r'):
-        return open(fn, mode)
 
     def chdir(self, dir):
         os.chdir(dir)
@@ -1572,10 +1572,10 @@ class ClientOptions(Options):
         need_close = False
         if not hasattr(fp, 'read'):
             self.here = os.path.dirname(normalize_path(fp))
-            if not os.path.exists(fp):
+            if not self.exists(fp):
                 raise ValueError("could not find config file %s" % fp)
             try:
-                fp = open(fp, 'r')
+                fp = self.open(fp, 'r')
                 need_close = True
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)

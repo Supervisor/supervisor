@@ -862,7 +862,7 @@ where specified.
 
   *Required*:  No.
 
-  *Introduced*: 3.1a1
+  *Introduced*: 4.0.0
 
 ``stderr_logfile``
 
@@ -939,7 +939,7 @@ where specified.
 
   *Required*:  No.
 
-  *Introduced*: 3.1a1
+  *Introduced*: 4.0.0
 
 ``environment``
 
