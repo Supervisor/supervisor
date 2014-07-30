@@ -8,6 +8,7 @@ RCS_ID = '$Id: monitor.py,v 1.5 2002/03/23 15:08:06 amk Exp $'
 
 from supervisor.compat import md5
 from supervisor.compat import print_function
+from supervisor.compat import raw_input
 
 import supervisor.medusa.text_socket as socket
 import sys

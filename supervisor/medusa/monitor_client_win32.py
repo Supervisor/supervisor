@@ -11,6 +11,7 @@ import supervisor.medusa.thread as thread
 
 from supervisor.compat import md5
 from supervisor.compat import print_function
+from supervisor.compat import raw_input
 
 def hex_digest (s):
     m = md5.md5()

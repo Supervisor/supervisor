@@ -9,6 +9,7 @@ import os
 
 from supervisor.compat import md5
 from supervisor.compat import print_function
+from supervisor.compat import raw_input
 
 class stdin_channel (asyncore.file_dispatcher):
     def handle_read (self):
