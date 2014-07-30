@@ -201,7 +201,10 @@ class HTTPHandler(asynchat.async_chat):
         line = self.buffer
         if not line:
             return
-        chunk_size = int(line.split()[0], 16)
+        try:
+            chunk_size = int(line.split()[0], 16)
+        except ValueError:
+            return
         if chunk_size==0:
             self.part = self.trailer
         else:

@@ -10,6 +10,7 @@ import weakref
 from supervisor.compat import urllib
 from supervisor.compat import sha1
 from supervisor.compat import as_bytes
+from supervisor.compat import as_string
 from supervisor.medusa import asyncore_25 as asyncore
 from supervisor.medusa import http_date
 from supervisor.medusa import http_server
@@ -663,7 +664,7 @@ class tail_f_producer:
             self.file.seek(-bytes_added, 2)
             bytes = self.file.read(bytes_added)
             self.sz = newsz
-            return bytes
+            return as_string(bytes)
         return NOT_DONE_YET
 
     def fsize(self):
