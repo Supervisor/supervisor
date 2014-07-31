@@ -14,6 +14,8 @@ CR="\x0d"
 LF="\x0a"
 CRLF=CR+LF
 
+SUPERVISOR_USER_AGENT = 'Supervisor HTTP Client'
+
 class Listener(object):
 
     def status(self, url, status):
@@ -46,7 +48,7 @@ class HTTPHandler(asynchat.async_chat):
         ):
         asynchat.async_chat.__init__(self, conn, map)
         self.listener = listener
-        self.user_agent = 'Supervisor HTTP Client'
+        self.user_agent = SUPERVISOR_USER_AGENT
         self.buffer = ''
         self.set_terminator(CRLF)
         self.connected = 0
@@ -136,8 +138,8 @@ class HTTPHandler(asynchat.async_chat):
     def feed(self, data):
         self.listener.feed(self.url, data)
 
-    def collect_incoming_data(self, bytes):
-        self.buffer = self.buffer + bytes
+    def collect_incoming_data(self, data):
+        self.buffer = self.buffer + data
         if self.part==self.body:
             self.feed(self.buffer)
             self.buffer = ''
