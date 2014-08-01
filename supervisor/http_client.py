@@ -183,7 +183,10 @@ class HTTPHandler(asynchat.async_chat):
         self.listener.feed(self.url, as_string(data))
 
     def collect_incoming_data(self, data):
-        self.buffer = as_bytes(self.buffer) + as_bytes(data)
+        if PY3:
+            self.buffer = as_string(self.buffer) + as_string(data)
+        else:
+            self.buffer += data
         if self.part==self.body:
             self.feed(self.buffer)
             self.buffer = ''
@@ -197,8 +200,6 @@ class HTTPHandler(asynchat.async_chat):
 
     def status_line(self):
         line = self.buffer
-        if PY3:
-            line = as_string(line)
 
         version, status, reason = line.split(None, 2)
         status = int(status)
@@ -218,8 +219,6 @@ class HTTPHandler(asynchat.async_chat):
 
     def headers(self):
         line = self.buffer
-        if PY3:
-            line = as_string(line)
 
         if not line:
             if self.encoding=="chunked":
@@ -250,8 +249,6 @@ class HTTPHandler(asynchat.async_chat):
 
     def chunked_size(self):
         line = self.buffer
-        if PY3:
-            line = as_string(line)
 
         if not line:
             return
