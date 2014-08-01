@@ -3,6 +3,7 @@
 import sys
 import supervisor.medusa.text_socket as socket
 
+from supervisor.compat import long
 from supervisor.compat import print_function
 from supervisor.compat import urlparse
 from supervisor.compat import as_bytes
@@ -31,7 +32,7 @@ class Listener(object):
         pass
 
     def feed(self, url, data):
-        sys.stdout.write(data)
+        sys.stdout.write(as_string(data))
         sys.stdout.flush()
 
     def close(self, url):
@@ -134,12 +135,54 @@ class HTTPHandler(asynchat.async_chat):
         self.push(CRLF)
         self.push(CRLF)
 
+    # To extract chunk size precisely in Python3,
+    # we need to work on bytes string not unicode string.
+    # Therefore, we will override this method of asynchat
+    def handle_read(self):
+
+        try:
+            data = self.recv(self.ac_in_buffer_size)
+        except socket.error:
+            self.handle_error()
+            return
+
+        self.ac_in_buffer = as_bytes(self.ac_in_buffer) + as_bytes(data)
+
+        while self.ac_in_buffer:
+            lb = len(self.ac_in_buffer)
+            terminator = self.get_terminator()
+            if not terminator:
+                self.collect_incoming_data(self.ac_in_buffer)
+                self.ac_in_buffer = ''
+            elif isinstance(terminator, int) or isinstance(terminator, long):
+                n = terminator
+                if lb < n:
+                    self.collect_incoming_data(self.ac_in_buffer)
+                    self.ac_in_buffer = ''
+                    self.terminator -= lb
+                else:
+                    self.collect_incoming_data(self.ac_in_buffer[:n])
+                    self.ac_in_buffer = self.ac_in_buffer[n:]
+                    self.terminator = 0
+                    self.found_terminator()
+            else:
+                terminator_len = len(as_bytes(terminator))
+                index = self.ac_in_buffer.find(as_bytes(terminator))
+                if index != -1:
+                    if index > 0:
+                        self.collect_incoming_data(self.ac_in_buffer[:index])
+
+                    self.ac_in_buffer = self.ac_in_buffer[index + terminator_len:]
+                    self.found_terminator()
+                else:
+                    self.collect_incoming_data(self.ac_in_buffer)
+                    self.ac_in_buffer = ''
 
     def feed(self, data):
         self.listener.feed(self.url, data)
 
     def collect_incoming_data(self, data):
-        self.buffer = self.buffer + data
+        self.buffer = as_bytes(self.buffer) + as_bytes(data)
         if self.part==self.body:
             self.feed(self.buffer)
             self.buffer = ''
@@ -154,7 +197,7 @@ class HTTPHandler(asynchat.async_chat):
     def status_line(self):
         line = self.buffer
 
-        version, status, reason = line.split(None, 2)
+        version, status, reason = as_string(line).split(None, 2)
         status = int(status)
         if not version.startswith('HTTP/'):
             raise ValueError(line)
@@ -179,7 +222,7 @@ class HTTPHandler(asynchat.async_chat):
                 self.part = self.body
                 self.set_terminator(self.length)
         else:
-            name, value = line.split(":", 1)
+            name, value = as_string(line).split(":", 1)
             if name and value:
                 name = name.lower()
                 value = value.strip()
@@ -201,10 +244,12 @@ class HTTPHandler(asynchat.async_chat):
 
     def chunked_size(self):
         line = self.buffer
+        from supervisor import slogger
+        # slogger.log2("chunked_size line: \n%r\n\n" % as_string(line))
         if not line:
             return
         try:
-            chunk_size = int(line.split()[0], 16)
+            chunk_size = int(as_string(line).split()[0], 16)
         except ValueError:
             return
         if chunk_size==0:

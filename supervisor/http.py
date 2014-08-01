@@ -8,7 +8,6 @@ import errno
 import pwd
 import weakref
 
-from supervisor.compat import PY3
 from supervisor.compat import urllib
 from supervisor.compat import sha1
 from supervisor.compat import as_bytes
@@ -21,9 +20,6 @@ from supervisor.medusa import filesys
 from supervisor.medusa import default_handler
 
 from supervisor.medusa.auth_handler import auth_handler
-from supervisor.http_client import SUPERVISOR_USER_AGENT
-
-UA_RE = re.compile('User-Agent: (.*)', re.IGNORECASE)
 
 class NOT_DONE_YET:
     pass
@@ -38,10 +34,9 @@ class deferring_chunked_producer:
             request.done()
     """
 
-    def __init__ (self, producer, footers=None, user_agent=None):
+    def __init__ (self, producer, footers=None):
         self.producer = producer
         self.footers = footers
-        self.user_agent = user_agent
         self.delay = 0.1
 
     def more (self):
@@ -50,12 +45,7 @@ class deferring_chunked_producer:
             if data is NOT_DONE_YET:
                 return NOT_DONE_YET
             elif data:
-                # length of unicode string
-                data_length = len(data)
-                if (not PY3) or (self.user_agent != SUPERVISOR_USER_AGENT):
-                    data_length = len(as_bytes(data))
-                    
-                return '%x\r\n%s\r\n' % (data_length, data)
+                return '%x\r\n%s\r\n' % (len(as_bytes(data)), data)
             else:
                 self.producer = None
                 if self.footers:
@@ -162,10 +152,6 @@ class deferring_http_request(http_server.http_request):
 
         #  --- BUCKLE UP! ----
 
-        ua = http_server.get_header(UA_RE, self.header)
-        if not ua:
-            ua = SUPERVISOR_USER_AGENT
-
         connection = http_server.get_header(http_server.CONNECTION,self.header)
         connection = connection.lower()
 
@@ -211,8 +197,7 @@ class deferring_http_request(http_server.http_request):
 
         if wrap_in_chunking:
             outgoing_producer = deferring_chunked_producer(
-                    deferring_composite_producer(self.outgoing),
-                    user_agent=ua
+                    deferring_composite_producer(self.outgoing)
                     )
             # prepend the header
             outgoing_producer = deferring_composite_producer(
