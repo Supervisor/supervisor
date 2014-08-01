@@ -3,6 +3,7 @@
 import sys
 import supervisor.medusa.text_socket as socket
 
+from supervisor.compat import PY3
 from supervisor.compat import long
 from supervisor.compat import print_function
 from supervisor.compat import urlparse
@@ -32,7 +33,7 @@ class Listener(object):
         pass
 
     def feed(self, url, data):
-        sys.stdout.write(as_string(data))
+        sys.stdout.write(data)
         sys.stdout.flush()
 
     def close(self, url):
@@ -179,7 +180,7 @@ class HTTPHandler(asynchat.async_chat):
                     self.ac_in_buffer = ''
 
     def feed(self, data):
-        self.listener.feed(self.url, data)
+        self.listener.feed(self.url, as_string(data))
 
     def collect_incoming_data(self, data):
         self.buffer = as_bytes(self.buffer) + as_bytes(data)
@@ -196,8 +197,10 @@ class HTTPHandler(asynchat.async_chat):
 
     def status_line(self):
         line = self.buffer
+        if PY3:
+            line = as_string(line)
 
-        version, status, reason = as_string(line).split(None, 2)
+        version, status, reason = line.split(None, 2)
         status = int(status)
         if not version.startswith('HTTP/'):
             raise ValueError(line)
@@ -215,6 +218,9 @@ class HTTPHandler(asynchat.async_chat):
 
     def headers(self):
         line = self.buffer
+        if PY3:
+            line = as_string(line)
+
         if not line:
             if self.encoding=="chunked":
                 self.part = self.chunked_size
@@ -222,7 +228,7 @@ class HTTPHandler(asynchat.async_chat):
                 self.part = self.body
                 self.set_terminator(self.length)
         else:
-            name, value = as_string(line).split(":", 1)
+            name, value = line.split(":", 1)
             if name and value:
                 name = name.lower()
                 value = value.strip()
@@ -244,12 +250,13 @@ class HTTPHandler(asynchat.async_chat):
 
     def chunked_size(self):
         line = self.buffer
-        from supervisor import slogger
-        # slogger.log2("chunked_size line: \n%r\n\n" % as_string(line))
+        if PY3:
+            line = as_string(line)
+
         if not line:
             return
         try:
-            chunk_size = int(as_string(line).split()[0], 16)
+            chunk_size = int(line.split()[0], 16)
         except ValueError:
             return
         if chunk_size==0:
