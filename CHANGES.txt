@@ -1,6 +1,8 @@
 3.1.1-dev (Next 3.x Release)
 ----------------------------
 
+- Added docs/conf.py and docs/Makefile.py to the package.
+
 3.1.0 (2014-07-29)
 ------------------
 
