@@ -622,7 +622,7 @@ class DummyMedusaChannel:
     def set_terminator(self, terminator):
         pass
 
-class DummyRequest(dict):
+class DummyRequest(object):
     command = 'GET'
     _error = None
     _done = False
@@ -650,6 +650,12 @@ class DummyRequest(dict):
 
     def __setitem__(self, header, value):
         self.headers[header] = value
+
+    def __getitem__(self, header):
+        return self.headers[header]
+
+    def __delitem__(self, header):
+        del self.headers[header]
 
     def has_key(self, header):
         return header in self.headers

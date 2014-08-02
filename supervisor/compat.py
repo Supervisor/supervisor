@@ -123,16 +123,6 @@ else: # pragma: no cover
     func_attribute = 'im_func'
 
 try: # pragma: no cover
-    # Python 2.6 contains a version of cElementTree inside it.
-    from xml.etree.ElementTree import iterparse
-except ImportError: # pragma: no cover
-    try:
-        # Failing that, try cElementTree instead.
-        from cElementTree import iterparse
-    except ImportError:
-        iterparse = None
-
-try: # pragma: no cover
     from xmlrpc.client import Fault
 except ImportError: # pragma: no cover
     from xmlrpclib import Fault

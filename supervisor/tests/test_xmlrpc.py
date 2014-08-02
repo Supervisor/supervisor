@@ -1,4 +1,3 @@
-import sys
 import unittest
 
 from supervisor.tests.base import DummySupervisor
@@ -80,12 +79,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
         request = DummyRequest('/what/ever', None, None, None)
         handler.continue_request(data, request)
         logdata = supervisor.options.logger.data
-        from supervisor.xmlrpc import loads
-        if loads:
-            expected = 2
-        else:
-            expected = 3
-        self.assertEqual(len(logdata), expected)
+        self.assertEqual(len(logdata), 2)
         self.assertEqual(logdata[-2],
                          'XML-RPC method called: supervisor.noSuchMethod()')
         self.assertEqual(logdata[-1],
@@ -103,12 +97,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
         request = DummyRequest('/what/ever', None, None, None)
         handler.continue_request(data, request)
         logdata = supervisor.options.logger.data
-        from supervisor.xmlrpc import loads
-        if loads:
-            expected = 2
-        else:
-            expected = 3
-        self.assertEqual(len(logdata), expected)
+        self.assertEqual(len(logdata), 2)
         self.assertEqual(logdata[-2],
                'XML-RPC method called: supervisor.getAPIVersion()')
         self.assertEqual(logdata[-1],
@@ -133,12 +122,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
         request = DummyRequest('/what/ever', None, None, None)
         handler.continue_request(data, request)
         logdata = supervisor.options.logger.data
-        from supervisor.xmlrpc import loads
-        if loads:
-            expected = 2
-        else:
-            expected = 3
-        self.assertEqual(len(logdata), expected)
+        self.assertEqual(len(logdata), 2)
         self.assertEqual(logdata[-2],
                'XML-RPC method called: supervisor.getAPIVersion()')
         self.assertEqual(logdata[-1],
@@ -161,12 +145,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
         request = DummyRequest('/what/ever', None, None, None)
         handler.continue_request(data, request)
         logdata = supervisor.options.logger.data
-        from supervisor.xmlrpc import loads
-        if loads:
-            expected = 1
-        else:
-            expected = 2
-        self.assertEqual(len(logdata), expected)
+        self.assertEqual(len(logdata), 1)
         self.assertEqual(logdata[-1],
                'XML-RPC request received with no method name')
         self.assertEqual(len(request.producers), 0)
@@ -180,18 +159,81 @@ class XMLRPCHandlerTests(unittest.TestCase):
         request = DummyRequest('/what/ever', None, None, None)
         handler.continue_request(data, request)
         logdata = supervisor.options.logger.data
-        from supervisor.xmlrpc import loads
-        if loads:
-            expected = 2
-        else:
-            expected = 3
-        self.assertEqual(len(logdata), expected)
+        self.assertEqual(len(logdata), 2)
         self.assertEqual(logdata[-2],
                'XML-RPC method called: supervisor.raiseError()')
         self.assertTrue(logdata[-1].startswith('Traceback'))
         self.assertTrue(logdata[-1].endswith('ValueError: error\n'))
         self.assertEqual(len(request.producers), 0)
         self.assertEqual(request._error, 500)
+
+    def test_iterparse_loads_methodcall(self):
+        s = """<?xml version="1.0"?>
+        <methodCall>
+        <methodName>examples.getStateName</methodName>
+        <params>
+        <param>
+        <value><i4>41</i4></value>
+        </param>
+        <param>
+        <value><int>14</int></value>
+        </param>
+        <param>
+        <value><boolean>1</boolean></value>
+        </param>
+        <param>
+        <value><string>hello world</string></value>
+        </param>
+        <param>
+        <value><double>-12.214</double></value>
+        </param>
+        <param>
+        <value><dateTime.iso8601>19980717T14:08:55</dateTime.iso8601></value>
+        </param>
+        <param>
+        <value><base64>eW91IGNhbid0IHJlYWQgdGhpcyE=</base64></value>
+        </param>
+        <param>
+        <struct>
+          <member><name>k</name><value><i4>5</i4></value></member>
+        </struct>
+        </param>
+        <param>
+        <array>
+          <data>
+            <value><i4>12</i4></value>
+            <value><i4>34</i4></value>
+          </data>
+        </array>
+        </param>
+        <param>
+        <struct>
+        <member>
+          <name>k</name>
+          <value><array><data><value><i4>1</i4></value></data></array></value>
+        </member>
+        </struct>
+        </param>
+        </params>
+        </methodCall>
+        """
+        supervisor = DummySupervisor()
+        subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
+        handler = self._makeOne(supervisor, subinterfaces)
+        result = handler.loads(s)
+        params, method = result
+        import datetime
+        self.assertEqual(method, 'examples.getStateName')
+        self.assertEqual(params[0], 41)
+        self.assertEqual(params[1], 14)
+        self.assertEqual(params[2], True)
+        self.assertEqual(params[3], 'hello world')
+        self.assertEqual(params[4], -12.214)
+        self.assertEqual(params[5], datetime.datetime(1998, 7, 17, 14, 8, 55))
+        self.assertEqual(params[6], "you can't read this!")
+        self.assertEqual(params[7], {'k': 5})
+        self.assertEqual(params[8], [12, 34])
+        self.assertEqual(params[9], {'k': [1]})
 
 class TraverseTests(unittest.TestCase):
     def test_underscore(self):
@@ -310,75 +352,6 @@ class SupervisorTransportTests(unittest.TestCase):
         # would be an AttributeError for _use_datetime under Python 2.5
         parser, unmarshaller = instance.getparser() # this uses _use_datetime
 
-class IterparseLoadsTests(unittest.TestCase):
-    def test_iterparse_loads_methodcall(self):
-        s = """<?xml version="1.0"?>
-        <methodCall>
-        <methodName>examples.getStateName</methodName>
-        <params>
-        <param>
-        <value><i4>41</i4></value>
-        </param>
-        <param>
-        <value><int>14</int></value>
-        </param>
-        <param>
-        <value><boolean>1</boolean></value>
-        </param>
-        <param>
-        <value><string>hello world</string></value>
-        </param>
-        <param>
-        <value><double>-12.214</double></value>
-        </param>
-        <param>
-        <value><dateTime.iso8601>19980717T14:08:55</dateTime.iso8601></value>
-        </param>
-        <param>
-        <value><base64>eW91IGNhbid0IHJlYWQgdGhpcyE=</base64></value>
-        </param>
-        <param>
-        <struct>
-          <member><name>k</name><value><i4>5</i4></value></member>
-        </struct>
-        </param>
-        <param>
-        <array>
-          <data>
-            <value><i4>12</i4></value>
-            <value><i4>34</i4></value>
-          </data>
-        </array>
-        </param>
-        <param>
-        <struct>
-        <member>
-          <name>k</name>
-          <value><array><data><value><i4>1</i4></value></data></array></value>
-        </member>
-        </struct>
-        </param>
-        </params>
-        </methodCall>
-        """
-        from supervisor.xmlrpc import loads
-        if loads is None:
-            return # no cElementTree
-        result = loads(s)
-        params, method = result
-        import datetime
-        self.assertEqual(method, 'examples.getStateName')
-        self.assertEqual(params[0], 41)
-        self.assertEqual(params[1], 14)
-        self.assertEqual(params[2], True)
-        self.assertEqual(params[3], 'hello world')
-        self.assertEqual(params[4], -12.214)
-        self.assertEqual(params[5], datetime.datetime(1998, 7, 17, 14, 8, 55))
-        self.assertEqual(params[6], "you can't read this!")
-        self.assertEqual(params[7], {'k': 5})
-        self.assertEqual(params[8], [12, 34])
-        self.assertEqual(params[9], {'k': [1]})
-
 class TestDeferredXMLRPCResponse(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.xmlrpc import DeferredXMLRPCResponse
@@ -449,6 +422,106 @@ class TestDeferredXMLRPCResponse(unittest.TestCase):
         self.assertTrue(inst.finished)
         self.assertTrue(called)
 
+    def test_getresponse_http_10_with_keepalive(self):
+        inst = self._makeOne()
+        inst.request.version = '1.0'
+        inst.request.header.append('Connection: keep-alive')
+        inst.getresponse('abc')
+        self.assertEqual(len(inst.request.producers), 1)
+        self.assertEqual(inst.request.headers['Connection'], 'Keep-Alive')
+
+    def test_getresponse_http_10_no_keepalive(self):
+        inst = self._makeOne()
+        inst.request.version = '1.0'
+        inst.getresponse('abc')
+        self.assertEqual(len(inst.request.producers), 1)
+        self.assertEqual(inst.request.headers['Connection'], 'close')
+
+    def test_getresponse_http_11_without_close(self):
+        inst = self._makeOne()
+        inst.request.version = '1.1'
+        inst.getresponse('abc')
+        self.assertEqual(len(inst.request.producers), 1)
+        self.assertTrue('Connection' not in inst.request.headers)
+
+    def test_getresponse_http_11_with_close(self):
+        inst = self._makeOne()
+        inst.request.header.append('Connection: close')
+        inst.request.version = '1.1'
+        inst.getresponse('abc')
+        self.assertEqual(len(inst.request.producers), 1)
+        self.assertEqual(inst.request.headers['Connection'], 'close')
+
+    def test_getresponse_http_unknown(self):
+        inst = self._makeOne()
+        inst.request.version = None
+        inst.getresponse('abc')
+        self.assertEqual(len(inst.request.producers), 1)
+        self.assertEqual(inst.request.headers['Connection'], 'close')
+
+class TestSystemNamespaceRPCInterface(unittest.TestCase):
+    def _makeOne(self, namespaces=()):
+        from supervisor.xmlrpc import SystemNamespaceRPCInterface
+        return SystemNamespaceRPCInterface(namespaces)
+
+    def test_listMethods_gardenpath(self):
+        inst = self._makeOne()
+        result = inst.listMethods()
+        self.assertEqual(
+            result,
+            ['system.listMethods',
+             'system.methodHelp',
+             'system.methodSignature',
+             'system.multicall',
+             ]
+            )
+
+    def test_listMethods_omits_underscore_attrs(self):
+        class DummyNamespace(object):
+            def foo(self): pass
+            def _bar(self): pass
+        ns1 = DummyNamespace()
+        inst = self._makeOne([('ns1', ns1)])
+        result = inst.listMethods()
+        self.assertEqual(
+            result,
+            ['ns1.foo',
+             'system.listMethods',
+             'system.methodHelp',
+             'system.methodSignature',
+             'system.multicall'
+             ]
+            )
+
+    def test_methodHelp_known_method(self):
+        inst = self._makeOne()
+        result = inst.methodHelp('system.listMethods')
+        self.assertTrue('array' in result)
+
+    def test_methodHelp_unknown_method(self):
+        from supervisor.xmlrpc import RPCError
+        inst = self._makeOne()
+        self.assertRaises(RPCError, inst.methodHelp, 'wont.be.found')
+
+    def test_methodSignature_known_method(self):
+        inst = self._makeOne()
+        result = inst.methodSignature('system.methodSignature')
+        self.assertEqual(result, ['array', 'string'])
+
+    def test_methodSignature_unknown_method(self):
+        from supervisor.xmlrpc import RPCError
+        inst = self._makeOne()
+        self.assertRaises(RPCError, inst.methodSignature, 'wont.be.found')
+
+    def test_methodSignature_with_bad_sig(self):
+        from supervisor.xmlrpc import RPCError
+        class DummyNamespace(object):
+            def foo(self):
+                """ @param string name The thing"""
+        ns1 = DummyNamespace()
+        inst = self._makeOne([('ns1', ns1)])
+        self.assertRaises(RPCError, inst.methodSignature, 'ns1.foo')
+
 class DummyResponse:
     def __init__(self, status=200, body='', reason='reason'):
         self.status = status
@@ -475,10 +548,4 @@ class DummyConnection:
 
     def close(self):
         self.closed = True
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
 
