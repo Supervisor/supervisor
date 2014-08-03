@@ -1,5 +1,4 @@
 import os
-import re
 import stat
 import time
 import sys
