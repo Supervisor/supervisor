@@ -219,7 +219,6 @@ class HTTPHandler(asynchat.async_chat):
 
     def headers(self):
         line = self.buffer
-
         if not line:
             if self.encoding=="chunked":
                 self.part = self.chunked_size
@@ -249,7 +248,6 @@ class HTTPHandler(asynchat.async_chat):
 
     def chunked_size(self):
         line = self.buffer
-
         if not line:
             return
         try:
