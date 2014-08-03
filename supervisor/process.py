@@ -472,8 +472,8 @@ class Subprocess:
             self.backoff = 0
             self.exitstatus = es
 
-            if self.state == ProcessStates.STARTING:
-                # XXX I dont know under which circumstances this
+            if self.state == ProcessStates.STARTING: # pragma: no cover
+                # XXX I don't know under which circumstances this
                 # happens, but in the wild, there is a transition that
                 # subverts the RUNNING state (directly from STARTING
                 # to EXITED), so we perform the correct transition
