@@ -2,20 +2,12 @@ import grp
 import os
 import pwd
 import signal
-import sys
 import supervisor.medusa.text_socket as socket
 import shlex
 
 from supervisor.compat import urlparse
 from supervisor.compat import long
 from supervisor.loggers import getLevelNumByDescription
-
-# I dont know why we bother, this doesn't run on Windows, but just
-# in case it ever does, avoid this bug magnet by leaving it.
-if sys.platform[:3] == "win": # pragma: no cover
-    DEFAULT_HOST = "localhost"
-else:
-    DEFAULT_HOST = ""
 
 here = None
 
@@ -151,7 +143,7 @@ def inet_address(s):
         except ValueError:
             raise ValueError("not a valid port number: %r " %s)
     if not host or host == '*':
-        host = DEFAULT_HOST
+        host = ''
     return host, port
 
 class SocketAddress:
