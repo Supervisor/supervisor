@@ -25,27 +25,34 @@ else: # pragma: no cover
     reduce = reduce
 
 def print_function(*args,**kwargs): # pragma: no cover
-    kwargs.get('file', sys.stdout).write(' '.join(i for i in args)+kwargs.get('end','\n'))
+    kwargs.get('file', sys.stdout).write(
+        ' '.join(i for i in args)+kwargs.get('end','\n')
+        )
 
 def total_ordering(cls): # pragma: no cover
     """Class decorator that fills in missing ordering methods"""
     convert = {
-        '__lt__': [('__gt__', lambda self, other: not (self < other or self == other)),
-                   ('__le__', lambda self, other: self < other or self == other),
-                   ('__ge__', lambda self, other: not self < other)],
-        '__le__': [('__ge__', lambda self, other: not self <= other or self == other),
-                   ('__lt__', lambda self, other: self <= other and not self == other),
-                   ('__gt__', lambda self, other: not self <= other)],
-        '__gt__': [('__lt__', lambda self, other: not (self > other or self == other)),
-                   ('__ge__', lambda self, other: self > other or self == other),
-                   ('__le__', lambda self, other: not self > other)],
-        '__ge__': [('__le__', lambda self, other: (not self >= other) or self == other),
-                   ('__gt__', lambda self, other: self >= other and not self == other),
-                   ('__lt__', lambda self, other: not self >= other)]
+        '__lt__': [
+            ('__gt__', lambda self, other: not (self < other or self == other)),
+            ('__le__', lambda self, other: self < other or self == other),
+            ('__ge__', lambda self, other: not self < other)],
+        '__le__': [
+            ('__ge__', lambda self, other: not self <= other or self == other),
+            ('__lt__', lambda self, other: self <= other and not self == other),
+            ('__gt__', lambda self, other: not self <= other)],
+        '__gt__': [
+            ('__lt__', lambda self, other: not (self > other or self == other)),
+            ('__ge__', lambda self, other: self > other or self == other),
+            ('__le__', lambda self, other: not self > other)],
+        '__ge__': [
+            ('__le__', lambda self, other: (not self>= other) or self == other),
+            ('__gt__', lambda self, other: self >= other and not self == other),
+            ('__lt__', lambda self, other: not self >= other)]
     }
     roots = set(dir(cls)) & set(convert)
     if not roots:
-        raise ValueError('must define at least one ordering operation: < > <= >=')
+        raise ValueError(
+            'must define at least one ordering operation: < > <= >=')
     root = max(roots)       # prefer __lt__ to __le__ to __gt__ to __ge__
     for opname, opfunc in convert[root]:
         if opname not in roots:
@@ -121,16 +128,6 @@ if PY3: # pragma: no cover
     func_attribute = '__func__'
 else: # pragma: no cover
     func_attribute = 'im_func'
-
-try: # pragma: no cover
-    # Python 2.6 contains a version of cElementTree inside it.
-    from xml.etree.ElementTree import iterparse
-except ImportError: # pragma: no cover
-    try:
-        # Failing that, try cElementTree instead.
-        from cElementTree import iterparse
-    except ImportError:
-        iterparse = None
 
 try: # pragma: no cover
     from xmlrpc.client import Fault
