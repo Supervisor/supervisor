@@ -33,7 +33,8 @@ class SupervisorNamespaceRPCInterface:
 
     def _update(self, text):
         self.update_text = text # for unit tests, mainly
-        if self.supervisord.options.mood < SupervisorStates.RUNNING:
+        if ( isinstance(self.supervisord.options.mood, int) and
+             self.supervisord.options.mood < SupervisorStates.RUNNING ):
             raise RPCError(Faults.SHUTDOWN_STATE)
 
     # RPC API methods
