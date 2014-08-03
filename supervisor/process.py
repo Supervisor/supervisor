@@ -473,7 +473,7 @@ class Subprocess(object):
             self.backoff = 0
             self.exitstatus = es
 
-            if self.state == ProcessStates.STARTING:
+            if self.state == ProcessStates.STARTING: # pragma: no cover
                 # XXX I don't know under which circumstances this
                 # happens, but in the wild, there is a transition that
                 # subverts the RUNNING state (directly from STARTING
