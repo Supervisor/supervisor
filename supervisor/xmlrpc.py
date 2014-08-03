@@ -425,7 +425,6 @@ class SupervisorTransport(xmlrpclib.Transport):
     """
     connection = None
 
-    _use_datetime = 0 # python 2.5 fwd compatibility
     def __init__(self, username=None, password=None, serverurl=None):
         xmlrpclib.Transport.__init__(self)
         self.username = username
@@ -491,7 +490,7 @@ class SupervisorTransport(xmlrpclib.Transport):
         return u.close()
 
 class UnixStreamHTTPConnection(httplib.HTTPConnection):
-    def connect(self):
+    def connect(self): # pragma: no cover
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         # we abuse the host parameter as the socketname
         self.sock.connect(self.socketfile)

@@ -167,6 +167,29 @@ class XMLRPCHandlerTests(unittest.TestCase):
         self.assertEqual(len(request.producers), 0)
         self.assertEqual(request._error, 500)
 
+    def test_continue_request_value_is_function(self):
+        class DummyRPCNamespace(object):
+            def foo(self):
+                def inner(self):
+                    return 1
+                inner.delay = .05
+                return inner
+        supervisor = DummySupervisor()
+        subinterfaces = [('supervisor', DummySupervisorRPCNamespace()),
+                          ('ns1', DummyRPCNamespace())]
+        handler = self._makeOne(supervisor, subinterfaces)
+        data = xmlrpclib.dumps((), 'ns1.foo')
+        request = DummyRequest('/what/ever', None, None, None)
+        handler.continue_request(data, request)
+        logdata = supervisor.options.logger.data
+        self.assertEqual(len(logdata), 2)
+        self.assertEqual(logdata[-2],
+               'XML-RPC method called: ns1.foo()')
+        self.assertEqual(logdata[-1],
+            'XML-RPC method ns1.foo() returned successfully')
+        self.assertEqual(len(request.producers), 0)
+        self.assertEqual(request._done, False)
+
     def test_iterparse_loads_methodcall(self):
         s = """<?xml version="1.0"?>
         <methodCall>
@@ -275,6 +298,11 @@ class SupervisorTransportTests(unittest.TestCase):
         self.assertEqual(conn.host, 'localhost')
         self.assertEqual(conn.socketfile, '/foo/bar')
 
+    def test_ctor_unknown(self):
+        self.assertRaises(ValueError,
+            self._makeOne, 'user', 'pass', 'unknown:///foo/bar'
+            )
+
     def test__get_connection_http_9001(self):
         transport = self._makeOne('user', 'pass', 'http://127.0.0.1:9001/')
         conn = transport._get_connection()
@@ -345,12 +373,6 @@ class SupervisorTransportTests(unittest.TestCase):
                          'Basic dXNlcjpwYXNz')
         self.assertEqual(dummy_conn.requestargs[3]['Accept'], 'text/xml')
         self.assertEqual(result, ('South Dakota',))
-
-    def test_works_with_py25(self):
-        instance = self._makeOne('username', 'password', 'http://127.0.0.1')
-        # the test is just to insure that this method can be called; failure
-        # would be an AttributeError for _use_datetime under Python 2.5
-        parser, unmarshaller = instance.getparser() # this uses _use_datetime
 
 class TestDeferredXMLRPCResponse(unittest.TestCase):
     def _getTargetClass(self):
@@ -521,6 +543,124 @@ class TestSystemNamespaceRPCInterface(unittest.TestCase):
         ns1 = DummyNamespace()
         inst = self._makeOne([('ns1', ns1)])
         self.assertRaises(RPCError, inst.methodSignature, 'ns1.foo')
+
+    def test_multicall_recursion_forbidden(self):
+        inst = self._makeOne()
+        call = {'methodName':'system.multicall'}
+        multiproduce = inst.multicall([call])
+        result = multiproduce()
+        self.assertEqual(
+            result,
+            [{'faultCode': 2, 'faultString': 'INCORRECT_PARAMETERS'}]
+            )
+
+    def test_multicall_other_exception(self):
+        inst = self._makeOne()
+        call = {} # no methodName
+        multiproduce = inst.multicall([call])
+        result = multiproduce()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]['faultCode'], 1)
+
+    def test_multicall_no_calls(self):
+        inst = self._makeOne()
+        multiproduce = inst.multicall([])
+        result = multiproduce()
+        self.assertEqual(result, [])
+
+    def test_multicall_callback_raises_RPCError(self):
+        from supervisor.xmlrpc import RPCError, Faults
+        class DummyNamespace(object):
+            def foo(self):
+                """ @param string name The thing"""
+                raise RPCError(Faults.UNKNOWN_METHOD)
+
+        ns1 = DummyNamespace()
+        inst = self._makeOne([('ns1', ns1)])
+        multiproduce = inst.multicall([{'methodName':'ns1.foo'}])
+        result = multiproduce()
+        self.assertEqual(
+            result, [{'faultString': 'UNKNOWN_METHOD', 'faultCode': 1}]
+            )
+
+    def test_multicall_callback_returns_function_returns_NOT_DONE_YET(self):
+        from supervisor.http import NOT_DONE_YET
+        class DummyNamespace(object):
+            def __init__(self):
+                self.results = [NOT_DONE_YET, 1]
+            def foo(self):
+                """ @param string name The thing"""
+                def inner():
+                    return self.results.pop(0)
+                return inner
+        ns1 = DummyNamespace()
+        inst = self._makeOne([('ns1', ns1)])
+        multiproduce = inst.multicall([{'methodName':'ns1.foo'}])
+        result = multiproduce()
+        self.assertEqual(
+            result,
+            NOT_DONE_YET
+            )
+        result = multiproduce()
+        self.assertEqual(
+            result,
+            [1]
+            )
+
+    def test_multicall_callback_returns_function_raises_RPCError(self):
+        from supervisor.xmlrpc import Faults, RPCError
+        class DummyNamespace(object):
+            def foo(self):
+                """ @param string name The thing"""
+                def inner():
+                    raise RPCError(Faults.UNKNOWN_METHOD)
+                return inner
+        ns1 = DummyNamespace()
+        inst = self._makeOne([('ns1', ns1)])
+        multiproduce = inst.multicall([{'methodName':'ns1.foo'}])
+        result = multiproduce()
+        self.assertEqual(
+            result,
+            [{'faultString': 'UNKNOWN_METHOD', 'faultCode': 1}],
+            )
+
+
+class Test_gettags(unittest.TestCase):
+    def _callFUT(self, comment):
+        from supervisor.xmlrpc import gettags
+        return gettags(comment)
+
+    def test_one_atpart(self):
+        lines = '@foo'
+        result = self._callFUT(lines)
+        self.assertEqual(
+            result,
+            [(0, None, None, None, ''), (0, 'foo', '', '', '')]
+            )
+
+    def test_two_atparts(self):
+        lines = '@foo array'
+        result = self._callFUT(lines)
+        self.assertEqual(
+            result,
+            [(0, None, None, None, ''), (0, 'foo', 'array', '', '')]
+            )
+
+    def test_three_atparts(self):
+        lines = '@foo array name'
+        result = self._callFUT(lines)
+        self.assertEqual(
+            result,
+            [(0, None, None, None, ''), (0, 'foo', 'array', 'name', '')]
+            )
+
+    def test_four_atparts(self):
+        lines = '@foo array name text'
+        result = self._callFUT(lines)
+        self.assertEqual(
+            result,
+            [(0, None, None, None, ''), (0, 'foo', 'array', 'name', 'text')]
+            )
 
 class DummyResponse:
     def __init__(self, status=200, body='', reason='reason'):
