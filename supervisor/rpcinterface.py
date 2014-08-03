@@ -780,9 +780,14 @@ def make_allfunc(processes, predicate, func, **extra_kwargs):
     callbacks = []
     results = []
 
-    def allfunc(processes=processes, predicate=predicate, func=func,
-                extra_kwargs=extra_kwargs, callbacks=callbacks,
-                results=results):
+    def allfunc(
+        processes=processes,
+        predicate=predicate,
+        func=func,
+        extra_kwargs=extra_kwargs,
+        callbacks=callbacks, # used only to fool scoping, never passed by caller
+        results=results, # used only to fool scoping, never passed by caller
+        ):
         if not callbacks:
 
             for group, process in processes:
