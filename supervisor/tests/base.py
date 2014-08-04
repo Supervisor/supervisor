@@ -983,6 +983,9 @@ class PopulatedDummySupervisor(DummySupervisor):
         process = self.process_groups[group_name].processes[process_name]
         setattr(process, attr_name, val)
 
+    def reap(self):
+        self.reaped = True
+
 class DummyDispatcher:
     write_event_handled = False
     read_event_handled = False

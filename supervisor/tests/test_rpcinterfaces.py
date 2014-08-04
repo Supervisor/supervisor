@@ -315,9 +315,10 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
         supervisord.set_procattr('foo', 'pid', 10)
         interface = self._makeOne(supervisord)
-        callback = interface.startProcess('foo')
-        self._assertRPCError(xmlrpc.Faults.ALREADY_STARTED,
-                             callback)
+        self._assertRPCError(
+            xmlrpc.Faults.ALREADY_STARTED,
+            interface.startProcess, 'foo'
+            )
 
     def test_startProcess_bad_group_name(self):
         options = DummyOptions()
@@ -371,11 +372,13 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         process.spawnerr = 'abc'
         interface = self._makeOne(supervisord)
-        callback = interface.startProcess('foo')
-        self._assertRPCError(xmlrpc.Faults.SPAWN_ERROR, callback)
+        self._assertRPCError(
+            xmlrpc.Faults.SPAWN_ERROR,
+            interface.startProcess,
+            'foo'
+            )
 
     def test_startProcess(self):
-        from supervisor import http
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', __file__, autostart=False,
                                startsecs=.01)
@@ -383,14 +386,11 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
         supervisord.set_procattr('foo', 'state', ProcessStates.STOPPED)
         interface = self._makeOne(supervisord)
-        callback = interface.startProcess('foo')
-        self.assertEqual(callback(), http.NOT_DONE_YET)
+        result = interface.startProcess('foo')
         process = supervisord.process_groups['foo'].processes['foo']
         self.assertEqual(process.spawned, True)
         self.assertEqual(interface.update_text, 'startProcess')
         process.state = ProcessStates.RUNNING
-        time.sleep(.02)
-        result = callback()
         self.assertEqual(result, True)
 
     def test_startProcess_nowait(self):
