@@ -88,7 +88,7 @@ class deferring_globbing_producer:
         self.delay = 0.1
 
     def more (self):
-        while len(self.buffer) < self.buffer_size:
+        while len(as_bytes(self.buffer)) < self.buffer_size:
             data = self.producer.more()
             if data is NOT_DONE_YET:
                 return NOT_DONE_YET
@@ -126,7 +126,7 @@ class deferring_hooked_producer:
                 self.producer = None
                 self.function (self.bytes)
             else:
-                self.bytes += len(result)
+                self.bytes += len(as_bytes(result))
             return result
         else:
             return ''
