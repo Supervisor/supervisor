@@ -31,10 +31,11 @@ Options:
 """
 
 import os
-import time
 import errno
 import select
 import signal
+
+from supervisor.compat import monotonic_time
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -147,7 +148,7 @@ class Supervisor:
 
         if unstopped:
             # throttle 'waiting for x to die' reports
-            now = time.time()
+            now = monotonic_time()
             if now > (self.lastshutdownreport + 3): # every 3 secs
                 names = [ p.config.name for p in unstopped ]
                 namestr = ', '.join(names)
@@ -266,7 +267,7 @@ class Supervisor:
         the period for the event type rolls over """
         if now is None:
             # now won't be None in unit tests
-            now = time.time()
+            now = monotonic_time()
         for event in events.TICK_EVENTS:
             period = event.period
             last_tick = self.ticks.get(period)

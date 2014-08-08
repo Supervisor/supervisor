@@ -148,3 +148,37 @@ try: # pragma: no cover
     import thread
 except ImportError: # pragma: no cover
     import _thread as thread
+
+try: # pragma: no cover
+    from time import monotonic as monotonic_time
+except ImportError: # pragma: no cover
+    if sys.platform.startswith("linux") or sys.platform.contains("bsd"):
+        # Adapted from http://stackoverflow.com/questions/1205722/
+        import ctypes
+        import os
+
+        class timespec(ctypes.Structure):
+            _fields_ = [
+                ('tv_sec', ctypes.c_long),
+                ('tv_nsec', ctypes.c_long)
+            ]
+
+        if sys.platform.startswith("linux"):
+            librt = ctypes.CDLL('librt.so.1', use_errno=True)
+            clock_gettime = librt.clock_gettime
+            clock_gettime.argtypes = [ctypes.c_int32, ctypes.POINTER(timespec)]
+            CLOCK_MONOTONIC = 4  # see <linux/time.h>; CLOCK_MONOTONIC_RAW
+        elif sys.platform.contains("bsd"):
+            libc = ctypes.CDLL('libc.so', use_errno=True)
+            clock_gettime = libc.clock_gettime
+            clock_gettime.argtypes = [ctypes.c_int32, ctypes.POINTER(timespec)]
+            CLOCK_MONOTONIC = 4  # see <time.h>
+
+        def monotonic_time():
+            t = timespec()
+            if clock_gettime(CLOCK_MONOTONIC, ctypes.pointer(t)) != 0:
+                errno_ = ctypes.get_errno()
+                raise OSError(errno_, os.strerror(errno_))
+            return t.tv_sec + t.tv_nsec * 1e-9
+    else:
+        from time import monotonic  # raises ImportError
