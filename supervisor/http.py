@@ -357,9 +357,9 @@ class deferring_http_channel(http_server.http_channel):
         if self.delay:
             # we called a deferred producer via this channel (see refill_buffer)
             last_writable_check = self.writable_check
-            self.writable_check = now
             elapsed = now - last_writable_check
             if elapsed > self.delay:
+                self.writable_check = now
                 return True
             else:
                 return False
