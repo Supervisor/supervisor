@@ -1,6 +1,9 @@
 3.2.0 (Next 3.x Release)
 ------------------------
 
+- "supervisorctl start [spec naming lots of processes]" and "supervisorctl stop
+  [spec naming lots of processes]" both now complete much more quickly.  See
+  https://github.com/Supervisor/supervisor/issues/131 .
 
 3.1.2 (2014-09-07)
 ------------------
