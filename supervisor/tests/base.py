@@ -373,6 +373,7 @@ class DummySocketManager:
     def get_socket(self):
         return DummySocket(self._config.fd)
 
+@total_ordering
 class DummyProcess(object):
     # Initial state; overridden by instance variables
     pid = 0 # Subprocess pid; 0 when not running
@@ -498,8 +499,6 @@ class DummyProcess(object):
 
     def __lt__(self, other):
         return self.config.priority < other.config.priority
-
-DummyProcess = total_ordering(DummyProcess)
 
 class DummyPConfig:
     def __init__(self, options, name, command, directory=None, umask=None,
@@ -968,6 +967,7 @@ class DummyFCGIGroupConfig(DummyPGroupConfig):
         DummyPGroupConfig.__init__(self, options, name, priority, pconfigs)
         self.socket_config = socket_config
 
+@total_ordering
 class DummyProcessGroup(object):
     def __init__(self, config):
         self.config = config
@@ -993,8 +993,6 @@ class DummyProcessGroup(object):
 
     def __eq__(self, other):
         return self.config.priority == other.config.priority
-
-DummyProcessGroup = total_ordering(DummyProcessGroup)
 
 class DummyFCGIProcessGroup(DummyProcessGroup):
 
