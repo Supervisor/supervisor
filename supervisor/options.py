@@ -1294,10 +1294,15 @@ class ServerOptions(Options):
         os.setuid(uid)
 
     def waitpid(self):
-        # need pthread_sigmask here to avoid concurrent sigchild, but
-        # Python doesn't offer it as it's not standard across UNIX versions.
-        # there is still a race condition here; we can get a sigchild while
-        # we're sitting in the waitpid call.
+        # Need pthread_sigmask here to avoid concurrent sigchild, but Python
+        # doesn't offer in Python < 3.4.  There is still a race condition here;
+        # we can get a sigchild while we're sitting in the waitpid call.
+        # However, AFAICT, if waitpid is interrupted bu SIGCHILD, as long as we
+        # call waitpid again (which happens every so often during the normal
+        # course in the mainloop), we'll eventually reap the child that we
+        # tried to reap during the interrupted call. At least on Linux, this
+        # appears to be true, or at least stopping 50 processes at once never
+        # left zombies laying around.
         try:
             pid, sts = os.waitpid(-1, os.WNOHANG)
         except OSError as why:
