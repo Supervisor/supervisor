@@ -269,7 +269,9 @@ class Supervisor:
                 self.ticks[period] = this_tick
                 events.notify(event(this_tick, self))
 
-    def reap(self, once=False):
+    def reap(self, once=False, recursionguard=0):
+        if recursionguard == 100:
+            return
         pid, sts = self.options.waitpid()
         if pid:
             process = self.options.pidhistory.get(pid, None)
@@ -279,7 +281,9 @@ class Supervisor:
                 process.finish(pid, sts)
                 del self.options.pidhistory[pid]
             if not once:
-                self.reap() # keep reaping until no more kids to reap
+                # keep reaping until no more kids to reap, but don't recurse
+                # infintely
+                self.reap(once=False, recursionguard=recursionguard+1)
 
     def handle_signal(self):
         sig = self.options.get_signal()
