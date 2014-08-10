@@ -25,6 +25,10 @@
   [spec naming lots of processes]" both now complete much more quickly.  See
   https://github.com/Supervisor/supervisor/issues/131 .
 
+- Prevent a crash when a greater number file descriptors were attempted to be
+  opened than permitted by the environment when starting a bunch of programs.
+  Now, instead a spawn error is logged.
+
 3.1.0 (2014-07-29)
 ------------------
 
