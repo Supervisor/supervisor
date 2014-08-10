@@ -32,8 +32,6 @@ Options:
 
 import os
 import time
-import errno
-import select
 import signal
 
 from supervisor.medusa import asyncore_25 as asyncore
