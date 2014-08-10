@@ -13,7 +13,6 @@ import grp
 import resource
 import stat
 import pkg_resources
-import select
 import glob
 import platform
 import warnings
@@ -48,6 +47,7 @@ from supervisor.datatypes import profile_options
 from supervisor import loggers
 from supervisor import states
 from supervisor import xmlrpc
+from supervisor import poller
 
 mydir = os.path.abspath(os.path.dirname(__file__))
 version_txt = os.path.join(mydir, 'version.txt')
@@ -451,6 +451,7 @@ class ServerOptions(Options):
         self.parse_warnings = []
         self.parse_infos = []
         self.signal_receiver = SignalReceiver()
+        self.poller = poller.Poller(self)
 
     def version(self, dummy):
         """Print version to stdout and exit(0).
@@ -1056,6 +1057,11 @@ class ServerOptions(Options):
         return configs
 
     def daemonize(self):
+        self.poller.before_daemonize()
+        self._daemonize()
+        self.poller.after_daemonize()
+
+    def _daemonize(self):
         # To daemonize, we need to become the leader of our own session
         # (process) group.  If we do not, signals sent to our
         # parent process will also be sent to us.   This might be bad because
@@ -1228,9 +1234,6 @@ class ServerOptions(Options):
                 os.close(x)
             except OSError:
                 pass
-
-    def select(self, r, w, x, timeout):
-        return select.select(r, w, x, timeout)
 
     def kill(self, pid, signal):
         os.kill(pid, signal)

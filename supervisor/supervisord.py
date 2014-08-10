@@ -209,22 +209,13 @@ class Supervisor:
                     # killing everything), it's OK to shutdown or reload
                     raise asyncore.ExitNow
 
-            r, w, x = [], [], []
-
             for fd, dispatcher in combined_map.items():
                 if dispatcher.readable():
-                    r.append(fd)
+                    self.options.poller.register_readable(fd)
                 if dispatcher.writable():
-                    w.append(fd)
+                    self.options.poller.register_writable(fd)
 
-            try:
-                r, w, x = self.options.select(r, w, x, timeout)
-            except select.error, err:
-                r = w = x = []
-                if err.args[0] == errno.EINTR:
-                    self.options.logger.blather('EINTR encountered in select')
-                else:
-                    raise
+            r, w = self.options.poller.poll(timeout)
 
             for fd in r:
                 if combined_map.has_key(fd):
