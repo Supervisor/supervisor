@@ -27,7 +27,8 @@
 
 - Prevent a crash when a greater number file descriptors were attempted to be
   opened than permitted by the environment when starting a bunch of programs.
-  Now, instead a spawn error is logged.
+  Now, instead a spawn error is logged.  See
+  https://github.com/Supervisor/supervisor/issues/145
 
 3.1.0 (2014-07-29)
 ------------------
