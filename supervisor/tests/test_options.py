@@ -2082,6 +2082,14 @@ class ServerOptionsTests(unittest.TestCase):
         msg = instance.dropPrivileges(42)
         self.assertEqual(msg, "Can't drop privilege as nonroot user")
 
+    def test_daemonize_notifies_poller_before_and_after_fork(self):
+        instance = self._makeOne()
+        instance._daemonize = lambda: None
+        instance.poller = Mock()
+        instance.daemonize()
+        instance.poller.before_daemonize.assert_called_once_with()
+        instance.poller.after_daemonize.assert_called_once_with()
+
 class TestProcessConfig(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ProcessConfig

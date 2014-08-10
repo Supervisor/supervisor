@@ -72,8 +72,6 @@ class DummyOptions:
         self.privsdropped = None
         self.logs_reopened = False
         self.environment_processed = False
-        self.select_result = [], [], []
-        self.select_error = None
         self.write_accept = None
         self.write_error = None
         self.tempfile_name = '/foo/bar'
@@ -87,6 +85,7 @@ class DummyOptions:
         self.changed_directory = False
         self.chdir_error = None
         self.umaskset = None
+        self.poller = DummyPoller(self)
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -235,12 +234,6 @@ class DummyOptions:
 
     def mktempfile(self, prefix, suffix, dir):
         return self.tempfile_name
-
-    def select(self, r, w, x, timeout):
-        import select
-        if self.select_error:
-            raise select.error(self.select_error)
-        return self.select_result
 
     def remove(self, path):
         import os
@@ -1103,6 +1096,19 @@ class DummyEvent:
     def __str__(self):
         return 'dummy event'
 
+class DummyPoller:
+    def __init__(self, options):
+        self.result = [], []
+
+    def register_readable(self, fd):
+        pass
+
+    def register_writable(self, fd):
+        pass
+
+    def poll(self, timeout):
+        return self.result
+        
 def dummy_handler(event, result):
     pass
 
