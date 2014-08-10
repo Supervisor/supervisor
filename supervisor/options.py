@@ -1455,6 +1455,7 @@ class ServerOptions(Options):
             for fd in pipes.values():
                 if fd is not None:
                     self.close_fd(fd)
+            raise
 
     def close_parent_pipes(self, pipes):
         for fdname in ('stdin', 'stdout', 'stderr'):
