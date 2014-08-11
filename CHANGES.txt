@@ -3,6 +3,9 @@
 
 - Added docs/conf.py and docs/Makefile.py to the package.
 
+- Fixed a bug where ``supervisorctl tail -f name`` output would stop if log
+  rotation occurred while tailing.
+
 3.1.0 (2014-07-29)
 ------------------
 

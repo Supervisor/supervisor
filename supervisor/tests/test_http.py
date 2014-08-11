@@ -124,8 +124,7 @@ class TailFProducerTests(unittest.TestCase):
         f = tempfile.NamedTemporaryFile()
         f.write('a' * 80)
         f.flush()
-        t = f.name
-        producer = self._makeOne(request, t, 80)
+        producer = self._makeOne(request, f.name, 80)
         result = producer.more()
         self.assertEqual(result, 'a' * 80)
         f.write('w' * 100)
@@ -138,6 +137,25 @@ class TailFProducerTests(unittest.TestCase):
         f.flush()
         result = producer.more()
         self.assertEqual(result, '==> File truncated <==\n')
+
+    def test_handle_more_follow(self):
+        request = DummyRequest('/logtail/foo', None, None, None)
+        from supervisor import http
+        f = tempfile.NamedTemporaryFile()
+        f.write('a' * 80)
+        f.flush()
+        producer = self._makeOne(request, f.name, 80)
+        result = producer.more()
+        self.assertEqual(result, 'a' * 80)
+        f.close()
+        f2 = open(f.name, 'w')
+        try:
+            f2.write('b' * 80)
+            f2.close()
+            result = producer.more()
+        finally:
+            os.unlink(f2.name)
+        self.assertEqual(result, 'b' * 80)
 
 class DeferringChunkedProducerTests(unittest.TestCase):
     def _getTargetClass(self):
