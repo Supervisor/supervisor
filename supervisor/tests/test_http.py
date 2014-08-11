@@ -147,7 +147,7 @@ class TailFProducerTests(unittest.TestCase):
         result = producer.more()
         self.assertEqual(result, as_bytes('a' * 80))
         f.close()
-        f2 = open(f.name, 'w')
+        f2 = open(f.name, 'wb')
         try:
             f2.write(as_bytes('b' * 80))
             f2.close()
