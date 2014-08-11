@@ -34,6 +34,9 @@
   it.  See https://github.com/Supervisor/supervisor/pull/129.  Patch by Igor
   Sobreira.
 
+- Fixed a bug where ``supervisorctl tail -f name`` output would stop if log
+  rotation occurred while tailing.
+
 3.1.0 (2014-07-29)
 ------------------
 

@@ -636,22 +636,22 @@ class supervisor_af_unix_http_server(supervisor_http_server):
 
 class tail_f_producer:
     def __init__(self, request, filename, head):
-        self.file = open(filename, 'rb')
         self.request = weakref.ref(request)
+        self.filename = filename
         self.delay = 0.1
-        sz = self.fsize()
+
+        self._open()
+        sz = self._fsize()
         if sz >= head:
             self.sz = sz - head
-        else:
-            self.sz = 0
 
     def __del__(self):
-        if self.file:
-            self.file.close()
+        self._close()
 
     def more(self):
+        self._follow()
         try:
-            newsz = self.fsize()
+            newsz = self._fsize()
         except OSError:
             # file descriptor was closed
             return ''
@@ -666,7 +666,25 @@ class tail_f_producer:
             return bytes
         return NOT_DONE_YET
 
-    def fsize(self):
+    def _open(self):
+        self.file = open(self.filename, 'rb')
+        self.ino = os.fstat(self.file.fileno())[stat.ST_INO]
+        self.sz = 0
+
+    def _close(self):
+        self.file.close()
+
+    def _follow(self):
+        try:
+            ino = os.stat(self.filename)[stat.ST_INO]
+        except OSError:
+            return
+
+        if self.ino != ino: # log rotation occurred
+            self._close()
+            self._open()
+
+    def _fsize(self):
         return os.fstat(self.file.fileno())[stat.ST_SIZE]
 
 class logtail_handler:
