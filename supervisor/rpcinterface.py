@@ -512,7 +512,7 @@ class SupervisorNamespaceRPCInterface:
         if group is None:
             raise RPCError(Faults.BAD_NAME, name)
 
-        processes = group.processes.values()
+        processes = list(group.processes.values())
         processes.sort()
         processes = [(group, process) for process in processes]
 
