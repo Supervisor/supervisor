@@ -260,7 +260,7 @@ class Options:
 
         # Check for positional args
         if self.args and not self.positional_args_allowed:
-            self.usage("positional arguments are not supported")
+            self.usage("positional arguments are not supported: %s" % (str(self.args)))
 
         # Process options returned by getopt
         for opt, arg in self.options:
