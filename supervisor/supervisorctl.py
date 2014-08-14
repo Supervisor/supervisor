@@ -30,6 +30,7 @@ import socket
 import errno
 import urlparse
 import threading
+import signal
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -762,6 +763,22 @@ class DefaultControllerPlugin(ControllerPluginBase):
         # assertion
         raise ValueError('Unknown result code %s for %s' % (code, name))
 
+    def _signalresult(self, result):
+        name = make_namespec(result['group'], result['name'])
+        code = result['status']
+        fault_string = result['description']
+        template = '%s: ERROR (%s)'
+        if code == xmlrpc.Faults.BAD_NAME:
+            return template % (name, 'no such process')
+        elif code == xmlrpc.Faults.NOT_RUNNING:
+            return template % (name, 'not running')
+        elif code == xmlrpc.Faults.SUCCESS:
+            return '%s: signalled' % name
+        elif code == xmlrpc.Faults.FAILED:
+            return fault_string
+        # assertion
+        raise ValueError('Unknown result code %s for %s' % (code, name))
+
     def do_stop(self, arg):
         if not self.ctl.upcheck():
             return
@@ -813,6 +830,59 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output("stop <gname>:*\t\tStop all processes in a group")
         self.ctl.output("stop <name> <name>\tStop multiple processes or groups")
         self.ctl.output("stop all\t\tStop all processes")
+
+    def do_signal(self, arg):
+        if not self.ctl.upcheck():
+            return
+
+        args = arg.split()
+        sig = args[0]
+        names = args[1:]
+        supervisor = self.ctl.get_supervisor()
+
+        if not names:
+            self.ctl.output('Error: signal requires a process name')
+            self.help_stop()
+            return
+
+        if 'all' in names:
+            results = supervisor.signalAllProcesses()
+            for result in results:
+                result = self._stopresult(result)
+                self.ctl.output(result)
+
+        else:
+            for name in names:
+                group_name, process_name = split_namespec(name)
+                if process_name is None:
+                    try:
+                        results = supervisor.sendGroupSignal(group_name, sig)
+                        for result in results:
+                            result = self._signalresult(result)
+                            self.ctl.output(result)
+                    except xmlrpclib.Fault as e:
+                        if e.faultCode == xmlrpc.Faults.BAD_NAME:
+                            error = "%s: ERROR (no such group)" % group_name
+                            self.ctl.output(error)
+                        else:
+                            raise
+                else:
+                    try:
+                        supervisor.sendProcessSignal(name, sig)
+                    except xmlrpclib.Fault as e:
+                        error = self._signalresult({'status': e.faultCode,
+                                                    'name': process_name,
+                                                    'group': group_name,
+                                                    'description':e.faultString})
+                        self.ctl.output(error)
+                    else:
+                        name = make_namespec(group_name, process_name)
+                        self.ctl.output('%s: signalled' % name)
+
+    def help_signal(self):
+        self.ctl.output("signal <signal name> <name>\t\tSignal a process")
+        self.ctl.output("signal <signal name> <gname>:*\t\tSignal all processes in a group")
+        self.ctl.output("signal <signal name> <name> <name>\tSignal multiple processes or groups")
 
     def do_restart(self, arg):
         if not self.ctl.upcheck():
