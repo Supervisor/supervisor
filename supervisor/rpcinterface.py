@@ -466,7 +466,21 @@ class SupervisorNamespaceRPCInterface:
         return killall # deferred
 
 
-    def sendProcessSignal(self, name, signal = signal.SIGHUP):
+    def _getSignalFromString(self, name):
+        try:
+            return int(name)
+        except ValueError:
+            pass
+        name = name.upper()
+        sig = getattr(signal, name, None)
+        if isinstance(sig, int):
+            return sig
+        sig = getattr(signal, "SIG%s" % name, None)
+        if isinstance(sig, int):
+            return sig
+
+
+    def sendProcessSignal(self, name, signal='HUP'):
         """ Send an arbitrary UNIX signal to the process named by name
 
         @param string name The name of the process to signal (or 'group:name')
@@ -482,10 +496,12 @@ class SupervisorNamespaceRPCInterface:
             group_name, process_name = split_namespec(name)
             return self.sendGroupSignal(group_name, signal = signal)
 
+        sig = self._getSignalFromString(signal)
+
         if process.get_state() not in RUNNING_STATES:
            raise RPCError(Faults.NOT_RUNNING)
 
-        msg = process.signal(signal)
+        msg = process.signal(sig)
 
         if not msg is None:
             raise RPCError(Faults.FAILED, msg)
@@ -497,7 +513,7 @@ class SupervisorNamespaceRPCInterface:
         return cb
 
 
-    def sendGroupSignal(self, name, signal = signal.SIGHUP):
+    def sendGroupSignal(self, name, signal='HUP'):
         """ Send a signal to all processes in the group named 'name'
 
         @param string name  The group name
