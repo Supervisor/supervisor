@@ -1,5 +1,6 @@
 import unittest
 import sys
+import operator
 import os
 import time
 import errno
@@ -870,6 +871,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         while result is http.NOT_DONE_YET:
             result = callback()
 
+        # Sort so we get deterministic results despite hash randomization
+        result = sorted(result, key=operator.itemgetter('name'))
+
         self.assertEqual(result, [
             {'status':80,'group':'foo','name': 'process1','description': 'OK'},
             {'status':80,'group':'foo','name': 'process2','description': 'OK'},
@@ -897,6 +901,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         result = http.NOT_DONE_YET
         while result is http.NOT_DONE_YET:
             result = callback()
+
+        # Sort so we get deterministic results despite hash randomization
+        result = sorted(result, key=operator.itemgetter('name'))
 
         self.assertEqual(result, [
             {'status':80,'group':'foo','name': 'process1','description': 'OK'},
