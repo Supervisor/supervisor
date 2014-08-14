@@ -508,7 +508,7 @@ class SupervisorNamespaceRPCInterface:
         self._update('sendGroupSignal')
 
         group = self.supervisord.process_groups.get(name)
-        
+
         if group is None:
             raise RPCError(Faults.BAD_NAME, name)
 
