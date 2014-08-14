@@ -488,7 +488,7 @@ class SupervisorNamespaceRPCInterface:
 
         if process is None:
             group_name, process_name = split_namespec(name)
-            return self.sendGroupSignal(group_name, signal = signal)
+            return self.sendGroupSignal(group_name, signal=signal)
 
         sig = self._getSignalFromString(signal)
 
@@ -527,7 +527,7 @@ class SupervisorNamespaceRPCInterface:
         processes = [(group, process) for process in processes]
 
         sendall = make_allfunc(processes, isRunning, self.sendProcessSignal,
-                               signal = signal)
+                               signal=signal)
         sendall.rpcinterface = self
 
         sendall.delay = 0
