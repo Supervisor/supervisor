@@ -139,7 +139,6 @@ class TailFProducerTests(unittest.TestCase):
 
     def test_handle_more_follow(self):
         request = DummyRequest('/logtail/foo', None, None, None)
-        from supervisor import http
         f = tempfile.NamedTemporaryFile()
         f.write(as_bytes('a' * 80))
         f.flush()
