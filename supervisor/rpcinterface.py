@@ -484,7 +484,10 @@ class SupervisorNamespaceRPCInterface:
             group_name, process_name = split_namespec(name)
             return self.sendGroupSignal(group_name, signal=signal)
 
-        sig = signal_number(signal)
+        try:
+            sig = signal_number(signal)
+        except ValueError:
+            raise RPCError(Faults.BAD_SIGNAL, signal)
 
         if process.get_state() not in RUNNING_STATES:
            raise RPCError(Faults.NOT_RUNNING)

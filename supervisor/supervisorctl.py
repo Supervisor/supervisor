@@ -745,6 +745,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
         template = '%s: ERROR (%s)'
         if code == xmlrpc.Faults.BAD_NAME:
             return template % (name, 'no such process')
+        elif code == xmlrpc.Faults.BAD_SIGNAL:
+            return template % (name, fault_string)
         elif code == xmlrpc.Faults.NOT_RUNNING:
             return template % (name, 'not running')
         elif code == xmlrpc.Faults.SUCCESS:
