@@ -491,6 +491,8 @@ class SupervisorNamespaceRPCInterface:
         if not msg is None:
             raise RPCError(Faults.FAILED, msg)
 
+        return True
+
 
     def sendGroupSignal(self, name, signal='HUP'):
         """ Send a signal to all processes in the group named 'name'
