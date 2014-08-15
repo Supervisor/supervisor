@@ -759,6 +759,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.set_procattr('process2', 'state', ProcessStates.RUNNING)
         interface = self._makeOne(supervisord)
         callback = interface.stopProcessGroup('foo', wait=False)
+        from supervisor.xmlrpc import NOT_DONE_YET
         from supervisor.xmlrpc import Faults
 
         # create callbacks in killall()
