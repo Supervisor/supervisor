@@ -847,7 +847,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.set_procattr('foo', 'state', ProcessStates.RUNNING)
         interface = self._makeOne(supervisord)
 
-        result = interface.sendProcessSignal('foo', 10)()
+        result = interface.sendProcessSignal('foo', 10)
 
         self.assertEqual(interface.update_text, 'sendProcessSignal')
         self.assertEqual(result, True)
