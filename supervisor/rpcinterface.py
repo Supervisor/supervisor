@@ -5,6 +5,8 @@ import errno
 import types
 import signal
 
+from supervisor.datatypes import signal_number
+
 from supervisor.options import readFile
 from supervisor.options import tailFile
 from supervisor.options import NotExecutable
@@ -476,7 +478,7 @@ class SupervisorNamespaceRPCInterface:
             group_name, process_name = split_namespec(name)
             return self.sendGroupSignal(group_name, signal=signal)
 
-        sig = supervisor.datatypes.signal_number(signal)
+        sig = signal_number(signal)
 
         if process.get_state() not in RUNNING_STATES:
            raise RPCError(Faults.NOT_RUNNING)
