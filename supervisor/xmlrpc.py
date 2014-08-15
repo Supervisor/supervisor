@@ -22,6 +22,7 @@ class Faults:
     SIGNATURE_UNSUPPORTED = 4
     SHUTDOWN_STATE = 6
     BAD_NAME = 10
+    BAD_SIGNAL = 11
     NO_FILE = 20
     NOT_EXECUTABLE = 21
     FAILED = 30
