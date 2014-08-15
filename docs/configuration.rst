@@ -496,7 +496,7 @@ follows.
 
   *Required*:  No.
 
-  *Introduced*: post-3.0a4 (not including 3.0a4)
+  *Introduced*: 3.0a5
 
 ``[supervisorctl]`` Section Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
