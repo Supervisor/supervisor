@@ -4,7 +4,6 @@ env:
     - TOXENV=cover3
     - TOXENV=py26
     - TOXENV=py27
-    - TOXENV=pypy
     - TOXENV=py32
     - TOXENV=py33
     - TOXENV=py34
