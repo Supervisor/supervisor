@@ -8,6 +8,7 @@ import signal
 from supervisor.compat import maxint
 from supervisor.compat import StringIO
 from supervisor.compat import total_ordering
+from supervisor.compat import as_bytes
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -818,7 +819,7 @@ class EventListenerPool(ProcessGroupBase):
                     serial = event.serial
                     envelope = self._eventEnvelope(event_type, serial,
                                                    pool_serial, payload)
-                    process.write(envelope)
+                    process.write(as_bytes(envelope))
                 except OSError as why:
                     if why.args[0] != errno.EPIPE:
                         raise

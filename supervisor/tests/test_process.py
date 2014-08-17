@@ -1751,7 +1751,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [event])
-        self.assertEqual(process1.stdin_buffer, '')
+        self.assertEqual(process1.stdin_buffer, b'')
         self.assertEqual(process1.listener_state, EventListenerStates.READY)
 
     def test_transition_event_proc_running(self):
@@ -1772,8 +1772,8 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [])
-        header, payload = process1.stdin_buffer.split('\n', 1)
-        self.assertEqual(payload, 'dummy event', payload)
+        header, payload = process1.stdin_buffer.split(b'\n', 1)
+        self.assertEqual(payload, b'dummy event', payload)
         self.assertEqual(process1.listener_state, EventListenerStates.BUSY)
         self.assertEqual(process1.event, event)
 
@@ -1818,8 +1818,8 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [])
-        header, payload = process1.stdin_buffer.split('\n', 1)
-        self.assertEqual(payload, 'dummy event', payload)
+        header, payload = process1.stdin_buffer.split(b'\n', 1)
+        self.assertEqual(payload, b'dummy event', payload)
         self.assertEqual(process1.listener_state, EventListenerStates.BUSY)
         self.assertEqual(process1.event, event)
 

@@ -15,6 +15,8 @@ from supervisor.tests.base import PopulatedDummySupervisor
 from supervisor.tests.base import _NOW
 from supervisor.tests.base import _TIMEFORMAT
 
+from supervisor.compat import as_string
+
 class TestBase(unittest.TestCase):
     def setUp(self):
         pass
@@ -1613,21 +1615,21 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = PopulatedDummySupervisor(options, 'process1', pconfig1)
         supervisord.set_procattr('process1', 'pid', 42)
         interface   = self._makeOne(supervisord)
-        chars = 'chars for stdin'
+        chars = b'chars for stdin'
         self.assertTrue(interface.sendProcessStdin('process1', chars))
         self.assertEqual('sendProcessStdin', interface.update_text)
         process1 = supervisord.process_groups['process1'].processes['process1']
         self.assertEqual(process1.stdin_buffer, chars)
 
-#    def test_sendProcessStdin_unicode_encoded_to_utf8(self):
-#        options = DummyOptions()
-#        pconfig1 = DummyPConfig(options, 'process1', 'foo')
-#        supervisord = PopulatedDummySupervisor(options, 'process1', pconfig1)
-#        supervisord.set_procattr('process1', 'pid', 42)
-#        interface   = self._makeOne(supervisord)
-#        interface.sendProcessStdin('process1', u'fi\xed')
-#        process1 = supervisord.process_groups['process1'].processes['process1']
-#        self.assertEqual(process1.stdin_buffer, 'fi\xc3\xad')
+    def test_sendProcessStdin_unicode_encoded_to_utf8(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'foo')
+        supervisord = PopulatedDummySupervisor(options, 'process1', pconfig1)
+        supervisord.set_procattr('process1', 'pid', 42)
+        interface   = self._makeOne(supervisord)
+        interface.sendProcessStdin('process1', as_string(b'fi\xc3\xad'))
+        process1 = supervisord.process_groups['process1'].processes['process1']
+        self.assertEqual(process1.stdin_buffer, b'fi\xc3\xad')
 
     def test_sendRemoteCommEvent_notifies_subscribers(self):
         options = DummyOptions()

@@ -5,6 +5,7 @@ import errno
 import types
 
 from supervisor.compat import as_string
+from supervisor.compat import as_bytes
 from supervisor.compat import unicode
 from supervisor.compat import basestring
 
@@ -752,11 +753,10 @@ class SupervisorNamespaceRPCInterface:
         """
         self._update('sendProcessStdin')
 
-        if isinstance(chars, unicode):
-            chars = chars.encode('utf-8')
-
-        if not isinstance(chars, basestring):
+        if not isinstance(chars, (str, bytes, unicode)):
             raise RPCError(Faults.INCORRECT_PARAMETERS, chars)
+
+        chars = as_bytes(chars)
 
         group, process = self._getGroupAndProcess(name)
 

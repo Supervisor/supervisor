@@ -4,6 +4,7 @@ _TIMEFORMAT = '%b %d %I:%M %p'
 from supervisor.compat import total_ordering
 from supervisor.compat import Fault
 from supervisor.compat import as_string
+from supervisor.compat import as_bytes
 
 # mock is imported here for py2/3 compat.  we only declare mock as a dependency
 # via tests_require so it is not available on all supervisor installs.  the
@@ -404,11 +405,11 @@ class DummyProcess(object):
         self.error_at_clear = False
         self.killed_with = None
         self.drained = False
-        self.stdout_buffer = ''
-        self.stderr_buffer = ''
-        self.stdout_logged = ''
-        self.stderr_logged = ''
-        self.stdin_buffer = ''
+        self.stdout_buffer = as_bytes('')
+        self.stderr_buffer = as_bytes('')
+        self.stdout_logged = as_bytes('')
+        self.stderr_logged = as_bytes('')
+        self.stdin_buffer = as_bytes('')
         self.pipes = {}
         self.rpipes = {}
         self.dispatchers = {}
