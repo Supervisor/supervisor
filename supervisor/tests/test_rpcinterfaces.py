@@ -1869,6 +1869,20 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
         help = interface.methodHelp('system.methodHelp')
         self.assertEqual(help, interface.methodHelp.__doc__)
 
+class Test_make_main_rpcinterface(unittest.TestCase):
+    def _callFUT(self, supervisord):
+        from supervisor.rpcinterface import make_main_rpcinterface
+        return make_main_rpcinterface(supervisord)
+
+    def test_it(self):
+        inst = self._callFUT(None)
+        self.assertEqual(
+            inst.__class__.__name__,
+            'SupervisorNamespaceRPCInterface'
+            )
+
+
+
 class DummyRPCInterface:
     def hello(self):
         return 'Hello!'
