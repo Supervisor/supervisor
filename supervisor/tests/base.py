@@ -391,6 +391,7 @@ class DummyProcess(object):
     stdin_buffer = '' # buffer of characters to send to child process' stdin
     listener_state = None
     group = None
+    sent_signal = None
 
     def __init__(self, config, state=None):
         self.config = config
@@ -440,6 +441,10 @@ class DummyProcess(object):
 
     def kill(self, signal):
         self.killed_with = signal
+
+    def signal(self, signal):
+        self.sent_signal = signal
+
 
     def spawn(self):
         self.spawned = True
