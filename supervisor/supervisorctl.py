@@ -831,13 +831,13 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
         if not names:
             self.ctl.output('Error: signal requires a process name')
-            self.help_stop()
+            self.help_signal()
             return
 
         if 'all' in names:
             results = supervisor.signalAllProcesses()
             for result in results:
-                result = self._stopresult(result)
+                result = self._signalresult(result)
                 self.ctl.output(result)
 
         else:
