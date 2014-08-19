@@ -896,13 +896,16 @@ class DummySupervisorRPCNamespace:
     def clearAllProcessLogs(self):
         from supervisor import xmlrpc
         return [
-            {'name':'foo', 'group':'foo',
+            {'name':'foo',
+             'group':'foo',
              'status':xmlrpc.Faults.SUCCESS,
              'description': 'OK'},
-            {'name':'foo2', 'group':'foo2',
+            {'name':'foo2',
+             'group':'foo2',
              'status':xmlrpc.Faults.SUCCESS,
              'description': 'OK'},
-            {'name':'failed', 'group':'failed_group',
+            {'name':'failed',
+             'group':'failed_group',
              'status':xmlrpc.Faults.FAILED,
              'description':'FAILED'}
             ]
@@ -918,6 +921,52 @@ class DummySupervisorRPCNamespace:
             from xmlrpclib import Fault
             raise Fault(self._readlog_error, '')
         return 'mainlogdata'
+
+    def signalGroup(self, name, signal):
+        from supervisor import xmlrpc
+        return [
+            {'name':'foo_00',
+             'group':'foo',
+             'status': xmlrpc.Faults.SUCCESS,
+             'description': 'OK'},
+            {'name':'foo_01',
+             'group':'foo',
+             'status':xmlrpc.Faults.SUCCESS,
+             'description': 'OK'},
+            ]
+
+    def signalProcess(self, name, signal):
+        from supervisor import xmlrpc
+        from xmlrpclib import Fault
+        if signal == 'BAD_SIGNAL':
+            raise Fault(xmlrpc.Faults.BAD_SIGNAL, 'BAD_SIGNAL')
+        if name == 'BAD_NAME:BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME:BAD_NAME')
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+        if name == 'NOT_RUNNING':
+            raise Fault(xmlrpc.Faults.NOT_RUNNING, 'NOT_RUNNING')
+        if name == 'FAILED':
+            raise Fault(xmlrpc.Faults.FAILED, 'FAILED')
+
+        return True
+
+    def signalAllProcesses(self, signal):
+        from supervisor import xmlrpc
+        return [
+            {'name':'foo',
+             'group':'foo',
+             'status': xmlrpc.Faults.SUCCESS,
+             'description': 'OK'},
+            {'name':'foo2',
+             'group':'foo2',
+             'status':xmlrpc.Faults.SUCCESS,
+             'description': 'OK'},
+            {'name':'failed',
+             'group':'failed_group',
+             'status':xmlrpc.Faults.BAD_NAME,
+             'description':'FAILED'}
+            ]
 
 class DummyPGroupConfig:
     def __init__(self, options, name='whatever', priority=999, pconfigs=None):
@@ -1067,7 +1116,7 @@ class DummyEvent:
 
     def __str__(self):
         return 'dummy event'
-        
+
 def dummy_handler(event, result):
     pass
 

@@ -814,19 +814,77 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         out = plugin.ctl.stdout.getvalue()
         self.assertTrue("signal <signal name> <name>" in out)
 
-    def test_signal_no_arg(self):
+    def test_signal_fail_no_arg(self):
         plugin = self._makeOne()
         result = plugin.do_signal('')
         self.assertEqual(result, None)
         msg = 'Error: signal requires a signal name and a process name'
         self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0], msg)
 
-    def test_signal_one_arg(self):
+    def test_signal_fail_one_arg(self):
         plugin = self._makeOne()
         result = plugin.do_signal('hup')
         self.assertEqual(result, None)
         msg = 'Error: signal requires a signal name and a process name'
         self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0], msg)
+
+    def test_signal_bad_signal(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('BAD_SIGNAL foo')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: ERROR (bad signal name)\n')
+
+    def test_signal_bad_name(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP BAD_NAME')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'BAD_NAME: ERROR (no such process)\n')
+
+    def test_signal_not_running(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP NOT_RUNNING')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'NOT_RUNNING: ERROR (not running)\n')
+
+    def test_signal_failed(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP FAILED')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 'FAILED\n')
+
+    def test_signal_one_success(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP foo')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 'foo: signalled\n')
+
+    def test_signal_many(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP foo bar')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: signalled\n'
+                         'bar: signalled\n')
+
+    def test_signal_group(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP foo:')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo:foo_00: signalled\n'
+                         'foo:foo_01: signalled\n')
+
+    def test_signal_all(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP all')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: signalled\n'
+                         'foo2: signalled\n'
+                         'failed_group:failed: ERROR (no such process)\n')
 
     def test_restart_help(self):
         plugin = self._makeOne()
