@@ -3,7 +3,6 @@ import time
 import datetime
 import errno
 import types
-import signal
 
 from supervisor.datatypes import signal_number
 
@@ -462,7 +461,7 @@ class SupervisorNamespaceRPCInterface:
         return killall # deferred
 
 
-    def sendProcessSignal(self, name, signal='HUP'):
+    def signalProcess(self, name, signal='HUP'):
         """ Send an arbitrary UNIX signal to the process named by name
 
         @param string name The name of the process to signal (or 'group:name')
@@ -470,13 +469,13 @@ class SupervisorNamespaceRPCInterface:
         @return boolean result
         """
 
-        self._update('sendProcessSignal')
+        self._update('signalProcess')
 
         group, process = self._getGroupAndProcess(name)
 
         if process is None:
             group_name, process_name = split_namespec(name)
-            return self.sendGroupSignal(group_name, signal=signal)
+            return self.signalGroup(group_name, signal=signal)
 
         try:
             sig = signal_number(signal)
@@ -494,18 +493,16 @@ class SupervisorNamespaceRPCInterface:
         return True
 
 
-    def sendGroupSignal(self, name, signal='HUP'):
+    def signalGroup(self, name, signal='HUP'):
         """ Send a signal to all processes in the group named 'name'
 
         @param string name  The group name
         @param int signal   The signal to be sent. SIGHUP by default
         @return array result
         """
-
-        self._update('sendGroupSignal')
+        self._update('signalGroup')
 
         group = self.supervisord.process_groups.get(name)
-        
         if group is None:
             raise RPCError(Faults.BAD_NAME, name)
 
@@ -513,13 +510,12 @@ class SupervisorNamespaceRPCInterface:
         processes.sort()
         processes = [(group, process) for process in processes]
 
-        sendall = make_allfunc(processes, isRunning, self.sendProcessSignal,
+        sendall = make_allfunc(processes, isRunning, self.signalProcess,
                                signal=signal)
-        sendall.rpcinterface = self
+        result = sendall()
+        self._update('signalGroup')
 
-        sendall.delay = 0
-        sendall.rpcinterface = self
-        return sendall
+        return result
 
 
     def getAllConfigInfo(self):

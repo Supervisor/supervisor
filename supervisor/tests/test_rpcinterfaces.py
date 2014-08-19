@@ -838,7 +838,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
              ]
             )
 
-    def test_sendProcessSignal(self):
+    def test_signalProcess(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo')
         from supervisor.process import ProcessStates
@@ -846,14 +846,14 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.set_procattr('foo', 'state', ProcessStates.RUNNING)
         interface = self._makeOne(supervisord)
 
-        result = interface.sendProcessSignal('foo', 10)
+        result = interface.signalProcess('foo', 10)
 
-        self.assertEqual(interface.update_text, 'sendProcessSignal')
+        self.assertEqual(interface.update_text, 'signalProcess')
         self.assertEqual(result, True)
         p = supervisord.process_groups[supervisord.group_name].processes['foo']
         self.assertEqual(p.sent_signal, 10 )
 
-    def test_sendGroupSignal(self):
+    def test_signalGroup(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
         pconfig2 = DummyPConfig(options, 'process2', '/bin/foo2')
@@ -863,8 +863,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.set_procattr('process1', 'state', ProcessStates.RUNNING)
         supervisord.set_procattr('process2', 'state', ProcessStates.RUNNING)
         interface = self._makeOne(supervisord)
-        callback = interface.sendGroupSignal('foo', 10)
-        self.assertEqual(interface.update_text, 'sendGroupSignal')
+        callback = interface.signalGroup('foo', 10)
+        self.assertEqual(interface.update_text, 'signalGroup')
         from supervisor import http
 
         result = http.NOT_DONE_YET
@@ -883,7 +883,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process2 = supervisord.process_groups['foo'].processes['process2']
         self.assertEqual(process2.sent_signal, 10)
 
-    def test_sendProcessGroupSignal(self):
+    def test_signalGroup(self):
         """ Test that sending foo:* works """
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
@@ -894,14 +894,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.set_procattr('process1', 'state', ProcessStates.RUNNING)
         supervisord.set_procattr('process2', 'state', ProcessStates.RUNNING)
         interface = self._makeOne(supervisord)
-        callback = interface.sendProcessSignal('foo:*', 10)
-        self.assertEqual(interface.update_text, 'sendGroupSignal')
-        from supervisor import http
+        result = interface.signalProcess('foo:*', 10)
+        self.assertEqual(interface.update_text, 'signalGroup')
         
-        result = http.NOT_DONE_YET
-        while result is http.NOT_DONE_YET:
-            result = callback()
-
         # Sort so we get deterministic results despite hash randomization
         result = sorted(result, key=operator.itemgetter('name'))
 

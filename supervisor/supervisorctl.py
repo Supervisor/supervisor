@@ -747,23 +747,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             "start <name> <name>\tStart multiple processes or groups")
         self.ctl.output("start all\t\tStart all processes")
 
-    def _stopresult(self, result):
-        name = make_namespec(result['group'], result['name'])
-        code = result['status']
-        fault_string = result['description']
-        template = '%s: ERROR (%s)'
-        if code == xmlrpc.Faults.BAD_NAME:
-            return template % (name, 'no such process')
-        elif code == xmlrpc.Faults.NOT_RUNNING:
-            return template % (name, 'not running')
-        elif code == xmlrpc.Faults.SUCCESS:
-            return '%s: stopped' % name
-        elif code == xmlrpc.Faults.FAILED:
-            return fault_string
-        # assertion
-        raise ValueError('Unknown result code %s for %s' % (code, name))
-
-    def _signalresult(self, result):
+    def _signalresult(self, result, success='signalled'):
         name = make_namespec(result['group'], result['name'])
         code = result['status']
         fault_string = result['description']
@@ -775,11 +759,14 @@ class DefaultControllerPlugin(ControllerPluginBase):
         elif code == xmlrpc.Faults.NOT_RUNNING:
             return template % (name, 'not running')
         elif code == xmlrpc.Faults.SUCCESS:
-            return '%s: signalled' % name
+            return '%s: %s' % (name, success)
         elif code == xmlrpc.Faults.FAILED:
             return fault_string
         # assertion
         raise ValueError('Unknown result code %s for %s' % (code, name))
+
+    def _stopresult(self, result):
+        return self._signalresult(result, success='stopped')
 
     def do_stop(self, arg):
         if not self.ctl.upcheck():
@@ -858,7 +845,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 group_name, process_name = split_namespec(name)
                 if process_name is None:
                     try:
-                        results = supervisor.sendGroupSignal(group_name, sig)
+                        results = supervisor.signalGroup(group_name, sig)
                         for result in results:
                             result = self._signalresult(result)
                             self.ctl.output(result)
@@ -870,7 +857,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                             raise
                 else:
                     try:
-                        supervisor.sendProcessSignal(name, sig)
+                        supervisor.signalProcess(name, sig)
                     except xmlrpclib.Fault as e:
                         error = self._signalresult({'status': e.faultCode,
                                                     'name': process_name,

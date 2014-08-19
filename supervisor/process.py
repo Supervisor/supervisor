@@ -463,7 +463,7 @@ class Subprocess:
 
         try:
             options.kill(self.pid, sig)
-        except Exception, e:
+        except Exception:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
             tb = io.getvalue()
