@@ -320,9 +320,9 @@ Process Control
 
     .. automethod:: stopAllProcesses
 
-    .. automethod:: sendProcessSignal
+    .. automethod:: signalProcess
 
-    .. automethod:: sendGroupSignal
+    .. automethod:: signalGroup
 
     .. automethod:: sendProcessStdin
 
