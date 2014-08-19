@@ -825,14 +825,15 @@ class DefaultControllerPlugin(ControllerPluginBase):
             return
 
         args = arg.split()
+        if len(args) < 2:
+            self.ctl.output(
+                'Error: signal requires a signal name and a process name')
+            self.help_signal()
+            return
+
         sig = args[0]
         names = args[1:]
         supervisor = self.ctl.get_supervisor()
-
-        if not names:
-            self.ctl.output('Error: signal requires a process name')
-            self.help_signal()
-            return
 
         if 'all' in names:
             results = supervisor.signalAllProcesses(sig)
@@ -872,6 +873,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output("signal <signal name> <name>\t\tSignal a process")
         self.ctl.output("signal <signal name> <gname>:*\t\tSignal all processes in a group")
         self.ctl.output("signal <signal name> <name> <name>\tSignal multiple processes or groups")
+        self.ctl.output("signal <signal name> all\t\tSignal all processes")
 
     def do_restart(self, arg):
         if not self.ctl.upcheck():

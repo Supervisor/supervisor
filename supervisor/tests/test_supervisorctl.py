@@ -796,6 +796,38 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'foo2: stopped\n'
                          'failed_group:failed: ERROR (no such process)\n')
 
+    def test_stop_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.stopAllProcesses = f
+        supervisor.stopProcessGroup = f
+        plugin.do_stop('foo')
+        self.assertEqual(called, [])
+
+    def test_signal_help(self):
+        plugin = self._makeOne()
+        plugin.help_signal()
+        out = plugin.ctl.stdout.getvalue()
+        self.assertTrue("signal <signal name> <name>" in out)
+
+    def test_signal_no_arg(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('')
+        self.assertEqual(result, None)
+        msg = 'Error: signal requires a signal name and a process name'
+        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0], msg)
+
+    def test_signal_one_arg(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('hup')
+        self.assertEqual(result, None)
+        msg = 'Error: signal requires a signal name and a process name'
+        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0], msg)
+
     def test_restart_help(self):
         plugin = self._makeOne()
         plugin.help_restart()
