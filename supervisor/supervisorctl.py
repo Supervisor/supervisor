@@ -810,7 +810,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             return
 
         if 'all' in names:
-            results = supervisor.signalAllProcesses()
+            results = supervisor.signalAllProcesses(sig)
             for result in results:
                 result = self._signalresult(result)
                 self.ctl.output(result)
