@@ -261,8 +261,8 @@ class Controller(cmd.Cmd):
             elif action in ('add', 'remove', 'update'):
                 matches = self._complete_groups(text)
             # actions that accept a process name
-            elif action in ('clear', 'fg', 'pid', 'restart', 'start',
-                            'stop', 'status', 'tail'):
+            elif action in ('clear', 'fg', 'pid', 'restart', 'signal',
+                            'start', 'status', 'stop', 'tail'):
                 matches = self._complete_processes(text)
         if len(matches) > state:
             return matches[state]
