@@ -66,6 +66,11 @@
 
 - Removed medusa files not used by Supervisor.
 
+- Added ``signalProcess`` and ``signalGroups`` XML-RPC methods to supervisor
+  RPC interface.
+
+- Added ``signal`` command to supervisorctl.
+
 3.1.1 (2014-08-11)
 ------------------
 
