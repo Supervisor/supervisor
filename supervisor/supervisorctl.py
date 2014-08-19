@@ -29,7 +29,6 @@ import getpass
 import supervisor.medusa.text_socket as socket
 import errno
 import threading
-import signal
 
 from supervisor.compat import xmlrpclib
 from supervisor.compat import urlparse
