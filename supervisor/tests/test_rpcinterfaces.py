@@ -854,36 +854,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(p.sent_signal, 10 )
 
     def test_signalGroup(self):
-        options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
-        pconfig2 = DummyPConfig(options, 'process2', '/bin/foo2')
-        from supervisor.process import ProcessStates
-        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
-                                               pconfig2)
-        supervisord.set_procattr('process1', 'state', ProcessStates.RUNNING)
-        supervisord.set_procattr('process2', 'state', ProcessStates.RUNNING)
-        interface = self._makeOne(supervisord)
-        callback = interface.signalGroup('foo', 10)
-        self.assertEqual(interface.update_text, 'signalGroup')
-        from supervisor import http
-
-        result = http.NOT_DONE_YET
-        while result is http.NOT_DONE_YET:
-            result = callback()
-
-        # Sort so we get deterministic results despite hash randomization
-        result = sorted(result, key=operator.itemgetter('name'))
-
-        self.assertEqual(result, [
-            {'status':80,'group':'foo','name': 'process1','description': 'OK'},
-            {'status':80,'group':'foo','name': 'process2','description': 'OK'},
-            ] )
-        process1 = supervisord.process_groups['foo'].processes['process1']
-        self.assertEqual(process1.sent_signal, 10)
-        process2 = supervisord.process_groups['foo'].processes['process2']
-        self.assertEqual(process2.sent_signal, 10)
-
-    def test_signalGroup(self):
         """ Test that sending foo:* works """
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
@@ -896,7 +866,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         result = interface.signalProcess('foo:*', 10)
         self.assertEqual(interface.update_text, 'signalGroup')
-        
+
         # Sort so we get deterministic results despite hash randomization
         result = sorted(result, key=operator.itemgetter('name'))
 
@@ -908,7 +878,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(process1.sent_signal, 10)
         process2 = supervisord.process_groups['foo'].processes['process2']
         self.assertEqual(process2.sent_signal, 10)
-
 
     def test_getAllConfigInfo(self):
         options = DummyOptions()
