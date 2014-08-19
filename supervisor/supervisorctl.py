@@ -30,7 +30,6 @@ import socket
 import errno
 import urlparse
 import threading
-import signal
 
 from supervisor.medusa import asyncore_25 as asyncore
 
