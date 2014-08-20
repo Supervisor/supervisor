@@ -29,7 +29,6 @@ import getpass
 import supervisor.medusa.text_socket as socket
 import errno
 import threading
-import signal
 
 from supervisor.compat import xmlrpclib
 from supervisor.compat import urlparse
@@ -730,7 +729,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if code == xmlrpc.Faults.BAD_NAME:
             return template % (name, 'no such process')
         elif code == xmlrpc.Faults.BAD_SIGNAL:
-            return template % (name, fault_string)
+            return template % (name, 'bad signal name')
         elif code == xmlrpc.Faults.NOT_RUNNING:
             return template % (name, 'not running')
         elif code == xmlrpc.Faults.SUCCESS:
