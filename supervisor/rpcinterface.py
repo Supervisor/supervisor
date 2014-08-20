@@ -463,9 +463,9 @@ class SupervisorNamespaceRPCInterface:
     def signalProcess(self, name, signal):
         """ Send an arbitrary UNIX signal to the process named by name
 
-        @param string name The name of the process to signal (or 'group:name')
-        @param int signal the integer UNIX signal to send.
-        @return boolean result
+        @param string name    Name of the process to signal (or 'group:name')
+        @param string signal  Signal to send, as name ('HUP') or number ('1')
+        @return boolean
         """
 
         self._update('signalProcess')
@@ -494,9 +494,9 @@ class SupervisorNamespaceRPCInterface:
     def signalProcessGroup(self, name, signal):
         """ Send a signal to all processes in the group named 'name'
 
-        @param string name  The group name
-        @param int signal   The signal to be sent.
-        @return array result
+        @param string name    The group name
+        @param string signal  Signal to send, as name ('HUP') or number ('1')
+        @return array
         """
         self._update('signalProcessGroup')
 
@@ -518,8 +518,8 @@ class SupervisorNamespaceRPCInterface:
     def signalAllProcesses(self, signal):
         """ Send a signal to all processes in the process list
 
-        @param int signal   The signal to be sent.
-        @return array result   An array of process status info structs
+        @param string signal  Signal to send, as name ('HUP') or number ('1')
+        @return array         An array of process status info structs
         """
         processes = self._getAllProcesses()
         signalall = make_allfunc(processes, isRunning, self.signalProcess,
