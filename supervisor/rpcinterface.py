@@ -475,7 +475,7 @@ class SupervisorNamespaceRPCInterface:
 
         if process is None:
             group_name, process_name = split_namespec(name)
-            return self.signalGroup(group_name, signal=signal)
+            return self.signalProcessGroup(group_name, signal=signal)
 
         try:
             sig = signal_number(signal)
@@ -493,14 +493,14 @@ class SupervisorNamespaceRPCInterface:
         return True
 
 
-    def signalGroup(self, name, signal='HUP'):
+    def signalProcessGroup(self, name, signal='HUP'):
         """ Send a signal to all processes in the group named 'name'
 
         @param string name  The group name
         @param int signal   The signal to be sent. SIGHUP by default
         @return array result
         """
-        self._update('signalGroup')
+        self._update('signalProcessGroup')
 
         group = self.supervisord.process_groups.get(name)
         if group is None:
@@ -513,10 +513,22 @@ class SupervisorNamespaceRPCInterface:
         sendall = make_allfunc(processes, isRunning, self.signalProcess,
                                signal=signal)
         result = sendall()
-        self._update('signalGroup')
+        self._update('signalProcessGroup')
 
         return result
 
+    def signalAllProcesses(self, signal='SIGHUP'):
+        """ Send a signal to all processes in the process list
+
+        @param int signal   The signal to be sent. SIGHUP by default
+        @return array result   An array of process status info structs
+        """
+        processes = self._getAllProcesses()
+        signalall = make_allfunc(processes, isRunning, self.signalProcess,
+            signal=signal)
+        result = signalall()
+        self._update('signalAllProcesses')
+        return result
 
     def getAllConfigInfo(self):
         """ Get info about all available process configurations. Each struct
