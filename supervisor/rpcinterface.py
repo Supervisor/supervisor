@@ -460,12 +460,11 @@ class SupervisorNamespaceRPCInterface:
         killall.rpcinterface = self
         return killall # deferred
 
-
-    def signalProcess(self, name, signal='HUP'):
+    def signalProcess(self, name, signal):
         """ Send an arbitrary UNIX signal to the process named by name
 
         @param string name The name of the process to signal (or 'group:name')
-        @param int signal the integer UNIX signal to send. SIGHUP by default.
+        @param int signal the integer UNIX signal to send.
         @return boolean result
         """
 
@@ -492,12 +491,11 @@ class SupervisorNamespaceRPCInterface:
 
         return True
 
-
-    def signalProcessGroup(self, name, signal='HUP'):
+    def signalProcessGroup(self, name, signal):
         """ Send a signal to all processes in the group named 'name'
 
         @param string name  The group name
-        @param int signal   The signal to be sent. SIGHUP by default
+        @param int signal   The signal to be sent.
         @return array result
         """
         self._update('signalProcessGroup')
@@ -517,10 +515,10 @@ class SupervisorNamespaceRPCInterface:
 
         return result
 
-    def signalAllProcesses(self, signal='SIGHUP'):
+    def signalAllProcesses(self, signal):
         """ Send a signal to all processes in the process list
 
-        @param int signal   The signal to be sent. SIGHUP by default
+        @param int signal   The signal to be sent.
         @return array result   An array of process status info structs
         """
         processes = self._getAllProcesses()
