@@ -322,7 +322,9 @@ Process Control
 
     .. automethod:: signalProcess
 
-    .. automethod:: signalGroup
+    .. automethod:: signalProcessGroup
+
+    .. automethod:: signalAllProcesses
 
     .. automethod:: sendProcessStdin
 

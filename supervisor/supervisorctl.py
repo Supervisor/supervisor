@@ -821,7 +821,9 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 group_name, process_name = split_namespec(name)
                 if process_name is None:
                     try:
-                        results = supervisor.signalGroup(group_name, sig)
+                        results = supervisor.signalProcessGroup(
+                            group_name, sig
+                            )
                         for result in results:
                             result = self._signalresult(result)
                             self.ctl.output(result)

@@ -855,37 +855,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         p = supervisord.process_groups[supervisord.group_name].processes['foo']
         self.assertEqual(p.sent_signal, 10 )
 
-    def test_signalGroup(self):
-        options = DummyOptions()
-        pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
-        pconfig2 = DummyPConfig(options, 'process2', '/bin/foo2')
-        from supervisor.process import ProcessStates
-        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
-                                               pconfig2)
-        supervisord.set_procattr('process1', 'state', ProcessStates.RUNNING)
-        supervisord.set_procattr('process2', 'state', ProcessStates.RUNNING)
-        interface = self._makeOne(supervisord)
-        callback = interface.signalGroup('foo', 10)
-        self.assertEqual(interface.update_text, 'signalGroup')
-        from supervisor import http
-
-        result = http.NOT_DONE_YET
-        while result is http.NOT_DONE_YET:
-            result = callback()
-
-        # Sort so we get deterministic results despite hash randomization
-        result = sorted(result, key=operator.itemgetter('name'))
-
-        self.assertEqual(result, [
-            {'status':80,'group':'foo','name': 'process1','description': 'OK'},
-            {'status':80,'group':'foo','name': 'process2','description': 'OK'},
-            ] )
-        process1 = supervisord.process_groups['foo'].processes['process1']
-        self.assertEqual(process1.sent_signal, 10)
-        process2 = supervisord.process_groups['foo'].processes['process2']
-        self.assertEqual(process2.sent_signal, 10)
-
-    def test_signalGroup(self):
+    def test_signalProcess_withgroup(self):
         """ Test that sending foo:* works """
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
@@ -897,7 +867,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.set_procattr('process2', 'state', ProcessStates.RUNNING)
         interface = self._makeOne(supervisord)
         result = interface.signalProcess('foo:*', 10)
-        self.assertEqual(interface.update_text, 'signalGroup')
+        self.assertEqual(interface.update_text, 'signalProcessGroup')
         
         # Sort so we get deterministic results despite hash randomization
         result = sorted(result, key=operator.itemgetter('name'))
@@ -911,6 +881,56 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process2 = supervisord.process_groups['foo'].processes['process2']
         self.assertEqual(process2.sent_signal, 10)
 
+
+    def test_signalProcessGroup(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
+        pconfig2 = DummyPConfig(options, 'process2', '/bin/foo2')
+        from supervisor.process import ProcessStates
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
+                                               pconfig2)
+        supervisord.set_procattr('process1', 'state', ProcessStates.RUNNING)
+        supervisord.set_procattr('process2', 'state', ProcessStates.RUNNING)
+        interface = self._makeOne(supervisord)
+        result = interface.signalProcessGroup('foo', 10)
+        self.assertEqual(interface.update_text, 'signalProcessGroup')
+
+        # Sort so we get deterministic results despite hash randomization
+        result = sorted(result, key=operator.itemgetter('name'))
+
+        self.assertEqual(result, [
+            {'status':80,'group':'foo','name': 'process1','description': 'OK'},
+            {'status':80,'group':'foo','name': 'process2','description': 'OK'},
+            ] )
+        process1 = supervisord.process_groups['foo'].processes['process1']
+        self.assertEqual(process1.sent_signal, 10)
+        process2 = supervisord.process_groups['foo'].processes['process2']
+        self.assertEqual(process2.sent_signal, 10)
+
+    def test_signalAllProcesses(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
+        pconfig2 = DummyPConfig(options, 'process2', '/bin/foo2')
+        from supervisor.process import ProcessStates
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
+                                               pconfig2)
+        supervisord.set_procattr('process1', 'state', ProcessStates.RUNNING)
+        supervisord.set_procattr('process2', 'state', ProcessStates.RUNNING)
+        interface = self._makeOne(supervisord)
+        result = interface.signalAllProcesses(10)
+        self.assertEqual(interface.update_text, 'signalAllProcesses')
+
+        # Sort so we get deterministic results despite hash randomization
+        result = sorted(result, key=operator.itemgetter('name'))
+
+        self.assertEqual(result, [
+            {'status':80,'group':'foo','name': 'process1','description': 'OK'},
+            {'status':80,'group':'foo','name': 'process2','description': 'OK'},
+            ] )
+        process1 = supervisord.process_groups['foo'].processes['process1']
+        self.assertEqual(process1.sent_signal, 10)
+        process2 = supervisord.process_groups['foo'].processes['process2']
+        self.assertEqual(process2.sent_signal, 10)
 
     def test_getAllConfigInfo(self):
         options = DummyOptions()

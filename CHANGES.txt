@@ -29,9 +29,9 @@
   it.  See https://github.com/Supervisor/supervisor/pull/129.  Patch by Igor
   Sobreira.
 
-- Added ``signalProcess`` and ``signalGroup`` XML-RPC methods to supervisor
-  RPC interface.  Thanks to Casey Callendrello, Marc Abramowitz, and
-  Moriyoshi Koizumi for the patches.
+- Added ``signalProcess``, ``signalProcessGroup``, and ``signalAllProcesses``
+  XML-RPC methods to supervisor RPC interface.  Thanks to Casey Callendrello,
+  Marc Abramowitz, and Moriyoshi Koizumi for the patches.
 
 - Added ``signal`` command to supervisorctl.  Thanks to Moriyoshi Koizumi and
   Marc Abramowitz for the patches.
