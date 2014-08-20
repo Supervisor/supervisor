@@ -892,7 +892,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         result = interface.signalProcessGroup('foo', 10)
         self.assertEqual(interface.update_text, 'signalProcessGroup')
-
         # Sort so we get deterministic results despite hash randomization
         result = sorted(result, key=operator.itemgetter('name'))
 

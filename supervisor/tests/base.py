@@ -922,7 +922,7 @@ class DummySupervisorRPCNamespace:
             raise Fault(self._readlog_error, '')
         return 'mainlogdata'
 
-    def signalGroup(self, name, signal):
+    def signalProcessGroup(self, name, signal):
         from supervisor import xmlrpc
         return [
             {'name':'foo_00',
