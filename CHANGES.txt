@@ -21,13 +21,13 @@
 - Environment variables are now expanded for all config file options.
   Patch by Dexter Tad-y.
 
-- "supervisorctl start [spec naming lots of processes]" and "supervisorctl stop
-  [spec naming lots of processes]" both now complete much more quickly.  See
-  https://github.com/Supervisor/supervisor/issues/131 .
+- "supervisorctl start [spec naming lots of processes]" and "supervisorctl
+  stop [spec naming lots of processes]" both now complete much more quickly.
+  See https://github.com/Supervisor/supervisor/issues/131 .
 
-- Allow > 1023 file descriptor by using poll/kqueue on platforms which support
-  it.  See https://github.com/Supervisor/supervisor/pull/129.  Patch by Igor
-  Sobreira.
+- Allow > 1023 file descriptors by using poll/kqueue on platforms which
+  support it.  See https://github.com/Supervisor/supervisor/pull/129.
+  Patch by Igor Sobreira.
 
 - Added ``signalProcess``, ``signalProcessGroup``, and ``signalAllProcesses``
   XML-RPC methods to supervisor RPC interface.  Thanks to Casey Callendrello,
@@ -42,13 +42,13 @@
 - Fixed a bug where ``supervisorctl tail -f name`` output would stop if log
   rotation occurred while tailing.
 
-- Prevent a crash when a greater number file descriptors were attempted to be
-  opened than permitted by the environment when starting a bunch of programs.
-  Now, instead a spawn error is logged.
+- Prevent a crash when a greater number of file descriptors were attempted to
+  be opened than permitted by the environment when starting a bunch of
+  programs.  Now, instead a spawn error is logged.
 
-- Compute "channel delay" properly, fixing symptoms where a supervisorctl start
-  command would hang for a very long time when a process (or many processes)
-  are spewing to their stdout or stderr.  See comments attached to
+- Compute "channel delay" properly, fixing symptoms where a supervisorctl
+  start command would hang for a very long time when a process (or many
+  processes) are spewing to their stdout or stderr.  See comments attached to
   https://github.com/Supervisor/supervisor/pull/263 .
 
 - Added docs/conf.py, docs/Makefile, and supervisor/scripts/*.py to
