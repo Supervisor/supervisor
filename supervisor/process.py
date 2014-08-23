@@ -457,7 +457,7 @@ class Subprocess(object):
 
         try:
             options.kill(self.pid, sig)
-        except Exception:
+        except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
             tb = io.getvalue()
@@ -469,8 +469,6 @@ class Subprocess(object):
             return msg
 
         return None
-
-
 
     def finish(self, pid, sts):
         """ The process was reaped and we need to report and manage its state
