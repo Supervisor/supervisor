@@ -316,6 +316,7 @@ class Subprocess(object):
                 env['SUPERVISOR_GROUP_NAME'] = self.group.config.name
             if self.config.environment is not None:
                 env.update(self.config.environment)
+
             # change directory
             cwd = self.config.directory
             try:
