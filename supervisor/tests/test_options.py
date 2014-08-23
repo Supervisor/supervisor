@@ -881,7 +881,7 @@ class ServerOptionsTests(unittest.TestCase):
         config = UnhosedConfigParser()
         config.read_string(text)
         instance.configfile = StringIO(text)
-        conf = instance.read_config(StringIO(text))
+        instance.read_config(StringIO(text))
         instance.realize(args=[])
         # unix_http_server
         options = instance.configroot.supervisord
@@ -906,7 +906,7 @@ class ServerOptionsTests(unittest.TestCase):
         config = UnhosedConfigParser()
         config.read_string(text)
         instance.configfile = StringIO(text)
-        conf = instance.read_config(StringIO(text))
+        instance.read_config(StringIO(text))
         instance.realize(args=[])
         # unix_http_server
         options = instance.configroot.supervisord
@@ -1160,7 +1160,7 @@ class ServerOptionsTests(unittest.TestCase):
         config = UnhosedConfigParser()
         config.read_string(text)
         instance.configfile = StringIO(text)
-        conf = instance.read_config(StringIO(text))
+        instance.read_config(StringIO(text))
         instance.realize(args=[])
         # supervisord
         self.assertEqual(instance.logfile,
