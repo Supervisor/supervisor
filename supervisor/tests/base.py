@@ -924,6 +924,9 @@ class DummySupervisorRPCNamespace:
 
     def signalProcessGroup(self, name, signal):
         from supervisor import xmlrpc
+        from xmlrpclib import Fault
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
         return [
             {'name':'foo_00',
              'group':'foo',

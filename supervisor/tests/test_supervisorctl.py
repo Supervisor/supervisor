@@ -842,6 +842,13 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'BAD_NAME: ERROR (no such process)\n')
 
+    def test_signal_bad_group(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP BAD_NAME:')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'BAD_NAME: ERROR (no such group)\n')
+
     def test_signal_not_running(self):
         plugin = self._makeOne()
         result = plugin.do_signal('HUP NOT_RUNNING')
@@ -885,6 +892,18 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'foo: signalled\n'
                          'foo2: signalled\n'
                          'failed_group:failed: ERROR (no such process)\n')
+
+    def test_signal_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.stopAllProcesses = f
+        supervisor.stopProcessGroup = f
+        plugin.do_signal('term foo')
+        self.assertEqual(called, [])
 
     def test_restart_help(self):
         plugin = self._makeOne()
