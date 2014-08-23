@@ -900,8 +900,8 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         def f(*arg, **kw):
             called.append(True)
         supervisor = plugin.ctl.options._server.supervisor
-        supervisor.stopAllProcesses = f
-        supervisor.stopProcessGroup = f
+        supervisor.signalAllProcesses = f
+        supervisor.signalProcessGroup = f
         plugin.do_signal('term foo')
         self.assertEqual(called, [])
 
