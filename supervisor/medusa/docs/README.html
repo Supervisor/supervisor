@@ -58,11 +58,11 @@ the core async library.
 
 <h2>Server Notes</h2>
 
-<p>Both the FTP and HTTP servers use an abstracted 'filesystem object' to
+<p>HTTP server uses an abstracted 'filesystem object' to
 gain access to a given directory tree.  One possible server extension
 technique would be to build behavior into this filesystem object,
 rather than directly into the server: Then the extension could be
-shared with both the FTP and HTTP servers.
+shared between multiple types of servers.
 
 <h3>HTTP</h3>
 
@@ -77,65 +77,6 @@ or extending this class.
 
 <p>The default extension includes support for the 'Connection: Keep-Alive'
 token, and will re-use a client channel when requested by the client.
-
-<h3>FTP</h3>
-
-<p>On Unix, the ftp server includes support for 'real' users, so that it
-may be used as a drop-in replacement for the normal ftp server.  Since
-most ftp servers on Unix use the 'forking' model, each child process
-changes its user/group persona after a successful login.  This is a
-appears to be a secure design.
-
-
-<p>Medusa takes a different approach - whenever Medusa performs an
-operation for a particular user [listing a directory, opening a file],
-it temporarily switches to that user's persona _only_ for the duration
-of the operation.  [and each such operation is protected by a
-try/finally exception handler].
-
-
-<p>To do this  Medusa MUST run  with super-user privileges.  This is a
-HIGHLY experimental   approach, and although   it has  been thoroughly
-tested    on Linux, security problems  may    still exist.  If you are
-concerned  about the security of your   server machine, AND YOU SHOULD
-BE,  I suggest running  Medusa's ftp  server  in anonymous-only  mode,
-under an account with limited privileges ('nobody' is usually used for
-this purpose).
-
-
-<p>I am   very  interested  in any feedback    on  this feature,  most
-especially   information  on how     the server behaves  on  different
-implementations of Unix, and of course  any security problems that are
-found.
-
-<hr>
-
-<h3>Monitor</h3>
-
-<p>The monitor server gives you remote, 'back-door' access to your server
-while it is running.  It implements a remote python interpreter.  Once
-connected to the monitor, you can do just about anything you can do from
-the normal python interpreter.  You can examine data structures, servers,
-connection objects.  You can enable or disable extensions, restart the server,
-reload modules, etc...
-
-<p>The monitor server   is protected with an MD5-based  authentication
-similar to that proposed in RFC1725 for the POP3 protocol.  The server
-sends the  client a  timestamp,  which  is then  appended to  a secret
-password.  The resulting md5 digest is  sent back to the server, which
-then compares this to the  expected result.  Failed login attempts are
-logged and immediately disconnected.  The  password itself is not sent
-over the network (unless you  have  foolishly transmitted it  yourself
-through an insecure telnet or X11 session. 8^)
-
-<p>For this  reason telnet  cannot be used  to connect  to the monitor
-server when it is in a secure mode (the default).  A client program is
-provided for this  purpose.  You will  be prompted for a password when
-starting up the server, and by the monitor client.
-
-<p>For  extra added   security  on   Unix,  the monitor   server  will
-eventually be able to use a Unix-domain socket, which can be protected
-behind a 'firewall' directory (similar to the InterNet News server).
 
 <hr>
 <h2>Performance Notes</h2>
