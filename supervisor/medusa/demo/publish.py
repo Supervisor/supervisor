@@ -15,7 +15,6 @@
 from supervisor.medusa import asyncore_25 as asyncore
 from supervisor.medusa import default_handler
 from supervisor.medusa import http_server
-from supervisor.medusa import put_handler
 from supervisor.medusa import auth_handler
 from supervisor.medusa import filesys
 
@@ -32,18 +31,14 @@ fs = filesys.os_filesystem('/home/medusa')
 # The 'default' handler - delivers files for the HTTP GET method.
 dh = default_handler.default_handler(fs)
 
-# Supports the HTTP PUT method...
-ph = put_handler.put_handler(fs, '/.*')
-
 # ... but be sure to wrap it with an auth handler:
-ah = auth_handler.auth_handler(users, ph)
+ah = auth_handler.auth_handler(users, dh)
 
 # Create a Web Server
 hs = http_server.http_server(ip='', port=8080)
 
-# install the handlers we created:
+# install the handler we created:
 
-hs.install_handler(dh) # for GET
-hs.install_handler(ah) # for PUT
+hs.install_handler(ah) # for GET
 
 asyncore.loop()
