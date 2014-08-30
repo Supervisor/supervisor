@@ -78,11 +78,6 @@ except ImportError: # pragma: no cover
     import urlparse
     import urllib
 
-if PY3: # pragma: no cover
-    from base64 import encodebytes as encodestring
-else: # pragma: no cover
-    from base64 import encodestring
-
 try: # pragma: no cover
     from hashlib import sha1
 except ImportError: # pragma: no cover
