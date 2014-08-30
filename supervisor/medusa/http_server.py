@@ -656,9 +656,6 @@ class http_server (asyncore.dispatcher):
 
         self.handlers = []
 
-        if not logger_object:
-            logger_object = logger.file_logger (sys.stdout)
-
         self.set_reuse_addr()
         self.bind ((ip, port))
 
@@ -685,10 +682,7 @@ class http_server (asyncore.dispatcher):
         if not logger_object:
             logger_object = logger.file_logger (sys.stdout)
 
-        if resolver:
-            self.logger = logger.resolving_logger (resolver, logger_object)
-        else:
-            self.logger = logger.unresolving_logger (logger_object)
+        self.logger = logger.unresolving_logger (logger_object)
 
         self.log_info (
                 'Medusa (V%s) started at %s'
