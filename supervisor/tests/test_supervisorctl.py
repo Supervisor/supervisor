@@ -1,7 +1,7 @@
 import sys
 import unittest
-from StringIO import StringIO
-
+from supervisor.compat import StringIO
+from supervisor.compat import xmlrpclib
 from supervisor.tests.base import DummyRPCServer
 
 class ControllerTests(unittest.TestCase):
@@ -37,10 +37,9 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_unknown_method(self):
         options = DummyClientOptions()
-        from xmlrpclib import Fault
         from supervisor.xmlrpc import Faults
         def getVersion():
-            raise Fault(Faults.UNKNOWN_METHOD, 'duh')
+            raise xmlrpclib.Fault(Faults.UNKNOWN_METHOD, 'duh')
         options._server.supervisor.getVersion = getVersion
         controller = self._makeOne(options)
         controller.stdout = StringIO()
@@ -54,9 +53,19 @@ class ControllerTests(unittest.TestCase):
                          ' enabled in the configuration file'
                          ' (see sample.conf).\n')
 
+    def test__upcheck_reraises_other_xmlrpc_faults(self):
+        options = DummyClientOptions()
+        from supervisor.xmlrpc import Faults
+        def f(*arg, **kw):
+            raise xmlrpclib.Fault(Faults.FAILED, '')
+        options._server.supervisor.getVersion = f
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        self.assertRaises(xmlrpclib.Fault, controller.upcheck)
+
     def test__upcheck_catches_socket_error_ECONNREFUSED(self):
         options = DummyClientOptions()
-        import socket
+        import supervisor.medusa.text_socket as socket
         import errno
         def raise_fault(*arg, **kw):
             raise socket.error(errno.ECONNREFUSED, 'nobody home')
@@ -73,7 +82,7 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_catches_socket_error_ENOENT(self):
         options = DummyClientOptions()
-        import socket
+        import supervisor.medusa.text_socket as socket
         import errno
         def raise_fault(*arg, **kw):
             raise socket.error(errno.ENOENT, 'nobody home')
@@ -87,6 +96,17 @@ class ControllerTests(unittest.TestCase):
 
         output = controller.stdout.getvalue()
         self.assertTrue('no such file' in output)
+
+    def test__upcheck_reraises_other_socket_faults(self):
+        options = DummyClientOptions()
+        import supervisor.medusa.text_socket as socket
+        import errno
+        def f(*arg, **kw):
+            raise socket.error(errno.EBADF, '')
+        options._server.supervisor.getVersion = f
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        self.assertRaises(socket.error, controller.upcheck)
 
     def test_onecmd(self):
         options = DummyClientOptions()
@@ -498,11 +518,31 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         value = plugin.ctl.stdout.getvalue().strip()
         self.assertEqual(value, "Error: bad channel 'fudge'")
 
+    def test_tail_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        plugin.ctl.options._server.supervisor.readProcessStdoutLog = f
+        plugin.do_tail('foo')
+        self.assertEqual(called, [])
+
     def test_status_help(self):
         plugin = self._makeOne()
         plugin.help_status()
         out = plugin.ctl.stdout.getvalue()
         self.assertTrue("status <name>" in out)
+
+    def test_status_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        plugin.ctl.options._server.supervisor.getAllProcessInfo = f
+        plugin.do_status('')
+        self.assertEqual(called, [])
 
     def test_status_table_process_column_min_width(self):
         plugin = self._makeOne()
@@ -717,6 +757,18 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'foo2: started\n'
                          'failed_group:failed: ERROR (spawn error)\n')
 
+    def test_start_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.startAllProcesses = f
+        supervisor.startProcessGroup = f
+        plugin.do_start('foo')
+        self.assertEqual(called, [])
+
     def test_stop_help(self):
         plugin = self._makeOne()
         plugin.help_stop()
@@ -796,6 +848,115 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'foo2: stopped\n'
                          'failed_group:failed: ERROR (no such process)\n')
 
+    def test_stop_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.stopAllProcesses = f
+        supervisor.stopProcessGroup = f
+        plugin.do_stop('foo')
+        self.assertEqual(called, [])
+
+    def test_signal_help(self):
+        plugin = self._makeOne()
+        plugin.help_signal()
+        out = plugin.ctl.stdout.getvalue()
+        self.assertTrue("signal <signal name> <name>" in out)
+
+    def test_signal_fail_no_arg(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('')
+        self.assertEqual(result, None)
+        msg = 'Error: signal requires a signal name and a process name'
+        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0], msg)
+
+    def test_signal_fail_one_arg(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('hup')
+        self.assertEqual(result, None)
+        msg = 'Error: signal requires a signal name and a process name'
+        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0], msg)
+
+    def test_signal_bad_signal(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('BAD_SIGNAL foo')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: ERROR (bad signal name)\n')
+
+    def test_signal_bad_name(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP BAD_NAME')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'BAD_NAME: ERROR (no such process)\n')
+
+    def test_signal_bad_group(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP BAD_NAME:')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'BAD_NAME: ERROR (no such group)\n')
+
+    def test_signal_not_running(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP NOT_RUNNING')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'NOT_RUNNING: ERROR (not running)\n')
+
+    def test_signal_failed(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP FAILED')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 'FAILED\n')
+
+    def test_signal_one_success(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP foo')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 'foo: signalled\n')
+
+    def test_signal_many(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP foo bar')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: signalled\n'
+                         'bar: signalled\n')
+
+    def test_signal_group(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP foo:')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo:foo_00: signalled\n'
+                         'foo:foo_01: signalled\n')
+
+    def test_signal_all(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP all')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: signalled\n'
+                         'foo2: signalled\n'
+                         'failed_group:failed: ERROR (no such process)\n')
+
+    def test_signal_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.signalAllProcesses = f
+        supervisor.signalProcessGroup = f
+        plugin.do_signal('term foo')
+        self.assertEqual(called, [])
+
     def test_restart_help(self):
         plugin = self._makeOne()
         plugin.help_restart()
@@ -825,6 +986,18 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'failed_group:failed: ERROR (no such process)\n'
                          'foo: started\nfoo2: started\n'
                          'failed_group:failed: ERROR (spawn error)\n')
+
+    def test_restart_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.stopAllProcesses = f
+        supervisor.stopProcessGroup = f
+        plugin.do_restart('foo')
+        self.assertEqual(called, [])
 
     def test_clear_help(self):
         plugin = self._makeOne()
@@ -877,6 +1050,18 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'foo2: cleared\n'
                          'failed_group:failed: ERROR (failed)\n')
 
+    def test_clear_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.clearAllProcessLogs = f
+        supervisor.clearProcessLogs = f
+        plugin.do_clear('foo')
+        self.assertEqual(called, [])
+
     def test_open_help(self):
         plugin = self._makeOne()
         plugin.help_open()
@@ -912,6 +1097,16 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin = self._makeOne()
         plugin.do_version(None)
         self.assertEqual(plugin.ctl.stdout.getvalue(), '3000\n')
+
+    def test_version_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        plugin.ctl.options._server.supervisor.getSupervisorVersion = f
+        plugin.do_version('')
+        self.assertEqual(called, [])
 
     def test_reload_help(self):
         plugin = self._makeOne()
@@ -950,7 +1145,6 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_shutdown_catches_xmlrpc_fault_shutdown_state(self):
         plugin = self._makeOne()
         from supervisor import xmlrpc
-        import xmlrpclib
 
         def raise_fault(*arg, **kw):
             raise xmlrpclib.Fault(xmlrpc.Faults.SHUTDOWN_STATE, 'bye')
@@ -964,7 +1158,6 @@ class TestDefaultControllerPlugin(unittest.TestCase):
     def test_shutdown_reraises_other_xmlrpc_faults(self):
         plugin = self._makeOne()
         from supervisor import xmlrpc
-        import xmlrpclib
 
         def raise_fault(*arg, **kw):
             raise xmlrpclib.Fault(xmlrpc.Faults.CANT_REREAD, 'ouch')
@@ -975,7 +1168,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_catches_socket_error_ECONNREFUSED(self):
         plugin = self._makeOne()
-        import socket
+        import supervisor.medusa.text_socket as socket
         import errno
 
         def raise_fault(*arg, **kw):
@@ -990,7 +1183,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_catches_socket_error_ENOENT(self):
         plugin = self._makeOne()
-        import socket
+        import supervisor.medusa.text_socket as socket
         import errno
 
         def raise_fault(*arg, **kw):
@@ -1005,7 +1198,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_reraises_other_socket_errors(self):
         plugin = self._makeOne()
-        import socket
+        import supervisor.medusa.text_socket as socket
         import errno
 
         def raise_fault(*arg, **kw):
@@ -1035,16 +1228,33 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(calls[0], [['added'], ['changed'], ['removed']])
 
-    def test_reread_Fault(self):
+    def test_reread_cant_reread(self):
         plugin = self._makeOne()
         from supervisor import xmlrpc
-        import xmlrpclib
-        def raise_fault(*arg, **kw):
+        def reloadConfig(*arg, **kw):
             raise xmlrpclib.Fault(xmlrpc.Faults.CANT_REREAD, 'cant')
-        plugin.ctl.options._server.supervisor.reloadConfig = raise_fault
+        plugin.ctl.options._server.supervisor.reloadConfig = reloadConfig
         plugin.do_reread(None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ERROR: cant\n')
+
+    def test_reread_shutdown_state(self):
+        plugin = self._makeOne()
+        from supervisor import xmlrpc
+        def reloadConfig(*arg, **kw):
+            raise xmlrpclib.Fault(xmlrpc.Faults.SHUTDOWN_STATE, '')
+        plugin.ctl.options._server.supervisor.reloadConfig = reloadConfig
+        plugin.do_reread(None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: supervisor shutting down\n')
+
+    def test_reread_reraises_other_faults(self):
+        plugin = self._makeOne()
+        from supervisor import xmlrpc
+        def reloadConfig(*arg, **kw):
+            raise xmlrpclib.Fault(xmlrpc.Faults.FAILED, '')
+        plugin.ctl.options._server.supervisor.reloadConfig = reloadConfig
+        self.assertRaises(xmlrpclib.Fault, plugin.do_reread, '')
 
     def test__formatConfigInfo(self):
         info = { 'group': 'group1',
@@ -1086,6 +1296,31 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         result = plugin.do_avail('')
         self.assertEqual(result, None)
 
+    def test_avail_shutdown_state(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+
+        def getAllConfigInfo():
+            from supervisor import xmlrpc
+            raise xmlrpclib.Fault(xmlrpc.Faults.SHUTDOWN_STATE, '')
+        supervisor.getAllConfigInfo = getAllConfigInfo
+
+        result = plugin.do_avail('')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: supervisor shutting down\n')
+
+    def test_avail_reraises_other_faults(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+
+        def getAllConfigInfo():
+            from supervisor import xmlrpc
+            raise xmlrpclib.Fault(xmlrpc.Faults.FAILED, '')
+        supervisor.getAllConfigInfo = getAllConfigInfo
+
+        self.assertRaises(xmlrpclib.Fault, plugin.do_avail, '')
+
     def test_add_help(self):
         plugin = self._makeOne()
         plugin.help_add()
@@ -1112,6 +1347,17 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ERROR: no such process/group: BAD_NAME\n')
+
+    def test_add_shutdown_state(self):
+        plugin = self._makeOne()
+        result = plugin.do_add('SHUTDOWN_STATE')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'ERROR: shutting down\n')
+
+    def test_add_reraises_other_faults(self):
+        plugin = self._makeOne()
+        self.assertRaises(xmlrpclib.Fault, plugin.do_add, 'FAILED')
 
     def test_remove_help(self):
         plugin = self._makeOne()
@@ -1145,6 +1391,10 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ERROR: process/group still running: STILL_RUNNING\n')
 
+    def test_remove_reraises_other_faults(self):
+        plugin = self._makeOne()
+        self.assertRaises(xmlrpclib.Fault, plugin.do_remove, 'FAILED')
+
     def test_update_help(self):
         plugin = self._makeOne()
         plugin.help_update()
@@ -1156,7 +1406,6 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         supervisor = plugin.ctl.options._server.supervisor
         def reloadConfig():
             from supervisor import xmlrpc
-            import xmlrpclib
             raise xmlrpclib.Fault(xmlrpc.Faults.SHUTDOWN_STATE, 'blah')
         supervisor.reloadConfig = reloadConfig
         supervisor.processes = ['removed']
@@ -1301,6 +1550,17 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin.do_update('')
         self.assertEqual(supervisor.processes, ['removed_group'])
 
+    def test_update_reraises_other_faults(self):
+        plugin = self._makeOne()
+        supervisor = plugin.ctl.options._server.supervisor
+
+        def reloadConfig():
+            from supervisor import xmlrpc
+            raise xmlrpclib.Fault(xmlrpc.Faults.FAILED, 'FAILED')
+        supervisor.reloadConfig = reloadConfig
+
+        self.assertRaises(xmlrpclib.Fault, plugin.do_update, '')
+
     def test_pid_help(self):
         plugin = self._makeOne()
         plugin.help_pid()
@@ -1335,6 +1595,16 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         result = plugin.do_pid('foo')
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue().strip(), '11')
+
+    def test_pid_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        plugin.ctl.options._server.supervisor.getPID = f
+        plugin.do_pid('')
+        self.assertEqual(called, [])
 
     def test_maintail_help(self):
         plugin = self._makeOne()
@@ -1375,8 +1645,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'http://localhost:65532/mainlogtail')
         self.assertEqual(error[0],
                          'http://localhost:65532/mainlogtail')
-        for msg in ('Cannot connect', 'socket.error'):
-            self.assertTrue(msg in error[1])
+        self.assertTrue('Cannot connect' in error[1])
 
     def test_maintail_bad_modifier(self):
         plugin = self._makeOne()
@@ -1417,6 +1686,16 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'supervisord: ERROR (unknown error reading log)\n')
 
+    def test_maintail_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        plugin.ctl.options._server.supervisor.readLog = f
+        plugin.do_maintail('')
+        self.assertEqual(called, [])
+
     def test_fg_help(self):
         plugin = self._makeOne()
         plugin.help_fg()
@@ -1454,6 +1733,16 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(result, None)
         self.assertEqual(lines[-2], 'Error: process not running')
+
+    def test_fg_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        plugin.ctl.options._server.supervisor.getProcessInfo = f
+        plugin.do_fg('foo')
+        self.assertEqual(called, [])
 
     def test_exit_help(self):
         plugin = self._makeOne()

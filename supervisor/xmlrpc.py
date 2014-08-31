@@ -1,14 +1,22 @@
 import types
-import socket
-import xmlrpclib
-import httplib
-import urllib
 import re
-from cStringIO import StringIO
 import traceback
 import sys
-import base64
+import datetime
+import time
+from xml.etree.ElementTree import iterparse
 
+from supervisor.compat import xmlrpclib
+from supervisor.compat import func_attribute
+from supervisor.compat import StringIO
+from supervisor.compat import urllib
+from supervisor.compat import as_bytes
+from supervisor.compat import as_string
+from supervisor.compat import encodestring
+from supervisor.compat import decodestring
+from supervisor.compat import httplib
+
+import supervisor.medusa.text_socket as socket
 from supervisor.medusa.http_server import get_header
 from supervisor.medusa.xmlrpc_handler import xmlrpc_handler
 from supervisor.medusa import producers
@@ -22,6 +30,7 @@ class Faults:
     SIGNATURE_UNSUPPORTED = 4
     SHUTDOWN_STATE = 6
     BAD_NAME = 10
+    BAD_SIGNAL = 11
     NO_FILE = 20
     NOT_EXECUTABLE = 21
     FAILED = 30
@@ -51,6 +60,7 @@ class DeferredXMLRPCResponse:
     """ A medusa producer that implements a deferred callback; requires
     a subclass of asynchat.async_chat that handles NOT_DONE_YET sentinel """
     CONNECTION = re.compile ('Connection: (.*)', re.IGNORECASE)
+    traceback = traceback # for testing override
 
     def __init__(self, request, callback):
         self.callback = callback
@@ -66,9 +76,9 @@ class DeferredXMLRPCResponse:
                 value = self.callback()
                 if value is NOT_DONE_YET:
                     return NOT_DONE_YET
-            except RPCError, err:
+            except RPCError as err:
                 value = xmlrpclib.Fault(err.code, err.text)
-                
+
             body = xmlrpc_marshal(value)
 
             self.finished = True
@@ -77,7 +87,7 @@ class DeferredXMLRPCResponse:
 
         except:
             # report unexpected exception back to server
-            traceback.print_exc()
+            self.traceback.print_exc()
             self.finished = True
             self.request.error(500)
 
@@ -88,28 +98,15 @@ class DeferredXMLRPCResponse:
         connection = get_header(self.CONNECTION, self.request.header)
 
         close_it = 0
-        wrap_in_chunking = 0
 
         if self.request.version == '1.0':
             if connection == 'keep-alive':
-                if not self.request.has_key ('Content-Length'):
-                    close_it = 1
-                else:
-                    self.request['Connection'] = 'Keep-Alive'
+                self.request['Connection'] = 'Keep-Alive'
             else:
                 close_it = 1
         elif self.request.version == '1.1':
             if connection == 'close':
                 close_it = 1
-            elif not self.request.has_key ('Content-Length'):
-                if self.request.has_key ('Transfer-Encoding'):
-                    if not self.request['Transfer-Encoding'] == 'chunked':
-                        close_it = 1
-                elif self.request.use_chunked:
-                    self.request['Transfer-Encoding'] = 'chunked'
-                    wrap_in_chunking = 1
-                else:
-                    close_it = 1
         elif self.request.version is None:
             close_it = 1
 
@@ -119,19 +116,9 @@ class DeferredXMLRPCResponse:
         if close_it:
             self.request['Connection'] = 'close'
 
-        if wrap_in_chunking:
-            outgoing_producer = producers.chunked_producer (
-                    producers.composite_producer (self.request.outgoing)
-                    )
-            # prepend the header
-            outgoing_producer = producers.composite_producer(
-                [outgoing_header, outgoing_producer]
-                )
-        else:
-            # prepend the header
-            self.request.outgoing.insert(0, outgoing_header)
-            outgoing_producer = producers.composite_producer (
-                self.request.outgoing)
+        # prepend the header
+        self.request.outgoing.insert(0, outgoing_header)
+        outgoing_producer = producers.composite_producer(self.request.outgoing)
 
         # apply a few final transformations to the output
         self.request.channel.push_with_producer (
@@ -175,7 +162,7 @@ class SystemNamespaceRPCInterface:
                 # introspect; any methods that don't start with underscore
                 # are published
                 func = getattr(namespace, method_name)
-                meth = getattr(func, 'im_func', None)
+                meth = getattr(func, func_attribute, None)
                 if meth is not None:
                     if not method_name.startswith('_'):
                         sig = '%s.%s' % (ns_name, method_name)
@@ -188,7 +175,7 @@ class SystemNamespaceRPCInterface:
         @return array result  An array of method names available (strings).
         """
         methods = self._listMethods()
-        keys = methods.keys()
+        keys = list(methods.keys())
         keys.sort()
         return keys
 
@@ -203,7 +190,7 @@ class SystemNamespaceRPCInterface:
             if methodname == name:
                 return methods[methodname]
         raise RPCError(Faults.SIGNATURE_UNSUPPORTED)
-    
+
     def methodSignature(self, name):
         """ Return an array describing the method signature in the
         form [rtype, ptype, ptype...] where rtype is the return data type
@@ -233,7 +220,7 @@ class SystemNamespaceRPCInterface:
         """Process an array of calls, and return an array of
         results. Calls should be structs of the form {'methodName':
         string, 'params': array}. Each result will either be a
-        single-item array containg the result value, or a struct of
+        single-item array containing the result value, or a struct of
         the form {'faultCode': int, 'faultString': string}. This is
         useful when you need to make lots of small calls without lots
         of round trips.
@@ -252,11 +239,11 @@ class SystemNamespaceRPCInterface:
                     raise RPCError(Faults.INCORRECT_PARAMETERS)
                 root = AttrDict(self.namespaces)
                 value = traverse(root, name, params)
-            except RPCError, inst:
+            except RPCError as inst:
                 value = {'faultCode': inst.code,
                          'faultString': inst.text}
             except:
-                errmsg = "%s:%s" % (sys.exc_type, sys.exc_value)
+                errmsg = "%s:%s" % (sys.exc_info()[0], sys.exc_info()[1])
                 value = {'faultCode': 1, 'faultString': errmsg}
             producers.append(value)
 
@@ -272,7 +259,7 @@ class SystemNamespaceRPCInterface:
             if isinstance(callback, types.FunctionType):
                 try:
                     value = callback()
-                except RPCError, inst:
+                except RPCError as inst:
                     value = {'faultCode':inst.code, 'faultString':inst.text}
 
                 if value is NOT_DONE_YET:
@@ -304,27 +291,54 @@ class RootRPCInterface:
         for name, rpcinterface in subinterfaces:
             setattr(self, name, rpcinterface)
 
+def make_datetime(text):
+    return datetime.datetime(
+        *time.strptime(text, "%Y%m%dT%H:%M:%S")[:6]
+    )
+
 class supervisor_xmlrpc_handler(xmlrpc_handler):
     path = '/RPC2'
     IDENT = 'Supervisor XML-RPC Handler'
+
+    unmarshallers = {
+        "int": lambda x: int(x.text),
+        "i4": lambda x: int(x.text),
+        "boolean": lambda x: x.text == "1",
+        "string": lambda x: x.text or "",
+        "double": lambda x: float(x.text),
+        "dateTime.iso8601": lambda x: make_datetime(x.text),
+        "array": lambda x: x[0].text,
+        "data": lambda x: [v.text for v in x],
+        "struct": lambda x: dict([(k.text or "", v.text) for k, v in x]),
+        "base64": lambda x: as_string(decodestring(as_bytes(x.text or ""))),
+        "value": lambda x: x[0].text,
+        "param": lambda x: x[0].text,
+        }
+
     def __init__(self, supervisord, subinterfaces):
         self.rpcinterface = RootRPCInterface(subinterfaces)
         self.supervisord = supervisord
-        if loads:
-            self.loads = loads
-        else:
-            self.supervisord.options.logger.warn(
-                'cElementTree not installed, using slower XML parser for '
-                'XML-RPC'
-                )
-            self.loads = xmlrpclib.loads
+
+    def loads(self, data):
+        params = method = None
+        for action, elem in iterparse(StringIO(data)):
+            unmarshall = self.unmarshallers.get(elem.tag)
+            if unmarshall:
+                data = unmarshall(elem)
+                elem.clear()
+                elem.text = data
+            elif elem.tag == "methodName":
+                method = elem.text
+            elif elem.tag == "params":
+                params = tuple([v.text for v in elem])
+        return params, method
 
     def match(self, request):
         return request.uri.startswith(self.path)
-        
+
     def continue_request (self, data, request):
         logger = self.supervisord.options.logger
-        
+
         try:
 
             params, method = self.loads(data)
@@ -334,7 +348,7 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                 logger.trace('XML-RPC request received with no method name')
                 request.error(400)
                 return
-            
+
             # we allow xml-rpc clients that do not send empty <params>
             # when there are no parameters for the method call
             if params is None:
@@ -353,7 +367,7 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                     )
                 logger.trace('XML-RPC method %s() returned successfully' %
                              method)
-            except RPCError, err:
+            except RPCError as err:
                 # turn RPCError reported by method into a Fault instance
                 value = xmlrpclib.Fault(err.code, err.text)
                 logger.trace('XML-RPC method %s() returned fault: [%d] %s' % (
@@ -412,8 +426,8 @@ class SupervisorTransport(xmlrpclib.Transport):
     """
     connection = None
 
-    _use_datetime = 0 # python 2.5 fwd compatibility
     def __init__(self, username=None, password=None, serverurl=None):
+        xmlrpclib.Transport.__init__(self)
         self.username = username
         self.password = password
         self.verbose = False
@@ -448,13 +462,15 @@ class SupervisorTransport(xmlrpclib.Transport):
                 "Content-Type" : "text/xml",
                 "Accept": "text/xml"
                 }
-            
+
             # basic auth
             if self.username is not None and self.password is not None:
                 unencoded = "%s:%s" % (self.username, self.password)
-                encoded = base64.encodestring(unencoded).replace('\n', '')
+                encoded = as_string(encodestring(as_bytes(unencoded)))
+                encoded = encoded.replace('\n', '')
+                encoded = encoded.replace('\012', '')
                 self.headers["Authorization"] = "Basic %s" % encoded
-                
+
         self.headers["Content-Length"] = str(len(request_body))
 
         self.connection.request('POST', handler, request_body, self.headers)
@@ -472,10 +488,10 @@ class SupervisorTransport(xmlrpclib.Transport):
         p, u = self.getparser()
         p.feed(data)
         p.close()
-        return u.close()    
+        return u.close()
 
 class UnixStreamHTTPConnection(httplib.HTTPConnection):
-    def connect(self):
+    def connect(self): # pragma: no cover
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         # we abuse the host parameter as the socketname
         self.sock.connect(self.socketfile)
@@ -517,60 +533,10 @@ def gettags(comment):
         else:
             if line:
                 tag_text.append(line)
-        lineno = lineno + 1
+        lineno += 1
 
     tags.append((tag_lineno, tag, datatype, name, '\n'.join(tag_text)))
 
     return tags
 
 
-try:
-    # Python 2.6 contains a version of cElementTree inside it.
-    from xml.etree.ElementTree import iterparse
-except ImportError:
-    try:
-        # Failing that, try cElementTree instead.
-        from cElementTree import iterparse
-    except ImportError:
-        iterparse = None
-
-
-if iterparse is not None:
-    import datetime, time
-    from base64 import decodestring
-
-    def make_datetime(text):
-        return datetime.datetime(
-            *time.strptime(text, "%Y%m%dT%H:%M:%S")[:6]
-        )
-
-    unmarshallers = {
-        "int": lambda x: int(x.text),
-        "i4": lambda x: int(x.text),
-        "boolean": lambda x: x.text == "1",
-        "string": lambda x: x.text or "",
-        "double": lambda x: float(x.text),
-        "dateTime.iso8601": lambda x: make_datetime(x.text),
-        "array": lambda x: x[0].text,
-        "data": lambda x: [v.text for v in x],
-        "struct": lambda x: dict([(k.text or "", v.text) for k, v in x]),
-        "base64": lambda x: decodestring(x.text or ""),
-        "value": lambda x: x[0].text,
-        "param": lambda x: x[0].text,
-    }
-
-    def loads(data):
-        params = method = None
-        for action, elem in iterparse(StringIO(data)):
-            unmarshal = unmarshallers.get(elem.tag)
-            if unmarshal:
-                data = unmarshal(elem)
-                elem.clear()
-                elem.text = data
-            elif elem.tag == "methodName":
-                method = elem.text
-            elif elem.tag == "params":
-                params = tuple([v.text for v in elem])
-        return params, method
-else:
-    loads = None

@@ -15,19 +15,23 @@
 import os
 import sys
 
-if sys.version_info[:2] < (2, 4) or sys.version_info[0] > 2:
-    msg = ("Supervisor requires Python 2.4 or later but does not work on "
-           "any version of Python 3.  You are using version %s.  Please "
-           "install using a supported version." % sys.version)
-    sys.stderr.write(msg)
-    sys.exit(1)
+py_version = sys.version_info[:2]
 
-requires = ['meld3 >= 0.6.5']
+if py_version < (2, 6):
+    raise RuntimeError('On Python 2, Supervisor requires Python 2.6 or later')
+elif (3, 0) < py_version < (3, 2):
+    raise RuntimeError('On Python 3, Supervisor requires Python 3.2 or later')
 
-if sys.version_info[:2] < (2, 5):
-    # for meld3 (it's a distutils package)
-    requires.append('elementtree')
+requires = ['meld3 >= 1.0.0']
+tests_require = []
+if py_version < (3, 3):
+    tests_require.append('mock')
 
+testing_extras = tests_require + [
+    'nose',
+    'coverage',
+    ]
+    
 from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
 try:
@@ -48,6 +52,14 @@ CLASSIFIERS = [
     'Topic :: System :: Boot',
     'Topic :: System :: Monitoring',
     'Topic :: System :: Systems Administration',
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 2",
+    "Programming Language :: Python :: 2.6",
+    "Programming Language :: Python :: 2.7",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.2",
+    "Programming Language :: Python :: 3.3",
+    "Programming Language :: Python :: 3.4",
 ]
 
 version_txt = os.path.join(here, 'supervisor/version.txt')
@@ -59,7 +71,7 @@ dist = setup(
     license='BSD-derived (http://www.repoze.org/LICENSE.txt)',
     url='http://supervisord.org/',
     description="A system for controlling process state under UNIX",
-    long_description=README + '\n\n' + CHANGES,
+    long_description=README + '\n\n' +  CHANGES,
     classifiers=CLASSIFIERS,
     author="Chris McDonough",
     author_email="chrism@plope.com",
@@ -67,14 +79,16 @@ dist = setup(
     maintainer_email="chrism@plope.com",
     packages=find_packages(),
     install_requires=requires,
-    extras_require={'iterparse': ['cElementTree >= 1.0.2']},
-    tests_require=['mock >= 0.5.0'],
+    extras_require={
+        'iterparse':['cElementTree >= 1.0.2'],
+        'testing':testing_extras,
+        },
+    tests_require=tests_require,
     include_package_data=True,
     zip_safe=False,
-    namespace_packages=['supervisor'],
     test_suite="supervisor.tests",
     entry_points={
-        'console_scripts': [
+     'console_scripts': [
          'supervisord = supervisor.supervisord:main',
          'supervisorctl = supervisor.supervisorctl:main',
          'echo_supervisord_conf = supervisor.confecho:main',

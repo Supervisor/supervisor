@@ -7,7 +7,36 @@ from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyLogger
 from supervisor.tests.base import DummyEvent
+from supervisor import read_file
 
+class PDispatcherTests(unittest.TestCase):
+    def setUp(self):
+        from supervisor.events import clear
+        clear()
+
+    def tearDown(self):
+        from supervisor.events import clear
+        clear()
+
+    def _getTargetClass(self):
+        from supervisor.dispatchers import PDispatcher
+        return PDispatcher
+
+    def _makeOne(self, process=None, channel='stdout', fd=0):
+        return self._getTargetClass()(process, channel, fd)
+    
+    def test_readable(self):
+        inst = self._makeOne()
+        self.assertRaises(NotImplementedError, inst.readable)
+        
+    def test_writable(self):
+        inst = self._makeOne()
+        self.assertRaises(NotImplementedError, inst.writable)
+
+    def test_flush(self):
+        inst = self._makeOne()
+        self.assertEqual(inst.flush(), None)
+        
 class POutputDispatcherTests(unittest.TestCase):
     def setUp(self):
         from supervisor.events import clear
@@ -287,7 +316,7 @@ class POutputDispatcherTests(unittest.TestCase):
         try:
             dispatcher.output_buffer = data
             dispatcher.record_output()
-            self.assertEqual(open(logfile, 'r').read(), '')
+            self.assertEqual(read_file(logfile), '')
             self.assertEqual(dispatcher.output_buffer, '')
             self.assertEqual(len(events), 1)
 
@@ -340,7 +369,7 @@ class POutputDispatcherTests(unittest.TestCase):
             dispatcher.output_buffer = first
             dispatcher.record_output()
             [ x.flush() for x in dispatcher.childlog.handlers]
-            self.assertEqual(open(logfile, 'r').read(), letters)
+            self.assertEqual(read_file(logfile), letters)
             self.assertEqual(dispatcher.output_buffer, first[len(letters):])
             self.assertEqual(len(events), 0)
 
@@ -348,14 +377,14 @@ class POutputDispatcherTests(unittest.TestCase):
             dispatcher.record_output()
             self.assertEqual(len(events), 0)
             [ x.flush() for x in dispatcher.childlog.handlers]
-            self.assertEqual(open(logfile, 'r').read(), letters)
+            self.assertEqual(read_file(logfile), letters)
             self.assertEqual(dispatcher.output_buffer, first[len(letters):])
             self.assertEqual(len(events), 0)
 
             dispatcher.output_buffer += third
             dispatcher.record_output()
             [ x.flush() for x in dispatcher.childlog.handlers]
-            self.assertEqual(open(logfile, 'r').read(), letters *2)
+            self.assertEqual(read_file(logfile), letters *2)
             self.assertEqual(len(events), 1)
             event = events[0]
             from supervisor.events import ProcessCommunicationStdoutEvent
@@ -450,9 +479,9 @@ class POutputDispatcherTests(unittest.TestCase):
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         drepr = repr(dispatcher)
-        self.assertTrue(drepr.startswith('<POutputDispatcher at'), drepr)
+        self.assertTrue('POutputDispatcher' in drepr)
         self.assertNotEqual(
-            drepr.find('<supervisor.tests.base.DummyProcess instance at'),
+            drepr.find('supervisor.tests.base.DummyProcess'),
             -1)
         self.assertTrue(drepr.endswith('(stdout)>'), drepr)
 
@@ -465,6 +494,20 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.closed, True)
         dispatcher.close() # make sure we don't error if we try to close twice
         self.assertEqual(dispatcher.closed, True)
+
+
+    def test_syslog_logfile_deprecated(self):
+        import warnings
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        config.stdout_logfile = 'syslog'
+        process = DummyProcess(config)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            self._makeOne(process)
+            self.assertEqual(len(w), 1)
+        
+        
 
 
 class PInputDispatcherTests(unittest.TestCase):
@@ -587,9 +630,9 @@ class PInputDispatcherTests(unittest.TestCase):
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         drepr = repr(dispatcher)
-        self.assertTrue(drepr.startswith('<PInputDispatcher at'), drepr)
+        self.assertTrue('PInputDispatcher' in drepr)
         self.assertNotEqual(
-            drepr.find('<supervisor.tests.base.DummyProcess instance at'),
+            drepr.find('supervisor.tests.base.DummyProcess'),
             -1)
         self.assertTrue(drepr.endswith('(stdin)>'), drepr)
 
@@ -1054,9 +1097,9 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         drepr = repr(dispatcher)
-        self.assertTrue(drepr.startswith('<PEventListenerDispatcher at'), drepr)
+        self.assertTrue('PEventListenerDispatcher' in drepr)
         self.assertNotEqual(
-            drepr.find('<supervisor.tests.base.DummyProcess instance at'),
+            drepr.find('supervisor.tests.base.DummyProcess'),
             -1)
         self.assertTrue(drepr.endswith('(stdout)>'), drepr)
 
@@ -1070,6 +1113,23 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         dispatcher.close() # make sure we don't error if we try to close twice
         self.assertEqual(dispatcher.closed, True)
 
+
+class stripEscapeTests(unittest.TestCase):
+    def _callFUT(self, s):
+        from supervisor.dispatchers import stripEscapes
+        return stripEscapes(s)
+
+    def test_zero_length_string(self):
+        self.assertEqual(self._callFUT(''), '')
+
+    def test_ansi(self):
+        ansi = '\x1b[34mHello world... this is longer than a token!\x1b[0m'
+        noansi = 'Hello world... this is longer than a token!'
+        self.assertEqual(self._callFUT(ansi), noansi)
+
+    def test_noansi(self):
+        noansi = 'Hello world... this is longer than a token!'
+        self.assertEqual(self._callFUT(noansi), noansi)
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

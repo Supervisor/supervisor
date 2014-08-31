@@ -21,6 +21,12 @@ class PDispatcher:
 
     closed = False # True if close() has been called
 
+    def __init__(self, process, channel, fd):
+        self.process = process  # process which "owns" this dispatcher
+        self.channel = channel  # 'stderr' or 'stdout'
+        self.fd = fd
+        self.closed = False     # True if close() has been called
+
     def __repr__(self):
         return '<%s at %s for %s (%s)>' % (self.__class__.__name__,
                                            id(self),
@@ -72,8 +78,6 @@ class POutputDispatcher(PDispatcher):
       config.
     """
 
-    process = None # process which "owns" this dispatcher
-    channel = None # 'stderr' or 'stdout'
     capturemode = False # are we capturing process event data
     mainlog = None #  the process' "normal" logger
     capturelog = None # the logger while we're in capturemode
@@ -264,8 +268,6 @@ class POutputDispatcher(PDispatcher):
 class PEventListenerDispatcher(PDispatcher):
     """ An output dispatcher that monitors and changes a process'
     listener_state """
-    process = None # process which "owns" this dispatcher
-    channel = None # 'stderr' or 'stdout'
     childlog = None # the logger
     state_buffer = ''  # data waiting to be reviewed for state changes
 
@@ -275,15 +277,13 @@ class PEventListenerDispatcher(PDispatcher):
     RESULT_TOKEN_START_LEN = len(RESULT_TOKEN_START)
 
     def __init__(self, process, channel, fd):
-        self.process = process
+        PDispatcher.__init__(self, process, channel, fd)
         # the initial state of our listener is ACKNOWLEDGED; this is a
         # "busy" state that implies we're awaiting a READY_FOR_EVENTS_TOKEN
         self.process.listener_state = EventListenerStates.ACKNOWLEDGED
         self.process.event = None
         self.result = ''
         self.resultlen = None
-        self.channel = channel
-        self.fd = fd
 
         logfile = getattr(process.config, '%s_logfile' % channel)
 
@@ -427,8 +427,6 @@ class PEventListenerDispatcher(PDispatcher):
             if self.state_buffer:
                 # keep going til its too short
                 self.handle_listener_state_change()
-            else:
-                return
 
     def handle_result(self, result):
         process = self.process
@@ -451,14 +449,9 @@ class PEventListenerDispatcher(PDispatcher):
 
 class PInputDispatcher(PDispatcher):
     """ Input (stdin) dispatcher """
-    process = None # process which "owns" this dispatcher
-    channel = None # 'stdin'
-    input_buffer = '' # data waiting to be sent to the child process
 
     def __init__(self, process, channel, fd):
-        self.process = process
-        self.channel = channel
-        self.fd = fd
+        PDispatcher.__init__(self, process, channel, fd)
         self.input_buffer = ''
 
     def writable(self):
@@ -479,7 +472,7 @@ class PInputDispatcher(PDispatcher):
         if self.input_buffer:
             try:
                 self.flush()
-            except OSError, why:
+            except OSError as why:
                 if why.args[0] == errno.EPIPE:
                     self.input_buffer = ''
                     self.close()
@@ -509,7 +502,7 @@ def stripEscapes(s):
                 result = result + s[i:n]
                 i = n
                 show = 0
-        i = i + 1
+        i += 1
     return result
 
 class RejectEvent(Exception):

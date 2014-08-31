@@ -1,13 +1,14 @@
-# Configuration for Travis CI
-# !!! When making changes, make sure to also edit tox.ini !!!
-
 language: python
-python:
-  - "2.6"
-  - "2.7"
-# command to install dependencies
+env:
+    - TOXENV=cover
+    - TOXENV=cover3
+    - TOXENV=py26
+    - TOXENV=py27
+    - TOXENV=py32
+    - TOXENV=py33
+    - TOXENV=py34
+    - TOXENV=pypy
 install:
-  - pip install -r test_requirements.txt --use-mirrors
-# command to run tests
+    - travis_retry pip install tox==1.6.1
 script:
-  - python setup.py test -q
+    - travis_retry tox

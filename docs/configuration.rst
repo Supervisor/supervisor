@@ -496,7 +496,7 @@ follows.
 
   *Required*:  No.
 
-  *Introduced*: post-3.0a4 (not including 3.0a4)
+  *Introduced*: 3.0a5
 
 ``[supervisorctl]`` Section Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -862,7 +862,7 @@ where specified.
 
   *Required*:  No.
 
-  *Introduced*: 3.1a1
+  *Introduced*: 4.0.0
 
 ``stderr_logfile``
 
@@ -939,7 +939,7 @@ where specified.
 
   *Required*:  No.
 
-  *Introduced*: 3.1a1
+  *Introduced*: 4.0.0
 
 ``environment``
 
@@ -1417,3 +1417,70 @@ And a section in the config file meant to configure it.
    [rpcinterface:another]
    supervisor.rpcinterface_factory = my.package:make_another_rpcinterface
    retries = 1
+
+Environment Variable Interpolation
+----------------------------------
+
+There may be a time where it is necessary to avoid hardcoded values in your
+configuration file (such as paths, port numbers, username, etc). Some teams
+may also put their supervisord.conf files under source control but may want
+to avoid committing sensitive information into the repository.
+
+With this, **all** the environment variables inherited by the ``supervisord``
+process are available and can be interpolated / expanded in **any**
+configuration value, under **any** section.
+
+Your configuration values may contain Python expressions for expanding
+the environment variables using the ``ENV_`` prefix. The sample syntax is
+``foo_key=%(ENV_FOO)s``, where the value of the environment variable ``FOO``
+will be assigned to the ``foo_key``. The string values of environment
+variables will be converted properly to their correct types.
+
+.. note::
+  - some sections such as ``[program:x]`` have other extra expansion options.
+  - environment variables in the configuration will be required, otherwise
+    supervisord will refuse to start.
+  - any changes to the variable requires a restart in the ``supervisord``
+    daemon.
+
+
+An example configuration snippet with customizable values:
+
+.. code-block:: ini
+
+   [supervisord]
+   logfile = %(ENV_MYSUPERVISOR_BASEDIR)s/%(ENV_MYSUPERVISOR_LOGFILE)s
+   logfile_maxbytes = %(ENV_MYSUPERVISOR_LOGFILE_MAXBYTES)s
+   logfile_backups=10
+   loglevel = info
+   pidfile = %(ENV_MYSUPERVISOR_BASEDIR)s/supervisor.pid
+   nodaemon = false
+   minfds = 1024
+   minprocs = 200
+   umask = 022
+   user = %(ENV_USER)s
+
+   [program:cat]
+   command=/bin/cat -x -y --optz=%(ENV_CAT_OPTZ)s
+   process_name=%(program_name)s
+   numprocs=%(ENV_CAT_NUMPROCS)s
+   directory=%(ENV_CAT_DIR)s
+   umask=022
+   priority=999
+   autostart=true
+   autorestart=true
+   exitcodes=0,2
+   user=%(ENV_USER)s
+   redirect_stderr=false
+   stopwaitsecs=10
+
+The above sample config will require the following environment variables to be set:
+
+   - ``MYSUPERVISOR_BASEDIR``
+   - ``MYSUPERVISOR_LOGFILE``
+   - ``MYSUPERVISOR_LOGFILE_MAXBYTES``
+   - ``USER``
+   - ``CAT_OPTZ``
+   - ``CAT_NUMPROCS``
+   - ``CAT_DIRECTORY``
+

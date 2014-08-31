@@ -1,15 +1,14 @@
 import base64
 import os
-import socket
 import stat
 import sys
+import supervisor.medusa.text_socket as socket
 import tempfile
 import unittest
 
-try:
-    from hashlib import sha1
-except ImportError:
-    from sha import new as sha1
+from supervisor.compat import as_bytes
+from supervisor.compat import as_string
+from supervisor.compat import sha1
 
 from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import PopulatedDummySupervisor
@@ -25,12 +24,12 @@ class HandlerTests:
         return self._getTargetClass()(supervisord)
 
     def test_match(self):
-        class DummyRequest:
+        class FakeRequest:
             def __init__(self, uri):
                 self.uri = uri
         supervisor = DummySupervisor()
         handler = self._makeOne(supervisor)
-        self.assertEqual(handler.match(DummyRequest(handler.path)), True)
+        self.assertEqual(handler.match(FakeRequest(handler.path)), True)
 
 class LogtailHandlerTests(HandlerTests, unittest.TestCase):
     def _getTargetClass(self):
@@ -122,22 +121,39 @@ class TailFProducerTests(unittest.TestCase):
         request = DummyRequest('/logtail/foo', None, None, None)
         from supervisor import http
         f = tempfile.NamedTemporaryFile()
-        f.write('a' * 80)
+        f.write(as_bytes('a' * 80))
         f.flush()
-        t = f.name
-        producer = self._makeOne(request, t, 80)
+        producer = self._makeOne(request, f.name, 80)
         result = producer.more()
-        self.assertEqual(result, 'a' * 80)
-        f.write('w' * 100)
+        self.assertEqual(result, as_bytes('a' * 80))
+        f.write(as_bytes('w' * 100))
         f.flush()
         result = producer.more()
-        self.assertEqual(result, 'w' * 100)
+        self.assertEqual(result, as_bytes('w' * 100))
         result = producer.more()
         self.assertEqual(result, http.NOT_DONE_YET)
         f.truncate(0)
         f.flush()
         result = producer.more()
         self.assertEqual(result, '==> File truncated <==\n')
+
+    def test_handle_more_follow(self):
+        request = DummyRequest('/logtail/foo', None, None, None)
+        f = tempfile.NamedTemporaryFile()
+        f.write(as_bytes('a' * 80))
+        f.flush()
+        producer = self._makeOne(request, f.name, 80)
+        result = producer.more()
+        self.assertEqual(result, as_bytes('a' * 80))
+        f.close()
+        f2 = open(f.name, 'wb')
+        try:
+            f2.write(as_bytes('b' * 80))
+            f2.close()
+            result = producer.more()
+        finally:
+            os.unlink(f2.name)
+        self.assertEqual(result, as_bytes('b' * 80))
 
 class DeferringChunkedProducerTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -161,6 +177,20 @@ class DeferringChunkedProducerTests(unittest.TestCase):
         wrapped = DummyProducer()
         producer = self._makeOne(wrapped, footers=['a', 'b'])
         self.assertEqual(producer.more(), '0\r\na\r\nb\r\n\r\n')
+
+    def test_more_nodata_footers(self):
+        wrapped = DummyProducer('')
+        producer = self._makeOne(wrapped, footers=['a', 'b'])
+        self.assertEqual(producer.more(), '0\r\na\r\nb\r\n\r\n')
+
+    def test_more_nodata_nofooters(self):
+        wrapped = DummyProducer('')
+        producer = self._makeOne(wrapped)
+        self.assertEqual(producer.more(), '0\r\n\r\n')
+
+    def test_more_noproducer(self):
+        producer = self._makeOne(None)
+        self.assertEqual(producer.more(), '')
 
 class DeferringCompositeProducerTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -248,6 +278,126 @@ class DeferringHookedProducerTests(unittest.TestCase):
         self.assertEqual(producer.more(), '')
         self.assertEqual(L, [0])
 
+    def test_more_noproducer(self):
+        producer = self._makeOne(None, None)
+        self.assertEqual(producer.more(), '')
+
+class Test_deferring_http_request(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.http import deferring_http_request
+        return deferring_http_request
+
+    def _makeOne(
+        self,
+        channel=None,
+        req='GET / HTTP/1.0',
+        command='GET',
+        uri='/',
+        version='1.0',
+        header=(),
+        ):
+        return self._getTargetClass()(
+            channel, req, command, uri, version, header
+            )
+
+    def _makeChannel(self):
+        class Channel:
+            closed = False
+            def close_when_done(self):
+                self.closed = True
+            def push_with_producer(self, producer):
+                self.producer = producer
+        return Channel()
+
+    def test_done_http_10_nokeepalive(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(channel=channel, version='1.0')
+        inst.done()
+        self.assertTrue(channel.closed)
+
+    def test_done_http_10_keepalive_no_content_length(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version='1.0',
+            header=['Connection: Keep-Alive'],
+            )
+
+        inst.done()
+        self.assertTrue(channel.closed)
+
+    def test_done_http_10_keepalive_and_content_length(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version='1.0',
+            header=['Connection: Keep-Alive'],
+            )
+        inst.reply_headers['Content-Length'] = 1
+        inst.done()
+        self.assertEqual(inst['Connection'], 'Keep-Alive')
+        self.assertFalse(channel.closed)
+
+    def test_done_http_11_connection_close(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version='1.1',
+            header=['Connection: close']
+            )
+        inst.done()
+        self.assertTrue(channel.closed)
+
+    def test_done_http_11_unknown_transfer_encoding(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version='1.1',
+            )
+        inst.reply_headers['Transfer-Encoding'] = 'notchunked'
+        inst.done()
+        self.assertTrue(channel.closed)
+
+    def test_done_http_11_chunked_transfer_encoding(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version='1.1',
+            )
+        inst.reply_headers['Transfer-Encoding'] = 'chunked'
+        inst.done()
+        self.assertFalse(channel.closed)
+
+    def test_done_http_11_use_chunked(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version='1.1',
+            )
+        inst.use_chunked = True
+        inst.done()
+        self.assertTrue('Transfer-Encoding' in inst)
+        self.assertFalse(channel.closed)
+
+    def test_done_http_11_wo_content_length_no_te_no_use_chunked_close(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version='1.1',
+            )
+        inst.use_chunked = False
+        inst.done()
+        self.assertTrue(channel.closed)
+
+    def test_done_http_09(self):
+        channel = self._makeChannel()
+        inst = self._makeOne(
+            channel=channel,
+            version=None,
+            )
+        inst.done()
+        self.assertTrue(channel.closed)
+
 class EncryptedDictionaryAuthorizedTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.http import encrypted_dictionary_authorizer
@@ -273,12 +423,12 @@ class EncryptedDictionaryAuthorizedTests(unittest.TestCase):
         self.assertTrue(authorizer.authorize(('foo', 'pass:word')))
 
     def test_authorize_gooduser_badpassword_sha(self):
-        password = '{SHA}' + sha1('password').hexdigest()
+        password = '{SHA}' + sha1(as_bytes('password')).hexdigest()
         authorizer = self._makeOne({'foo':password})
         self.assertFalse(authorizer.authorize(('foo', 'bar')))
 
     def test_authorize_gooduser_goodpassword_sha(self):
-        password = '{SHA}' + sha1('password').hexdigest()
+        password = '{SHA}' + sha1(as_bytes('password')).hexdigest()
         authorizer = self._makeOne({'foo':password})
         self.assertTrue(authorizer.authorize(('foo', 'password')))
 
@@ -298,8 +448,8 @@ class SupervisorAuthHandlerTests(unittest.TestCase):
 
     def test_handle_request_authorizes_good_credentials(self):
         request = DummyRequest('/logtail/process1', None, None, None)
-        encoded = base64.b64encode("user:password")
-        request.header = ["Authorization: Basic %s" % encoded]
+        encoded = base64.b64encode(as_bytes("user:password"))
+        request.header = ["Authorization: Basic %s" % as_string(encoded)]
         handler = DummyHandler()
         auth_handler = self._makeOne({'user':'password'}, handler)
         auth_handler.handle_request(request)
@@ -307,8 +457,9 @@ class SupervisorAuthHandlerTests(unittest.TestCase):
 
     def test_handle_request_authorizes_good_password_with_colon(self):
         request = DummyRequest('/logtail/process1', None, None, None)
-        encoded = base64.b64encode("user:pass:word") # password contains colon
-        request.header = ["Authorization: Basic %s" % encoded]
+        # password contains colon
+        encoded = base64.b64encode(as_bytes("user:pass:word"))
+        request.header = ["Authorization: Basic %s" % as_string(encoded)]
         handler = DummyHandler()
         auth_handler = self._makeOne({'user':'pass:word'}, handler)
         auth_handler.handle_request(request)
@@ -316,8 +467,8 @@ class SupervisorAuthHandlerTests(unittest.TestCase):
 
     def test_handle_request_does_not_authorize_bad_credentials(self):
         request = DummyRequest('/logtail/process1', None, None, None)
-        encoded = base64.b64encode("wrong:wrong")
-        request.header = ["Authorization: Basic %s" % encoded]
+        encoded = base64.b64encode(as_bytes("wrong:wrong"))
+        request.header = ["Authorization: Basic %s" % as_string(encoded)]
         handler = DummyHandler()
         auth_handler = self._makeOne({'user':'password'}, handler)
         auth_handler.handle_request(request)
@@ -347,7 +498,7 @@ class TopLevelFunctionTests(unittest.TestCase):
         socketfile = tempfile.mktemp()
         inet = {'family':socket.AF_INET, 'host':'localhost', 'port':17735,
                 'username':None, 'password':None, 'section':'inet_http_server'}
-        unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':0700,
+        unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':448, # 0700 in Py2, 0o700 in Py3
                 'chown':(-1, -1), 'username':None, 'password':None,
                 'section':'unix_http_server'}
         servers = self._make_http_servers([inet, unix])
@@ -375,7 +526,7 @@ class TopLevelFunctionTests(unittest.TestCase):
         inet = {'family':socket.AF_INET, 'host':'localhost', 'port':17736,
                 'username':'username', 'password':'password',
                 'section':'inet_http_server'}
-        unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':0700,
+        unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':448, # 0700 in Py2, 0o700 in Py3
                 'chown':(-1, -1), 'username':'username', 'password':'password',
                 'section':'unix_http_server'}
         servers = self._make_http_servers([inet, unix])

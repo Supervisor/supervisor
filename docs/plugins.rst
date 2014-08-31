@@ -69,6 +69,9 @@ These also includes various event listeners.
     works by using the non-blocking mode of the XML-RPC methods and then
     polling ``supervisord``.  The built-in commands use the blocking mode,
     which can be slower due to ``supervisord`` implementation details.
+`supervisor-logging <https://github.com/infoxchange/supervisor-logging>`_
+    An event listener that sends process log events to an external
+    Syslog instance (e.g. Logstash).
 
 Libraries that integrate Third Party Applications with Supervisor
 -----------------------------------------------------------------
@@ -121,3 +124,14 @@ with third party applications:
 `Supermann <https://github.com/borntyping/supermann>`_
     Supermann monitors processes running under Supervisor and sends metrics
     to `Riemann <http://riemann.io/>`_.
+`gulp-supervisor <https://github.com/leny/gulp-supervisor>`_
+    Run Supervisor as a `Gulp <http://gulpjs.com/>`_ task.
+`Yeebase.Supervisor <https://github.com/yeebase/Yeebase.Supervisor>`_
+    Control and monitor Supervisor from a TYPO3 Flow application.
+`dokku-supervisord <https://github.com/statianzo/dokku-supervisord>`_
+    `Dokku <https://github.com/progrium/dokku>`_ plugin that injects ``supervisord`` to run
+    applications.
+`dokku-logging-supervisord <https://github.com/sehrope/dokku-logging-supervisord>`_
+    `Dokku <https://github.com/progrium/dokku>`_ plugin that injects ``supervisord`` to run
+    applications.  It also redirects ``stdout`` and ``stderr`` from processes to log files
+    (rather than the Docker default per-container JSON files).

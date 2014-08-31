@@ -1,5 +1,61 @@
-3.1a1 (Next Release)
---------------------
+4.0.0-dev (Next 4.x Release)
+----------------------------
+
+- Support for Python 3 has been added.  On Python 3, Supervisor requires
+  Python 3.2 or later.
+
+- Support for Python 2.4 and 2.5 has been dropped.  On Python 2, Supervisor
+  now requires Python 2.6 or later.
+
+- The ``supervisor`` package is no longer a namespace package.
+
+- Parsing ``environment=`` has been improved to allow escaped quotes
+  inside quotes and quoted empty values.  Patch by Stefan Friesel.
+
+- Added new ``stdout_syslog`` and ``stderr_syslog`` options to the config
+  file.  These are boolean options that indicate whether process output will
+  be sent to syslog.  Supervisor can now log to both files and syslog at the
+  same time.  Specifying a log filename of ``syslog`` is still supported
+  but deprecated.  Patch by Jason R. Coombs.
+
+- Environment variables are now expanded for all config file options.
+  Patch by Dexter Tad-y.
+
+- "supervisorctl start [spec naming lots of processes]" and "supervisorctl
+  stop [spec naming lots of processes]" both now complete much more quickly.
+  See https://github.com/Supervisor/supervisor/issues/131 .
+
+- Allow > 1023 file descriptors by using poll/kqueue on platforms which
+  support it.  See https://github.com/Supervisor/supervisor/pull/129.
+  Patch by Igor Sobreira.
+
+- Added ``signalProcess``, ``signalProcessGroup``, and ``signalAllProcesses``
+  XML-RPC methods to supervisor RPC interface.  Thanks to Casey Callendrello,
+  Marc Abramowitz, and Moriyoshi Koizumi for the patches.
+
+- Added ``signal`` command to supervisorctl.  Thanks to Moriyoshi Koizumi and
+  Marc Abramowitz for the patches.
+
+3.1.1 (2014-08-11)
+------------------
+
+- Fixed a bug where ``supervisorctl tail -f name`` output would stop if log
+  rotation occurred while tailing.
+
+- Prevent a crash when a greater number of file descriptors were attempted to
+  be opened than permitted by the environment when starting a bunch of
+  programs.  Now, instead a spawn error is logged.
+
+- Compute "channel delay" properly, fixing symptoms where a supervisorctl
+  start command would hang for a very long time when a process (or many
+  processes) are spewing to their stdout or stderr.  See comments attached to
+  https://github.com/Supervisor/supervisor/pull/263 .
+
+- Added docs/conf.py, docs/Makefile, and supervisor/scripts/*.py to
+  the release package.
+
+3.1.0 (2014-07-29)
+------------------
 
 - The output of the ``start``, ``stop``, ``restart``, and ``clear`` commands
   in ``supervisorctl`` has been changed to be consistent with the ``status``
@@ -39,12 +95,6 @@
   a homogeneous process group.  This allows each process to have its own
   working directory.  Patch by Perttu Ranta-aho.
 
-- Added new ``stdout_syslog`` and ``stderr_syslog`` options to the config
-  file.  These are boolean options that indicate whether process output will
-  be sent to syslog.  Supervisor can now log to both files and syslog at the
-  same time.  Specifying a log filename of ``syslog`` is still supported
-  but deprecated.  Patch by Jason R. Coombs.
-
 - Removed ``setuptools`` from the ``requires`` list in ``setup.py`` because
   it caused installation issues on some systems.
 
@@ -58,6 +108,9 @@
 
 - Fixed a hang that could occur in ``supervisord`` if log rotation is used
   and an outside program deletes an active log file.  Patch by Magnus Lycka.
+
+- A warning is now logged if a glob pattern in an ``[include]`` section does
+  not match any files.  Patch by Daniel Hahler.
 
 3.0 (2013-07-30)
 ----------------

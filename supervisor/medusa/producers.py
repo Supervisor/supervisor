@@ -11,11 +11,10 @@ For example, you can feed dynamically-produced output into the compressing
 producer, then wrap this with the 'chunked' transfer-encoding producer.
 """
 
-import string
 from asynchat import find_prefix_at_end
 
 class simple_producer:
-    "producer for a string"
+    """producer for a string"""
     def __init__ (self, data, buffer_size=1024):
         self.data = data
         self.buffer_size = buffer_size
@@ -31,7 +30,7 @@ class simple_producer:
             return result
 
 class scanning_producer:
-    "like simple_producer, but more efficient for large strings"
+    """like simple_producer, but more efficient for large strings"""
     def __init__ (self, data, buffer_size=1024):
         self.data = data
         self.buffer_size = buffer_size
@@ -45,13 +44,13 @@ class scanning_producer:
                     self.pos + self.buffer_size
                     )
             result = self.data[lp:rp]
-            self.pos = self.pos + len(result)
+            self.pos += len(result)
             return result
         else:
             return ''
 
 class lines_producer:
-    "producer for a list of lines"
+    """producer for a list of lines"""
 
     def __init__ (self, lines):
         self.lines = lines
@@ -65,7 +64,7 @@ class lines_producer:
             return ''
 
 class buffer_list_producer:
-    "producer for a list of strings"
+    """producer for a list of strings"""
 
     # i.e., data == ''.join(buffers)
 
@@ -78,11 +77,11 @@ class buffer_list_producer:
             return ''
         else:
             data = self.buffers[self.index]
-            self.index = self.index + 1
+            self.index += 1
             return data
 
 class file_producer:
-    "producer wrapper for file[-like] objects"
+    """producer wrapper for file[-like] objects"""
 
     # match http_channel's outgoing buffer size
     out_buffer_size = 1<<16
@@ -112,14 +111,14 @@ class file_producer:
 # of this object.
 
 class output_producer:
-    "Acts like an output file; suitable for capturing sys.stdout"
+    """Acts like an output file; suitable for capturing sys.stdout"""
     def __init__ (self):
         self.data = ''
 
-    def write(self, data):
+    def write (self, data):
         lines = data.split('\n')
         data = '\r\n'.join(lines)
-        self.data = self.data + data
+        self.data += data
 
     def writeline (self, line):
         self.data = self.data + line + '\r\n'
@@ -142,7 +141,7 @@ class output_producer:
             return ''
 
 class composite_producer:
-    "combine a fifo of producers into one"
+    """combine a fifo of producers into one"""
     def __init__ (self, producers):
         self.producers = producers
 
@@ -201,7 +200,7 @@ class hooked_producer:
                 self.producer = None
                 self.function (self.bytes)
             else:
-                self.bytes = self.bytes + len(result)
+                self.bytes += len(result)
             return result
         else:
             return ''
@@ -281,8 +280,8 @@ class compressed_producer:
 
 class escaping_producer:
 
-    "A producer that escapes a sequence of characters"
-    " Common usage: escaping the CRLF.CRLF sequence in SMTP, NNTP, etc..."
+    """A producer that escapes a sequence of characters"""
+    # Common usage: escaping the CRLF.CRLF sequence in SMTP, NNTP, etc...
 
     def __init__ (self, producer, esc_from='\r\n.', esc_to='\r\n..'):
         self.producer = producer

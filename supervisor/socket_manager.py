@@ -1,4 +1,4 @@
-import socket
+import supervisor.medusa.text_socket as socket
 
 class Proxy:
     """ Class for wrapping a shared resource object and getting
@@ -34,7 +34,7 @@ class ReferenceCounter:
     def increment(self):
         if self.ref_count == 0:
             self.on_non_zero()
-        self.ref_count = self.ref_count + 1
+        self.ref_count += 1
         
     def decrement(self):
         if self.ref_count <= 0:
@@ -55,7 +55,9 @@ class SocketManager:
         self.socket = None
         self.prepared = False
         self.socket_config = socket_config
-        self.ref_ctr = ReferenceCounter(on_zero=self._close, on_non_zero=self._prepare_socket)
+        self.ref_ctr = ReferenceCounter(
+            on_zero=self._close, on_non_zero=self._prepare_socket
+            )
         
     def __repr__(self):
         return '<%s at %s for %s>' % (self.__class__,

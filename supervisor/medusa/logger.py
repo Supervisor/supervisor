@@ -1,7 +1,7 @@
 # -*- Mode: Python -*-
 
-import asynchat_25 as asynchat
-import socket
+import supervisor.medusa.asynchat_25 as asynchat
+import supervisor.medusa.text_socket as socket
 import time         # these three are for the rotating logger
 import os           # |
 import stat         # v
@@ -34,8 +34,8 @@ class file_logger:
 
     # pass this either a path or a file object.
     def __init__ (self, file, flush=1, mode='a'):
-        if type(file) == type(''):
-            if (file == '-'):
+        if isinstance(file, str):
+            if file == '-':
                 import sys
                 self.file = sys.stdout
             else:
@@ -87,13 +87,12 @@ class rotating_file_logger (file_logger):
     # Else if maxsize is non-None we back up whenever the log gets
     # to big.  If both are None we never back up.
     def __init__ (self, file, freq=None, maxsize=None, flush=1, mode='a'):
+        file_logger.__init__ (self, file, flush, mode)
         self.filename = file
         self.mode = mode
-        self.file = open (file, mode)
         self.freq = freq
         self.maxsize = maxsize
         self.rotate_when = self.next_backup(self.freq)
-        self.do_flush = flush
 
     def __repr__ (self):
         return '<rotating-file logger: %s>' % self.file
@@ -133,8 +132,8 @@ class rotating_file_logger (file_logger):
             newname = '%s.ends%04d%02d%02d' % (self.filename, yr, mo, day)
             try:
                 open(newname, "r").close()      # check if file exists
-                newname = newname + "-%02d%02d%02d" % (hr, min, sec)
-            except:                             # YEARMODY is unique
+                newname += "-%02d%02d%02d" % (hr, min, sec)
+            except:                             # YEAR_MONTH_DAY is unique
                 pass
             os.rename(self.filename, newname)
             self.file = open(self.filename, self.mode)
@@ -150,7 +149,7 @@ class rotating_file_logger (file_logger):
 # TODO: async version of syslog_client: now, log entries use blocking
 # send()
 
-import m_syslog
+import supervisor.medusa.m_syslog as m_syslog
 syslog_logger = m_syslog.syslog_client
 
 class syslog_logger (m_syslog.syslog_client):
@@ -162,7 +161,7 @@ class syslog_logger (m_syslog.syslog_client):
     def __repr__ (self):
         return '<syslog logger address=%s>' % (repr(self.address))
 
-    def log (self, message):
+    def log(self, message):
         m_syslog.syslog_client.log (
                 self,
                 message,
@@ -175,8 +174,8 @@ class syslog_logger (m_syslog.syslog_client):
 class socket_logger (asynchat.async_chat):
 
     def __init__ (self, address):
-
-        if type(address) == type(''):
+        asynchat.async_chat.__init__(self)
+        if isinstance(address, str):
             self.create_socket (socket.AF_UNIX, socket.SOCK_STREAM)
         else:
             self.create_socket (socket.AF_INET, socket.SOCK_STREAM)
@@ -185,7 +184,7 @@ class socket_logger (asynchat.async_chat):
         self.address = address
 
     def __repr__ (self):
-        return '<socket logger: address=%s>' % (self.address)
+        return '<socket logger: address=%s>' % self.address
 
     def log (self, message):
         if message[-2:] != '\r\n':
@@ -234,7 +233,7 @@ class resolving_logger:
                 )
 
 class unresolving_logger:
-    "Just in case you don't want to resolve"
+    """Just in case you don't want to resolve"""
     def __init__ (self, logger):
         self.logger = logger
 
@@ -248,7 +247,7 @@ def strip_eol (line):
     return line
 
 class tail_logger:
-    "Keep track of the last <size> log messages"
+    """Keep track of the last <size> log messages"""
     def __init__ (self, logger, size=500):
         self.size = size
         self.logger = logger

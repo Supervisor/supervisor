@@ -1,11 +1,14 @@
 import os
-import sys
 import time
 import errno
 import shlex
-import StringIO
 import traceback
 import signal
+
+from supervisor.compat import maxint
+from supervisor.compat import StringIO
+from supervisor.compat import total_ordering
+from supervisor.compat import as_bytes
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -26,7 +29,8 @@ from supervisor.datatypes import RestartUnconditionally
 
 from supervisor.socket_manager import SocketManager
 
-class Subprocess:
+@total_ordering
+class Subprocess(object):
 
     """A class to manage a subprocess."""
 
@@ -44,9 +48,9 @@ class Subprocess:
     system_stop = 0 # true if the process has been stopped by the system
     killing = 0 # flag determining whether we are trying to kill this proc
     backoff = 0 # backoff counter (to startretries)
-    dispatchers = None # asnycore output dispatchers (keyed by fd)
+    dispatchers = None # asyncore output dispatchers (keyed by fd)
     pipes = None # map of channel name to file descriptor #
-    exitstatus = None # status attached to dead process by finsh()
+    exitstatus = None # status attached to dead process by finish()
     spawnerr = None # error message attached by spawn() if any
     group = None # ProcessGroup instance if process is in the group
 
@@ -102,7 +106,7 @@ class Subprocess:
         if not """
         try:
             commandargs = shlex.split(self.config.command)
-        except ValueError, e:
+        except ValueError as e:
             raise BadCommand("can't parse command %r: %s" % \
                 (self.config.command, str(e)))
 
@@ -166,7 +170,7 @@ class Subprocess:
 
         if new_state == ProcessStates.BACKOFF:
             now = time.time()
-            self.backoff = self.backoff + 1
+            self.backoff += 1
             self.delay = now + self.backoff
 
         self.state = new_state
@@ -209,7 +213,7 @@ class Subprocess:
 
         try:
             filename, argv = self.get_execv_args()
-        except ProcessException, what:
+        except ProcessException as what:
             self.record_spawnerr(what.args[0])
             self._assertInState(ProcessStates.STARTING)
             self.change_state(ProcessStates.BACKOFF)
@@ -217,7 +221,7 @@ class Subprocess:
 
         try:
             self.dispatchers, self.pipes = self.config.make_dispatchers(self)
-        except OSError, why:
+        except OSError as why:
             code = why.args[0]
             if code == errno.EMFILE:
                 # too many file descriptors open
@@ -231,7 +235,7 @@ class Subprocess:
 
         try:
             pid = options.fork()
-        except OSError, why:
+        except OSError as why:
             code = why.args[0]
             if code == errno.EAGAIN:
                 # process table full
@@ -314,11 +318,11 @@ class Subprocess:
                 env.update(self.config.environment)
 
             # change directory
+            cwd = self.config.directory
             try:
-                cwd = self.config.directory
                 if cwd is not None:
                     options.chdir(cwd)
-            except OSError, why:
+            except OSError as why:
                 code = errno.errorcode.get(why.args[0], why.args[0])
                 msg = "couldn't chdir to %s: %s\n" % (cwd, code)
                 options.write(2, "supervisor: " + msg)
@@ -329,7 +333,7 @@ class Subprocess:
                 if self.config.umask is not None:
                     options.setumask(self.config.umask)
                 options.execve(filename, argv, env)
-            except OSError, why:
+            except OSError as why:
                 code = errno.errorcode.get(why.args[0], why.args[0])
                 msg = "couldn't exec %s: %s\n" % (argv[0], code)
                 options.write(2, "supervisor: " + msg)
@@ -416,7 +420,7 @@ class Subprocess:
         try:
             options.kill(pid, sig)
         except:
-            io = StringIO.StringIO()
+            io = StringIO()
             traceback.print_exc(file=io)
             tb = io.getvalue()
             msg = 'unknown problem killing %s (%s):%s' % (self.config.name,
@@ -426,6 +430,43 @@ class Subprocess:
             self.pid = 0
             self.killing = 0
             self.delay = 0
+            return msg
+
+        return None
+
+    def signal(self, sig):
+        """Send a signal to the subprocess, without intending to kill it.
+
+        Return None if the signal was sent, or an error message string
+        if an error occurred or if the subprocess is not running.
+        """
+        options = self.config.options
+        if not self.pid:
+            msg = ("attempted to send %s sig %s but it wasn't running" %
+                   (self.config.name, signame(sig)))
+            options.logger.debug(msg)
+            return msg
+
+        options.logger.debug('sending %s (pid %s) sig %s'
+                             % (self.config.name,
+                                self.pid,
+                                signame(sig))
+                             )
+
+        self._assertInState(ProcessStates.RUNNING,ProcessStates.STARTING,
+                            ProcessStates.STOPPING)
+
+        try:
+            options.kill(self.pid, sig)
+        except:
+            io = StringIO.StringIO()
+            traceback.print_exc(file=io)
+            tb = io.getvalue()
+            msg = 'unknown problem sending sig %s (%s):%s' % (
+                                self.config.name, self.pid, tb)
+            options.logger.critical(msg)
+            self.change_state(ProcessStates.UNKNOWN)
+            self.pid = 0
             return msg
 
         return None
@@ -472,8 +513,8 @@ class Subprocess:
             self.backoff = 0
             self.exitstatus = es
 
-            if self.state == ProcessStates.STARTING:
-                # XXX I dont know under which circumstances this
+            if self.state == ProcessStates.STARTING: # pragma: no cover
+                # XXX I don't know under which circumstances this
                 # happens, but in the wild, there is a transition that
                 # subverts the RUNNING state (directly from STARTING
                 # to EXITED), so we perform the correct transition
@@ -514,9 +555,12 @@ class Subprocess:
         msg = self.config.options.dropPrivileges(self.config.uid)
         return msg
 
-    def __cmp__(self, other):
+    def __lt__(self, other):
+        return self.config.priority < other.config.priority
+
+    def __eq__(self, other):
         # sort by priority
-        return cmp(self.config.priority, other.config.priority)
+        return self.config.priority == other.config.priority
 
     def __repr__(self):
         return '<Subprocess at %s with name %s in state %s>' % (
@@ -649,7 +693,8 @@ class FastCGISubprocess(Subprocess):
         for i in range(3, options.minfds):
             options.close_fd(i)
 
-class ProcessGroupBase:
+@total_ordering
+class ProcessGroupBase(object):
     def __init__(self, config):
         self.config = config
         self.processes = {}
@@ -657,8 +702,11 @@ class ProcessGroupBase:
             self.processes[pconfig.name] = pconfig.make_process(self)
 
 
-    def __cmp__(self, other):
-        return cmp(self.config.priority, other.config.priority)
+    def __lt__(self, other):
+        return self.config.priority < other.config.priority
+
+    def __eq__(self, other):
+        return self.config.priority == other.config.priority
 
     def __repr__(self):
         return '<%s instance at %s named %s>' % (self.__class__, id(self),
@@ -673,7 +721,7 @@ class ProcessGroupBase:
             process.reopenlogs()
 
     def stop_all(self):
-        processes = self.processes.values()
+        processes = list(self.processes.values())
         processes.sort()
         processes.reverse() # stop in desc priority order
 
@@ -716,8 +764,11 @@ class FastCGIProcessGroup(ProcessGroup):
         # to fail early during start up if there is a config error
         try:
             self.socket_manager.get_socket()
-        except Exception, e:
-            raise ValueError('Could not create FastCGI socket %s: %s' % (self.socket_manager.config(), e))
+        except Exception as e:
+            raise ValueError(
+                'Could not create FastCGI socket %s: %s' % (
+                    self.socket_manager.config(), e)
+                )
 
 class EventListenerPool(ProcessGroupBase):
     def __init__(self, config):
@@ -768,12 +819,13 @@ class EventListenerPool(ProcessGroupBase):
 
     def _acceptEvent(self, event, head=False):
         # events are required to be instances
-        # this has a side effect to fail with an attribute error on 'old style' classes
+        # this has a side effect to fail with an attribute error on 'old style'
+        # classes
         if not hasattr(event, 'serial'):
             event.serial = new_serial(GlobalSerial)
         if not hasattr(event, 'pool_serials'):
             event.pool_serials = {}
-        if not event.pool_serials.has_key(self.config.name):
+        if self.config.name not in event.pool_serials:
             event.pool_serials[self.config.name] = new_serial(self)
         else:
             self.config.options.logger.debug(
@@ -805,8 +857,8 @@ class EventListenerPool(ProcessGroupBase):
                     serial = event.serial
                     envelope = self._eventEnvelope(event_type, serial,
                                                    pool_serial, payload)
-                    process.write(envelope)
-                except OSError, why:
+                    process.write(as_bytes(envelope))
+                except OSError as why:
                     if why.args[0] != errno.EPIPE:
                         raise
                     continue
@@ -837,14 +889,14 @@ class EventListenerPool(ProcessGroupBase):
                 'pool:%(pool_name)s poolserial:%(pool_serial)s '
                 'eventname:%(event_name)s len:%(len)s\n%(payload)s' % D)
 
-class GlobalSerial:
+class GlobalSerial(object):
     def __init__(self):
         self.serial = -1
 
 GlobalSerial = GlobalSerial() # singleton
 
 def new_serial(inst):
-    if inst.serial == sys.maxint:
+    if inst.serial == maxint:
         inst.serial = -1
     inst.serial += 1
     return inst.serial
