@@ -948,6 +948,21 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process2 = supervisord.process_groups['foo'].processes['process2']
         self.assertEqual(process2.sent_signal, 10)
 
+    def test_signalProcessGroup_nosuchgroup(self):
+        from supervisor import xmlrpc
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
+        pconfig2 = DummyPConfig(options, 'process2', '/bin/foo2')
+        from supervisor.process import ProcessStates
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
+                                               pconfig2)
+        supervisord.set_procattr('process1', 'state', ProcessStates.RUNNING)
+        supervisord.set_procattr('process2', 'state', ProcessStates.RUNNING)
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
+            interface.signalProcessGroup, 'bar', 10
+            )
+
     def test_signalAllProcesses(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
