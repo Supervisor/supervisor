@@ -2018,6 +2018,32 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
         help = interface.methodHelp('system.methodHelp')
         self.assertEqual(help, interface.methodHelp.__doc__)
 
+class Test_make_allfunc(unittest.TestCase):
+    def _callFUT(self, processes, predicate, func, **extra_kwargs):
+        from supervisor.rpcinterface import make_allfunc
+        return make_allfunc(processes, predicate, func, **extra_kwargs)
+
+    def test_rpcerror_nocallbacks(self):
+        from supervisor import xmlrpc
+        def cb(name, **kw):
+            raise xmlrpc.RPCError(xmlrpc.Faults.FAILED)
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'foo')
+        proc = DummyProcess(pconfig1)
+        group = DummyProcessGroup(pconfig1)
+        def pred(proc):
+            return True
+        af = self._callFUT([(group, proc)], pred, cb)
+        result = af()
+        self.assertEqual(result,
+            [{'description': 'FAILED',
+            'group': 'process1',
+            'name': 'process1',
+            'status': xmlrpc.Faults.FAILED}])
+
+
+
+
 class Test_make_main_rpcinterface(unittest.TestCase):
     def _callFUT(self, supervisord):
         from supervisor.rpcinterface import make_main_rpcinterface
