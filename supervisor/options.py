@@ -56,13 +56,14 @@ from supervisor.datatypes import set_here
 from supervisor import loggers
 from supervisor import states
 from supervisor import xmlrpc
-from supervisor import read_file
 from supervisor import poller
 
-mydir = os.path.abspath(os.path.dirname(__file__))
-version_txt = os.path.join(mydir, 'version.txt')
-
-VERSION = read_file(version_txt).strip()
+def _read_version_txt():
+    mydir = os.path.abspath(os.path.dirname(__file__))
+    version_txt = os.path.join(mydir, 'version.txt')
+    with open(version_txt, 'r') as f:
+        return f.read().strip()
+VERSION = _read_version_txt()
 
 def normalize_path(v):
     return os.path.normpath(os.path.abspath(os.path.expanduser(v)))

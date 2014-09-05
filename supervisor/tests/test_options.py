@@ -10,7 +10,6 @@ import signal
 import shutil
 import errno
 
-from supervisor import read_file
 from supervisor.compat import StringIO
 from supervisor.compat import as_bytes
 
@@ -981,7 +980,8 @@ class ServerOptionsTests(unittest.TestCase):
             instance.pidfile = fn
             instance.write_pidfile()
             self.assertTrue(os.path.exists(fn))
-            pid = int(read_file(fn)[:-1])
+            with open(fn, 'r') as f:
+                pid = int(f.read().strip())
             self.assertEqual(pid, os.getpid())
             msg = instance.logger.data[0]
             self.assertTrue(msg.startswith('supervisord started with pid'))
