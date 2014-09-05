@@ -728,9 +728,17 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             if value is not http.NOT_DONE_YET:
                 break
 
+        from supervisor.xmlrpc import Faults
         self.assertEqual(value, [
-            {'status':80,'group':'foo','name': 'process1','description': 'OK'},
-            {'status':80,'group':'foo','name': 'process2','description': 'OK'},
+            {'status': Faults.SUCCESS,
+             'group':'foo',
+             'name': 'process1',
+             'description': 'OK'},
+
+            {'status': Faults.SUCCESS,
+             'group':'foo',
+             'name': 'process2',
+             'description': 'OK'},
             ] )
         process1 = supervisord.process_groups['foo'].processes['process1']
         self.assertEqual(process1.stop_called, True)
@@ -805,9 +813,17 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             if value is not http.NOT_DONE_YET:
                 break
 
+        from supervisor.xmlrpc import Faults
         self.assertEqual(value, [
-            {'status':80,'group':'foo','name': 'process1','description': 'OK'},
-            {'status':80,'group':'foo','name': 'process2','description': 'OK'},
+            {'status': Faults.SUCCESS,
+             'group':'foo',
+             'name': 'process1',
+             'description': 'OK'},
+
+            {'status': Faults.SUCCESS,
+             'group':'foo',
+             'name': 'process2',
+             'description': 'OK'},
             ] )
         process1 = supervisord.process_groups['foo'].processes['process1']
         self.assertEqual(process1.stop_called, True)
@@ -910,13 +926,21 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         result = interface.signalProcess('foo:*', 10)
         self.assertEqual(interface.update_text, 'signalProcessGroup')
-        
+
         # Sort so we get deterministic results despite hash randomization
         result = sorted(result, key=operator.itemgetter('name'))
 
+        from supervisor.xmlrpc import Faults
         self.assertEqual(result, [
-            {'status':80,'group':'foo','name': 'process1','description': 'OK'},
-            {'status':80,'group':'foo','name': 'process2','description': 'OK'},
+            {'status': Faults.SUCCESS,
+             'group': 'foo',
+             'name': 'process1',
+             'description': 'OK'},
+
+            {'status': Faults.SUCCESS,
+             'group':'foo',
+             'name': 'process2',
+             'description': 'OK'},
             ] )
         process1 = supervisord.process_groups['foo'].processes['process1']
         self.assertEqual(process1.sent_signal, 10)
@@ -939,9 +963,17 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         # Sort so we get deterministic results despite hash randomization
         result = sorted(result, key=operator.itemgetter('name'))
 
+        from supervisor.xmlrpc import Faults
         self.assertEqual(result, [
-            {'status':80,'group':'foo','name': 'process1','description': 'OK'},
-            {'status':80,'group':'foo','name': 'process2','description': 'OK'},
+            {'status': Faults.SUCCESS,
+             'group': 'foo',
+             'name': 'process1',
+             'description': 'OK'},
+
+            {'status': Faults.SUCCESS,
+             'group': 'foo',
+             'name': 'process2',
+             'description': 'OK'},
             ] )
         process1 = supervisord.process_groups['foo'].processes['process1']
         self.assertEqual(process1.sent_signal, 10)
@@ -979,9 +1011,17 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         # Sort so we get deterministic results despite hash randomization
         result = sorted(result, key=operator.itemgetter('name'))
 
+        from supervisor.xmlrpc import Faults
         self.assertEqual(result, [
-            {'status':80,'group':'foo','name': 'process1','description': 'OK'},
-            {'status':80,'group':'foo','name': 'process2','description': 'OK'},
+            {'status': Faults.SUCCESS,
+             'group': 'foo',
+             'name': 'process1',
+             'description': 'OK'},
+
+            {'status': Faults.SUCCESS,
+             'group': 'foo',
+             'name': 'process2',
+             'description': 'OK'},
             ] )
         process1 = supervisord.process_groups['foo'].processes['process1']
         self.assertEqual(process1.sent_signal, 10)
