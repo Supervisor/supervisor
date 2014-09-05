@@ -36,6 +36,9 @@
 - Added ``signal`` command to supervisorctl.  Thanks to Moriyoshi Koizumi and
   Marc Abramowitz for the patches.
 
+- Fixed a bug where ``tail group:*`` would cause a 500 Internal Server Error
+  rather than returning a BAD_NAME fault.
+
 3.1.1 (2014-08-11)
 ------------------
 

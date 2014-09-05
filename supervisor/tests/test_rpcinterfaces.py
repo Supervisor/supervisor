@@ -1291,6 +1291,17 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         finally:
             os.remove(logfile)
 
+    def test_readProcessStdoutLog_bad_name_no_process(self):
+        from supervisor import xmlrpc
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'process1', '/bin/process1', priority=1,
+                               stdout_logfile='/tmp/process1.log')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
+                             interface.readProcessStdoutLog,
+                             'foo:*', offset=0, length=1)
+
     def test_readProcessStdoutLog(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',
@@ -1358,6 +1369,17 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         finally:
             os.remove(logfile)
 
+    def test_readProcessStderrLog_bad_name_no_process(self):
+        from supervisor import xmlrpc
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'process1', '/bin/process1', priority=1,
+                               stdout_logfile='/tmp/process1.log')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
+                             interface.readProcessStderrLog,
+                             'foo:*', offset=0, length=1)
+
     def test_readProcessStderrLog(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',
@@ -1389,6 +1411,16 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
                              interface.tailProcessStdoutLog, 'BAD_NAME', 0, 10)
+
+    def test_tailProcessStdoutLog_bad_name_no_process(self):
+        from supervisor import xmlrpc
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'process1', '/bin/process1', priority=1,
+                               stdout_logfile='/tmp/process1.log')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
+                             interface.tailProcessStdoutLog, 'foo:*', 0, 10)
 
     def test_tailProcessStdoutLog_all(self):
         # test entire log is returned when offset==0 and logsize < length
@@ -1503,6 +1535,16 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
                              interface.tailProcessStderrLog, 'BAD_NAME', 0, 10)
+
+    def test_tailProcessStderrLog_bad_name_no_process(self):
+        from supervisor import xmlrpc
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'process1', '/bin/process1', priority=1,
+                               stdout_logfile='/tmp/process1.log')
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
+                             interface.tailProcessStderrLog, 'foo:*', 0, 10)
 
     def test_tailProcessStderrLog_all(self):
         # test entire log is returned when offset==0 and logsize < length

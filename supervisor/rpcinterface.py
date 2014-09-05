@@ -648,6 +648,9 @@ class SupervisorNamespaceRPCInterface:
     def _readProcessLog(self, name, offset, length, channel):
         group, process = self._getGroupAndProcess(name)
 
+        if process is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
         logfile = getattr(process.config, '%s_logfile' % channel)
 
         if logfile is None or not os.path.exists(logfile):
@@ -685,6 +688,9 @@ class SupervisorNamespaceRPCInterface:
 
     def _tailProcessLog(self, name, offset, length, channel):
         group, process = self._getGroupAndProcess(name)
+
+        if process is None:
+            raise RPCError(Faults.BAD_NAME, name)
 
         logfile = getattr(process.config, '%s_logfile' % channel)
 
