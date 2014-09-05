@@ -25,13 +25,6 @@ from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import lstrip
 
 
-def missing_but_potential_file():
-    """Quick and dirty way of coming up with a decent filename that might exist"""
-    tempf = tempfile.NamedTemporaryFile()
-    fname = tempf.name
-    tempf.close()
-    return fname
-
 class DummyExitException(Exception):
     def __init__(self, exitcode):
         self.exitcode = exitcode
@@ -251,7 +244,7 @@ class OptionTests(unittest.TestCase):
 
     def test_missing_default_config(self):
         options = self._makeOptions()
-        options.searchpaths = [missing_but_potential_file()]
+        options.searchpaths = []
         options.exit = dummy_exit()
         options.stderr = StringIO()
         try:
@@ -260,7 +253,8 @@ class OptionTests(unittest.TestCase):
             self.assertEqual(e.exitcode, 2)
         else:
             self.fail("expected exception")
-        self.assertTrue(options.stderr.getvalue().startswith("Error: No config file found at default paths"))
+        msg = "Error: No config file found at default paths"
+        self.assertTrue(options.stderr.getvalue().startswith(msg))
 
     def test_default_config(self):
         options = self._makeOptions()
@@ -276,12 +270,10 @@ class OptionTests(unittest.TestCase):
         options.stdout = StringIO()
         options.progname = 'test_help'
         options.doc = 'A sample docstring for %s'
-        try:
-            options.help('Argument ignored?')
-        except DummyExitException:
-            self.assertEqual(options.stdout.getvalue(), 'A sample docstring for test_help\n')
-        else:
-            self.fail('help() did not try to exit.')
+        self.assertRaises(DummyExitException,
+            options.help, 'Argument ignored?')
+        msg = 'A sample docstring for test_help\n'
+        self.assertEqual(options.stdout.getvalue(), msg)
 
 class ClientOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
