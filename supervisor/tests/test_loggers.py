@@ -178,13 +178,12 @@ class FileHandlerTests(HandlerTests, unittest.TestCase):
         with open(self.filename, 'r') as f:
             self.assertEqual(f.read(), 'hello!')
 
-# TODO uncomment and fix
-#    def test_emit_unicode_noerror(self):
-#        handler = self._makeOne(self.filename)
-#        record = self._makeLogRecord(u'fi\xed')
-#        handler.emit(record)
-#        with open(self.filename, 'r') as f:
-#            self.assertEqual(f.read(), 'fi\xc3\xad')
+    def test_emit_unicode_noerror(self):
+        handler = self._makeOne(self.filename)
+        record = self._makeLogRecord(as_string(b'fi\xc3\xad'))
+        handler.emit(record)
+        with open(self.filename, 'rb') as f:
+            self.assertEqual(f.read(), b'fi\xc3\xad')
 
     def test_emit_error(self):
         handler = self._makeOne(self.filename)
