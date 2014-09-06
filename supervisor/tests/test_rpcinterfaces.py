@@ -856,20 +856,39 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
              ]
             )
 
-    def test_signalProcess(self):
+    def test_signalProcess_with_signal_number(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo')
         from supervisor.process import ProcessStates
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
         supervisord.set_procattr('foo', 'state', ProcessStates.RUNNING)
-        interface = self._makeOne(supervisord)
 
+        interface = self._makeOne(supervisord)
         result = interface.signalProcess('foo', 10)
 
         self.assertEqual(interface.update_text, 'signalProcess')
         self.assertEqual(result, True)
         p = supervisord.process_groups[supervisord.group_name].processes['foo']
-        self.assertEqual(p.sent_signal, 10 )
+        self.assertEqual(p.sent_signal, 10)
+
+    def test_signalProcess_with_signal_name(self):
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo')
+        from supervisor.process import ProcessStates
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        supervisord.set_procattr('foo', 'state', ProcessStates.RUNNING)
+
+        from supervisor.datatypes import signal_number
+        signame = 'quit'
+        signum = signal_number(signame)
+
+        interface = self._makeOne(supervisord)
+        result = interface.signalProcess('foo', signame)
+
+        self.assertEqual(interface.update_text, 'signalProcess')
+        self.assertEqual(result, True)
+        p = supervisord.process_groups[supervisord.group_name].processes['foo']
+        self.assertEqual(p.sent_signal, signum)
 
     def test_signalProcess_badsignal(self):
         options = DummyOptions()
@@ -948,7 +967,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(process2.sent_signal, 10)
 
 
-    def test_signalProcessGroup(self):
+    def test_signalProcessGroup_with_signal_number(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
         pconfig2 = DummyPConfig(options, 'process2', '/bin/foo2')
@@ -980,6 +999,32 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process2 = supervisord.process_groups['foo'].processes['process2']
         self.assertEqual(process2.sent_signal, 10)
 
+    def test_signalProcessGroup_with_signal_name(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
+        from supervisor.process import ProcessStates
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1)
+        supervisord.set_procattr('process1', 'state', ProcessStates.RUNNING)
+
+        from supervisor.datatypes import signal_number
+        signame = 'term'
+        signum = signal_number(signame)
+
+        interface = self._makeOne(supervisord)
+        result = interface.signalProcessGroup('foo', signame)
+
+        self.assertEqual(interface.update_text, 'signalProcessGroup')
+        from supervisor.xmlrpc import Faults
+        self.assertEqual(result, [
+            {'status': Faults.SUCCESS,
+             'group': 'foo',
+             'name': 'process1',
+             'description': 'OK'},
+            ] )
+
+        process1 = supervisord.process_groups['foo'].processes['process1']
+        self.assertEqual(process1.sent_signal, signum)
+
     def test_signalProcessGroup_nosuchgroup(self):
         from supervisor import xmlrpc
         options = DummyOptions()
@@ -995,7 +1040,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             interface.signalProcessGroup, 'bar', 10
             )
 
-    def test_signalAllProcesses(self):
+    def test_signalAllProcesses_with_signal_number(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
         pconfig2 = DummyPConfig(options, 'process2', '/bin/foo2')
@@ -1027,6 +1072,31 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(process1.sent_signal, 10)
         process2 = supervisord.process_groups['foo'].processes['process2']
         self.assertEqual(process2.sent_signal, 10)
+
+    def test_signalAllProcesses_with_signal_name(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', '/bin/foo')
+        from supervisor.process import ProcessStates
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1)
+        supervisord.set_procattr('process1', 'state', ProcessStates.RUNNING)
+
+        from supervisor.datatypes import signal_number
+        signame = 'hup'
+        signum = signal_number(signame)
+
+        interface = self._makeOne(supervisord)
+        result = interface.signalAllProcesses(signame)
+        self.assertEqual(interface.update_text, 'signalAllProcesses')
+
+        from supervisor.xmlrpc import Faults
+        self.assertEqual(result, [
+            {'status': Faults.SUCCESS,
+             'group': 'foo',
+             'name': 'process1',
+             'description': 'OK'},
+            ] )
+        process1 = supervisord.process_groups['foo'].processes['process1']
+        self.assertEqual(process1.sent_signal, signum)
 
     def test_getAllConfigInfo(self):
         options = DummyOptions()
