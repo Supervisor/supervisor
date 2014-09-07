@@ -146,9 +146,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         try:
             logfile = supervisord.options.logfile
-            f = open(logfile, 'w+')
-            f.write('x' * 2048)
-            f.close()
+            with open(logfile, 'w+') as f:
+                f.write('x' * 2048)
             self._assertRPCError(xmlrpc.Faults.BAD_ARGUMENTS,
                                  interface.readLog, offset=-1, length=1)
             self._assertRPCError(xmlrpc.Faults.BAD_ARGUMENTS,
@@ -162,10 +161,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         logfile = supervisord.options.logfile
         try:
-            f = open(logfile, 'w+')
-            f.write('x' * 2048)
-            f.write('y' * 2048)
-            f.close()
+            with open(logfile, 'w+') as f:
+                f.write('x' * 2048)
+                f.write('y' * 2048)
             data = interface.readLog(offset=0, length=0)
             self.assertEqual(interface.update_text, 'readLog')
             self.assertEqual(data, ('x' * 2048) + ('y' * 2048))
@@ -1349,9 +1347,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         logfile = process.config.stdout_logfile
 
         try:
-            f = open(logfile, 'w+')
-            f.write('x' * 2048)
-            f.close()
+            with open(logfile, 'w+') as f:
+                f.write('x' * 2048)
             self._assertRPCError(xmlrpc.Faults.BAD_ARGUMENTS,
                                  interface.readProcessStdoutLog,
                                  'process1', offset=-1, length=1)
@@ -1381,10 +1378,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stdout_logfile
         try:
-            f = open(logfile, 'w+')
-            f.write('x' * 2048)
-            f.write('y' * 2048)
-            f.close()
+            with open(logfile, 'w+') as f:
+                f.write('x' * 2048)
+                f.write('y' * 2048)
             data = interface.readProcessStdoutLog('foo', offset=0, length=0)
             self.assertEqual(interface.update_text, 'readProcessStdoutLog')
             self.assertEqual(data, ('x' * 2048) + ('y' * 2048))
@@ -1427,9 +1423,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         logfile = process.config.stderr_logfile
 
         try:
-            f = open(logfile, 'w+')
-            f.write('x' * 2048)
-            f.close()
+            with open(logfile, 'w+') as f:
+                f.write('x' * 2048)
             self._assertRPCError(xmlrpc.Faults.BAD_ARGUMENTS,
                                  interface.readProcessStderrLog,
                                  'process1', offset=-1, length=1)
@@ -1459,10 +1454,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stderr_logfile
         try:
-            f = open(logfile, 'w+')
-            f.write('x' * 2048)
-            f.write('y' * 2048)
-            f.close()
+            with open(logfile, 'w+') as f:
+                f.write('x' * 2048)
+                f.write('y' * 2048)
             data = interface.readProcessStderrLog('foo', offset=0, length=0)
             self.assertEqual(interface.update_text, 'readProcessStderrLog')
             self.assertEqual(data, ('x' * 2048) + ('y' * 2048))
@@ -1503,9 +1497,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stdout_logfile
         try:
-            f = open(logfile, 'w+')
-            f.write(letters)
-            f.close()
+            with open(logfile, 'w+') as f:
+                f.write(letters)
 
             data, offset, overflow = interface.tailProcessStdoutLog('foo',
                                                         offset=0,
@@ -1528,9 +1521,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stdout_logfile
         try:
-            f = open(logfile, 'w+')
-            f.write(letters)
-            f.close()
+            with open(logfile, 'w+') as f:
+                f.write(letters)
 
             # offset==logsize
             data, offset, overflow = interface.tailProcessStdoutLog('foo',
@@ -1563,9 +1555,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stdout_logfile
         try:
-            f = open(logfile, 'w+')
-            f.write(letters)
-            f.close()
+            with open(logfile, 'w+') as f:
+                f.write(letters)
 
             data, offset, overflow = interface.tailProcessStdoutLog('foo',
                                                         offset=0, length=5)
@@ -1627,9 +1618,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stderr_logfile
         try:
-            f = open(logfile, 'w+')
-            f.write(letters)
-            f.close()
+            with open(logfile, 'w+') as f:
+                f.write(letters)
 
             data, offset, overflow = interface.tailProcessStderrLog('foo',
                                                         offset=0,
@@ -1652,9 +1642,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stderr_logfile
         try:
-            f = open(logfile, 'w+')
-            f.write(letters)
-            f.close()
+            with open(logfile, 'w+') as f:
+                f.write(letters)
 
             # offset==logsize
             data, offset, overflow = interface.tailProcessStderrLog('foo',
@@ -1687,9 +1676,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         logfile = process.config.stderr_logfile
         try:
-            f = open(logfile, 'w+')
-            f.write(letters)
-            f.close()
+            with open(logfile, 'w+') as f:
+                f.write(letters)
 
             data, offset, overflow = interface.tailProcessStderrLog('foo',
                                                         offset=0, length=5)

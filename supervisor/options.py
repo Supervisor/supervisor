@@ -1111,9 +1111,8 @@ class ServerOptions(Options):
     def write_pidfile(self):
         pid = os.getpid()
         try:
-            f = open(self.pidfile, 'w')
-            f.write('%s\n' % pid)
-            f.close()
+            with open(self.pidfile, 'w') as f:
+                f.write('%s\n' % pid)
         except (IOError, OSError):
             self.logger.critical('could not write pidfile %s' % self.pidfile)
         else:
@@ -1903,35 +1902,31 @@ def readFile(filename, offset, length):
     absoffset = abs(offset)
     abslength = abs(length)
 
-    f = None
     try:
-        f = open(filename, 'rb')
-        if absoffset != offset:
-            # negative offset returns offset bytes from tail of the file
-            if length:
-                raise ValueError('BAD_ARGUMENTS')
-            f.seek(0, 2)
-            sz = f.tell()
-            pos = int(sz - absoffset)
-            if pos < 0:
-                pos = 0
-            f.seek(pos)
-            data = f.read(absoffset)
-        else:
-            if abslength != length:
-                raise ValueError('BAD_ARGUMENTS')
-            if length == 0:
-                f.seek(offset)
-                data = f.read()
+        with open(filename, 'rb') as f:
+            if absoffset != offset:
+                # negative offset returns offset bytes from tail of the file
+                if length:
+                    raise ValueError('BAD_ARGUMENTS')
+                f.seek(0, 2)
+                sz = f.tell()
+                pos = int(sz - absoffset)
+                if pos < 0:
+                    pos = 0
+                f.seek(pos)
+                data = f.read(absoffset)
             else:
-                f.seek(offset)
-                data = f.read(length)
+                if abslength != length:
+                    raise ValueError('BAD_ARGUMENTS')
+                if length == 0:
+                    f.seek(offset)
+                    data = f.read()
+                else:
+                    f.seek(offset)
+                    data = f.read(length)
     except (OSError, IOError):
         raise ValueError('FAILED')
 
-    finally:
-        if f:
-            f.close()
     return data
 
 def tailFile(filename, offset, length):
@@ -1942,39 +1937,36 @@ def tailFile(filename, offset, length):
     bytes are not available, as many bytes as are available are returned.
     """
 
-    overflow = False
-    f = None
     try:
-        f = open(filename, 'rb')
-        f.seek(0, 2)
-        sz = f.tell()
+        with open(filename, 'rb') as f:
+            overflow = False
+            f.seek(0, 2)
+            sz = f.tell()
 
-        if sz > (offset + length):
-            overflow = True
-            offset   = sz - 1
+            if sz > (offset + length):
+                overflow = True
+                offset = sz - 1
 
-        if (offset + length) > sz:
-            if offset > (sz - 1):
+            if (offset + length) > sz:
+                if offset > (sz - 1):
+                    length = 0
+                offset = sz - length
+
+            if offset < 0:
+                offset = 0
+            if length < 0:
                 length = 0
-            offset = sz - length
 
-        if offset < 0: offset = 0
-        if length < 0: length = 0
+            if length == 0:
+                data = ''
+            else:
+                f.seek(offset)
+                data = f.read(length)
 
-        if length == 0:
-            data = ''
-        else:
-            f.seek(offset)
-            data = f.read(length)
-
-        offset = sz
-        return [as_string(data), offset, overflow]
-
+            offset = sz
+            return [as_string(data), offset, overflow]
     except (OSError, IOError):
         return ['', offset, False]
-    finally:
-        if f:
-            f.close()
 
 # Helpers for dealing with signals and exit status
 
