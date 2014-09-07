@@ -36,8 +36,13 @@
 - Added ``signal`` command to supervisorctl.  Thanks to Moriyoshi Koizumi and
   Marc Abramowitz for the patches.
 
-- Fixed a bug where ``tail group:*`` would cause a 500 Internal Server Error
-  rather than returning a BAD_NAME fault.
+- Fixed a bug where ``tail group:*`` in ``supervisorctl`` would show a 500
+  Internal Server Error rather than a BAD_NAME fault.
+
+- Fixed a bug where the web interface would show a 500 Internal Server Error
+  instead of an error message for some process start faults.
+
+- Removed medusa files not used by Supervisor.
 
 3.1.1 (2014-08-11)
 ------------------
