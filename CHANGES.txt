@@ -1,6 +1,5 @@
-3.1.2-dev (Next 3.x Release)
-----------------------------
-
+3.1.2 (2014-09-07)
+------------------
 
 - Fixed a bug where ``tail group:*`` in ``supervisorctl`` would show a 500
   Internal Server Error rather than a BAD_NAME fault.
