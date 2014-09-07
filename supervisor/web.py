@@ -357,7 +357,7 @@ class StatusView(MeldView):
                     try:
                         callback = rpcinterface.supervisor.startProcess(
                             namespec)
-                    except RPCError as e:
+                    except RPCError, e:
                         if e.code == Faults.NO_FILE:
                             msg = 'no such file'
                         elif e.code == Faults.NOT_EXECUTABLE:
@@ -378,7 +378,7 @@ class StatusView(MeldView):
                     def startprocess():
                         try:
                             result = callback()
-                        except RPCError as e:
+                        except RPCError, e:
                             if e.code == Faults.SPAWN_ERROR:
                                 msg = 'spawn error'
                             elif e.code == Faults.ABNORMAL_TERMINATION:
