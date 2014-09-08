@@ -25,12 +25,12 @@ class HandlerTests:
         return self._getTargetClass()(supervisord)
 
     def test_match(self):
-        class DummyRequest:
+        class FakeRequest:
             def __init__(self, uri):
                 self.uri = uri
         supervisor = DummySupervisor()
         handler = self._makeOne(supervisor)
-        self.assertEqual(handler.match(DummyRequest(handler.path)), True)
+        self.assertEqual(handler.match(FakeRequest(handler.path)), True)
 
 class LogtailHandlerTests(HandlerTests, unittest.TestCase):
     def _getTargetClass(self):
