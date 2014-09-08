@@ -15,6 +15,9 @@ Dashboards and Tools for Multiple Supervisor Instances
 These are tools that can monitor or control a number of Supervisor
 instances running on different servers.
 
+`cesi <https://github.com/Gamegos/cesi>`_
+    Web-based dashboard written in Python.
+
 `Django-Dashvisor <https://github.com/aleszoulek/django-dashvisor>`_
     Web-based dashboard written in Python.  Requires Django 1.3 or 1.4.
 
