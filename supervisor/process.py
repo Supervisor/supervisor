@@ -464,9 +464,7 @@ class Subprocess:
         try:
             options.kill(self.pid, sig)
         except:
-            io = StringIO.StringIO()
-            traceback.print_exc(file=io)
-            tb = io.getvalue()
+            tb = traceback.format_exc()
             msg = 'unknown problem sending sig %s (%s):%s' % (
                                 self.config.name, self.pid, tb)
             options.logger.critical(msg)
