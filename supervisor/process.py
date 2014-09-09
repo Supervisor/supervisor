@@ -459,7 +459,7 @@ class Subprocess(object):
         try:
             options.kill(self.pid, sig)
         except:
-            io = StringIO.StringIO()
+            io = StringIO()
             traceback.print_exc(file=io)
             tb = io.getvalue()
             msg = 'unknown problem sending sig %s (%s):%s' % (
