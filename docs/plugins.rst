@@ -95,6 +95,9 @@ with third party applications:
     A Nagios/Icinga plugin written in Python to monitor individual supervisord processes.
 `nagios-supervisord-processes <https://github.com/blablacar/nagios-supervisord-processes>`_
     A Nagios/Icinga plugin written in PHP to monitor individual supervisord processes.
+`supervisord-nagios <https://github.com/3dna/supervisord-nagios>`_
+    A plugin for supervisorctl to allow one to perform nagios-style checks
+    against supervisord-managed processes.
 `php-supervisor-event <https://github.com/mtdowling/php-supervisor-event>`_
     PHP classes for interacting with Supervisor event notifications.
 `PHP5 Supervisor wrapper <https://github.com/yzalis/Supervisor>`_
