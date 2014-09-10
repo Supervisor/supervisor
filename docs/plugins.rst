@@ -88,6 +88,8 @@ with third party applications:
     A buildout recipe to install supervisor.
 `puppet-module-supervisor <https://github.com/plathrop/puppet-module-supervisor>`_
     Puppet module for configuring the supervisor daemon tool.
+`puppet-supervisord <https://github.com/ajcrowe/puppet-supervisord>`_
+    Puppet module to manage the supervisord process control system.
 `ngx_supervisord <https://github.com/FRiCKLE/ngx_supervisord>`_
     An nginx module providing API to communicate with supervisord and
     manage (start/stop) backends on-demand.
