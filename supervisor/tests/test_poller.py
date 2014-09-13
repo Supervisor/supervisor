@@ -30,6 +30,18 @@ class SelectPollerTests(unittest.TestCase):
         poller.register_writable(7)
         self.assertEqual(sorted(poller.writables), [6,7])
 
+    def test_unregister(self):
+        poller = self._makeOne(DummyOptions())
+        poller.register_readable(6)
+        poller.register_readable(7)
+        poller.register_writable(8)
+        poller.register_writable(9)
+        poller.unregister(6)
+        poller.unregister(9)
+        poller.unregister(100)  # not registered, ignore error
+        self.assertEqual(list(poller.readables), [7])
+        self.assertEqual(list(poller.writables), [8])
+
     def test_poll_returns_readables_and_writables(self):
         _select = DummySelect(result={'readables': [6],
                                       'writables': [8]})
