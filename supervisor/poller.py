@@ -36,16 +36,16 @@ class SelectPoller(BasePoller):
         self._init_fdsets()
 
     def register_readable(self, fd):
-        self.readable.add(fd)
+        self.readables.add(fd)
 
     def register_writable(self, fd):
-        self.writable.add(fd)
+        self.writables.add(fd)
 
     def unregister(self, fd):
-        if fd in self.readable:
-            self.readable.remove(fd)
-        if fd in self.writable:
-            self.writable.remove(fd)
+        if fd in self.readables:
+            self.readables.remove(fd)
+        if fd in self.writables:
+            self.writables.remove(fd)
 
     def unregister_all(self):
         self._init_fdsets()
@@ -53,8 +53,8 @@ class SelectPoller(BasePoller):
     def poll(self, timeout):
         try:
             r, w, x = self._select.select(
-                self.readable,
-                self.writable,
+                self.readables,
+                self.writables,
                 [], timeout
                 )
         except select.error as err:
@@ -69,8 +69,8 @@ class SelectPoller(BasePoller):
         return r, w
 
     def _init_fdsets(self):
-        self.readable = set()
-        self.writable = set()
+        self.readables = set()
+        self.writables = set()
 
 class PollPoller(BasePoller):
 
