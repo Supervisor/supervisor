@@ -11,7 +11,6 @@ import grp
 import resource
 import stat
 import pkg_resources
-import select
 import glob
 import platform
 import warnings
@@ -57,12 +56,14 @@ from supervisor.datatypes import set_here
 from supervisor import loggers
 from supervisor import states
 from supervisor import xmlrpc
-from supervisor import read_file
+from supervisor import poller
 
-mydir = os.path.abspath(os.path.dirname(__file__))
-version_txt = os.path.join(mydir, 'version.txt')
-
-VERSION = read_file(version_txt).strip()
+def _read_version_txt():
+    mydir = os.path.abspath(os.path.dirname(__file__))
+    version_txt = os.path.join(mydir, 'version.txt')
+    with open(version_txt, 'r') as f:
+        return f.read().strip()
+VERSION = _read_version_txt()
 
 def normalize_path(v):
     return os.path.normpath(os.path.abspath(os.path.expanduser(v)))
@@ -272,7 +273,7 @@ class Options:
 
         # Check for positional args
         if self.args and not self.positional_args_allowed:
-            self.usage("positional arguments are not supported")
+            self.usage("positional arguments are not supported: %s" % (str(self.args)))
 
         # Process options returned by getopt
         for opt, arg in self.options:
@@ -458,6 +459,7 @@ class ServerOptions(Options):
         self.process_group_configs = []
         self.parse_warnings = []
         self.signal_receiver = SignalReceiver()
+        self.poller = poller.Poller(self)
 
     def version(self, dummy):
         """Print version to stdout and exit(0).
@@ -1050,6 +1052,11 @@ class ServerOptions(Options):
         return configs
 
     def daemonize(self):
+        self.poller.before_daemonize()
+        self._daemonize()
+        self.poller.after_daemonize()
+
+    def _daemonize(self):
         # To daemonize, we need to become the leader of our own session
         # (process) group.  If we do not, signals sent to our
         # parent process will also be sent to us.   This might be bad because
@@ -1104,9 +1111,8 @@ class ServerOptions(Options):
     def write_pidfile(self):
         pid = os.getpid()
         try:
-            f = open(self.pidfile, 'w')
-            f.write('%s\n' % pid)
-            f.close()
+            with open(self.pidfile, 'w') as f:
+                f.write('%s\n' % pid)
         except (IOError, OSError):
             self.logger.critical('could not write pidfile %s' % self.pidfile)
         else:
@@ -1223,9 +1229,6 @@ class ServerOptions(Options):
             except OSError:
                 pass
 
-    def select(self, r, w, x, timeout):
-        return select.select(r, w, x, timeout)
-
     def kill(self, pid, signal):
         os.kill(pid, signal)
 
@@ -1294,10 +1297,15 @@ class ServerOptions(Options):
         os.setuid(uid)
 
     def waitpid(self):
-        # need pthread_sigmask here to avoid concurrent sigchild, but
-        # Python doesn't offer it as it's not standard across UNIX versions.
-        # there is still a race condition here; we can get a sigchild while
-        # we're sitting in the waitpid call.
+        # Need pthread_sigmask here to avoid concurrent sigchild, but Python
+        # doesn't offer in Python < 3.4.  There is still a race condition here;
+        # we can get a sigchild while we're sitting in the waitpid call.
+        # However, AFAICT, if waitpid is interrupted bu SIGCHILD, as long as we
+        # call waitpid again (which happens every so often during the normal
+        # course in the mainloop), we'll eventually reap the child that we
+        # tried to reap during the interrupted call. At least on Linux, this
+        # appears to be true, or at least stopping 50 processes at once never
+        # left zombies laying around.
         try:
             pid, sts = os.waitpid(-1, os.WNOHANG)
         except OSError as why:
@@ -1513,6 +1521,7 @@ class ServerOptions(Options):
             for fd in pipes.values():
                 if fd is not None:
                     self.close_fd(fd)
+            raise
 
     def close_parent_pipes(self, pipes):
         for fdname in ('stdin', 'stdout', 'stderr'):
@@ -1896,35 +1905,31 @@ def readFile(filename, offset, length):
     absoffset = abs(offset)
     abslength = abs(length)
 
-    f = None
     try:
-        f = open(filename, 'rb')
-        if absoffset != offset:
-            # negative offset returns offset bytes from tail of the file
-            if length:
-                raise ValueError('BAD_ARGUMENTS')
-            f.seek(0, 2)
-            sz = f.tell()
-            pos = int(sz - absoffset)
-            if pos < 0:
-                pos = 0
-            f.seek(pos)
-            data = f.read(absoffset)
-        else:
-            if abslength != length:
-                raise ValueError('BAD_ARGUMENTS')
-            if length == 0:
-                f.seek(offset)
-                data = f.read()
+        with open(filename, 'rb') as f:
+            if absoffset != offset:
+                # negative offset returns offset bytes from tail of the file
+                if length:
+                    raise ValueError('BAD_ARGUMENTS')
+                f.seek(0, 2)
+                sz = f.tell()
+                pos = int(sz - absoffset)
+                if pos < 0:
+                    pos = 0
+                f.seek(pos)
+                data = f.read(absoffset)
             else:
-                f.seek(offset)
-                data = f.read(length)
+                if abslength != length:
+                    raise ValueError('BAD_ARGUMENTS')
+                if length == 0:
+                    f.seek(offset)
+                    data = f.read()
+                else:
+                    f.seek(offset)
+                    data = f.read(length)
     except (OSError, IOError):
         raise ValueError('FAILED')
 
-    finally:
-        if f:
-            f.close()
     return data
 
 def tailFile(filename, offset, length):
@@ -1935,39 +1940,36 @@ def tailFile(filename, offset, length):
     bytes are not available, as many bytes as are available are returned.
     """
 
-    overflow = False
-    f = None
     try:
-        f = open(filename, 'rb')
-        f.seek(0, 2)
-        sz = f.tell()
+        with open(filename, 'rb') as f:
+            overflow = False
+            f.seek(0, 2)
+            sz = f.tell()
 
-        if sz > (offset + length):
-            overflow = True
-            offset   = sz - 1
+            if sz > (offset + length):
+                overflow = True
+                offset = sz - 1
 
-        if (offset + length) > sz:
-            if offset > (sz - 1):
+            if (offset + length) > sz:
+                if offset > (sz - 1):
+                    length = 0
+                offset = sz - length
+
+            if offset < 0:
+                offset = 0
+            if length < 0:
                 length = 0
-            offset = sz - length
 
-        if offset < 0: offset = 0
-        if length < 0: length = 0
+            if length == 0:
+                data = ''
+            else:
+                f.seek(offset)
+                data = f.read(length)
 
-        if length == 0:
-            data = ''
-        else:
-            f.seek(offset)
-            data = f.read(length)
-
-        offset = sz
-        return [as_string(data), offset, overflow]
-
+            offset = sz
+            return [as_string(data), offset, overflow]
     except (OSError, IOError):
         return ['', offset, False]
-    finally:
-        if f:
-            f.close()
 
 # Helpers for dealing with signals and exit status
 

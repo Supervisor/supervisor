@@ -21,6 +21,50 @@
 - Environment variables are now expanded for all config file options.
   Patch by Dexter Tad-y.
 
+- "supervisorctl start [spec naming lots of processes]" and "supervisorctl
+  stop [spec naming lots of processes]" both now complete much more quickly.
+  See https://github.com/Supervisor/supervisor/issues/131 .
+
+- Allow > 1023 file descriptors by using poll/kqueue on platforms which
+  support it.  See https://github.com/Supervisor/supervisor/pull/129.
+  Patch by Igor Sobreira.
+
+- Added ``signalProcess``, ``signalProcessGroup``, and ``signalAllProcesses``
+  XML-RPC methods to supervisor RPC interface.  Thanks to Casey Callendrello,
+  Marc Abramowitz, and Moriyoshi Koizumi for the patches.
+
+- Added ``signal`` command to supervisorctl.  Thanks to Moriyoshi Koizumi and
+  Marc Abramowitz for the patches.
+
+3.1.2 (2014-09-07)
+------------------
+
+- Fixed a bug where ``tail group:*`` in ``supervisorctl`` would show a 500
+  Internal Server Error rather than a BAD_NAME fault.
+
+- Fixed a bug where the web interface would show a 500 Internal Server Error
+  instead of an error message for some process start faults.
+
+- Removed medusa files not used by Supervisor.
+
+3.1.1 (2014-08-11)
+------------------
+
+- Fixed a bug where ``supervisorctl tail -f name`` output would stop if log
+  rotation occurred while tailing.
+
+- Prevent a crash when a greater number of file descriptors were attempted to
+  be opened than permitted by the environment when starting a bunch of
+  programs.  Now, instead a spawn error is logged.
+
+- Compute "channel delay" properly, fixing symptoms where a supervisorctl
+  start command would hang for a very long time when a process (or many
+  processes) are spewing to their stdout or stderr.  See comments attached to
+  https://github.com/Supervisor/supervisor/pull/263 .
+
+- Added docs/conf.py, docs/Makefile, and supervisor/scripts/*.py to
+  the release package.
+
 3.1.0 (2014-07-29)
 ------------------
 

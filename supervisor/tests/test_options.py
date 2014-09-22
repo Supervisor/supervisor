@@ -10,7 +10,6 @@ import signal
 import shutil
 import errno
 
-from supervisor import read_file
 from supervisor.compat import StringIO
 from supervisor.compat import as_bytes
 
@@ -25,13 +24,6 @@ from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import lstrip
 
-
-def missing_but_potential_file():
-    """Quick and dirty way of coming up with a decent filename that might exist"""
-    tempf = tempfile.NamedTemporaryFile()
-    fname = tempf.name
-    tempf.close()
-    return fname
 
 class DummyExitException(Exception):
     def __init__(self, exitcode):
@@ -252,7 +244,7 @@ class OptionTests(unittest.TestCase):
 
     def test_missing_default_config(self):
         options = self._makeOptions()
-        options.searchpaths = [missing_but_potential_file()]
+        options.searchpaths = []
         options.exit = dummy_exit()
         options.stderr = StringIO()
         try:
@@ -261,7 +253,8 @@ class OptionTests(unittest.TestCase):
             self.assertEqual(e.exitcode, 2)
         else:
             self.fail("expected exception")
-        self.assertTrue(options.stderr.getvalue().startswith("Error: No config file found at default paths"))
+        msg = "Error: No config file found at default paths"
+        self.assertTrue(options.stderr.getvalue().startswith(msg))
 
     def test_default_config(self):
         options = self._makeOptions()
@@ -277,12 +270,10 @@ class OptionTests(unittest.TestCase):
         options.stdout = StringIO()
         options.progname = 'test_help'
         options.doc = 'A sample docstring for %s'
-        try:
-            options.help('Argument ignored?')
-        except DummyExitException:
-            self.assertEqual(options.stdout.getvalue(), 'A sample docstring for test_help\n')
-        else:
-            self.fail('help() did not try to exit.')
+        self.assertRaises(DummyExitException,
+            options.help, 'Argument ignored?')
+        msg = 'A sample docstring for test_help\n'
+        self.assertEqual(options.stdout.getvalue(), msg)
 
 class ClientOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -881,7 +872,7 @@ class ServerOptionsTests(unittest.TestCase):
         config = UnhosedConfigParser()
         config.read_string(text)
         instance.configfile = StringIO(text)
-        conf = instance.read_config(StringIO(text))
+        instance.read_config(StringIO(text))
         instance.realize(args=[])
         # unix_http_server
         options = instance.configroot.supervisord
@@ -906,7 +897,7 @@ class ServerOptionsTests(unittest.TestCase):
         config = UnhosedConfigParser()
         config.read_string(text)
         instance.configfile = StringIO(text)
-        conf = instance.read_config(StringIO(text))
+        instance.read_config(StringIO(text))
         instance.realize(args=[])
         # unix_http_server
         options = instance.configroot.supervisord
@@ -981,7 +972,8 @@ class ServerOptionsTests(unittest.TestCase):
             instance.pidfile = fn
             instance.write_pidfile()
             self.assertTrue(os.path.exists(fn))
-            pid = int(read_file(fn)[:-1])
+            with open(fn, 'r') as f:
+                pid = int(f.read().strip())
             self.assertEqual(pid, os.getpid())
             msg = instance.logger.data[0]
             self.assertTrue(msg.startswith('supervisord started with pid'))
@@ -1160,7 +1152,7 @@ class ServerOptionsTests(unittest.TestCase):
         config = UnhosedConfigParser()
         config.read_string(text)
         instance.configfile = StringIO(text)
-        conf = instance.read_config(StringIO(text))
+        instance.read_config(StringIO(text))
         instance.realize(args=[])
         # supervisord
         self.assertEqual(instance.logfile,
@@ -2081,6 +2073,14 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         msg = instance.dropPrivileges(42)
         self.assertEqual(msg, "Can't drop privilege as nonroot user")
+
+    def test_daemonize_notifies_poller_before_and_after_fork(self):
+        instance = self._makeOne()
+        instance._daemonize = lambda: None
+        instance.poller = Mock()
+        instance.daemonize()
+        instance.poller.before_daemonize.assert_called_once_with()
+        instance.poller.after_daemonize.assert_called_once_with()
 
 class TestProcessConfig(unittest.TestCase):
     def _getTargetClass(self):

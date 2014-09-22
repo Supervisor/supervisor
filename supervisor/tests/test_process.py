@@ -1,7 +1,6 @@
 import errno
 import os
 import signal
-import sys
 import time
 import unittest
 
@@ -840,6 +839,80 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(event.__class__, events.ProcessStateStoppingEvent)
         self.assertEqual(event.extra_values, [('pid', 11)])
         self.assertEqual(event.from_state, ProcessStates.RUNNING)
+
+    def test_signal(self):
+        options = DummyOptions()
+
+        killedpid = []
+        killedsig = []
+
+        def kill(pid, sig):
+            killedpid.append(pid)
+            killedsig.append(sig)
+
+        options.kill = kill
+
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        instance.pid = 11
+
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.RUNNING
+
+        instance.signal(signal.SIGWINCH )
+
+        self.assertEqual(killedpid, [instance.pid,])
+        self.assertEqual(killedsig, [signal.SIGWINCH,])
+
+        self.assertEqual(options.logger.data[0], 'sending test (pid 11) sig SIGWINCH')
+
+    def test_signal_stopped(self):
+        options = DummyOptions()
+
+        killedpid = []
+        killedsig = []
+
+        def kill(pid, sig):
+            killedpid.append(pid)
+            killedsig.append(sig)
+
+        options.kill = kill #don't actually start killing random processes...
+
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        instance.pid = None
+
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.STOPPED
+
+        instance.signal(signal.SIGWINCH )
+
+        self.assertEqual(options.logger.data[0], "attempted to send test sig SIGWINCH "
+                                                    "but it wasn't running")
+
+        self.assertEqual(killedpid, [])
+
+    def test_signal_error(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        options.kill_error = 1
+        instance = self._makeOne(config)
+        L = []
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        events.subscribe(events.ProcessStateEvent,
+                         lambda x: L.append(x))
+        instance.pid = 11
+        instance.state = ProcessStates.RUNNING
+        instance.signal(signal.SIGWINCH)
+        self.assertEqual(options.logger.data[0],
+            'sending test (pid 11) sig SIGWINCH')
+        self.assertTrue(options.logger.data[1].startswith(
+            'unknown problem sending sig test (11)'))
+        self.assertEqual(instance.killing, 0)
+        self.assertEqual(len(L), 1)
+        event = L[0]
+        self.assertEqual(event.__class__, events.ProcessStateUnknownEvent)
 
     def test_finish(self):
         options = DummyOptions()
@@ -1752,7 +1825,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [event])
-        self.assertEqual(process1.stdin_buffer, '')
+        self.assertEqual(process1.stdin_buffer, b'')
         self.assertEqual(process1.listener_state, EventListenerStates.READY)
 
     def test_transition_event_proc_running(self):
@@ -1773,8 +1846,8 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [])
-        header, payload = process1.stdin_buffer.split('\n', 1)
-        self.assertEqual(payload, 'dummy event', payload)
+        header, payload = process1.stdin_buffer.split(b'\n', 1)
+        self.assertEqual(payload, b'dummy event', payload)
         self.assertEqual(process1.listener_state, EventListenerStates.BUSY)
         self.assertEqual(process1.event, event)
 
@@ -1819,8 +1892,8 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [])
-        header, payload = process1.stdin_buffer.split('\n', 1)
-        self.assertEqual(payload, 'dummy event', payload)
+        header, payload = process1.stdin_buffer.split(b'\n', 1)
+        self.assertEqual(payload, b'dummy event', payload)
         self.assertEqual(process1.listener_state, EventListenerStates.BUSY)
         self.assertEqual(process1.event, event)
 

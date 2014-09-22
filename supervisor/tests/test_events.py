@@ -31,8 +31,6 @@ class EventSubscriptionNotificationTests(unittest.TestCase):
         L = []
         def callback(event):
             L.append(1)
-        class DummyEvent:
-            pass
         events.callbacks[:] = [(DummyEvent, callback)]
         events.notify(DummyEvent())
         self.assertEqual(L, [1])
@@ -42,8 +40,6 @@ class EventSubscriptionNotificationTests(unittest.TestCase):
         L = []
         def callback(event):
             L.append(1)
-        class DummyEvent:
-            pass
         class AnotherEvent:
             pass
         events.callbacks[:] = [(AnotherEvent, callback)]
@@ -55,8 +51,6 @@ class EventSubscriptionNotificationTests(unittest.TestCase):
         L = []
         def callback(event):
             L.append(1)
-        class DummyEvent:
-            pass
         class ASubclassEvent(DummyEvent):
             pass
         events.callbacks[:] = [(DummyEvent, callback)]

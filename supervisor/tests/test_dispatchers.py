@@ -7,7 +7,6 @@ from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyLogger
 from supervisor.tests.base import DummyEvent
-from supervisor import read_file
 
 class PDispatcherTests(unittest.TestCase):
     def setUp(self):
@@ -24,11 +23,11 @@ class PDispatcherTests(unittest.TestCase):
 
     def _makeOne(self, process=None, channel='stdout', fd=0):
         return self._getTargetClass()(process, channel, fd)
-    
+
     def test_readable(self):
         inst = self._makeOne()
         self.assertRaises(NotImplementedError, inst.readable)
-        
+
     def test_writable(self):
         inst = self._makeOne()
         self.assertRaises(NotImplementedError, inst.writable)
@@ -36,7 +35,7 @@ class PDispatcherTests(unittest.TestCase):
     def test_flush(self):
         inst = self._makeOne()
         self.assertEqual(inst.flush(), None)
-        
+
 class POutputDispatcherTests(unittest.TestCase):
     def setUp(self):
         from supervisor.events import clear
@@ -316,8 +315,8 @@ class POutputDispatcherTests(unittest.TestCase):
         try:
             dispatcher.output_buffer = data
             dispatcher.record_output()
-            self.assertEqual(read_file(logfile), '')
-            self.assertEqual(dispatcher.output_buffer, '')
+            self.assertEqual(os.path.getsize(logfile), 0)
+            self.assertEqual(len(dispatcher.output_buffer), 0)
             self.assertEqual(len(events), 1)
 
             event = events[0]
@@ -368,23 +367,26 @@ class POutputDispatcherTests(unittest.TestCase):
         try:
             dispatcher.output_buffer = first
             dispatcher.record_output()
-            [ x.flush() for x in dispatcher.childlog.handlers]
-            self.assertEqual(read_file(logfile), letters)
+            [ x.flush() for x in dispatcher.childlog.handlers ]
+            with open(logfile, 'r') as f:
+                self.assertEqual(f.read(), letters)
             self.assertEqual(dispatcher.output_buffer, first[len(letters):])
             self.assertEqual(len(events), 0)
 
             dispatcher.output_buffer += second
             dispatcher.record_output()
             self.assertEqual(len(events), 0)
-            [ x.flush() for x in dispatcher.childlog.handlers]
-            self.assertEqual(read_file(logfile), letters)
+            [ x.flush() for x in dispatcher.childlog.handlers ]
+            with open(logfile, 'r') as f:
+                self.assertEqual(f.read(), letters)
             self.assertEqual(dispatcher.output_buffer, first[len(letters):])
             self.assertEqual(len(events), 0)
 
             dispatcher.output_buffer += third
             dispatcher.record_output()
-            [ x.flush() for x in dispatcher.childlog.handlers]
-            self.assertEqual(read_file(logfile), letters *2)
+            [ x.flush() for x in dispatcher.childlog.handlers ]
+            with open(logfile, 'r') as f:
+                self.assertEqual(f.read(), letters * 2)
             self.assertEqual(len(events), 1)
             event = events[0]
             from supervisor.events import ProcessCommunicationStdoutEvent
@@ -506,8 +508,8 @@ class POutputDispatcherTests(unittest.TestCase):
             warnings.simplefilter('always')
             self._makeOne(process)
             self.assertEqual(len(w), 1)
-        
-        
+
+
 
 
 class PInputDispatcherTests(unittest.TestCase):

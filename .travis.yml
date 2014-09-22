@@ -4,14 +4,10 @@ env:
     - TOXENV=cover3
     - TOXENV=py26
     - TOXENV=py27
-    - TOXENV=pypy
     - TOXENV=py32
     - TOXENV=py33
     - TOXENV=py34
-matrix:
-  allow_failures:
-    - env: TOXENV=pypy
-  fast_finish: true
+    - TOXENV=pypy
 install:
     - travis_retry pip install tox==1.6.1
 script:

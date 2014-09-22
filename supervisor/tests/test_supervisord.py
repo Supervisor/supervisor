@@ -448,26 +448,9 @@ class SupervisordTests(unittest.TestCase):
         supervisord.runforever()
         self.assertEqual(len(supervisord.ticks), 3)
 
-    def test_runforever_select_eintr(self):
+    def test_runforever_poll_dispatchers(self):
         options = DummyOptions()
-        import errno
-        options.select_error = errno.EINTR
-        supervisord = self._makeOne(options)
-        options.test = True
-        supervisord.runforever()
-        self.assertEqual(options.logger.data[0], 'EINTR encountered in select')
-
-    def test_runforever_select_uncaught_exception(self):
-        options = DummyOptions()
-        import errno
-        options.select_error = errno.EBADF
-        supervisord = self._makeOne(options)
-        import select
-        options.test = True
-        self.assertRaises(select.error, supervisord.runforever)
-
-    def test_runforever_select_dispatchers(self):
-        options = DummyOptions()
+        options.poller.result = [6], [7, 8]
         supervisord = self._makeOne(options)
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
@@ -477,7 +460,6 @@ class SupervisordTests(unittest.TestCase):
         error = DummyDispatcher(writable=True, error=OSError)
         pgroup.dispatchers = {6:readable, 7:writable, 8:error}
         supervisord.process_groups = {'foo': pgroup}
-        options.select_result = [6], [7, 8], []
         options.test = True
         supervisord.runforever()
         self.assertEqual(pgroup.transitioned, True)
@@ -487,6 +469,7 @@ class SupervisordTests(unittest.TestCase):
 
     def test_runforever_select_dispatcher_exitnow(self):
         options = DummyOptions()
+        options.poller.result = [6], []
         supervisord = self._makeOne(options)
         pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
@@ -495,7 +478,6 @@ class SupervisordTests(unittest.TestCase):
         exitnow = DummyDispatcher(readable=True, error=asyncore.ExitNow)
         pgroup.dispatchers = {6:exitnow}
         supervisord.process_groups = {'foo': pgroup}
-        options.select_result = [6], [], []
         options.test = True
         self.assertRaises(asyncore.ExitNow, supervisord.runforever)
 

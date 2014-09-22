@@ -4,6 +4,7 @@ _TIMEFORMAT = '%b %d %I:%M %p'
 from supervisor.compat import total_ordering
 from supervisor.compat import Fault
 from supervisor.compat import as_string
+from supervisor.compat import as_bytes
 
 # mock is imported here for py2/3 compat.  we only declare mock as a dependency
 # via tests_require so it is not available on all supervisor installs.  the
@@ -72,8 +73,6 @@ class DummyOptions:
         self.privsdropped = None
         self.logs_reopened = False
         self.environment_processed = False
-        self.select_result = [], [], []
-        self.select_error = None
         self.write_accept = None
         self.write_error = None
         self.tempfile_name = '/foo/bar'
@@ -87,6 +86,7 @@ class DummyOptions:
         self.changed_directory = False
         self.chdir_error = None
         self.umaskset = None
+        self.poller = DummyPoller(self)
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -236,12 +236,6 @@ class DummyOptions:
     def mktempfile(self, prefix, suffix, dir):
         return self.tempfile_name
 
-    def select(self, r, w, x, timeout):
-        import select
-        if self.select_error:
-            raise select.error(self.select_error)
-        return self.select_result
-
     def remove(self, path):
         import os
         if self.remove_error:
@@ -373,6 +367,7 @@ class DummySocketManager:
     def get_socket(self):
         return DummySocket(self._config.fd)
 
+@total_ordering
 class DummyProcess(object):
     # Initial state; overridden by instance variables
     pid = 0 # Subprocess pid; 0 when not running
@@ -396,6 +391,7 @@ class DummyProcess(object):
     stdin_buffer = '' # buffer of characters to send to child process' stdin
     listener_state = None
     group = None
+    sent_signal = None
 
     def __init__(self, config, state=None):
         self.config = config
@@ -410,11 +406,11 @@ class DummyProcess(object):
         self.error_at_clear = False
         self.killed_with = None
         self.drained = False
-        self.stdout_buffer = ''
-        self.stderr_buffer = ''
-        self.stdout_logged = ''
-        self.stderr_logged = ''
-        self.stdin_buffer = ''
+        self.stdout_buffer = as_bytes('')
+        self.stderr_buffer = as_bytes('')
+        self.stdout_logged = as_bytes('')
+        self.stderr_logged = as_bytes('')
+        self.stdin_buffer = as_bytes('')
         self.pipes = {}
         self.rpipes = {}
         self.dispatchers = {}
@@ -445,6 +441,10 @@ class DummyProcess(object):
 
     def kill(self, signal):
         self.killed_with = signal
+
+    def signal(self, signal):
+        self.sent_signal = signal
+
 
     def spawn(self):
         self.spawned = True
@@ -498,8 +498,6 @@ class DummyProcess(object):
 
     def __lt__(self, other):
         return self.config.priority < other.config.priority
-
-DummyProcess = total_ordering(DummyProcess)
 
 class DummyPConfig:
     def __init__(self, options, name, command, directory=None, umask=None,
@@ -919,13 +917,16 @@ class DummySupervisorRPCNamespace:
     def clearAllProcessLogs(self):
         from supervisor import xmlrpc
         return [
-            {'name':'foo', 'group':'foo',
+            {'name':'foo',
+             'group':'foo',
              'status':xmlrpc.Faults.SUCCESS,
              'description': 'OK'},
-            {'name':'foo2', 'group':'foo2',
+            {'name':'foo2',
+             'group':'foo2',
              'status':xmlrpc.Faults.SUCCESS,
              'description': 'OK'},
-            {'name':'failed', 'group':'failed_group',
+            {'name':'failed',
+             'group':'failed_group',
              'status':xmlrpc.Faults.FAILED,
              'description':'FAILED'}
             ]
@@ -940,6 +941,53 @@ class DummySupervisorRPCNamespace:
         if self._readlog_error:
             raise Fault(self._readlog_error, '')
         return 'mainlogdata'
+
+    def signalProcessGroup(self, name, signal):
+        from supervisor import xmlrpc
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+        return [
+            {'name':'foo_00',
+             'group':'foo',
+             'status': xmlrpc.Faults.SUCCESS,
+             'description': 'OK'},
+            {'name':'foo_01',
+             'group':'foo',
+             'status':xmlrpc.Faults.SUCCESS,
+             'description': 'OK'},
+            ]
+
+    def signalProcess(self, name, signal):
+        from supervisor import xmlrpc
+        if signal == 'BAD_SIGNAL':
+            raise Fault(xmlrpc.Faults.BAD_SIGNAL, 'BAD_SIGNAL')
+        if name == 'BAD_NAME:BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME:BAD_NAME')
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+        if name == 'NOT_RUNNING':
+            raise Fault(xmlrpc.Faults.NOT_RUNNING, 'NOT_RUNNING')
+        if name == 'FAILED':
+            raise Fault(xmlrpc.Faults.FAILED, 'FAILED')
+
+        return True
+
+    def signalAllProcesses(self, signal):
+        from supervisor import xmlrpc
+        return [
+            {'name':'foo',
+             'group':'foo',
+             'status': xmlrpc.Faults.SUCCESS,
+             'description': 'OK'},
+            {'name':'foo2',
+             'group':'foo2',
+             'status':xmlrpc.Faults.SUCCESS,
+             'description': 'OK'},
+            {'name':'failed',
+             'group':'failed_group',
+             'status':xmlrpc.Faults.BAD_NAME,
+             'description':'FAILED'}
+            ]
 
 class DummyPGroupConfig:
     def __init__(self, options, name='whatever', priority=999, pconfigs=None):
@@ -968,6 +1016,7 @@ class DummyFCGIGroupConfig(DummyPGroupConfig):
         DummyPGroupConfig.__init__(self, options, name, priority, pconfigs)
         self.socket_config = socket_config
 
+@total_ordering
 class DummyProcessGroup(object):
     def __init__(self, config):
         self.config = config
@@ -994,8 +1043,6 @@ class DummyProcessGroup(object):
     def __eq__(self, other):
         return self.config.priority == other.config.priority
 
-DummyProcessGroup = total_ordering(DummyProcessGroup)
-
 class DummyFCGIProcessGroup(DummyProcessGroup):
 
     def __init__(self, config):
@@ -1021,6 +1068,9 @@ class PopulatedDummySupervisor(DummySupervisor):
             group_name = self.group_name
         process = self.process_groups[group_name].processes[process_name]
         setattr(process, attr_name, val)
+
+    def reap(self):
+        self.reaped = True
 
 class DummyDispatcher:
     write_event_handled = False
@@ -1101,6 +1151,19 @@ class DummyEvent:
 
     def __str__(self):
         return 'dummy event'
+
+class DummyPoller:
+    def __init__(self, options):
+        self.result = [], []
+
+    def register_readable(self, fd):
+        pass
+
+    def register_writable(self, fd):
+        pass
+
+    def poll(self, timeout):
+        return self.result
 
 def dummy_handler(event, result):
     pass

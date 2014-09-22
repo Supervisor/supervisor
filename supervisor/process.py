@@ -8,6 +8,7 @@ import signal
 from supervisor.compat import maxint
 from supervisor.compat import StringIO
 from supervisor.compat import total_ordering
+from supervisor.compat import as_bytes
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -315,6 +316,7 @@ class Subprocess(object):
                 env['SUPERVISOR_GROUP_NAME'] = self.group.config.name
             if self.config.environment is not None:
                 env.update(self.config.environment)
+
             # change directory
             cwd = self.config.directory
             try:
@@ -428,6 +430,43 @@ class Subprocess(object):
             self.pid = 0
             self.killing = 0
             self.delay = 0
+            return msg
+
+        return None
+
+    def signal(self, sig):
+        """Send a signal to the subprocess, without intending to kill it.
+
+        Return None if the signal was sent, or an error message string
+        if an error occurred or if the subprocess is not running.
+        """
+        options = self.config.options
+        if not self.pid:
+            msg = ("attempted to send %s sig %s but it wasn't running" %
+                   (self.config.name, signame(sig)))
+            options.logger.debug(msg)
+            return msg
+
+        options.logger.debug('sending %s (pid %s) sig %s'
+                             % (self.config.name,
+                                self.pid,
+                                signame(sig))
+                             )
+
+        self._assertInState(ProcessStates.RUNNING,ProcessStates.STARTING,
+                            ProcessStates.STOPPING)
+
+        try:
+            options.kill(self.pid, sig)
+        except:
+            io = StringIO()
+            traceback.print_exc(file=io)
+            tb = io.getvalue()
+            msg = 'unknown problem sending sig %s (%s):%s' % (
+                                self.config.name, self.pid, tb)
+            options.logger.critical(msg)
+            self.change_state(ProcessStates.UNKNOWN)
+            self.pid = 0
             return msg
 
         return None
@@ -818,7 +857,7 @@ class EventListenerPool(ProcessGroupBase):
                     serial = event.serial
                     envelope = self._eventEnvelope(event_type, serial,
                                                    pool_serial, payload)
-                    process.write(envelope)
+                    process.write(as_bytes(envelope))
                 except OSError as why:
                     if why.args[0] != errno.EPIPE:
                         raise
