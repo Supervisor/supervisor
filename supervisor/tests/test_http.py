@@ -144,7 +144,7 @@ class TailFProducerTests(unittest.TestCase):
         f.flush()
         producer = self._makeOne(request, f.name, 80)
         result = producer.more()
-        self.assertEqual(result, as_bytes('a' * 80))
+        self.assertEqual(result, as_string('a' * 80))
         f.close()
         f2 = open(f.name, 'wb')
         try:
@@ -153,7 +153,7 @@ class TailFProducerTests(unittest.TestCase):
             result = producer.more()
         finally:
             os.unlink(f2.name)
-        self.assertEqual(result, as_bytes('b' * 80))
+        self.assertEqual(result, as_string('b' * 80))
 
 class DeferringChunkedProducerTests(unittest.TestCase):
     def _getTargetClass(self):
