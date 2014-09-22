@@ -1588,10 +1588,7 @@ class ClientOptions(Options):
                 need_close = True
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)
-        kwargs = {}
-        if PY3:
-            kwargs['inline_comment_prefixes'] = (';','#')
-        config = UnhosedConfigParser(**kwargs)
+        config = UnhosedConfigParser()
         config.mysection = 'supervisorctl'
         try:
             config.read_file(fp)
