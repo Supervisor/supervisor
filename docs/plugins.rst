@@ -30,6 +30,9 @@ instances running on different servers.
 `SupervisorUI <https://github.com/luxbet/supervisorui>`_
     Another Web-based dashboard written in PHP.
 
+`supervisorclusterctl <https://github.com/RobWin/supervisorclusterctl>`_
+    Command line tool for controlling multiple Supervisor instances
+    using Ansible.
 
 Third Party Plugins and Libraries for Supervisor
 ------------------------------------------------
