@@ -65,6 +65,16 @@ class Subprocess(object):
         self.pipes = {}
         self.state = ProcessStates.STOPPED
 
+    @property
+    def logname(self):
+        """
+        The name of this subprocess as used in logging.
+        """
+        if self.group is None:
+            return self.config.name
+        else:
+            return make_namespec(self.group.config.name, self.config.name)
+
     def removelogs(self):
         for dispatcher in self.dispatchers.values():
             if hasattr(dispatcher, 'removelogs'):
@@ -195,7 +205,7 @@ class Subprocess(object):
         options = self.config.options
 
         if self.pid:
-            msg = 'process %r already running' % self.config.name
+            msg = 'process %r already running' % self.logname
             options.logger.warn(msg)
             return
 
@@ -226,7 +236,7 @@ class Subprocess(object):
             code = why.args[0]
             if code == errno.EMFILE:
                 # too many file descriptors open
-                msg = 'too many open files to spawn %r' % self.config.name
+                msg = 'too many open files to spawn %r' % self.logname
             else:
                 msg = 'unknown error: %s' % errno.errorcode.get(code, code)
             self.record_spawnerr(msg)
@@ -241,7 +251,7 @@ class Subprocess(object):
             if code == errno.EAGAIN:
                 # process table full
                 msg  = ('Too many processes in process table to spawn %r' %
-                        self.config.name)
+                        self.logname)
             else:
                 msg = 'unknown error: %s' % errno.errorcode.get(code, code)
 
@@ -263,7 +273,7 @@ class Subprocess(object):
         self.pid = pid
         options = self.config.options
         options.close_child_pipes(self.pipes)
-        options.logger.info('spawned: %r with pid %s' % (make_namespec(self.group.config.name, self.config.name), pid))
+        options.logger.info('spawned: %r with pid %s' % (self.logname, pid))
         self.spawnerr = None
         self.delay = time.time() + self.config.startsecs
         options.pidhistory[pid] = self
@@ -375,14 +385,14 @@ class Subprocess(object):
         # Properly stop processes in BACKOFF state.
         if self.state == ProcessStates.BACKOFF:
             msg = ("Attempted to kill %s, which is in BACKOFF state." %
-                   (self.config.name))
+                   (self.logname))
             options.logger.debug(msg)
             self.change_state(ProcessStates.STOPPED)
             return None
 
         if not self.pid:
             msg = ("attempted to kill %s with sig %s but it wasn't running" %
-                   (self.config.name, signame(sig)))
+                   (self.logname, signame(sig)))
             options.logger.debug(msg)
             return msg
 
@@ -398,7 +408,7 @@ class Subprocess(object):
             as_group = "process group "
 
         options.logger.debug('killing %s (pid %s) %swith signal %s'
-                             % (self.config.name,
+                             % (self.logname,
                                 self.pid,
                                 as_group,
                                 signame(sig))
@@ -424,7 +434,7 @@ class Subprocess(object):
             io = StringIO()
             traceback.print_exc(file=io)
             tb = io.getvalue()
-            msg = 'unknown problem killing %s (%s):%s' % (self.config.name,
+            msg = 'unknown problem killing %s (%s):%s' % (self.logname,
                                                           self.pid, tb)
             options.logger.critical(msg)
             self.change_state(ProcessStates.UNKNOWN)
@@ -444,12 +454,12 @@ class Subprocess(object):
         options = self.config.options
         if not self.pid:
             msg = ("attempted to send %s sig %s but it wasn't running" %
-                   (self.config.name, signame(sig)))
+                   (self.logname, signame(sig)))
             options.logger.debug(msg)
             return msg
 
         options.logger.debug('sending %s (pid %s) sig %s'
-                             % (self.config.name,
+                             % (self.logname,
                                 self.pid,
                                 signame(sig))
                              )
@@ -464,7 +474,7 @@ class Subprocess(object):
             traceback.print_exc(file=io)
             tb = io.getvalue()
             msg = 'unknown problem sending sig %s (%s):%s' % (
-                                self.config.name, self.pid, tb)
+                                self.logname, self.pid, tb)
             options.logger.critical(msg)
             self.change_state(ProcessStates.UNKNOWN)
             self.pid = 0
@@ -481,7 +491,7 @@ class Subprocess(object):
 
         now = time.time()
         self.laststop = now
-        processname = self.config.name
+        processname = self.logname
 
         tooquickly = now - self.laststart < self.config.startsecs
         exit_expected = es in self.config.exitcodes
@@ -566,7 +576,7 @@ class Subprocess(object):
     def __repr__(self):
         return '<Subprocess at %s with name %s in state %s>' % (
             id(self),
-            self.config.name,
+            self.logname,
             getProcessStateDescription(self.get_state()))
 
     def get_state(self):
@@ -611,7 +621,7 @@ class Subprocess(object):
                 msg = (
                     'entered RUNNING state, process has stayed up for '
                     '> than %s seconds (startsecs)' % self.config.startsecs)
-                logger.info('success: %s %s' % (self.config.name, msg))
+                logger.info('success: %s %s' % (self.logname, msg))
 
         if state == ProcessStates.BACKOFF:
             if self.backoff > self.config.startretries:
@@ -620,7 +630,7 @@ class Subprocess(object):
                 self.give_up()
                 msg = ('entered FATAL state, too many start retries too '
                        'quickly')
-                logger.info('gave up: %s %s' % (self.config.name, msg))
+                logger.info('gave up: %s %s' % (self.logname, msg))
 
         elif state == ProcessStates.STOPPING:
             time_left = self.delay - now
@@ -629,7 +639,7 @@ class Subprocess(object):
                 # sigkill.  if this doesn't kill it, the process will be stuck
                 # in the STOPPING state forever.
                 self.config.options.logger.warn(
-                    'killing %r (%s) with SIGKILL' % (self.config.name,
+                    'killing %r (%s) with SIGKILL' % (self.logname,
                                                       self.pid))
                 self.kill(signal.SIGKILL)
 
