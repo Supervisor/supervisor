@@ -876,11 +876,6 @@ class ServerOptions(Options):
         if umask is not None:
             umask = octal_type(umask)
 
-        command = get(section, 'command', None)
-        if command is None:
-            raise ValueError(
-                'program section %s does not specify a command' % section)
-
         process_name = process_or_group_name(
             get(section, 'process_name', '%(program_name)s', do_expand=False))
 
@@ -937,10 +932,15 @@ class ServerOptions(Options):
                         'rollover, set maxbytes > 0 to avoid filling up '
                         'filesystem unintentionally' % (section, n))
 
+            command = get(section, 'command', expansions=expansions)
+            if command is None:
+                raise ValueError(
+                    'program section %s does not specify a command' % section)
+
             pconfig = klass(
                 self,
                 name=expand(process_name, expansions, 'process_name'),
-                command=expand(command, expansions, 'command'),
+                command=command,
                 directory=directory,
                 umask=umask,
                 priority=priority,
@@ -2040,14 +2040,18 @@ class SignalReceiver:
 def expand(s, expansions, name):
     try:
         return s % expansions
-    except KeyError:
+    except KeyError as ex:
+        available = expansions.keys()
+        available.sort()
         raise ValueError(
-            'Format string %r for %r contains names which cannot be '
-            'expanded' % (s, name))
-    except:
+            'Format string %r for %r contains names (%s) which cannot be '
+            'expanded. Available names: %s' %
+            (s, name, str(ex), ", ".join(available)))
+    except Exception as ex:
         raise ValueError(
-            'Format string %r for %r is badly formatted' % (s, name)
-            )
+            'Format string %r for %r is badly formatted: %s' %
+            (s, name, str(ex))
+        )
 
 def environ_expansions():
     """Return dict of environment variables, suitable for use in string
