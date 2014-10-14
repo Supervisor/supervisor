@@ -8,6 +8,7 @@ import signal
 from supervisor.compat import maxint
 from supervisor.compat import StringIO
 from supervisor.compat import total_ordering
+from supervisor.compat import as_bytes
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -29,6 +30,7 @@ from supervisor.datatypes import RestartUnconditionally
 
 from supervisor.socket_manager import SocketManager
 
+@total_ordering
 class Subprocess(object):
 
     """A class to manage a subprocess."""
@@ -315,6 +317,7 @@ class Subprocess(object):
                 env['SUPERVISOR_GROUP_NAME'] = self.group.config.name
             if self.config.environment is not None:
                 env.update(self.config.environment)
+
             # change directory
             cwd = self.config.directory
             try:
@@ -432,6 +435,43 @@ class Subprocess(object):
 
         return None
 
+    def signal(self, sig):
+        """Send a signal to the subprocess, without intending to kill it.
+
+        Return None if the signal was sent, or an error message string
+        if an error occurred or if the subprocess is not running.
+        """
+        options = self.config.options
+        if not self.pid:
+            msg = ("attempted to send %s sig %s but it wasn't running" %
+                   (self.config.name, signame(sig)))
+            options.logger.debug(msg)
+            return msg
+
+        options.logger.debug('sending %s (pid %s) sig %s'
+                             % (self.config.name,
+                                self.pid,
+                                signame(sig))
+                             )
+
+        self._assertInState(ProcessStates.RUNNING,ProcessStates.STARTING,
+                            ProcessStates.STOPPING)
+
+        try:
+            options.kill(self.pid, sig)
+        except:
+            io = StringIO()
+            traceback.print_exc(file=io)
+            tb = io.getvalue()
+            msg = 'unknown problem sending sig %s (%s):%s' % (
+                                self.config.name, self.pid, tb)
+            options.logger.critical(msg)
+            self.change_state(ProcessStates.UNKNOWN)
+            self.pid = 0
+            return msg
+
+        return None
+
     def finish(self, pid, sts):
         """ The process was reaped and we need to report and manage its state
         """
@@ -474,7 +514,7 @@ class Subprocess(object):
             self.backoff = 0
             self.exitstatus = es
 
-            if self.state == ProcessStates.STARTING:
+            if self.state == ProcessStates.STARTING: # pragma: no cover
                 # XXX I don't know under which circumstances this
                 # happens, but in the wild, there is a transition that
                 # subverts the RUNNING state (directly from STARTING
@@ -593,8 +633,6 @@ class Subprocess(object):
                                                       self.pid))
                 self.kill(signal.SIGKILL)
 
-Subprocess = total_ordering(Subprocess)
-
 class FastCGISubprocess(Subprocess):
     """Extends Subprocess class to handle FastCGI subprocesses"""
 
@@ -656,6 +694,7 @@ class FastCGISubprocess(Subprocess):
         for i in range(3, options.minfds):
             options.close_fd(i)
 
+@total_ordering
 class ProcessGroupBase(object):
     def __init__(self, config):
         self.config = config
@@ -710,8 +749,6 @@ class ProcessGroupBase(object):
             dispatchers.update(process.dispatchers)
         return dispatchers
 
-ProcessGroupBase = total_ordering(ProcessGroupBase)
-
 class ProcessGroup(ProcessGroupBase):
     def transition(self):
         for proc in self.processes.values():
@@ -729,7 +766,10 @@ class FastCGIProcessGroup(ProcessGroup):
         try:
             self.socket_manager.get_socket()
         except Exception as e:
-            raise ValueError('Could not create FastCGI socket %s: %s' % (self.socket_manager.config(), e))
+            raise ValueError(
+                'Could not create FastCGI socket %s: %s' % (
+                    self.socket_manager.config(), e)
+                )
 
 class EventListenerPool(ProcessGroupBase):
     def __init__(self, config):
@@ -780,7 +820,8 @@ class EventListenerPool(ProcessGroupBase):
 
     def _acceptEvent(self, event, head=False):
         # events are required to be instances
-        # this has a side effect to fail with an attribute error on 'old style' classes
+        # this has a side effect to fail with an attribute error on 'old style'
+        # classes
         if not hasattr(event, 'serial'):
             event.serial = new_serial(GlobalSerial)
         if not hasattr(event, 'pool_serials'):
@@ -817,7 +858,7 @@ class EventListenerPool(ProcessGroupBase):
                     serial = event.serial
                     envelope = self._eventEnvelope(event_type, serial,
                                                    pool_serial, payload)
-                    process.write(envelope)
+                    process.write(as_bytes(envelope))
                 except OSError as why:
                     if why.args[0] != errno.EPIPE:
                         raise

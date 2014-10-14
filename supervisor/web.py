@@ -11,6 +11,7 @@ from supervisor.compat import urllib
 from supervisor.compat import parse_qs
 from supervisor.compat import parse_qsl
 from supervisor.compat import as_string
+from supervisor.compat import PY3
 
 from supervisor.medusa import producers
 from supervisor.medusa.http_server import http_date
@@ -124,6 +125,12 @@ class DeferredWebProducer:
                 [outgoing_header, outgoing_producer]
                 )
         else:
+            # fix AttributeError: 'unicode' object has no attribute 'more'
+            if (not PY3) and (len(self.request.outgoing) > 0):
+                body = self.request.outgoing[0]
+                if isinstance(body, unicode):
+                    self.request.outgoing[0] = producers.simple_producer (body)
+
             # prepend the header
             self.request.outgoing.insert(0, outgoing_header)
             outgoing_producer = producers.composite_producer (
@@ -360,13 +367,36 @@ class StatusView(MeldView):
                         callback = rpcinterface.supervisor.startProcess(
                             namespec)
                     except RPCError as e:
-                        if e.code == Faults.SPAWN_ERROR:
-                            def spawnerr():
-                                return 'Process %s spawn error' % namespec
-                            spawnerr.delay = 0.05
-                            return spawnerr
+                        if e.code == Faults.NO_FILE:
+                            msg = 'no such file'
+                        elif e.code == Faults.NOT_EXECUTABLE:
+                            msg = 'file not executable'
+                        elif e.code == Faults.ALREADY_STARTED:
+                            msg = 'already started'
+                        elif e.code == Faults.SPAWN_ERROR:
+                            msg = 'spawn error'
+                        elif e.code == Faults.ABNORMAL_TERMINATION:
+                            msg = 'abnormal termination'
+                        else:
+                            msg = 'unexpected rpc fault code %d' % e.code
+                        def starterr():
+                            return 'ERROR: Process %s: %s' % (namespec, msg)
+                        starterr.delay = 0.05
+                        return starterr
+
                     def startprocess():
-                        if callback() is NOT_DONE_YET:
+                        try:
+                            result = callback()
+                        except RPCError as e:
+                            if e.code == Faults.SPAWN_ERROR:
+                                msg = 'spawn error'
+                            elif e.code == Faults.ABNORMAL_TERMINATION:
+                                msg = 'abnormal termination'
+                            else:
+                                msg = 'unexpected rpc fault code %d' % e.code
+                            return 'ERROR: Process %s: %s' % (namespec, msg)
+
+                        if result is NOT_DONE_YET:
                             return NOT_DONE_YET
                         return 'Process %s started' % namespec
                     startprocess.delay = 0.05

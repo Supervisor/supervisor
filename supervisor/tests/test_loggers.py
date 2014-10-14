@@ -12,7 +12,6 @@ from supervisor.compat import as_string
 
 from supervisor.tests.base import mock
 from supervisor.tests.base import DummyStream
-from supervisor import read_file
 
 class LevelTests(unittest.TestCase):
     def test_LOG_LEVELS_BY_NUM_doesnt_include_builtins(self):
@@ -176,14 +175,15 @@ class FileHandlerTests(HandlerTests, unittest.TestCase):
         record = self._makeLogRecord('hello!')
         handler.emit(record)
         handler.close()
-        self.assertEqual(read_file(self.filename,'r'), 'hello!')
+        with open(self.filename, 'r') as f:
+            self.assertEqual(f.read(), 'hello!')
 
-#    def test_emit_unicode_noerror(self):
-#        handler = self._makeOne(self.filename)
-#        record = self._makeLogRecord(u'fi\xed')
-#        handler.emit(record)
-#        content = open(self.filename, 'r').read()
-#        self.assertEqual(content, 'fi\xc3\xad')
+    def test_emit_unicode_noerror(self):
+        handler = self._makeOne(self.filename)
+        record = self._makeLogRecord(as_string(b'fi\xc3\xad'))
+        handler.emit(record)
+        with open(self.filename, 'rb') as f:
+            self.assertEqual(f.read(), b'fi\xc3\xad')
 
     def test_emit_error(self):
         handler = self._makeOne(self.filename)
@@ -245,11 +245,14 @@ class RotatingFileHandlerTests(FileHandlerTests):
         self.assertTrue(os.path.exists(self.filename + '.1'))
         self.assertTrue(os.path.exists(self.filename + '.2'))
 
-        self.assertEqual(read_file(self.filename), 'a' * 4)
-        one = read_file(self.filename+'.1')
-        self.assertEqual(one, 'a'*12)
-        two = read_file(self.filename+'.2')
-        self.assertEqual(two, 'a'*12)
+        with open(self.filename, 'r') as f:
+            self.assertEqual(f.read(), 'a' * 4)
+
+        with open(self.filename+'.1', 'r') as f:
+            self.assertEqual(f.read(), 'a' * 12)
+
+        with open(self.filename+'.2', 'r') as f:
+            self.assertEqual(f.read(), 'a' * 12)
 
     def test_current_logfile_removed(self):
         handler = self._makeOne(self.filename, maxBytes=6, backupCount=1)

@@ -15,6 +15,9 @@ Dashboards and Tools for Multiple Supervisor Instances
 These are tools that can monitor or control a number of Supervisor
 instances running on different servers.
 
+`cesi <https://github.com/Gamegos/cesi>`_
+    Web-based dashboard written in Python.
+
 `Django-Dashvisor <https://github.com/aleszoulek/django-dashvisor>`_
     Web-based dashboard written in Python.  Requires Django 1.3 or 1.4.
 
@@ -27,6 +30,9 @@ instances running on different servers.
 `SupervisorUI <https://github.com/luxbet/supervisorui>`_
     Another Web-based dashboard written in PHP.
 
+`supervisorclusterctl <https://github.com/RobWin/supervisorclusterctl>`_
+    Command line tool for controlling multiple Supervisor instances
+    using Ansible.
 
 Third Party Plugins and Libraries for Supervisor
 ------------------------------------------------
@@ -85,6 +91,8 @@ with third party applications:
     A buildout recipe to install supervisor.
 `puppet-module-supervisor <https://github.com/plathrop/puppet-module-supervisor>`_
     Puppet module for configuring the supervisor daemon tool.
+`puppet-supervisord <https://github.com/ajcrowe/puppet-supervisord>`_
+    Puppet module to manage the supervisord process control system.
 `ngx_supervisord <https://github.com/FRiCKLE/ngx_supervisord>`_
     An nginx module providing API to communicate with supervisord and
     manage (start/stop) backends on-demand.
@@ -92,6 +100,9 @@ with third party applications:
     A Nagios/Icinga plugin written in Python to monitor individual supervisord processes.
 `nagios-supervisord-processes <https://github.com/blablacar/nagios-supervisord-processes>`_
     A Nagios/Icinga plugin written in PHP to monitor individual supervisord processes.
+`supervisord-nagios <https://github.com/3dna/supervisord-nagios>`_
+    A plugin for supervisorctl to allow one to perform nagios-style checks
+    against supervisord-managed processes.
 `php-supervisor-event <https://github.com/mtdowling/php-supervisor-event>`_
     PHP classes for interacting with Supervisor event notifications.
 `PHP5 Supervisor wrapper <https://github.com/yzalis/Supervisor>`_

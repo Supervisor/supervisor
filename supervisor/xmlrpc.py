@@ -2,6 +2,9 @@ import types
 import re
 import traceback
 import sys
+import datetime
+import time
+from xml.etree.ElementTree import iterparse
 
 from supervisor.compat import xmlrpclib
 from supervisor.compat import func_attribute
@@ -12,7 +15,6 @@ from supervisor.compat import as_string
 from supervisor.compat import encodestring
 from supervisor.compat import decodestring
 from supervisor.compat import httplib
-from supervisor.compat import iterparse
 
 import supervisor.medusa.text_socket as socket
 from supervisor.medusa.http_server import get_header
@@ -28,6 +30,7 @@ class Faults:
     SIGNATURE_UNSUPPORTED = 4
     SHUTDOWN_STATE = 6
     BAD_NAME = 10
+    BAD_SIGNAL = 11
     NO_FILE = 20
     NOT_EXECUTABLE = 21
     FAILED = 30
@@ -95,28 +98,15 @@ class DeferredXMLRPCResponse:
         connection = get_header(self.CONNECTION, self.request.header)
 
         close_it = 0
-        wrap_in_chunking = 0
 
         if self.request.version == '1.0':
             if connection == 'keep-alive':
-                if 'Content-Length' not in self.request:
-                    close_it = 1
-                else:
-                    self.request['Connection'] = 'Keep-Alive'
+                self.request['Connection'] = 'Keep-Alive'
             else:
                 close_it = 1
         elif self.request.version == '1.1':
             if connection == 'close':
                 close_it = 1
-            elif 'Content-Length' not in self.request:
-                if 'Transfer-Encoding' in self.request:
-                    if not self.request['Transfer-Encoding'] == 'chunked':
-                        close_it = 1
-                elif self.request.use_chunked:
-                    self.request['Transfer-Encoding'] = 'chunked'
-                    wrap_in_chunking = 1
-                else:
-                    close_it = 1
         elif self.request.version is None:
             close_it = 1
 
@@ -126,19 +116,9 @@ class DeferredXMLRPCResponse:
         if close_it:
             self.request['Connection'] = 'close'
 
-        if wrap_in_chunking:
-            outgoing_producer = producers.chunked_producer (
-                    producers.composite_producer (self.request.outgoing)
-                    )
-            # prepend the header
-            outgoing_producer = producers.composite_producer(
-                [outgoing_header, outgoing_producer]
-                )
-        else:
-            # prepend the header
-            self.request.outgoing.insert(0, outgoing_header)
-            outgoing_producer = producers.composite_producer (
-                self.request.outgoing)
+        # prepend the header
+        self.request.outgoing.insert(0, outgoing_header)
+        outgoing_producer = producers.composite_producer(self.request.outgoing)
 
         # apply a few final transformations to the output
         self.request.channel.push_with_producer (
@@ -311,20 +291,47 @@ class RootRPCInterface:
         for name, rpcinterface in subinterfaces:
             setattr(self, name, rpcinterface)
 
+def make_datetime(text):
+    return datetime.datetime(
+        *time.strptime(text, "%Y%m%dT%H:%M:%S")[:6]
+    )
+
 class supervisor_xmlrpc_handler(xmlrpc_handler):
     path = '/RPC2'
     IDENT = 'Supervisor XML-RPC Handler'
+
+    unmarshallers = {
+        "int": lambda x: int(x.text),
+        "i4": lambda x: int(x.text),
+        "boolean": lambda x: x.text == "1",
+        "string": lambda x: x.text or "",
+        "double": lambda x: float(x.text),
+        "dateTime.iso8601": lambda x: make_datetime(x.text),
+        "array": lambda x: x[0].text,
+        "data": lambda x: [v.text for v in x],
+        "struct": lambda x: dict([(k.text or "", v.text) for k, v in x]),
+        "base64": lambda x: as_string(decodestring(as_bytes(x.text or ""))),
+        "value": lambda x: x[0].text,
+        "param": lambda x: x[0].text,
+        }
+
     def __init__(self, supervisord, subinterfaces):
         self.rpcinterface = RootRPCInterface(subinterfaces)
         self.supervisord = supervisord
-        if loads:
-            self.loads = loads
-        else:
-            self.supervisord.options.logger.warn(
-                'cElementTree not installed, using slower XML parser for '
-                'XML-RPC'
-                )
-            self.loads = xmlrpclib.loads
+
+    def loads(self, data):
+        params = method = None
+        for action, elem in iterparse(StringIO(data)):
+            unmarshall = self.unmarshallers.get(elem.tag)
+            if unmarshall:
+                data = unmarshall(elem)
+                elem.clear()
+                elem.text = data
+            elif elem.tag == "methodName":
+                method = elem.text
+            elif elem.tag == "params":
+                params = tuple([v.text for v in elem])
+        return params, method
 
     def match(self, request):
         return request.uri.startswith(self.path)
@@ -419,7 +426,6 @@ class SupervisorTransport(xmlrpclib.Transport):
     """
     connection = None
 
-    _use_datetime = 0 # python 2.5 fwd compatibility
     def __init__(self, username=None, password=None, serverurl=None):
         xmlrpclib.Transport.__init__(self)
         self.username = username
@@ -485,7 +491,7 @@ class SupervisorTransport(xmlrpclib.Transport):
         return u.close()
 
 class UnixStreamHTTPConnection(httplib.HTTPConnection):
-    def connect(self):
+    def connect(self): # pragma: no cover
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         # we abuse the host parameter as the socketname
         self.sock.connect(self.socketfile)
@@ -534,41 +540,3 @@ def gettags(comment):
     return tags
 
 
-if iterparse is not None:
-    import datetime, time
-
-    def make_datetime(text):
-        return datetime.datetime(
-            *time.strptime(text, "%Y%m%dT%H:%M:%S")[:6]
-        )
-
-    unmarshallers = {
-        "int": lambda x: int(x.text),
-        "i4": lambda x: int(x.text),
-        "boolean": lambda x: x.text == "1",
-        "string": lambda x: x.text or "",
-        "double": lambda x: float(x.text),
-        "dateTime.iso8601": lambda x: make_datetime(x.text),
-        "array": lambda x: x[0].text,
-        "data": lambda x: [v.text for v in x],
-        "struct": lambda x: dict([(k.text or "", v.text) for k, v in x]),
-        "base64": lambda x: as_string(decodestring(as_bytes(x.text or ""))),
-        "value": lambda x: x[0].text,
-        "param": lambda x: x[0].text,
-    }
-
-    def loads(data):
-        params = method = None
-        for action, elem in iterparse(StringIO(data)):
-            unmarshall = unmarshallers.get(elem.tag)
-            if unmarshall:
-                data = unmarshall(elem)
-                elem.clear()
-                elem.text = data
-            elif elem.tag == "methodName":
-                method = elem.text
-            elif elem.tag == "params":
-                params = tuple([v.text for v in elem])
-        return params, method
-else:
-    loads = None

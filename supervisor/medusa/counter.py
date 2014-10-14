@@ -12,6 +12,8 @@
 # method, the use of long arithmetic is a reminder that the counter
 # will overflow.
 
+from supervisor.compat import long
+
 class counter:
     """general-purpose counter"""
 
