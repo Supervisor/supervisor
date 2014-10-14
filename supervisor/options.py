@@ -2041,7 +2041,7 @@ def expand(s, expansions, name):
     try:
         return s % expansions
     except KeyError as ex:
-        available = expansions.keys()
+        available = list(expansions.keys())
         available.sort()
         raise ValueError(
             'Format string %r for %r contains names (%s) which cannot be '
