@@ -1066,6 +1066,22 @@ class ServerOptionsTests(unittest.TestCase):
         expected = "/bin/foo --host=" + platform.node()
         self.assertEqual(pconfigs[0].command, expected)
 
+    def test_processes_from_section_process_num_expansion(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo --num=%(process_num)d
+        process_name = foo_%(process_num)d
+        numprocs = 2
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(len(pconfigs), 2)
+        self.assertEqual(pconfigs[0].command, "/bin/foo --num=0")
+        self.assertEqual(pconfigs[1].command, "/bin/foo --num=1")
+
     def test_processes_from_section_environment_variables_expansion(self):
         instance = self._makeOne()
         text = lstrip("""\
