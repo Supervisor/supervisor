@@ -333,7 +333,7 @@ class ClientOptionsTests(unittest.TestCase):
                                 'CLIENT_PROMPT': 'xsupervisor',
                                 'CLIENT_HIST_EXT': '.hist',
                                 })
-    def test_options_with_enviroment_expansions(self):
+    def test_options_with_environment_expansions(self):
         s = lstrip("""[supervisorctl]
         serverurl=http://localhost:%(ENV_SERVER_PORT)s
         username=%(ENV_CLIENT_USER)s
