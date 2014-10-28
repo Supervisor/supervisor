@@ -311,7 +311,6 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
         "data": lambda x: [v.text for v in x],
         "struct": lambda x: dict([(k.text or "", v.text) for k, v in x]),
         "base64": lambda x: as_string(decodestring(as_bytes(x.text or ""))),
-        "value": lambda x: x[0].text,
         "param": lambda x: x[0].text,
         }
 
@@ -325,6 +324,13 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
             unmarshall = self.unmarshallers.get(elem.tag)
             if unmarshall:
                 data = unmarshall(elem)
+                elem.clear()
+                elem.text = data
+            elif elem.tag == "value":
+                try:
+                    data = elem[0].text
+                except IndexError:
+                    data = elem.text or ""
                 elem.clear()
                 elem.text = data
             elif elem.tag == "methodName":

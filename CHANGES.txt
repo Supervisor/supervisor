@@ -36,6 +36,12 @@
 - Added ``signal`` command to supervisorctl.  Thanks to Moriyoshi Koizumi and
   Marc Abramowitz for the patches.
 
+- Fixed an XML-RPC bug where the ElementTree-based parser handled strings
+  like ``<value><string>hello</string></value>`` but not strings like
+  ``<value>hello</value>``, which are valid in the XML-RPC spec.  This
+  fixes compatibility with the Apache XML-RPC client for Java and
+  possibly other clients.
+
 3.1.2 (2014-09-07)
 ------------------
 
