@@ -69,7 +69,7 @@ class DeferredXMLRPCResponse:
                     return NOT_DONE_YET
             except RPCError, err:
                 value = xmlrpclib.Fault(err.code, err.text)
-                
+
             body = xmlrpc_marshal(value)
 
             self.finished = True
@@ -204,7 +204,7 @@ class SystemNamespaceRPCInterface:
             if methodname == name:
                 return methods[methodname]
         raise RPCError(Faults.SIGNATURE_UNSUPPORTED)
-    
+
     def methodSignature(self, name):
         """ Return an array describing the method signature in the
         form [rtype, ptype, ptype...] where rtype is the return data type
@@ -322,10 +322,10 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
 
     def match(self, request):
         return request.uri.startswith(self.path)
-        
+
     def continue_request (self, data, request):
         logger = self.supervisord.options.logger
-        
+
         try:
 
             params, method = self.loads(data)
@@ -335,7 +335,7 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                 logger.trace('XML-RPC request received with no method name')
                 request.error(400)
                 return
-            
+
             # we allow xml-rpc clients that do not send empty <params>
             # when there are no parameters for the method call
             if params is None:
@@ -449,13 +449,13 @@ class SupervisorTransport(xmlrpclib.Transport):
                 "Content-Type" : "text/xml",
                 "Accept": "text/xml"
                 }
-            
+
             # basic auth
             if self.username is not None and self.password is not None:
                 unencoded = "%s:%s" % (self.username, self.password)
                 encoded = base64.encodestring(unencoded).replace('\n', '')
                 self.headers["Authorization"] = "Basic %s" % encoded
-                
+
         self.headers["Content-Length"] = str(len(request_body))
 
         self.connection.request('POST', handler, request_body, self.headers)
@@ -473,7 +473,7 @@ class SupervisorTransport(xmlrpclib.Transport):
         p, u = self.getparser()
         p.feed(data)
         p.close()
-        return u.close()    
+        return u.close()
 
 class UnixStreamHTTPConnection(httplib.HTTPConnection):
     def connect(self):
@@ -556,7 +556,6 @@ if iterparse is not None:
         "data": lambda x: [v.text for v in x],
         "struct": lambda x: dict([(k.text or "", v.text) for k, v in x]),
         "base64": lambda x: decodestring(x.text or ""),
-        "value": lambda x: x[0].text,
         "param": lambda x: x[0].text,
     }
 
@@ -566,6 +565,13 @@ if iterparse is not None:
             unmarshal = unmarshallers.get(elem.tag)
             if unmarshal:
                 data = unmarshal(elem)
+                elem.clear()
+                elem.text = data
+            elif elem.tag == "value":
+                try:
+                    data = elem[0].text
+                except IndexError:
+                    data = elem.text or ""
                 elem.clear()
                 elem.text = data
             elif elem.tag == "methodName":
