@@ -297,42 +297,57 @@ class IterparseLoadsTests(unittest.TestCase):
         <value><i4>41</i4></value>
         </param>
         <param>
-        <value><int>14</int></value>
+        <value><string>foo</string></value>
+        </param>
+        <param>
+        <value><string></string></value>
+        </param>
+        <param>
+        <!-- xml-rpc spec allows strings without <string> tag -->
+        <value>bar</value>
+        </param>
+        <param>
+        <value></value>
         </param>
         <param>
         <value><boolean>1</boolean></value>
         </param>
         <param>
-        <value><string>hello world</string></value>
-        </param>
-        <param>
         <value><double>-12.214</double></value>
         </param>
         <param>
-        <value><dateTime.iso8601>19980717T14:08:55</dateTime.iso8601></value>
+        <value>
+        <dateTime.iso8601>19980717T14:08:55</dateTime.iso8601>
+        </value>
         </param>
         <param>
         <value><base64>eW91IGNhbid0IHJlYWQgdGhpcyE=</base64></value>
         </param>
         <param>
         <struct>
-          <member><name>k</name><value><i4>5</i4></value></member>
+        <member><name>j</name><value><i4>5</i4></value></member>
+        <member><name>k</name><value>abc</value></member>
         </struct>
         </param>
         <param>
         <array>
           <data>
             <value><i4>12</i4></value>
+            <value><string>abc</string></value>
+            <value>def</value>
             <value><i4>34</i4></value>
           </data>
         </array>
         </param>
         <param>
         <struct>
-        <member>
-          <name>k</name>
-          <value><array><data><value><i4>1</i4></value></data></array></value>
-        </member>
+          <member>
+            <name>k</name>
+            <value><array><data>
+              <value><i4>1</i4></value>
+              <struct></struct>
+            </data></array></value>
+          </member>
         </struct>
         </param>
         </params>
@@ -346,15 +361,17 @@ class IterparseLoadsTests(unittest.TestCase):
         import datetime
         self.assertEqual(method, 'examples.getStateName')
         self.assertEqual(params[0], 41)
-        self.assertEqual(params[1], 14)
-        self.assertEqual(params[2], True)
-        self.assertEqual(params[3], 'hello world')
-        self.assertEqual(params[4], -12.214)
-        self.assertEqual(params[5], datetime.datetime(1998, 7, 17, 14, 8, 55))
-        self.assertEqual(params[6], "you can't read this!")
-        self.assertEqual(params[7], {'k': 5})
-        self.assertEqual(params[8], [12, 34])
-        self.assertEqual(params[9], {'k': [1]})
+        self.assertEqual(params[1], 'foo')
+        self.assertEqual(params[2], '')
+        self.assertEqual(params[3], 'bar')
+        self.assertEqual(params[4], '')
+        self.assertEqual(params[5], True)
+        self.assertEqual(params[6], -12.214)
+        self.assertEqual(params[7], datetime.datetime(1998, 7, 17, 14, 8, 55))
+        self.assertEqual(params[8], "you can't read this!")
+        self.assertEqual(params[9], {'j': 5, 'k': 'abc'})
+        self.assertEqual(params[10], [12, 'abc', 'def', 34])
+        self.assertEqual(params[11], {'k': [1, {}]})
 
 class DummyResponse:
     def __init__(self, status=200, body='', reason='reason'):
