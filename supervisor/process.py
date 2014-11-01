@@ -171,7 +171,7 @@ class Subprocess(object):
         if new_state == ProcessStates.BACKOFF:
             now = time.time()
             self.backoff += 1
-            self.delay = now + self.backoff
+            self.delay = now + self.backoff + self.config.restartpause
 
         self.state = new_state
 
@@ -531,6 +531,9 @@ class Subprocess(object):
                 # unexpected exit code
                 self.spawnerr = 'Bad exit code %s' % es
                 msg = "exited: %s (%s)" % (processname, msg + "; not expected")
+                self.delay = now + self.config.restartpause
+                if self.config.restartpause > 0: 
+                    msg += ". Will restart in %s seconds (restartpause)" % self.config.restartpause
                 self.change_state(ProcessStates.EXITED, expected=False)
 
         self.config.options.logger.info(msg)
@@ -580,7 +583,7 @@ class Subprocess(object):
         if self.config.options.mood > SupervisorStates.RESTARTING:
             # dont start any processes if supervisor is shutting down
             if state == ProcessStates.EXITED:
-                if self.config.autorestart:
+                if self.config.autorestart and now > self.delay:
                     if self.config.autorestart is RestartUnconditionally:
                         # EXITED -> STARTING
                         self.spawn()
