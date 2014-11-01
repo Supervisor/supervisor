@@ -281,7 +281,7 @@ class DummyLogger:
         self.data.append(msg)
 
     def addHandler(self, handler):
-        pass
+        handler.close()
 
     def reopen(self):
         self.reopened = True

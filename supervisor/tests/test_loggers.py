@@ -182,6 +182,7 @@ class FileHandlerTests(HandlerTests, unittest.TestCase):
         handler = self._makeOne(self.filename)
         record = self._makeLogRecord(as_string(b'fi\xc3\xad'))
         handler.emit(record)
+        handler.close()
         with open(self.filename, 'rb') as f:
             self.assertEqual(f.read(), b'fi\xc3\xad')
 
