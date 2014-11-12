@@ -13,7 +13,14 @@ class PidProxy:
     def __init__(self, args):
         self.setsignals()
         try:
-            self.pidfile, cmdargs = args[1], args[2:]
+            if args[1] == '-w':
+                grace, self.pidfile, cmdargs = args[2], args[3], args[4:]
+                self.grace_time = int(grace)
+                if self.grace_time < 0:
+                    self.grace_time = 0
+            else:
+                self.pidfile, cmdargs = args[1], args[2:]
+                self.grace_time = 0
             self.command = os.path.abspath(cmdargs[0])
             self.cmdargs = cmdargs
         except (ValueError, IndexError):
@@ -32,7 +39,8 @@ class PidProxy:
                 break
 
     def usage(self):
-        print("pidproxy.py <pidfile name> <command> [<cmdarg1> ...]")
+        print("pidproxy.py [-w <grace seconds>] <pidfile name> <command> "
+              "[<cmdarg1> ...]")
 
     def setsignals(self):
         signal.signal(signal.SIGTERM, self.passtochild)
@@ -55,7 +63,25 @@ class PidProxy:
             print("Can't read child pidfile %s!" % self.pidfile)
             return
         os.kill(pid, sig)
-        if sig in [signal.SIGTERM, signal.SIGINT, signal.SIGQUIT]:
+        if (sig in [signal.SIGTERM, signal.SIGINT, signal.SIGQUIT] and
+            self.grace_time):
+            # Because be have a grace time, wait before sending
+            # the kill signal to child process
+            try:
+                deadline = time.time() + self.grace_time
+                while time.time() < deadline:
+                    r_pid, _ = os.waitpid(-1, os.WNOHANG)
+                    if r_pid > 0:
+                        # child has terminated
+                        break
+                    time.sleep(0.11)
+                else:
+                    # time is up, kill child process
+                    print("Sending kill signal to %d" % pid)
+                    os.kill(pid, signal.SIGKILL)
+            except OSError:
+                # TODO: Find out what to do when this happens
+                pass
             sys.exit(0)
 
 def main():
@@ -64,6 +90,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
