@@ -745,7 +745,7 @@ class http_server (asyncore.dispatcher):
         self.handlers.remove (handler)
 
     def status (self):
-        from supervisor.medusa.status_handler import english_bytes
+        from supervisor.medusa.util import english_bytes
         def nice_bytes (n):
             return ''.join(english_bytes (n))
 
@@ -826,7 +826,6 @@ if __name__ == '__main__':
         import supervisor.medusa.monitor as monitor
         import supervisor.medusa.filesys as filesys
         import supervisor.medusa.default_handler as default_handler
-        import supervisor.medusa.status_handler as status_handler
         import supervisor.medusa.ftp_server as ftp_server
         import supervisor.medusa.chat_server as chat_server
         import supervisor.medusa.resolver as resolver
@@ -844,8 +843,6 @@ if __name__ == '__main__':
                 logger_object=lg
                 )
         cs = chat_server.chat_server ('', 7777)
-        sh = status_handler.status_extension([hs,ms,ftp,cs,rs])
-        hs.install_handler (sh)
         if '-p' in sys.argv:
             def profile_loop ():
                 try:
