@@ -834,7 +834,9 @@ class ServerOptions(Options):
             return self._processes_from_section(
                 parser, section, group_name, klass)
         except ValueError as e:
-            raise ValueError('%s in section %r' % (e, section))
+            filename = parser.section_to_file.get(section, '???')
+            raise ValueError('%s in section %r (file: %s)'
+                             % (e, section, filename))
 
     def _processes_from_section(self, parser, section, group_name,
                                 klass=None):
@@ -1660,6 +1662,10 @@ _marker = []
 class UnhosedConfigParser(ConfigParser.RawConfigParser):
     mysection = 'supervisord'
 
+    def __init__(self, *args, **kwargs):
+        ConfigParser.RawConfigParser.__init__(self, *args, **kwargs)
+        self.section_to_file = {}
+
     def read_string(self, s):
         s = StringIO(s)
         try:
@@ -1686,6 +1692,20 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
     def getdefault(self, option, default=_marker, expansions={}, **kwargs):
         return self.saneget(self.mysection, option, default=default,
                             expansions=expansions, **kwargs)
+
+    def read(self, filenames):
+        sections_orig = self._sections.copy()
+        filenames = ConfigParser.RawConfigParser.read(self, filenames)
+
+        if len(filenames) == 1:
+            filename = filenames[0]
+        else:
+            filename = '???'
+
+        for section in frozenset(self._sections) - frozenset(sections_orig):
+            self.section_to_file[section] = filename
+
+        return filenames
 
 
 class Config(object):
