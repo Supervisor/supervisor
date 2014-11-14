@@ -82,8 +82,7 @@ def dict_of_key_value_pairs(arg):
     while i < tokens_len:
         k_eq_v = tokens[i:i+3]
         if len(k_eq_v) != 3 or k_eq_v[1] != '=':
-            raise ValueError(
-                "Unexpected end of key/value pairs in value %r" % arg)
+            raise ValueError("Unexpected end of key/value pairs")
         D[k_eq_v[0]] = k_eq_v[2].strip('\'"')
         i += 4
     return D
