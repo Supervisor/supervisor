@@ -1181,6 +1181,27 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertRaises(ValueError, instance.processes_from_section,
                           config, 'program:foo', None)
 
+    def test_processes_from_section_unexpected_end_of_key_value_pairs(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/cat
+        environment = KEY1=val1,KEY2=val2,KEY3
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        try:
+            instance.processes_from_section(config, 'program:foo', None)
+        except ValueError, e:
+            self.assertEqual(
+                str(e),
+                "Unexpected end of key/value pairs in value "
+                "'KEY1=val1,KEY2=val2,KEY3' in section 'program:foo'")
+        else:
+            self.fail('instance.processes_from_section should '
+                      'raise a ValueError')
+
     def test_processes_from_autolog_without_rollover(self):
         instance = self._makeOne()
         text = lstrip("""\
