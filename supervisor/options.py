@@ -827,6 +827,14 @@ class ServerOptions(Options):
 
     def processes_from_section(self, parser, section, group_name,
                                klass=None):
+        try:
+            return self._processes_from_section(
+                parser, section, group_name, klass)
+        except ValueError as e:
+            raise ValueError('%s in section %r' % (e, section))
+
+    def _processes_from_section(self, parser, section, group_name,
+                                klass=None):
         if klass is None:
             klass = ProcessConfig
         programs = []
