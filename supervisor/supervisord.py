@@ -314,7 +314,7 @@ def timeslice(period, when):
     return int(when - (when % period))
 
 # profile entry point
-def profile(cmd, globals, locals, sort_order, callers):
+def profile(cmd, globals, locals, sort_order, callers): # pragma: no cover
     try:
         import cProfile as profile
     except ImportError:
@@ -353,16 +353,16 @@ def main(args=None, test=False):
             go(options)
         if test or (options.mood < SupervisorStates.RESTARTING):
             break
-        options.close_httpservers()
-        options.close_logger()
-        first = False
+        options.close_httpservers() # pragma: no cover
+        options.close_logger() # pragma: no cover
+        first = False # pragma: no cover
 
-def go(options):
+def go(options): # pragma: no cover
     d = Supervisor(options)
     try:
         d.main()
     except asyncore.ExitNow:
         pass
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
     main()

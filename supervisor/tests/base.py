@@ -1043,6 +1043,9 @@ class DummyProcessGroup(object):
     def __eq__(self, other):
         return self.config.priority == other.config.priority
 
+    def reopenlogs(self):
+        self.logs_reopened = True
+
 class DummyFCGIProcessGroup(DummyProcessGroup):
 
     def __init__(self, config):
