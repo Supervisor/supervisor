@@ -13,6 +13,35 @@ from supervisor.tests.base import DummyOptions
 # not available
 SkipTestCase = object
 
+class BasePollerTests(unittest.TestCase):
+    def _makeOne(self, options):
+        from supervisor.poller import BasePoller
+        return BasePoller(options)
+
+    def test_register_readable(self):
+        inst = self._makeOne(None)
+        self.assertRaises(NotImplementedError, inst.register_readable, None)
+
+    def test_register_writable(self):
+        inst = self._makeOne(None)
+        self.assertRaises(NotImplementedError, inst.register_writable, None)
+
+    def test_unregister(self):
+        inst = self._makeOne(None)
+        self.assertRaises(NotImplementedError, inst.unregister, None)
+
+    def test_poll(self):
+        inst = self._makeOne(None)
+        self.assertRaises(NotImplementedError, inst.poll, None)
+
+    def test_before_daemonize(self):
+        inst = self._makeOne(None)
+        self.assertEqual(inst.before_daemonize(), None)
+
+    def test_after_daemonize(self):
+        inst = self._makeOne(None)
+        self.assertEqual(inst.after_daemonize(), None)
+
 class SelectPollerTests(unittest.TestCase):
 
     def _makeOne(self, options):
