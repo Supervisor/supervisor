@@ -47,6 +47,21 @@ class fgthread_Tests(unittest.TestCase):
         result = inst.localtrace(None, None, None)
         self.assertEqual(result, inst.localtrace)
 
+    def test_kill(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        inst.killed = True
+        class DummyCloseable(object):
+            def close(self):
+                self.closed = True
+        inst.output_handler = DummyCloseable()
+        inst.error_handler = DummyCloseable()
+        inst.kill()
+        self.assertTrue(inst.killed)
+        self.assertTrue(inst.output_handler.closed)
+        self.assertTrue(inst.error_handler.closed)
+
 class ControllerTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.supervisorctl import Controller
