@@ -4,6 +4,49 @@ from supervisor.compat import StringIO
 from supervisor.compat import xmlrpclib
 from supervisor.tests.base import DummyRPCServer
 
+class fgthread_Tests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.supervisorctl import fgthread
+        return fgthread
+
+    def _makeOne(self, program, ctl):
+        return self._getTargetClass()(program, ctl)
+
+    def test_ctor(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        self.assertEqual(inst.killed, False)
+
+    def test_globaltrace_call(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        result = inst.globaltrace(None, 'call', None)
+        self.assertEqual(result, inst.localtrace)
+
+    def test_globaltrace_noncall(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        result = inst.globaltrace(None, None, None)
+        self.assertEqual(result, None)
+
+    def test_localtrace_killed_whyline(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        inst.killed = True
+        self.assertRaises(SystemExit, inst.localtrace, None, 'line', None)
+
+    def test_localtrace_killed_not_whyline(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        inst.killed = True
+        result = inst.localtrace(None, None, None)
+        self.assertEqual(result, inst.localtrace)
+
 class ControllerTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.supervisorctl import Controller

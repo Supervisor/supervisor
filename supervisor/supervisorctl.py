@@ -63,20 +63,20 @@ class fgthread(threading.Thread):
                                                      self.ctl.options.username,
                                                      self.ctl.options.password)
 
-    def start(self):
+    def start(self): # pragma: no cover
         # Start the thread
         self.__run_backup = self.run
         self.run = self.__run
         threading.Thread.start(self)
 
-    def run(self):
+    def run(self): # pragma: no cover
         self.output_handler.get(self.ctl.options.serverurl,
                                 '/logtail/%s/stdout'%self.program)
         self.error_handler.get(self.ctl.options.serverurl,
                                '/logtail/%s/stderr'%self.program)
         asyncore.loop()
 
-    def __run(self):
+    def __run(self): # pragma: no cover
         # Hacked run function, which installs the trace
         sys.settrace(self.globaltrace)
         self.__run_backup()
