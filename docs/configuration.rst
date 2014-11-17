@@ -772,6 +772,13 @@ where specified.
   :program:`supervisord` on its stdout file descriptor (in UNIX shell
   terms, this is the equivalent of executing ``/the/program 2>&1``).
 
+  .. note::
+
+     Do not set ``redirect_stderr=true`` in an ``[eventlistener:x]`` section.
+     Eventlisteners use ``stdout`` and ``stdin`` to communicate with
+     ``supervisord``.  If ``stderr`` is redirected, output from
+     ``stderr`` will interfere with the eventlistener protocol.
+
   *Default*: false
 
   *Required*:  No.
