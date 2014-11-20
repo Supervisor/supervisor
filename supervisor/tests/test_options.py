@@ -1342,6 +1342,26 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(dog1.command, '/bin/dog')
         self.assertEqual(dog1.priority, 1)
 
+    def test_event_listener_pool_disallows_redirect_stderr(self):
+        text = lstrip("""\
+        [eventlistener:dog]
+        events=PROCESS_COMMUNICATION
+        command = /bin/dog
+        redirect_stderr = True
+        """)
+        from supervisor.options import UnhosedConfigParser
+        from supervisor.tests.base import dummy_handler
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        try:
+            instance.process_groups_from_parser(config)
+            self.fail('nothing raised')
+        except ValueError, exc:
+            self.assertEqual(exc.args[0], '[eventlistener:dog] section sets '
+                'redirect_stderr=true but this is not allowed because it '
+                'will interfere with the eventlistener protocol')
+
     def test_event_listener_pool_with_event_results_handler(self):
         text = lstrip("""\
         [eventlistener:dog]

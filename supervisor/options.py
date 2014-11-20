@@ -638,7 +638,6 @@ class ServerOptions(Options):
             kwargs['expansions'] = expansions
             return parser.saneget(section, opt, default, **kwargs)
 
-
         # process heterogeneous groups
         for section in all_sections:
             if not section.startswith('group:'):
@@ -683,6 +682,7 @@ class ServerOptions(Options):
             # and stopped last at mainloop exit
             priority = integer(get(section, 'priority', -1))
             buffer_size = integer(get(section, 'buffer_size', 10))
+
             result_handler = get(section, 'result_handler',
                                        'supervisor.dispatchers:default_handler')
             try:
@@ -690,12 +690,14 @@ class ServerOptions(Options):
             except ImportError:
                 raise ValueError('%s cannot be resolved within [%s]' % (
                     result_handler, section))
+
             pool_event_names = [x.upper() for x in
                                 list_of_strings(get(section, 'events', ''))]
             pool_event_names = set(pool_event_names)
             if not pool_event_names:
                 raise ValueError('[%s] section requires an "events" line' %
                                  section)
+
             from supervisor.events import EventTypes
             pool_events = []
             for pool_event_name in pool_event_names:
@@ -704,6 +706,13 @@ class ServerOptions(Options):
                     raise ValueError('Unknown event type %s in [%s] events' %
                                      (pool_event_name, section))
                 pool_events.append(pool_event)
+
+            redirect_stderr = boolean(get(section, 'redirect_stderr', 'false'))
+            if redirect_stderr:
+                raise ValueError('[%s] section sets redirect_stderr=true '
+                    'but this is not allowed because it will interfere '
+                    'with the eventlistener protocol' % section)
+
             processes=self.processes_from_section(parser, section, pool_name,
                                                   EventListenerConfig)
 
@@ -834,6 +843,7 @@ class ServerOptions(Options):
         stopasgroup = boolean(get(section, 'stopasgroup', 'false'))
         killasgroup = boolean(get(section, 'killasgroup', stopasgroup))
         exitcodes = list_of_exitcodes(get(section, 'exitcodes', '0,2'))
+        # see also redirect_stderr check in process_groups_from_parser()
         redirect_stderr = boolean(get(section, 'redirect_stderr','false'))
         numprocs = integer(get(section, 'numprocs', 1))
         numprocs_start = integer(get(section, 'numprocs_start', 0))
@@ -1734,7 +1744,9 @@ class ProcessConfig(Config):
 
 class EventListenerConfig(ProcessConfig):
     def make_dispatchers(self, proc):
-        use_stderr = not self.redirect_stderr
+        # always use_stderr=True for eventlisteners because mixing stderr
+        # messages into stdout would break the eventlistener protocol
+        use_stderr = True
         p = self.options.make_pipes(use_stderr)
         stdout_fd,stderr_fd,stdin_fd = p['stdout'],p['stderr'],p['stdin']
         dispatchers = {}
