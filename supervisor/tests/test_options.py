@@ -915,6 +915,8 @@ class ServerOptionsTests(unittest.TestCase):
         text = lstrip("""\
         [program:foo]
         command = /bin/foo --num=%(process_num)d
+        directory = /var/log/foo_%(process_num)d
+        environment = NUM=%(process_num)d
         process_name = foo_%(process_num)d
         numprocs = 2
         """)
@@ -923,8 +925,11 @@ class ServerOptionsTests(unittest.TestCase):
         config.read_string(text)
         pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
         self.assertEqual(len(pconfigs), 2)
-        self.assertEqual(pconfigs[0].command, "/bin/foo --num=0")
-        self.assertEqual(pconfigs[1].command, "/bin/foo --num=1")
+        for num in (0, 1):
+            self.assertEqual(pconfigs[num].name, 'foo_%d' % num)
+            self.assertEqual(pconfigs[num].command, "/bin/foo --num=%d" % num)
+            self.assertEqual(pconfigs[num].directory, '/var/log/foo_%d' % num)
+            self.assertEqual(pconfigs[num].environment, {'NUM': '%d' % num})
 
     def test_processes_from_section_environment_variables_expansion(self):
         instance = self._makeOne()
