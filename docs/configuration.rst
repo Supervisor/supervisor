@@ -1341,7 +1341,7 @@ above constraints and additions.
    stopsignal=QUIT
    stopwaitsecs=10
    user=chrism
-   redirect_stderr=true
+   redirect_stderr=false
    stdout_logfile=/a/path
    stdout_logfile_maxbytes=1MB
    stdout_logfile_backups=10
