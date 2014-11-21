@@ -1,4 +1,6 @@
 language: python
+
+sudo: false
 env:
     - TOXENV=cover
     - TOXENV=cover3
@@ -8,7 +10,9 @@ env:
     - TOXENV=py33
     - TOXENV=py34
     - TOXENV=pypy
+
 install:
     - travis_retry pip install tox==1.6.1
+
 script:
     - travis_retry tox
