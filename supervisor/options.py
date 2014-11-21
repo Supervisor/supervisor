@@ -16,7 +16,6 @@ import platform
 import warnings
 import fcntl
 
-from supervisor.compat import print_function
 from supervisor.compat import PY3
 from supervisor.compat import ConfigParser
 from supervisor.compat import as_bytes, as_string
@@ -134,7 +133,7 @@ class Options:
         help = self.doc + "\n"
         if help.find("%s") > 0:
             help = help.replace("%s", self.progname)
-        print_function(help, end='', file=self.stdout)
+        self.stdout.write(help)
         self.exit(0)
 
     def usage(self, msg):

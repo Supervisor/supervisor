@@ -3,7 +3,6 @@
 import sys
 import supervisor.medusa.text_socket as socket
 
-from supervisor.compat import print_function
 from supervisor.compat import urlparse
 from supervisor.compat import as_bytes
 from supervisor.compat import as_string
@@ -20,7 +19,7 @@ class Listener(object):
         pass
 
     def error(self, url, error):
-        print_function(url, error)
+        sys.stderr.write("%s %s\n" % (url, error))
 
     def response_header(self, url, name, value):
         pass

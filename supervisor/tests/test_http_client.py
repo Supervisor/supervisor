@@ -1,6 +1,7 @@
 import socket
 import sys
 import unittest
+from supervisor.compat import StringIO
 
 class ListenerTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -10,33 +11,21 @@ class ListenerTests(unittest.TestCase):
     def _makeOne(self):
         return self._getTargetClass()()
 
-    def _makeFakeStdout(self):
-        class Stdout(object):
-            def __init__(self):
-                self.things = []
-                self.flushed = False
-            def write(self, thing):
-                self.things.append(thing)
-            def flush(self):
-                self.flushed = True
-        stdout = Stdout()
-        return stdout
-
     def test_status(self):
         inst = self._makeOne()
         self.assertEqual(inst.status(None, None), None)
-        
+
     def test_error(self):
         inst = self._makeOne()
         try:
-            old_stdout = sys.stdout
-            stdout = self._makeFakeStdout()
-            sys.stdout = stdout
+            old_stderr = sys.stderr
+            stderr = StringIO()
+            sys.stderr = stderr
             self.assertEqual(inst.error('url', 'error'), None)
-            self.assertEqual(stdout.things, ['url error\n'])
+            self.assertEqual(stderr.getvalue(), 'url error\n')
         finally:
-            sys.stdout = old_stdout
-        
+            sys.stderr = old_stderr
+
     def test_response_header(self):
         inst = self._makeOne()
         self.assertEqual(inst.response_header(None, None, None), None)
@@ -49,10 +38,10 @@ class ListenerTests(unittest.TestCase):
         inst = self._makeOne()
         try:
             old_stdout = sys.stdout
-            stdout = self._makeFakeStdout()
+            stdout = StringIO()
             sys.stdout = stdout
             inst.feed('url', 'data')
-            self.assertEqual(stdout.things, ['data'])
+            self.assertEqual(stdout.getvalue(), 'data')
         finally:
             sys.stdout = old_stdout
 
@@ -93,7 +82,7 @@ class HTTPHandlerTests(unittest.TestCase):
             'nothttp://localhost',
             '/abc'
             )
-        
+
     def test_get_implied_port_80(self):
         inst = self._makeOne()
         sockets = []
@@ -150,7 +139,7 @@ class HTTPHandlerTests(unittest.TestCase):
         inst = self._makeOne()
         inst.error_handled = True
         self.assertEqual(inst.handle_error(), None)
-        
+
     def test_handle_error(self):
         inst = self._makeOne()
         closed = []
@@ -293,7 +282,7 @@ class HTTPHandlerTests(unittest.TestCase):
         inst.headers()
         self.assertEqual(inst.part, inst.body)
         self.assertEqual(terms, [3])
-        
+
     def test_headers_empty_line_chunked(self):
         inst = self._makeOne()
         inst.buffer = ''
@@ -357,7 +346,7 @@ class HTTPHandlerTests(unittest.TestCase):
         inst.length = 1
         self.assertEqual(inst.chunked_size(), None)
         self.assertEqual(inst.length, 1)
-        
+
     def test_chunked_size_zero_size(self):
         inst = self._makeOne()
         inst.buffer = '0'
@@ -406,7 +395,7 @@ class HTTPHandlerTests(unittest.TestCase):
         self.assertEqual(inst.trailer(), None)
         self.assertEqual(dones, [True])
         self.assertEqual(closes, [True])
-        
+
 class DummyListener(object):
     closed = None
     error_url = None
@@ -414,7 +403,7 @@ class DummyListener(object):
     done = False
     def __init__(self):
         self.fed_data = []
-        
+
     def close(self, url):
         self.closed = url
 
