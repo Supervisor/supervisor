@@ -16,6 +16,7 @@ except ImportError:
     from md5 import new as md5
 import re
 import string
+import sys
 import time
 import counter
 
@@ -54,7 +55,7 @@ class auth_handler:
                 try:
                     decoded = base64.decodestring (cookie)
                 except:
-                    print 'malformed authorization info <%s>' % cookie
+                    sys.stderr.write('malformed authorization info <%s>\n' % cookie)
                     request.error (400)
                     return
                 auth_info = decoded.split(':', 1)
@@ -67,7 +68,7 @@ class auth_handler:
             #elif scheme == 'digest':
             #       print 'digest: ',AUTHORIZATION.group(2)
             else:
-                print 'unknown/unsupported auth method: %s' % scheme
+                sys.stderr.write('unknown/unsupported auth method: %s\n' % scheme)
                 self.handle_unauthorized(request)
         else:
             # list both?  prefer one or the other?

@@ -17,7 +17,7 @@ class Listener(object):
         pass
 
     def error(self, url, error):
-        print url, error
+        sys.stderr.write("%s %s\n" % (url, error))
 
     def response_header(self, url, name, value):
         pass
