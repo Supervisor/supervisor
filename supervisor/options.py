@@ -1664,12 +1664,11 @@ _marker = []
 
 class UnhosedConfigParser(ConfigParser.RawConfigParser):
     mysection = 'supervisord'
+
     def read_string(self, s):
-        if not PY3 and isinstance(s, str):
-            s = unicode(s)
         s = StringIO(s)
         try:
-            return self.read_file(s)
+            return self.read_file(s) # Python 3.2 or later
         except AttributeError:
             return self.readfp(s)
 
