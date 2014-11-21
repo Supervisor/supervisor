@@ -1364,7 +1364,6 @@ class ServerOptionsTests(unittest.TestCase):
         redirect_stderr = True
         """)
         from supervisor.options import UnhosedConfigParser
-        from supervisor.tests.base import dummy_handler
         config = UnhosedConfigParser()
         config.read_string(text)
         instance = self._makeOne()
