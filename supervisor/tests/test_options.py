@@ -1071,7 +1071,9 @@ class ServerOptionsTests(unittest.TestCase):
         text = lstrip("""\
         [program:foo]
         command = /bin/foo --num=%(process_num)d
-        directory = /var/log/foo_%(process_num)d
+        directory = /tmp/foo_%(process_num)d
+        stderr_logfile = /tmp/foo_%(process_num)d_stderr
+        stdout_logfile = /tmp/foo_%(process_num)d_stdout
         environment = NUM=%(process_num)d
         process_name = foo_%(process_num)d
         numprocs = 2
@@ -1084,7 +1086,11 @@ class ServerOptionsTests(unittest.TestCase):
         for num in (0, 1):
             self.assertEqual(pconfigs[num].name, 'foo_%d' % num)
             self.assertEqual(pconfigs[num].command, "/bin/foo --num=%d" % num)
-            self.assertEqual(pconfigs[num].directory, '/var/log/foo_%d' % num)
+            self.assertEqual(pconfigs[num].directory, '/tmp/foo_%d' % num)
+            self.assertEqual(pconfigs[num].stderr_logfile,
+                '/tmp/foo_%d_stderr' % num)
+            self.assertEqual(pconfigs[num].stdout_logfile,
+                '/tmp/foo_%d_stdout' % num)
             self.assertEqual(pconfigs[num].environment, {'NUM': '%d' % num})
 
     def test_processes_from_section_environment_variables_expansion(self):
