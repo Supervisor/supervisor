@@ -1,7 +1,7 @@
 # this code based on Daniel Krech's RDFLib HTTP client code (see rdflib.net)
 
 import sys
-import supervisor.medusa.text_socket as socket
+import socket
 
 from supervisor.compat import urlparse
 from supervisor.compat import as_bytes

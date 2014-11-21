@@ -2,6 +2,7 @@
 
 import os
 import signal
+import socket
 import tempfile
 import unittest
 
@@ -9,7 +10,6 @@ from supervisor.tests.base import Mock, patch, sentinel
 from supervisor.compat import maxint
 
 from supervisor import datatypes
-import supervisor.medusa.text_socket as socket
 
 class ProcessOrGroupName(unittest.TestCase):
     def _callFUT(self, arg):

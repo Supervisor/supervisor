@@ -1,6 +1,7 @@
 import types
 import re
 import traceback
+import socket
 import sys
 import datetime
 import time
@@ -16,10 +17,10 @@ from supervisor.compat import encodestring
 from supervisor.compat import decodestring
 from supervisor.compat import httplib
 
-import supervisor.medusa.text_socket as socket
 from supervisor.medusa.http_server import get_header
 from supervisor.medusa.xmlrpc_handler import xmlrpc_handler
 from supervisor.medusa import producers
+from supervisor.medusa import text_socket
 
 from supervisor.http import NOT_DONE_YET
 
@@ -498,7 +499,7 @@ class SupervisorTransport(xmlrpclib.Transport):
 
 class UnixStreamHTTPConnection(httplib.HTTPConnection):
     def connect(self): # pragma: no cover
-        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock = text_socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         # we abuse the host parameter as the socketname
         self.sock.connect(self.socketfile)
 

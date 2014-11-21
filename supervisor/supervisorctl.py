@@ -26,7 +26,7 @@ import cmd
 import sys
 import getpass
 
-import supervisor.medusa.text_socket as socket
+import socket
 import errno
 import threading
 

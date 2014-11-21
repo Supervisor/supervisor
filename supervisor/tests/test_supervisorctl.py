@@ -123,7 +123,7 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_catches_socket_error_ECONNREFUSED(self):
         options = DummyClientOptions()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
         def raise_fault(*arg, **kw):
             raise socket.error(errno.ECONNREFUSED, 'nobody home')
@@ -140,7 +140,7 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_catches_socket_error_ENOENT(self):
         options = DummyClientOptions()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
         def raise_fault(*arg, **kw):
             raise socket.error(errno.ENOENT, 'nobody home')
@@ -157,7 +157,7 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_reraises_other_socket_faults(self):
         options = DummyClientOptions()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
         def f(*arg, **kw):
             raise socket.error(errno.EBADF, '')
@@ -1226,7 +1226,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_catches_socket_error_ECONNREFUSED(self):
         plugin = self._makeOne()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
 
         def raise_fault(*arg, **kw):
@@ -1241,7 +1241,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_catches_socket_error_ENOENT(self):
         plugin = self._makeOne()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
 
         def raise_fault(*arg, **kw):
@@ -1256,7 +1256,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_reraises_other_socket_errors(self):
         plugin = self._makeOne()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
 
         def raise_fault(*arg, **kw):

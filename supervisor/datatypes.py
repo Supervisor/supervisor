@@ -2,12 +2,13 @@ import grp
 import os
 import pwd
 import signal
-import supervisor.medusa.text_socket as socket
+import socket
 import shlex
 
 from supervisor.compat import urlparse
 from supervisor.compat import long
 from supervisor.loggers import getLevelNumByDescription
+from supervisor.medusa import text_socket
 
 here = None
 
@@ -204,7 +205,7 @@ class InetStreamSocketConfig(SocketConfig):
         return self.host, self.port
 
     def create_and_bind(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock = text_socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind(self.addr())
@@ -233,7 +234,7 @@ class UnixStreamSocketConfig(SocketConfig):
     def create_and_bind(self):
         if os.path.exists(self.path):
             os.unlink(self.path)
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock = text_socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
             sock.bind(self.addr())
             self._chown()

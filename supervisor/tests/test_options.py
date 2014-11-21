@@ -4,7 +4,7 @@ import logging
 import os
 import sys
 import tempfile
-import supervisor.medusa.text_socket as socket
+import socket
 import unittest
 import signal
 import shutil

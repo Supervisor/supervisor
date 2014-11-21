@@ -1,4 +1,4 @@
-import supervisor.medusa.text_socket as socket
+import socket
 import getopt
 import os
 import sys

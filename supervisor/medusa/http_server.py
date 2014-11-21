@@ -8,7 +8,7 @@ RCS_ID =  '$Id: http_server.py,v 1.12 2004/04/21 15:11:44 akuchling Exp $'
 
 # python modules
 import re
-import supervisor.medusa.text_socket as socket
+import socket
 import sys
 import time
 

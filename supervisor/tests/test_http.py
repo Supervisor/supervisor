@@ -2,7 +2,7 @@ import base64
 import os
 import stat
 import sys
-import supervisor.medusa.text_socket as socket
+import socket
 import tempfile
 import unittest
 

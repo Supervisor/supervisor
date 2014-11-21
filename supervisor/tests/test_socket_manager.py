@@ -4,7 +4,7 @@ import gc
 import sys
 import os
 import unittest
-import supervisor.medusa.text_socket as socket
+import socket
 import tempfile
 
 try:
