@@ -917,7 +917,7 @@ class ServerOptions(Options):
                         'rollover, set maxbytes > 0 to avoid filling up '
                         'filesystem unintentionally' % (section, n))
 
-            command = get(section, 'command', expansions=expansions)
+            command = get(section, 'command', None, expansions=expansions)
             if command is None:
                 raise ValueError(
                     'program section %s does not specify a command' % section)

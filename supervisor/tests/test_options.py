@@ -1113,13 +1113,16 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         text = lstrip("""\
         [program:foo]
-        numprocs = 2
         """)
         from supervisor.options import UnhosedConfigParser
         config = UnhosedConfigParser()
         config.read_string(text)
-        self.assertRaises(ValueError, instance.processes_from_section,
-                          config, 'program:foo', None)
+        try:
+            instance.processes_from_section(config, 'program:foo', None)
+            self.fail('nothing raised')
+        except ValueError as exc:
+            self.assertTrue(exc.args[0].startswith(
+                'program section program:foo does not specify a command'))
 
     def test_processes_from_section_missing_replacement_in_process_name(self):
         instance = self._makeOne()
