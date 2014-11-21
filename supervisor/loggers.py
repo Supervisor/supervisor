@@ -50,6 +50,7 @@ def getLevelNumByDescription(description):
 class Handler:
     fmt = '%(message)s'
     level = LevelsByName.INFO
+
     def __init__(self, stream=None):
         self.stream = stream
         self.closed = False
@@ -93,28 +94,6 @@ class Handler:
         traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
         del ei
 
-class FileHandler(Handler):
-    """File handler which supports reopening of logs.
-    """
-
-    def __init__(self, filename, mode="a"):
-        Handler.__init__(self, open(filename, mode))
-        self.baseFilename = filename
-        self.mode = mode
-
-    def reopen(self):
-        self.close()
-        self.stream = open(self.baseFilename, self.mode)
-        self.closed = False
-
-    def remove(self):
-        self.close()
-        try:
-            os.remove(self.baseFilename)
-        except OSError as why:
-            if why.args[0] != errno.ENOENT:
-                raise
-
 class StreamHandler(Handler):
     def __init__(self, strm=None):
         Handler.__init__(self, strm)
@@ -149,6 +128,28 @@ class BoundIO:
     def clear(self):
         self.buf = ''
 
+class FileHandler(Handler):
+    """File handler which supports reopening of logs.
+    """
+
+    def __init__(self, filename, mode="a"):
+        Handler.__init__(self, open(filename, mode))
+        self.baseFilename = filename
+        self.mode = mode
+
+    def reopen(self):
+        self.close()
+        self.stream = open(self.baseFilename, self.mode)
+        self.closed = False
+
+    def remove(self):
+        self.close()
+        try:
+            os.remove(self.baseFilename)
+        except OSError as why:
+            if why.args[0] != errno.ENOENT:
+                raise
+
 class RotatingFileHandler(FileHandler):
     def __init__(self, filename, mode='a', maxBytes=512*1024*1024,
                  backupCount=10):
@@ -172,7 +173,6 @@ class RotatingFileHandler(FileHandler):
 
         If maxBytes is zero, rollover never occurs.
         """
-#        FileHandler.__init__(self, filename, mode)
         if maxBytes > 0:
             mode = 'a' # doesn't make sense otherwise!
         FileHandler.__init__(self, filename, mode)
