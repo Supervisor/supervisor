@@ -14,9 +14,7 @@ import pkg_resources
 import glob
 import platform
 import warnings
-
-from fcntl import fcntl
-from fcntl import F_SETFL, F_GETFL
+import fcntl
 
 from supervisor.compat import print_function
 from supervisor.compat import PY3
@@ -1533,7 +1531,8 @@ class ServerOptions(Options):
                 pipes['stderr'], pipes['child_stderr'] = stderr, child_stderr
             for fd in (pipes['stdout'], pipes['stderr'], pipes['stdin']):
                 if fd is not None:
-                    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | os.O_NDELAY)
+                    flags = fcntl.fcntl(fd, fcntl.F_GETFL) | os.O_NDELAY
+                    fcntl.fcntl(fd, fcntl.F_SETFL, flags)
             return pipes
         except OSError:
             for fd in pipes.values():
