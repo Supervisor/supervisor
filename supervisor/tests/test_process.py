@@ -247,9 +247,10 @@ class SubprocessTests(unittest.TestCase):
         events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         result = instance.spawn()
         self.assertEqual(result, None)
-        self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
+        self.assertEqual(instance.spawnerr,
+                         'unknown error making dispatchers: EPERM')
         self.assertEqual(options.logger.data[0],
-                         "spawnerr: unknown error: EPERM")
+                         "spawnerr: unknown error making dispatchers: EPERM")
         self.assertTrue(instance.delay)
         self.assertTrue(instance.backoff)
         from supervisor.states import ProcessStates
@@ -298,9 +299,10 @@ class SubprocessTests(unittest.TestCase):
         events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         result = instance.spawn()
         self.assertEqual(result, None)
-        self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
+        self.assertEqual(instance.spawnerr,
+                         'unknown error during fork: EPERM')
         self.assertEqual(options.logger.data[0],
-                         "spawnerr: unknown error: EPERM")
+                         "spawnerr: unknown error during fork: EPERM")
         self.assertEqual(len(options.parent_pipes_closed), 6)
         self.assertEqual(len(options.child_pipes_closed), 6)
         self.assertTrue(instance.delay)
