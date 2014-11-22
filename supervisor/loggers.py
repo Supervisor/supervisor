@@ -133,9 +133,19 @@ class FileHandler(Handler):
     """
 
     def __init__(self, filename, mode="a"):
-        Handler.__init__(self, open(filename, mode))
+        Handler.__init__(self)
+        self.stream = open(filename, mode)
         self.baseFilename = filename
         self.mode = mode
+
+    def __del__(self):
+        # TODO try to remove this __del__ entirely, it's here to suppress
+        # ResourceWarnings when running the test suite on Python 3
+        if self.stream:
+            try:
+                self.close()
+            except OSError:
+                pass
 
     def reopen(self):
         self.close()
@@ -180,13 +190,6 @@ class RotatingFileHandler(FileHandler):
         self.backupCount = backupCount
         self.counter = 0
         self.every = 10
-
-    def __del__(self):
-        if self.stream:
-            try:
-                self.stream.close()
-            except OSError:
-                pass
 
     def emit(self, record):
         """

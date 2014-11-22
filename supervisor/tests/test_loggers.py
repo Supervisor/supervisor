@@ -117,6 +117,12 @@ class FileHandlerTests(HandlerTests, unittest.TestCase):
         self.assertEqual(handler.stream.name, self.filename)
         handler.close()
 
+    def test_ctor_sets_stream_to_None_if_open_raises(self):
+        not_a_file = os.path.dirname(self.filename)
+        self.assertTrue(os.path.isdir(not_a_file))
+        self.assertRaises(IOError, self._makeOne, not_a_file)
+        # FileHandler.__del__() shouldn't raise AttributeError
+
     def test_close(self):
         handler = self._makeOne(self.filename)
         handler.stream.close()
