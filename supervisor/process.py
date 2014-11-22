@@ -217,7 +217,7 @@ class Subprocess:
 
         try:
             self.dispatchers, self.pipes = self.config.make_dispatchers(self)
-        except OSError, why:
+        except (OSError, IOError), why:
             code = why.args[0]
             if code == errno.EMFILE:
                 # too many file descriptors open

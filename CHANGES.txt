@@ -15,6 +15,11 @@
   disallowed because any messages written to ``stderr`` would interfere
   with the eventlistener protocol on ``stdout``.
 
+- Fixed a bug where spawning a process could cause ``supervisord`` to crash
+  if an ``IOError`` occurred while setting up logging.  One way this could
+  happen is if a log filename was accidentally set to a directory instead
+  of a file.  Thanks to Grzegorz Nosek for reporting this issue.
+
 3.1.3 (2014-10-28)
 ------------------
 
