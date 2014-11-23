@@ -525,7 +525,7 @@ class supervisor_af_inet_http_server(supervisor_http_server):
     def __init__(self, ip, port, logger_object):
         self.ip = ip
         self.port = port
-        sock = text_socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock = text_socket.text_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.prebind(sock, logger_object)
         self.bind((ip, port))
 
@@ -570,7 +570,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
             pass
 
         while 1:
-            sock = text_socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock = text_socket.text_socket(socket.AF_UNIX, socket.SOCK_STREAM)
             try:
                 sock.bind(tempname)
                 os.chmod(tempname, sockchmod)
@@ -624,7 +624,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
         self.postbind()
 
     def checkused(self, socketname):
-        s = text_socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s = text_socket.text_socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
             s.connect(socketname)
             s.send("GET / HTTP/1.0\r\n\r\n")

@@ -205,7 +205,7 @@ class InetStreamSocketConfig(SocketConfig):
         return self.host, self.port
 
     def create_and_bind(self):
-        sock = text_socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock = text_socket.text_socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind(self.addr())
@@ -234,7 +234,7 @@ class UnixStreamSocketConfig(SocketConfig):
     def create_and_bind(self):
         if os.path.exists(self.path):
             os.unlink(self.path)
-        sock = text_socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock = text_socket.text_socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
             sock.bind(self.addr())
             self._chown()

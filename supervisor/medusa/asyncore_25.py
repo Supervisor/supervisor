@@ -257,7 +257,7 @@ class dispatcher:
 
     def create_socket(self, family, type):
         self.family_and_type = family, type
-        self.socket = text_socket.socket(family, type)
+        self.socket = text_socket.text_socket(family, type)
         self.socket.setblocking(0)
         self._fileno = self.socket.fileno()
         self.add_channel()
