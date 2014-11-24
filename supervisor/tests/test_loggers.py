@@ -228,6 +228,7 @@ class RotatingFileHandlerTests(FileHandlerTests):
         self.assertEqual(handler.mode, 'a')
         self.assertEqual(handler.maxBytes, 512*1024*1024)
         self.assertEqual(handler.backupCount, 10)
+        handler.close()
 
     def test_emit_does_rollover(self):
         handler = self._makeOne(self.filename, maxBytes=10, backupCount=2)
@@ -258,6 +259,7 @@ class RotatingFileHandlerTests(FileHandlerTests):
         self.assertTrue(os.path.exists(self.filename + '.2'))
 
         handler.emit(record) # 28 bytes
+        handler.close()
         self.assertTrue(os.path.exists(self.filename + '.1'))
         self.assertTrue(os.path.exists(self.filename + '.2'))
 
@@ -283,6 +285,7 @@ class RotatingFileHandlerTests(FileHandlerTests):
         self.assertFalse(os.path.exists(self.filename))
 
         handler.emit(record) # 8 bytes, do rollover
+        handler.close()
         self.assertTrue(os.path.exists(self.filename))
         self.assertFalse(os.path.exists(self.filename + '.1'))
 
@@ -296,6 +299,7 @@ class RotatingFileHandlerTests(FileHandlerTests):
         inst.removeAndRename('foo', 'bar')
         self.assertEqual(renames, [('foo', 'bar')])
         self.assertEqual(removes, [])
+        inst.close()
 
     def test_removeAndRename_destination_exists(self):
         inst = self._makeOne(self.filename)
@@ -307,6 +311,7 @@ class RotatingFileHandlerTests(FileHandlerTests):
         inst.removeAndRename('foo', 'bar')
         self.assertEqual(renames, [('foo', 'bar')])
         self.assertEqual(removes, ['bar'])
+        inst.close()
 
     def test_removeAndRename_remove_raises_ENOENT(self):
         def remove(fn):
@@ -318,6 +323,7 @@ class RotatingFileHandlerTests(FileHandlerTests):
         inst._rename = lambda s, t: renames.append((s, t))
         inst.removeAndRename('foo', 'bar')
         self.assertEqual(renames, [('foo', 'bar')])
+        inst.close()
 
     def test_removeAndRename_remove_raises_other_than_ENOENT(self):
         def remove(fn):
@@ -326,6 +332,7 @@ class RotatingFileHandlerTests(FileHandlerTests):
         inst._remove = remove
         inst._exists = lambda v: True
         self.assertRaises(OSError, inst.removeAndRename, 'foo', 'bar')
+        inst.close()
 
     def test_removeAndRename_rename_raises_ENOENT(self):
         def rename(s, d):
@@ -334,6 +341,7 @@ class RotatingFileHandlerTests(FileHandlerTests):
         inst._rename = rename
         inst._exists = lambda v: False
         self.assertEqual(inst.removeAndRename('foo', 'bar'), None)
+        inst.close()
 
     def test_removeAndRename_rename_raises_other_than_ENOENT(self):
         def rename(s, d):
@@ -342,11 +350,13 @@ class RotatingFileHandlerTests(FileHandlerTests):
         inst._rename = rename
         inst._exists = lambda v: False
         self.assertRaises(OSError, inst.removeAndRename, 'foo', 'bar')
+        inst.close()
 
     def test_doRollover_maxbytes_lte_zero(self):
         inst = self._makeOne(self.filename)
         inst.maxBytes = 0
         self.assertEqual(inst.doRollover(), None)
+        inst.close()
 
 
 class BoundIOTests(unittest.TestCase):
