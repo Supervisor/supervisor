@@ -87,6 +87,15 @@ class BareHandlerTests(HandlerTests, unittest.TestCase):
         inst.close() # shouldn't raise
         self.assertTrue(inst.closed)
 
+    def test_close_stream_handles_fileno_ioerror(self):
+        stream = DummyStream()
+        def raise_ioerror():
+            raise IOError()
+        stream.fileno = raise_ioerror
+        inst = self._makeOne(stream=stream)
+        inst.close() # shouldn't raise
+        self.assertTrue(inst.closed)
+
     def test_emit_gardenpath(self):
         stream = DummyStream()
         inst = self._makeOne(stream=stream)
