@@ -9,6 +9,7 @@ import syslog
 
 from supervisor.compat import PY3
 from supervisor.compat import as_string
+from supervisor.compat import StringIO
 
 from supervisor.tests.base import mock
 from supervisor.tests.base import DummyStream
@@ -77,6 +78,14 @@ class BareHandlerTests(HandlerTests, unittest.TestCase):
         self.assertEqual(inst.close(), None)
         self.assertFalse(inst.closed)
         self.assertFalse(inst.stream.closed)
+
+    def test_close_stream_handles_fileno_unsupported_operation(self):
+        # on python 2, StringIO does not have fileno()
+        # on python 3, StringIO has fileno() but calling it raises
+        stream = StringIO()
+        inst = self._makeOne(stream=stream)
+        inst.close() # shouldn't raise
+        self.assertTrue(inst.closed)
 
     def test_emit_gardenpath(self):
         stream = DummyStream()

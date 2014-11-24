@@ -72,9 +72,15 @@ class Handler:
     def close(self):
         if not self.closed:
             if hasattr(self.stream, 'fileno'):
-                fd = self.stream.fileno()
-                if fd < 3: # don't ever close stdout or stderr
-                    return
+                try:
+                    fd = self.stream.fileno()
+                except IOError:
+                    # on python 3, io.IOBase objects always have fileno()
+                    # but calling it may raise io.UnsupportedOperation
+                    pass
+                else:
+                    if fd < 3: # don't ever close stdout or stderr
+                        return
             self.stream.close()
             self.closed = True
 
