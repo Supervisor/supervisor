@@ -28,6 +28,7 @@ class EntryPointTests(unittest.TestCase):
             'donothing.conf')
         import StringIO
         new_stdout = StringIO.StringIO()
+        new_stdout.fileno = lambda: 1
         old_stdout = sys.stdout
         try:
             tempdir = tempfile.mkdtemp()
@@ -50,6 +51,7 @@ class EntryPointTests(unittest.TestCase):
                 'donothing.conf')
             import StringIO
             new_stdout = StringIO.StringIO()
+            new_stdout.fileno = lambda: 1
             old_stdout = sys.stdout
             try:
                 tempdir = tempfile.mkdtemp()

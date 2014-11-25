@@ -364,11 +364,11 @@ def main(args=None, test=False):
             profile('go(options)', globals(), locals(), sort_order, callers)
         else:
             go(options)
-        if test or (options.mood < SupervisorStates.RESTARTING):
-            break
         options.close_httpservers()
         options.close_logger()
         first = False
+        if test or (options.mood < SupervisorStates.RESTARTING):
+            break
 
 def go(options):
     d = Supervisor(options)
