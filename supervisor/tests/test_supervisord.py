@@ -29,6 +29,7 @@ class EntryPointTests(unittest.TestCase):
             os.path.abspath(os.path.dirname(__file__)), 'fixtures',
             'donothing.conf')
         new_stdout = StringIO()
+        new_stdout.fileno = lambda: 1
         old_stdout = sys.stdout
         try:
             tempdir = tempfile.mkdtemp()
@@ -50,6 +51,7 @@ class EntryPointTests(unittest.TestCase):
                 os.path.abspath(os.path.dirname(__file__)), 'fixtures',
                 'donothing.conf')
             new_stdout = StringIO()
+            new_stdout.fileno = lambda: 1
             old_stdout = sys.stdout
             try:
                 tempdir = tempfile.mkdtemp()

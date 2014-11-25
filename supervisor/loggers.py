@@ -144,15 +144,6 @@ class FileHandler(Handler):
         self.baseFilename = filename
         self.mode = mode
 
-    def __del__(self):
-        # TODO try to remove this __del__ entirely, it's here to suppress
-        # ResourceWarnings when running the test suite on Python 3
-        if self.stream:
-            try:
-                self.close()
-            except OSError:
-                pass
-
     def reopen(self):
         self.close()
         self.stream = open(self.baseFilename, self.mode)

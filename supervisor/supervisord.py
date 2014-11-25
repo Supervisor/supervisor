@@ -351,11 +351,11 @@ def main(args=None, test=False):
             profile('go(options)', globals(), locals(), sort_order, callers)
         else:
             go(options)
+        options.close_httpservers()
+        options.close_logger()
+        first = False
         if test or (options.mood < SupervisorStates.RESTARTING):
             break
-        options.close_httpservers() # pragma: no cover
-        options.close_logger() # pragma: no cover
-        first = False # pragma: no cover
 
 def go(options): # pragma: no cover
     d = Supervisor(options)
