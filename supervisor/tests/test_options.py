@@ -1482,7 +1482,7 @@ class ServerOptionsTests(unittest.TestCase):
                 'redirect_stderr=true but this is not allowed because it '
                 'will interfere with the eventlistener protocol')
 
-    def test_event_listener_pool_with_event_results_handler(self):
+    def test_event_listener_pool_with_event_result_handler(self):
         text = lstrip("""\
         [eventlistener:dog]
         events=PROCESS_COMMUNICATION
@@ -1499,6 +1499,25 @@ class ServerOptionsTests(unittest.TestCase):
 
         gconfig1 = gconfigs[0]
         self.assertEqual(gconfig1.result_handler, dummy_handler)
+
+    def test_event_listener_pool_result_handler_unimportable(self):
+        text = lstrip("""\
+        [eventlistener:cat]
+        events=PROCESS_COMMUNICATION
+        command = /bin/cat
+        result_handler = supervisor.tests.base:nonexistant
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        try:
+            instance.process_groups_from_parser(config)
+            self.fail('nothing raised')
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                'supervisor.tests.base:nonexistant cannot be '
+                'resolved within [eventlistener:cat]')
 
     def test_event_listener_pool_noeventsline(self):
         text = lstrip("""\
