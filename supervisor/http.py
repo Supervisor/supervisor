@@ -624,10 +624,10 @@ class supervisor_af_unix_http_server(supervisor_http_server):
         self.postbind()
 
     def checkused(self, socketname):
-        s = text_socket.text_socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
             s.connect(socketname)
-            s.send("GET / HTTP/1.0\r\n\r\n")
+            s.send(as_bytes("GET / HTTP/1.0\r\n\r\n"))
             s.recv(1)
             s.close()
         except socket.error:
