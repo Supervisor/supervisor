@@ -1134,19 +1134,16 @@ class ServerOptions(Options):
             self.logger.info('supervisord started with pid %s' % pid)
 
     def cleanup(self):
+        for config, server in self.httpservers:
+            if config['family'] == socket.AF_UNIX:
+                if self.unlink_socketfiles:
+                    socketname = config['file']
+                    self._try_unlink(socketname)
+        self._try_unlink(self.pidfile)
+
+    def _try_unlink(self, path):
         try:
-            for config, server in self.httpservers:
-                if config['family'] == socket.AF_UNIX:
-                    if self.unlink_socketfiles:
-                        socketname = config['file']
-                        try:
-                            os.unlink(socketname)
-                        except OSError:
-                            pass
-        except OSError:
-            pass
-        try:
-            os.unlink(self.pidfile)
+            os.unlink(path)
         except OSError:
             pass
 
