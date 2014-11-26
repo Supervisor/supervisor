@@ -425,6 +425,16 @@ class TopLevelFunctionTests(unittest.TestCase):
             socket_map.clear()
         return servers
 
+    def test_make_http_servers_socket_type_error(self):
+        config = {'family':999, 'host':'localhost', 'port':17735,
+                  'username':None, 'password':None,
+                  'section':'inet_http_server'}
+        try:
+            servers = self._make_http_servers([config])
+            self.fail('nothing raised')
+        except ValueError, exc:
+            self.assertEqual(exc.args[0], 'Cannot determine socket type 999')
+
     def test_make_http_servers_noauth(self):
         socketfile = tempfile.mktemp()
         inet = {'family':socket.AF_INET, 'host':'localhost', 'port':17735,
