@@ -2745,6 +2745,25 @@ class ProcessGroupConfigTests(unittest.TestCase):
         from supervisor.process import ProcessGroup
         self.assertEqual(group.__class__, ProcessGroup)
 
+class EventListenerPoolConfigTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.options import EventListenerPoolConfig
+        return EventListenerPoolConfig
+
+    def _makeOne(self, options, name, priority, process_configs, buffer_size,
+                 pool_events, result_handler):
+        return self._getTargetClass()(options, name, priority,
+                                      process_configs, buffer_size,
+                                      pool_events, result_handler)
+
+    def test_make_group(self):
+        options = DummyOptions()
+        pconfigs = [DummyPConfig(options, 'process1', '/bin/process1')]
+        instance = self._makeOne(options, 'name', 999, pconfigs, 1, [], None)
+        group = instance.make_group()
+        from supervisor.process import EventListenerPool
+        self.assertEqual(group.__class__, EventListenerPool)
+
 class FastCGIGroupConfigTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import FastCGIGroupConfig
@@ -2784,6 +2803,14 @@ class FastCGIGroupConfigTests(unittest.TestCase):
 
         self.assertTrue(instance1 != instance2)
         self.assertFalse(instance1 == instance2)
+
+    def test_make_group(self):
+        options = DummyOptions()
+        sock_config = DummySocketConfig(6)
+        instance = self._makeOne(options, 'name', 999, [], sock_config)
+        group = instance.make_group()
+        from supervisor.process import FastCGIProcessGroup
+        self.assertEqual(group.__class__, FastCGIProcessGroup)
 
 class SignalReceiverTests(unittest.TestCase):
     def test_returns_None_initially(self):
