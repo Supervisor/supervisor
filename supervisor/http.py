@@ -664,7 +664,7 @@ class tail_f_producer:
         self._follow()
         try:
             newsz = self._fsize()
-        except OSError:
+        except (OSError, ValueError):
             # file descriptor was closed
             return ''
         bytes_added = newsz - self.sz
@@ -689,7 +689,8 @@ class tail_f_producer:
     def _follow(self):
         try:
             ino = os.stat(self.filename)[stat.ST_INO]
-        except OSError:
+        except (OSError, ValueError):
+            # file was unlinked
             return
 
         if self.ino != ino: # log rotation occurred
