@@ -210,7 +210,6 @@ class TailView(MeldView):
                 rpcinterface = SupervisorNamespaceRPCInterface(supervisord)
                 try:
                     tail = rpcinterface.readProcessLog(processname, limit, offset)
-                    tail = rpcinterface.readProcessLog(processname, -1024, 0)
                 except RPCError as e:
                     if e.code == Faults.NO_FILE:
                         tail = 'No file for %s' % processname
