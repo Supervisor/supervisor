@@ -862,6 +862,11 @@ class EventListenerPool(ProcessGroupBase):
                 except OSError as why:
                     if why.args[0] != errno.EPIPE:
                         raise
+
+                    self.config.options.logger.debug(
+                        'epipe occurred while sending event %s '
+                        'to listener %s, listener state unchanged' % (
+                        event.serial, process.config.name))
                     continue
 
                 process.listener_state = EventListenerStates.BUSY
