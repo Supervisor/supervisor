@@ -907,9 +907,8 @@ class ServerOptionsTests(unittest.TestCase):
 
     def test_cleanup_afunix_unlink(self):
         fn = tempfile.mktemp()
-        f = open(fn, 'w')
-        f.write('foo')
-        f.close()
+        with open(fn, 'w') as f:
+            f.write('foo')
         instance = self._makeOne()
         class Port:
             family = socket.AF_UNIX
@@ -925,9 +924,8 @@ class ServerOptionsTests(unittest.TestCase):
     def test_cleanup_afunix_nounlink(self):
         fn = tempfile.mktemp()
         try:
-            f = open(fn, 'w')
-            f.write('foo')
-            f.close()
+            with open(fn, 'w') as f:
+                f.write('foo')
             instance = self._makeOne()
             class Port:
                 family = socket.AF_UNIX

@@ -583,9 +583,8 @@ def makeExecutable(file, substitutions=None):
         data = data.replace('<<%s>>' % key.upper(), substitutions[key])
 
     tmpnam = tempfile.mktemp(prefix=last)
-    f = open(tmpnam, 'w')
-    f.write(data)
-    f.close()
+    with open(tmpnam, 'w') as f:
+        f.write(data)
     os.chmod(tmpnam, 493) # 0755 on Py2, 0o755 on Py3
     return tmpnam
 
