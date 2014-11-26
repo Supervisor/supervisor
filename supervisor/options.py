@@ -464,6 +464,13 @@ class ServerOptions(Options):
         self.stdout.write('%s\n' % VERSION)
         self.exit(0)
 
+    def getLogger(self, *args, **kwargs):
+        """
+        A proxy to loggers.getLogger so the options might customize log setup.
+        Used by tests to mock log setup.
+        """
+        return loggers.getLogger(*args, **kwargs)
+
     def realize(self, *arg, **kw):
         Options.realize(self, *arg, **kw)
         section = self.configroot.supervisord
@@ -1635,6 +1642,18 @@ class ClientOptions(Options):
             )
 
         return section
+
+    def getServerProxy(self):
+        # mostly put here for unit testing
+        return xmlrpclib.ServerProxy(
+            # dumbass ServerProxy won't allow us to pass in a non-HTTP url,
+            # so we fake the url we pass into it and always use the transport's
+            # 'serverurl' to figure out what to attach to
+            'http://127.0.0.1',
+            transport = xmlrpc.SupervisorTransport(self.username,
+                                                   self.password,
+                                                   self.serverurl)
+            )
 
 _marker = []
 
