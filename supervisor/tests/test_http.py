@@ -137,7 +137,17 @@ class TailFProducerTests(unittest.TestCase):
         result = producer.more()
         self.assertEqual(result, '==> File truncated <==\n')
 
-    def test_handle_more_follow(self):
+    def test_handle_more_fd_closed(self):
+        request = DummyRequest('/logtail/foo', None, None, None)
+        f = tempfile.NamedTemporaryFile()
+        f.write(as_bytes('a' * 80))
+        f.flush()
+        producer = self._makeOne(request, f.name, 80)
+        producer.file.close()
+        result = producer.more()
+        self.assertEqual(result, producer.more())
+
+    def test_handle_more_follow_file_recreated(self):
         request = DummyRequest('/logtail/foo', None, None, None)
         f = tempfile.NamedTemporaryFile()
         f.write(as_bytes('a' * 80))
@@ -154,6 +164,25 @@ class TailFProducerTests(unittest.TestCase):
         finally:
             os.unlink(f2.name)
         self.assertEqual(result, as_bytes('b' * 80))
+
+    def test_handle_more_follow_file_gone(self):
+        request = DummyRequest('/logtail/foo', None, None, None)
+        filename = tempfile.mktemp()
+        with open(filename, 'wb') as f:
+            f.write(as_bytes('a' * 80))
+        try:
+            producer = self._makeOne(request, f.name, 80)
+        finally:
+            os.unlink(f.name)
+        result = producer.more()
+        self.assertEqual(result, as_bytes('a' * 80))
+        with open(filename, 'wb') as f:
+            f.write(as_bytes('b' * 80))
+        try:
+            result = producer.more() # should open in new file
+            self.assertEqual(result, as_bytes('b' * 80))
+        finally:
+             os.unlink(f.name)
 
 class DeferringChunkedProducerTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -499,7 +528,7 @@ class TopLevelFunctionTests(unittest.TestCase):
                   'username':None, 'password':None,
                   'section':'inet_http_server'}
         try:
-            servers = self._make_http_servers([config])
+            self._make_http_servers([config])
             self.fail('nothing raised')
         except ValueError as exc:
             self.assertEqual(exc.args[0], 'Cannot determine socket type 999')
