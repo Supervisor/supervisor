@@ -793,9 +793,6 @@ class ServerOptionsTests(unittest.TestCase):
         f.write('foo')
         f.close()
         instance = self._makeOne()
-        class Port:
-            family = socket.AF_UNIX
-            address = fn
         class Server:
             pass
         instance.httpservers = [({'family':socket.AF_UNIX, 'file':fn},
@@ -811,9 +808,6 @@ class ServerOptionsTests(unittest.TestCase):
             f.write('foo')
             f.close()
             instance = self._makeOne()
-            class Port:
-                family = socket.AF_UNIX
-                address = fn
             class Server:
                 pass
             instance.httpservers = [({'family':socket.AF_UNIX, 'file':fn},
@@ -827,6 +821,49 @@ class ServerOptionsTests(unittest.TestCase):
                 os.unlink(fn)
             except OSError:
                 pass
+
+    def test_cleanup_afunix_ignores_oserror_enoent(self):
+        notfound = os.path.join(os.path.dirname(__file__), 'notfound')
+        socketname = tempfile.mktemp()
+        try:
+            with open(socketname, 'w') as f:
+                f.write('foo')
+            instance = self._makeOne()
+            class Server:
+                pass
+            instance.httpservers = [
+                ({'family': socket.AF_UNIX, 'file': notfound}, Server()),
+                ({'family': socket.AF_UNIX, 'file': socketname}, Server()),
+            ]
+            instance.pidfile = ''
+            instance.cleanup()
+            self.assertFalse(os.path.exists(socketname))
+        finally:
+            try:
+                os.unlink(socketname)
+            except OSError:
+                pass
+
+    def test_cleanup_removes_pidfile(self):
+        pidfile = tempfile.mktemp()
+        try:
+            with open(pidfile, 'w') as f:
+                f.write('2')
+            instance = self._makeOne()
+            instance.pidfile = pidfile
+            instance.cleanup()
+            self.assertFalse(os.path.exists(pidfile))
+        finally:
+            try:
+                os.unlink(pidfile)
+            except OSError:
+                pass
+
+    def test_cleanup_pidfile_ignores_oserror_enoent(self):
+        notfound = os.path.join(os.path.dirname(__file__), 'notfound')
+        instance = self._makeOne()
+        instance.pidfile = notfound
+        instance.cleanup() # shouldn't raise
 
     def test_close_httpservers(self):
         instance = self._makeOne()
