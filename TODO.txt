@@ -73,8 +73,6 @@
 
 - Expat error on Jens' system running slapd as root after reload.
 
-- Unit tests for log rotation.
-
 - Command-line arg tests.
 
 - Consider adding a dependency mechanism.  See pull request #20.
