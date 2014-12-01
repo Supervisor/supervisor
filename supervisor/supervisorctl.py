@@ -117,6 +117,38 @@ class Controller(cmd.Cmd):
         # We don't want a blank line to repeat the last command.
         return
 
+    def exec_cmdloop(self, args, options):
+        try:
+            import readline
+            delims = readline.get_completer_delims()
+            delims = delims.replace(':', '')  # "group:process" as one word
+            delims = delims.replace('*', '')  # "group:*" as one word
+            delims = delims.replace('-', '')  # names with "-" as one word
+            readline.set_completer_delims(delims)
+
+            if options.history_file:
+                try:
+                    readline.read_history_file(options.history_file)
+                except IOError:
+                    pass
+
+                def save():
+                    try:
+                        readline.write_history_file(options.history_file)
+                    except IOError:
+                        pass
+
+                import atexit
+                atexit.register(save)
+        except ImportError:
+            pass
+        try:
+            self.cmdqueue.append('status')
+            self.cmdloop()
+        except KeyboardInterrupt:
+            self.output('')
+            pass
+
     def onecmd(self, line):
         """ Override the onecmd method to:
           - catch and print all exceptions
@@ -1177,42 +1209,20 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output('fg <process>\tConnect to a process in foreground mode')
         self.ctl.output('Press Ctrl+C to exit foreground')
 
+
 def main(args=None, options=None):
     if options is None:
         options = ClientOptions()
+
     options.realize(args, doc=__doc__)
     c = Controller(options)
+
     if options.args:
         c.onecmd(" ".join(options.args))
-    if options.interactive:
-        try:
-            import readline
-            delims = readline.get_completer_delims()
-            delims = delims.replace(':', '') # "group:process" as one word
-            delims = delims.replace('*', '') # "group:*" as one word
-            delims = delims.replace('-', '') # names with "-" as one word
-            readline.set_completer_delims(delims)
 
-            if options.history_file:
-                try:
-                    readline.read_history_file(options.history_file)
-                except IOError:
-                    pass
-                def save():
-                    try:
-                        readline.write_history_file(options.history_file)
-                    except IOError:
-                        pass
-                import atexit
-                atexit.register(save)
-        except ImportError:
-            pass
-        try:
-            c.cmdqueue.append('status')
-            c.cmdloop()
-        except KeyboardInterrupt:
-            c.output('')
-            pass
+    if options.interactive:
+        c.exec_cmdloop(args, options)
+
 
 if __name__ == "__main__":
     main()
