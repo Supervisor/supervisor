@@ -1832,6 +1832,7 @@ class DummyPluginFactory:
 class DummyClientOptions:
     def __init__(self):
         self.prompt = 'supervisor'
+        self.colorize_status = False
         self.serverurl = 'http://localhost:65532'
         self.username = 'chrism'
         self.password = '123'
