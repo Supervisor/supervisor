@@ -397,7 +397,7 @@ class ClientOptionsTests(unittest.TestCase):
         fp = StringIO(s)
         instance = self._makeOne()
         instance.configfile = fp
-        instance.realize()
+        instance.realize(())
         self.assertEqual(instance.serverurl, 'unix:///dev/null')
 
 class ServerOptionsTests(unittest.TestCase):
