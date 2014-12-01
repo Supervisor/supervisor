@@ -397,7 +397,7 @@ class ClientOptionsTests(unittest.TestCase):
         fp = StringIO(s)
         instance = self._makeOne()
         instance.configfile = fp
-        instance.realize(())
+        instance.realize(args=[])
         self.assertEqual(instance.serverurl, 'unix:///dev/null')
 
 class ServerOptionsTests(unittest.TestCase):
@@ -678,7 +678,7 @@ class ServerOptionsTests(unittest.TestCase):
         instance.stderr = StringIO()
 
         try:
-            instance.realize()
+            instance.realize(args=[])
         except DummyExitException as e:
             # Caught expected exception
             import traceback
