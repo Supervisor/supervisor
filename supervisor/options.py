@@ -1678,20 +1678,22 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
 
     def saneget(self, section, option, default=_marker, do_expand=True,
                 expansions={}):
-        combined_expansions = dict(
-            list(self.expansions.items()) + list(expansions.items()))
         try:
             optval = self.get(section, option)
-            if isinstance(optval, basestring) and do_expand:
-                return expand(optval,
-                              combined_expansions,
-                              "%s.%s" % (section, option))
-            return optval
         except ConfigParser.NoOptionError:
             if default is _marker:
                 raise
             else:
-                return default
+                optval = default
+
+        if do_expand and isinstance(optval, basestring):
+            combined_expansions = dict(
+                list(self.expansions.items()) + list(expansions.items()))
+
+            optval = expand(optval, combined_expansions,
+                           "%s.%s" % (section, option))
+
+        return optval
 
     def getdefault(self, option, default=_marker, expansions={}, **kwargs):
         return self.saneget(self.mysection, option, default=default,
