@@ -2537,6 +2537,42 @@ class UnhosedConfigParserTests(unittest.TestCase):
         result = parser.saneget("supervisord", "missing", default="abc")
         self.assertEqual(result, "abc")
 
+    def test_saneget_with_default_and_expand(self):
+        parser = self._makeOne()
+        parser.expansions = {'pet': 'dog'}
+        parser.read_string("[supervisord]\n")
+        result = parser.saneget("supervisord", "foo", default="%(pet)s")
+        self.assertEqual(result, "dog")
+
+    def test_saneget_with_default_no_expand(self):
+        parser = self._makeOne()
+        parser.expansions = {'pet': 'dog'}
+        parser.read_string("[supervisord]\n")
+        result = parser.saneget("supervisord", "foo",
+            default="%(pet)s", do_expand=False)
+        self.assertEqual(result, "%(pet)s")
+
+    def test_saneget_no_default_no_expand(self):
+        parser = self._makeOne()
+        parser.read_string("[supervisord]\nfoo=%(pet)s\n")
+        result = parser.saneget("supervisord", "foo", do_expand=False)
+        self.assertEqual(result, "%(pet)s")
+
+    def test_saneget_expands_instance_expansions(self):
+        parser = self._makeOne()
+        parser.expansions = {'pet': 'dog'}
+        parser.read_string("[supervisord]\nfoo=%(pet)s\n")
+        result = parser.saneget("supervisord", "foo")
+        self.assertEqual(result, "dog")
+
+    def test_saneget_expands_arg_expansions(self):
+        parser = self._makeOne()
+        parser.expansions = {'pet': 'dog'}
+        parser.read_string("[supervisord]\nfoo=%(pet)s\n")
+        result = parser.saneget("supervisord", "foo",
+            expansions={'pet': 'cat'})
+        self.assertEqual(result, "cat")
+
     def test_getdefault_does_saneget_with_mysection(self):
         parser = self._makeOne()
         parser.read_string("[%s]\nfoo=bar\n" % parser.mysection)
