@@ -1399,10 +1399,10 @@ class ServerOptionsTests(unittest.TestCase):
         try:
             instance.processes_from_section(config, 'program:foo', None)
         except ValueError as e:
-            self.assertEqual(
-                str(e),
+            self.assertTrue(
                 "Unexpected end of key/value pairs in value "
-                "'KEY1=val1,KEY2=val2,KEY3' in section 'program:foo'")
+                "'KEY1=val1,KEY2=val2,KEY3' in section 'program:foo'"
+                in str(e))
         else:
             self.fail('instance.processes_from_section should '
                       'raise a ValueError')
