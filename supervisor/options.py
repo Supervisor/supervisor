@@ -1693,19 +1693,21 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
         return self.saneget(self.mysection, option, default=default,
                             expansions=expansions, **kwargs)
 
-    def read(self, filenames):
-        sections_orig = self._sections.copy()
-        filenames = ConfigParser.RawConfigParser.read(self, filenames)
+    def read(self, filenames, **kwargs):
+        if isinstance(filenames, basestring):  # RawConfigParser compat
+            filenames = [filenames]
 
-        if len(filenames) == 1:
-            filename = filenames[0]
-        else:
-            filename = '???'
+        ok_filenames = []
+        for filename in filenames:
+            sections_orig = self._sections.copy()
 
-        for section in frozenset(self._sections) - frozenset(sections_orig):
-            self.section_to_file[section] = filename
+            ok_filenames.extend(
+                ConfigParser.RawConfigParser.read(self, [filename], **kwargs))
 
-        return filenames
+            diff = frozenset(self._sections) - frozenset(sections_orig)
+            for section in diff:
+                self.section_to_file[section] = filename
+        return ok_filenames
 
 
 class Config(object):
