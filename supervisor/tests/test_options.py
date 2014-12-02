@@ -2190,35 +2190,70 @@ class UnhosedConfigParserTests(unittest.TestCase):
     def _makeOne(self, *args, **kw):
         return self._getTargetClass()(*args, **kw)
 
-    def test_section_to_file_initially_empty(self):
+    def test_read_filenames_as_string(self):
+        f = tempfile.NamedTemporaryFile(mode="w+")
         config = self._makeOne()
-        self.assertEqual(config.section_to_file, {})
-
-    def test_section_to_file_read_one_file(self):
-        f = tempfile.NamedTemporaryFile()
         try:
             f.write("[foo]\n")
             f.flush()
-            config = self._makeOne()
-            config.read([f.name])
+            ok_filenames = config.read(f.name)
         finally:
             f.close()
-        self.assertEqual(config.section_to_file['foo'], f.name)
+        self.assertEqual(ok_filenames, [f.name])
 
-    def test_section_to_file_read_multiple_files(self):
-        f1 = tempfile.NamedTemporaryFile()
-        f2 = tempfile.NamedTemporaryFile()
+    def test_read_filenames_as_list(self):
+        f = tempfile.NamedTemporaryFile(mode="w+")
+        parser = self._makeOne()
+        try:
+            f.write("[foo]\n")
+            f.flush()
+            ok_filenames = parser.read([f.name])
+        finally:
+            f.close()
+        self.assertEqual(ok_filenames, [f.name])
+
+    def test_read_returns_ok_filenames_like_rawconfigparser(self):
+        nonexistant = os.path.join(os.path.dirname(__file__), "nonexistant")
+        f = tempfile.NamedTemporaryFile(mode="w+")
+        parser = self._makeOne()
+        try:
+            f.write("[foo]\n")
+            f.flush()
+            ok_filenames = parser.read([nonexistant, f.name])
+        finally:
+            f.close()
+        self.assertEqual(ok_filenames, [f.name])
+
+    def test_read_section_to_file_initially_empty(self):
+        parser = self._makeOne()
+        self.assertEqual(parser.section_to_file, {})
+
+    def test_read_section_to_file_read_one_file(self):
+        f = tempfile.NamedTemporaryFile(mode="w+")
+        try:
+            f.write("[foo]\n")
+            f.flush()
+            parser = self._makeOne()
+            parser.read([f.name])
+        finally:
+            f.close()
+        self.assertEqual(parser.section_to_file['foo'], f.name)
+
+    def test_read_section_to_file_read_multiple_files(self):
+        f1 = tempfile.NamedTemporaryFile(mode="w+")
+        f2 = tempfile.NamedTemporaryFile(mode="w+")
         try:
             f1.write("[foo]\n")
             f1.flush()
             f2.write("[bar]\n")
             f2.flush()
-            config = self._makeOne()
-            config.read([f1.name, f2.name])
+            parser = self._makeOne()
+            parser.read([f1.name, f2.name])
         finally:
             f1.close()
             f2.close()
-        self.assertEqual(config.section_to_file['foo'], '???')
+        self.assertEqual(parser.section_to_file['foo'], f1.name)
+        self.assertEqual(parser.section_to_file['bar'], f2.name)
 
 class UtilFunctionsTests(unittest.TestCase):
     def test_make_namespec(self):
