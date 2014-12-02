@@ -1407,6 +1407,29 @@ class ServerOptionsTests(unittest.TestCase):
             self.fail('instance.processes_from_section should '
                       'raise a ValueError')
 
+    def test_processes_from_section_shows_conf_filename_on_valueerror(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        ;no command
+        """)
+        f = tempfile.NamedTemporaryFile(mode="w+")
+        try:
+            f.write(text)
+            f.flush()
+            from supervisor.options import UnhosedConfigParser
+            config = UnhosedConfigParser()
+            config.read(f.name)
+            instance.processes_from_section(config, 'program:foo', None)
+        except ValueError as e:
+            self.assertEqual(e.args[0],
+                "program section program:foo does not specify a command "
+                "in section 'program:foo' (file: %s)" % f.name)
+        else:
+            self.fail('nothing raised')
+        finally:
+            f.close()
+
     def test_processes_from_autolog_without_rollover(self):
         instance = self._makeOne()
         text = lstrip("""\
