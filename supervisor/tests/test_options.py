@@ -2357,13 +2357,31 @@ class UnhosedConfigParserTests(unittest.TestCase):
     def _makeOne(self, *args, **kw):
         return self._getTargetClass()(*args, **kw)
 
+    def test_saneget_no_default(self):
+        parser = self._makeOne()
+        parser.read_string("[supervisord]\n")
+        from supervisor.compat import ConfigParser
+        self.assertRaises(ConfigParser.NoOptionError,
+            parser.saneget, "supervisord", "missing")
+
+    def test_saneget_with_default(self):
+        parser = self._makeOne()
+        parser.read_string("[supervisord]\n")
+        result = parser.saneget("supervisord", "missing", default="abc")
+        self.assertEqual(result, "abc")
+
+    def test_getdefault_does_saneget_with_mysection(self):
+        parser = self._makeOne()
+        parser.read_string("[%s]\nfoo=bar\n" % parser.mysection)
+        self.assertEqual(parser.getdefault("foo"), "bar")
+
     def test_read_filenames_as_string(self):
         f = tempfile.NamedTemporaryFile(mode="w+")
-        config = self._makeOne()
+        parser = self._makeOne()
         try:
             f.write("[foo]\n")
             f.flush()
-            ok_filenames = config.read(f.name)
+            ok_filenames = parser.read(f.name)
         finally:
             f.close()
         self.assertEqual(ok_filenames, [f.name])
