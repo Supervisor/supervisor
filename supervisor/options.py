@@ -553,6 +553,7 @@ class ServerOptions(Options):
         if PY3:
             kwargs['inline_comment_prefixes'] = (';','#')
         parser = UnhosedConfigParser(**kwargs)
+        parser.expansions = environ_expansions()
         try:
             try:
                 parser.read_file(fp)
@@ -1604,6 +1605,7 @@ class ClientOptions(Options):
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)
         config = UnhosedConfigParser()
+        config.expansions = environ_expansions()
         config.mysection = 'supervisorctl'
         try:
             config.read_file(fp)
@@ -1665,6 +1667,7 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
     def __init__(self, *args, **kwargs):
         ConfigParser.RawConfigParser.__init__(self, *args, **kwargs)
         self.section_to_file = {}
+        self.expansions = {}
 
     def read_string(self, s):
         s = StringIO(s)
@@ -1675,12 +1678,13 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
 
     def saneget(self, section, option, default=_marker, do_expand=True,
                 expansions={}):
-        expansions.update(environ_expansions())
+        combined_expansions = dict(
+            list(self.expansions.items()) + list(expansions.items()))
         try:
             optval = self.get(section, option)
             if isinstance(optval, basestring) and do_expand:
                 return expand(optval,
-                              expansions,
+                              combined_expansions,
                               "%s.%s" % (section, option))
             return optval
         except ConfigParser.NoOptionError:
