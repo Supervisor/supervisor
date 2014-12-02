@@ -541,6 +541,7 @@ class ServerOptions(Options):
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)
         parser = UnhosedConfigParser()
+        parser.expansions = environ_expansions()
         try:
             parser.readfp(fp)
         except ConfigParser.ParsingError, why:
@@ -1583,6 +1584,7 @@ class ClientOptions(Options):
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)
         config = UnhosedConfigParser()
+        config.expansions = environ_expansions()
         config.mysection = 'supervisorctl'
         config.readfp(fp)
         sections = config.sections()
@@ -1639,6 +1641,7 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
     def __init__(self, *args, **kwargs):
         ConfigParser.RawConfigParser.__init__(self, *args, **kwargs)
         self.section_to_file = {}
+        self.expansions = {}
 
     def read_string(self, s):
         from StringIO import StringIO
@@ -1647,12 +1650,13 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
 
     def saneget(self, section, option, default=_marker, do_expand=True,
                 expansions={}):
-        expansions.update(environ_expansions())
+        combined_expansions = dict(
+            list(self.expansions.items()) + list(expansions.items()))
         try:
             optval = self.get(section, option)
             if isinstance(optval, basestring) and do_expand:
                 return expand(optval,
-                              expansions,
+                              combined_expansions,
                               "%s.%s" % (section, option))
             return optval
         except ConfigParser.NoOptionError:

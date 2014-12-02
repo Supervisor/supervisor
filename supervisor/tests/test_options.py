@@ -1473,8 +1473,10 @@ class ServerOptionsTests(unittest.TestCase):
 
         """)
         from supervisor.options import UnhosedConfigParser
+        from supervisor.options import environ_expansions
         from supervisor.dispatchers import default_handler
         config = UnhosedConfigParser()
+        config.expansions = environ_expansions()
         config.read_string(text)
         instance = self._makeOne()
         gconfigs = instance.process_groups_from_parser(config)
@@ -1697,7 +1699,9 @@ class ServerOptionsTests(unittest.TestCase):
         priority = %(ENV_FOO_PRIORITY)s
         """)
         from supervisor.options import UnhosedConfigParser
+        from supervisor.options import environ_expansions
         config = UnhosedConfigParser()
+        config.expansions = environ_expansions()
         config.read_string(text)
         instance = self._makeOne()
 
