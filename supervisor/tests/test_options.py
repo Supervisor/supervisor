@@ -927,6 +927,33 @@ class ServerOptionsTests(unittest.TestCase):
         finally:
             shutil.rmtree(dirname)
 
+    def test_read_config_include_with_no_files_raises_valueerror(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        ;no files=
+        """)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError, exc:
+            self.assertEqual(exc.args[0],
+                ".ini file has [include] section, but no files setting")
+
+    def test_read_config_include_with_no_matching_files_logs_warning(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        files=nonexistent/*
+        """)
+        instance.read_config(StringIO(text))
+        self.assertEqual(instance.parse_warnings,
+                         ['No file matches via include "./nonexistent/*"'])
+
     def test_readFile_failed(self):
         from supervisor.options import readFile
         try:
@@ -935,20 +962,6 @@ class ServerOptionsTests(unittest.TestCase):
             self.assertEqual(inst.args[0], 'FAILED')
         else:
             raise AssertionError("Didn't raise")
-
-    def test_include_with_no_matching_files_logs_warning(self):
-        instance = self._makeOne()
-        text = lstrip("""\
-        [supervisord]
-        user=root
-
-        [include]
-        files=nonexistent/*
-        """)
-        instance.configfile = StringIO(text)
-        instance.realize(args=[])
-        self.assertEqual(instance.parse_warnings,
-                         ['No file matches via include "./nonexistent/*"'])
 
     def test_get_pid(self):
         instance = self._makeOne()
