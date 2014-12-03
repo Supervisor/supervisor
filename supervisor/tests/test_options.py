@@ -647,6 +647,29 @@ class ServerOptionsTests(unittest.TestCase):
         else:
             self.fail("expected exception")
 
+    def test_read_config_malformed_config_file_raises_valueerror(self):
+        instance = self._makeOne()
+        f = tempfile.NamedTemporaryFile(mode="w+")
+        try:
+            f.write("[supervisord]\njunk")
+            f.flush()
+            instance.read_config(f.name)
+            self.fail("nothing raised")
+        except ValueError, exc:
+            self.assertTrue(exc.args[0].startswith(
+                'File contains parsing errors: %s' % f.name))
+        finally:
+            f.close()
+
+    def test_read_config_no_supervisord_section_raises_valueerror(self):
+        instance = self._makeOne()
+        try:
+            instance.read_config(StringIO())
+            self.fail("nothing raised")
+        except ValueError, exc:
+            self.assertEqual(exc.args[0],
+                ".ini file does not include supervisord section")
+
     def test_include_reads_files_in_sorted_order(self):
         dirname = tempfile.mkdtemp()
         conf_d = os.path.join(dirname, "conf.d")
