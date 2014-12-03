@@ -983,6 +983,7 @@ class ServerOptionsTests(unittest.TestCase):
 
         [inet_http_server]
         password=passwordhere
+        ;no username=
         """)
         instance.configfile = StringIO(text)
         try:
@@ -992,6 +993,22 @@ class ServerOptionsTests(unittest.TestCase):
             self.assertEqual(exc.args[0],
                 "Must specify username if password is specified "
                 "in [inet_http_server]")
+
+    def test_options_afinet_no_port(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [inet_http_server]
+        ;no port=
+        """)
+        instance.configfile = StringIO(text)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                "section [inet_http_server] has no port value")
 
     def test_cleanup_afunix_unlink(self):
         fn = tempfile.mktemp()
