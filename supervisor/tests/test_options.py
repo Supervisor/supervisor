@@ -787,6 +787,109 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(options.server_configs[0]['file'], '/tmp/supvtest.sock')
         self.assertEqual(options.server_configs[0]['chmod'], 493)
 
+    def test_options_afunix_chmod_bad(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [unix_http_server]
+        file=/tmp/file
+        chmod=NaN
+        """)
+        instance.configfile = StringIO(text)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError, exc:
+            self.assertEqual(exc.args[0],
+                "Invalid chmod value NaN")
+
+    def test_options_afunix_chown_bad(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [unix_http_server]
+        file=/tmp/file
+        chown=thisisnotavaliduser
+        """)
+        instance.configfile = StringIO(text)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError, exc:
+            self.assertEqual(exc.args[0],
+                "Invalid sockchown value thisisnotavaliduser")
+
+    def test_options_afunix_no_file(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [unix_http_server]
+        ;no file=
+        """)
+        instance.configfile = StringIO(text)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError, exc:
+            self.assertEqual(exc.args[0],
+                "section [unix_http_server] has no file value")
+
+    def test_options_afunix_password_without_username(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [unix_http_server]
+        file=/tmp/supvtest.sock
+        password=passwordhere
+        chmod=0755
+        """)
+        instance.configfile = StringIO(text)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError, exc:
+            self.assertEqual(exc.args[0],
+                "Must specify username if password is specified "
+                "in [unix_http_server]")
+
+    def test_options_afinet_password_without_username(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [inet_http_server]
+        password=passwordhere
+        ;no username=
+        """)
+        instance.configfile = StringIO(text)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError, exc:
+            self.assertEqual(exc.args[0],
+                "Must specify username if password is specified "
+                "in [inet_http_server]")
+
+    def test_options_afinet_no_port(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [inet_http_server]
+        ;no port=
+        """)
+        instance.configfile = StringIO(text)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError, exc:
+            self.assertEqual(exc.args[0],
+                "section [inet_http_server] has no port value")
+
     def test_cleanup_afunix_unlink(self):
         fn = tempfile.mktemp()
         f = open(fn, 'w')
