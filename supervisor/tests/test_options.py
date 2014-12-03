@@ -941,6 +941,40 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(options.server_configs[0]['file'], '/tmp/supvtest.sock')
         self.assertEqual(options.server_configs[0]['chmod'], 493)
 
+    def test_options_afunix_chmod_bad(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [unix_http_server]
+        file=/tmp/file
+        chmod=NaN
+        """)
+        instance.configfile = StringIO(text)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                "Invalid chmod value NaN")
+
+    def test_options_afunix_chown_bad(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [unix_http_server]
+        file=/tmp/file
+        chown=thisisnotavaliduser
+        """)
+        instance.configfile = StringIO(text)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                "Invalid sockchown value thisisnotavaliduser")
+
     def test_options_afunix_no_file(self):
         instance = self._makeOne()
         text = lstrip("""\
