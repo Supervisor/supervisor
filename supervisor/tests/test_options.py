@@ -2853,6 +2853,13 @@ class EventListenerPoolConfigTests(unittest.TestCase):
                                       process_configs, buffer_size,
                                       pool_events, result_handler)
 
+    def test_after_setuid(self):
+        options = DummyOptions()
+        pconfigs = [DummyPConfig(options, 'process1', '/bin/process1')]
+        instance = self._makeOne(options, 'name', 999, pconfigs, 1, [], None)
+        instance.after_setuid()
+        self.assertEqual(pconfigs[0].autochildlogs_created, True)
+
     def test_make_group(self):
         options = DummyOptions()
         pconfigs = [DummyPConfig(options, 'process1', '/bin/process1')]
