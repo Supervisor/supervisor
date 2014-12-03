@@ -2037,12 +2037,28 @@ class ServerOptionsTests(unittest.TestCase):
         finally:
             shutil.rmtree(dn)
 
-    def test_clear_autochildlog_oserror(self):
+    def test_clear_autochildlogdir_listdir_oserror(self):
         instance = self._makeOne()
         instance.childlogdir = '/tmp/this/cant/possibly/existjjjj'
         instance.logger = DummyLogger()
         instance.clear_autochildlogdir()
         self.assertEqual(instance.logger.data, ['Could not clear childlog dir'])
+
+    def test_clear_autochildlogdir_unlink_oserror(self):
+        dirname = tempfile.mkdtemp()
+        instance = self._makeOne()
+        instance.childlogdir = dirname
+        ident = instance.identifier
+        filename = os.path.join(dirname, 'cat-stdout---%s-ayWAp9.log' % ident)
+        with open(filename, 'w') as f:
+            f.write("log")
+        def raise_oserror(*args):
+            raise OSError(errno.ENOENT)
+        instance.remove = raise_oserror
+        instance.logger = DummyLogger()
+        instance.clear_autochildlogdir()
+        self.assertEqual(instance.logger.data,
+            ["Failed to clean up '%s'" % filename])
 
     def test_openhttpservers_reports_friendly_usage_when_eaddrinuse(self):
         supervisord = DummySupervisor()
