@@ -112,6 +112,10 @@ class Options:
                        '/etc/supervisord.conf']
         self.searchpaths = searchpaths
 
+        self.environ_expansions = {}
+        for k, v in os.environ.items():
+            self.environ_expansions['ENV_%s' % k] = v
+
     def default_configfile(self):
         """Return the name of the found config file or print usage/exit."""
         config = None
@@ -550,7 +554,7 @@ class ServerOptions(Options):
         if PY3:
             kwargs['inline_comment_prefixes'] = (';','#')
         parser = UnhosedConfigParser(**kwargs)
-        parser.expansions = environ_expansions()
+        parser.expansions = self.environ_expansions
         try:
             try:
                 parser.read_file(fp)
@@ -563,7 +567,7 @@ class ServerOptions(Options):
                 fp.close()
 
         expansions = {'here':self.here}
-        expansions.update(environ_expansions())
+        expansions.update(self.environ_expansions)
         if parser.has_section('include'):
             if not parser.has_option('include', 'files'):
                 raise ValueError(".ini file has [include] section, but no "
@@ -907,7 +911,7 @@ class ServerOptions(Options):
         for process_num in range(numprocs_start, numprocs + numprocs_start):
             expansions = common_expansions
             expansions.update({'process_num': process_num})
-            expansions.update(environ_expansions())
+            expansions.update(self.environ_expansions)
 
             environment = dict_of_key_value_pairs(
                 expand(environment_str, expansions, 'environment'))
@@ -1600,7 +1604,7 @@ class ClientOptions(Options):
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)
         config = UnhosedConfigParser()
-        config.expansions = environ_expansions()
+        config.expansions = self.environ_expansions
         config.mysection = 'supervisorctl'
         try:
             config.read_file(fp)
@@ -2089,17 +2093,6 @@ def expand(s, expansions, name):
             'Format string %r for %r is badly formatted: %s' %
             (s, name, str(ex))
         )
-
-def environ_expansions():
-    """Return dict of environment variables, suitable for use in string
-    expansions.
-
-    Every environment variable is prefixed by 'ENV_'.
-    """
-    x = {}
-    for key, value in os.environ.items():
-        x['ENV_%s' % key] = value
-    return x
 
 def make_namespec(group_name, process_name):
     # we want to refer to the process by its "short name" (a process named
