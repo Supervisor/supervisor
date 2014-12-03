@@ -1128,6 +1128,20 @@ class ServerOptionsTests(unittest.TestCase):
                 '/tmp/foo_%d_stdout' % num)
             self.assertEqual(pconfigs[num].environment, {'NUM': '%d' % num})
 
+    def test_processes_from_section_expands_directory(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/cat
+        directory = /tmp/%(ENV_FOO)s
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.expansions = {'ENV_FOO': 'bar'}
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(pconfigs[0].directory, '/tmp/bar')
+
     def test_processes_from_section_environment_variables_expansion(self):
         instance = self._makeOne()
         text = lstrip("""\
