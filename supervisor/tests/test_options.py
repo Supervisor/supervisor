@@ -908,6 +908,20 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(recorder[0],
             'positional arguments are not supported: %s' % args)
 
+    def test_realize_getopt_error(self):
+        instance = self._makeOne()
+
+        recorder = []
+        def record_usage(message):
+            recorder.append(message)
+        instance.usage = record_usage
+
+        instance.configfile=StringIO('[supervisord]')
+        instance.realize(args=["--bad=1"])
+        self.assertEqual(len(recorder), 1)
+        self.assertEqual(recorder[0],
+            "GetoptError('option --bad not recognized', 'bad')")
+
     def test_options_afunix(self):
         instance = self._makeOne()
         text = lstrip("""\
