@@ -861,6 +861,72 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.parse_warnings,
                          ['No file matches via include "./nonexistant/*"'])
 
+    def test_read_config_include_reads_extra_files(self):
+        dirname = tempfile.mkdtemp()
+        conf_d = os.path.join(dirname, "conf.d")
+        os.mkdir(conf_d)
+
+        supervisord_conf = os.path.join(dirname, "supervisord.conf")
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        files=%s/conf.d/*.conf %s/conf.d/*.ini
+        """ % (dirname, dirname))
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+
+        conf_file = os.path.join(conf_d, "a.conf")
+        with open(conf_file, 'w') as f:
+            f.write("[inet_http_server]\nport=8000\n")
+
+        ini_file = os.path.join(conf_d, "a.ini")
+        with open(ini_file, 'w') as f:
+            f.write("[unix_http_server]\nfile=/tmp/file\n")
+
+        instance = self._makeOne()
+        try:
+            instance.read_config(supervisord_conf)
+            options = instance.configroot.supervisord
+            self.assertEqual(len(options.server_configs), 2)
+            msg = 'Included extra file "%s" during parsing' % conf_file
+            self.assertTrue(msg in instance.parse_warnings)
+            msg = 'Included extra file "%s" during parsing' % ini_file
+            self.assertTrue(msg in instance.parse_warnings)
+        finally:
+            shutil.rmtree(dirname)
+
+    def test_read_config_include_extra_file_malformed(self):
+        dirname = tempfile.mkdtemp()
+        conf_d = os.path.join(dirname, "conf.d")
+        os.mkdir(conf_d)
+
+        supervisord_conf = os.path.join(dirname, "supervisord.conf")
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        files=%s/conf.d/*.conf
+        """ % dirname)
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+
+        malformed_file = os.path.join(conf_d, "a.conf")
+        with open(malformed_file, 'w') as f:
+            f.write("[inet_http_server]\njunk\n")
+
+        instance = self._makeOne()
+        try:
+            instance.read_config(supervisord_conf)
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertTrue('contains parsing errors:' in exc.args[0])
+            self.assertTrue(malformed_file in exc.args[0])
+            msg = 'Included extra file "%s" during parsing' % malformed_file
+            self.assertTrue(msg in instance.parse_warnings)
+        finally:
+            shutil.rmtree(dirname)
+
     def test_readFile_failed(self):
         from supervisor.options import readFile
         try:
