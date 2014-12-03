@@ -383,6 +383,15 @@ class ClientOptionsTests(unittest.TestCase):
         else:
             self.fail("expected exception")
 
+    def test_read_config_no_supervisord_section_raises_valueerror(self):
+        instance = self._makeOne()
+        try:
+            instance.read_config(StringIO())
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                ".ini file does not include supervisorctl section")
+
     def test_options_unixsocket_cli(self):
         fp = StringIO('[supervisorctl]')
         instance = self._makeOne()
