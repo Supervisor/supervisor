@@ -811,8 +811,8 @@ class ServerOptionsTests(unittest.TestCase):
             instance.read_config(f.name)
             self.fail("nothing raised")
         except ValueError as exc:
-            self.assertTrue(exc.args[0].startswith(
-                'File contains parsing errors: %s' % f.name))
+            self.assertTrue('contains parsing errors:' in exc.args[0])
+            self.assertTrue(f.name in exc.args[0])
         finally:
             f.close()
 
