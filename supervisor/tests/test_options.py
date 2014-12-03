@@ -1176,6 +1176,15 @@ class ServerOptionsTests(unittest.TestCase):
         instance.close_logger()
         self.assertEqual(logger.closed, True)
 
+    def test_reopenlogs(self):
+        instance = self._makeOne()
+        logger = DummyLogger()
+        logger.handlers = [DummyLogger()]
+        instance.logger = logger
+        instance.reopenlogs()
+        self.assertEqual(logger.handlers[0].reopened, True)
+        self.assertEqual(logger.data[0], 'supervisord logreopen')
+
     def test_write_pidfile_ok(self):
         fn = tempfile.mktemp()
         try:
