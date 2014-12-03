@@ -373,6 +373,7 @@ class Options:
         for section in parser.sections():
             if not section.startswith(section_prefix):
                 continue
+
             name = section.split(':', 1)[1]
             factory_spec = parser.saneget(section, factory_key, None)
             if factory_spec is None:
@@ -383,16 +384,12 @@ class Options:
             except ImportError:
                 raise ValueError('%s cannot be resolved within [%s]' % (
                     factory_spec, section))
-            items_tmp = parser.items(section)
-            items = []
-            for ikv in items_tmp:
-                ik, iv_tmp = ikv
-                iexpansions = {}
-                iexpansions.update(environ_expansions())
-                iv = expand(iv_tmp, iexpansions, ik)
-                items.append((ik, iv))
-            items.remove((factory_key, factory_spec))
-            factories.append((name, factory, dict(items)))
+
+            extras = {}
+            for k in parser.options(section):
+                if k != factory_key:
+                    extras[k] = parser.saneget(section, k)
+            factories.append((name, factory, extras))
 
         return factories
 

@@ -2041,6 +2041,7 @@ class ServerOptionsTests(unittest.TestCase):
         [rpcinterface:dummy]
         supervisor.rpcinterface_factory = %s
         foo = bar
+        baz = qux
         """ % __name__)
         from supervisor.options import UnhosedConfigParser
         config = UnhosedConfigParser()
@@ -2053,7 +2054,27 @@ class ServerOptionsTests(unittest.TestCase):
         factory = factories[0]
         self.assertEqual(factory[0], 'dummy')
         self.assertEqual(factory[1], sys.modules[__name__])
-        self.assertEqual(factory[2], {'foo':'bar'})
+        self.assertEqual(factory[2], {'foo':'bar', 'baz':'qux'})
+
+    def test_rpcinterfaces_from_parser_factory_expansions(self):
+        text = lstrip("""\
+        [rpcinterface:dummy]
+        supervisor.rpcinterface_factory = %(factory)s
+        foo = %(pet)s
+        """)
+        from supervisor.options import UnhosedConfigParser
+        instance = self._makeOne()
+        config = UnhosedConfigParser()
+        config.expansions = {'factory': __name__, 'pet': 'cat'}
+        config.read_string(text)
+        factories = instance.get_plugins(config,
+                                         'supervisor.rpcinterface_factory',
+                                         'rpcinterface:')
+        self.assertEqual(len(factories), 1)
+        factory = factories[0]
+        self.assertEqual(factory[0], 'dummy')
+        self.assertEqual(factory[1], sys.modules[__name__])
+        self.assertEqual(factory[2], {'foo': 'cat'})
 
     def test_rpcinterfaces_from_parser_factory_missing(self):
         text = lstrip("""\
