@@ -941,6 +941,46 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(options.server_configs[0]['file'], '/tmp/supvtest.sock')
         self.assertEqual(options.server_configs[0]['chmod'], 493)
 
+    def test_options_afunix_password_without_username(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [unix_http_server]
+        file=/tmp/supvtest.sock
+        password=passwordhere
+        chmod=0755
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        instance.configfile = StringIO(text)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                "Must specify username if password is specified "
+                "in [unix_http_server]")
+
+    def test_options_afinet_password_without_username(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [inet_http_server]
+        password=passwordhere
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        instance.configfile = StringIO(text)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                "Must specify username if password is specified "
+                "in [inet_http_server]")
+
     def test_cleanup_afunix_unlink(self):
         fn = tempfile.mktemp()
         with open(fn, 'w') as f:
@@ -1481,7 +1521,7 @@ class ServerOptionsTests(unittest.TestCase):
         finally:
             f.close()
 
-    def test_processes_from_autolog_without_rollover(self):
+    def test_processes_from_section_autolog_without_rollover(self):
         instance = self._makeOne()
         text = lstrip("""\
         [program:foo]
