@@ -236,8 +236,7 @@ class Options:
             setattr(self, attr, value)
             self.attr_priorities[attr] = prio
 
-    def realize(self, args=None, doc=None,
-                progname=None, raise_getopt_errs=True):
+    def realize(self, args=None, doc=None, progname=None):
         """Realize a configuration.
 
         Optional arguments:
@@ -268,9 +267,8 @@ class Options:
         try:
             self.options, self.args = getopt.getopt(
                 args, "".join(self.short_options), self.long_options)
-        except getopt.error as msg:
-            if raise_getopt_errs:
-                self.usage(msg)
+        except getopt.error as exc:
+            self.usage(repr(exc))
 
         # Check for positional args
         if self.args and not self.positional_args_allowed:
