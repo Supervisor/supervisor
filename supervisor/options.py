@@ -895,8 +895,6 @@ class ServerOptions(Options):
                 expand(environment_str, expansions, 'environment'))
 
             directory = get(section, 'directory', None)
-            if directory:
-                directory = expand(directory, expansions, 'directory')
 
             logfiles = {}
 
