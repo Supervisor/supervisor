@@ -941,6 +941,22 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(options.server_configs[0]['file'], '/tmp/supvtest.sock')
         self.assertEqual(options.server_configs[0]['chmod'], 493)
 
+    def test_options_afunix_no_file(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [unix_http_server]
+        ;no file=
+        """)
+        instance.configfile = StringIO(text)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                "section [unix_http_server] has no file value")
+
     def test_options_afunix_password_without_username(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -951,8 +967,6 @@ class ServerOptionsTests(unittest.TestCase):
         password=passwordhere
         chmod=0755
         """)
-        from supervisor.options import UnhosedConfigParser
-        config = UnhosedConfigParser()
         instance.configfile = StringIO(text)
         try:
             instance.read_config(StringIO(text))
@@ -970,8 +984,6 @@ class ServerOptionsTests(unittest.TestCase):
         [inet_http_server]
         password=passwordhere
         """)
-        from supervisor.options import UnhosedConfigParser
-        config = UnhosedConfigParser()
         instance.configfile = StringIO(text)
         try:
             instance.read_config(StringIO(text))
