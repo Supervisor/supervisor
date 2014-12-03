@@ -893,6 +893,21 @@ class ServerOptionsTests(unittest.TestCase):
                           instance.check_execv_args, '/',
                           ['/'], os.stat('/'))
 
+    def test_realize_positional_args_not_supported(self):
+        instance = self._makeOne()
+
+        recorder = []
+        def record_usage(message):
+            recorder.append(message)
+        instance.usage = record_usage
+
+        instance.configfile=StringIO('[supervisord]')
+        args = ['foo', 'bar']
+        instance.realize(args=args)
+        self.assertEqual(len(recorder), 1)
+        self.assertEqual(recorder[0],
+            'positional arguments are not supported: %s' % args)
+
     def test_options_afunix(self):
         instance = self._makeOne()
         text = lstrip("""\
