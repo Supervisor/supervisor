@@ -1225,7 +1225,7 @@ class ServerOptions(Options):
             if fnre.match(filename):
                 pathname = os.path.join(childlogdir, filename)
                 try:
-                    os.remove(pathname)
+                    self.remove(pathname)
                 except (OSError, IOError):
                     self.logger.warn('Failed to clean up %r' % pathname)
 
