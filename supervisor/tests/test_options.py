@@ -806,11 +806,11 @@ class ServerOptionsTests(unittest.TestCase):
         [supervisord]
 
         [include]
-        files=nonexistant/*
+        files=nonexistent/*
         """)
         instance.read_config(StringIO(text))
         self.assertEqual(instance.parse_warnings,
-                         ['No file matches via include "./nonexistant/*"'])
+                         ['No file matches via include "./nonexistent/*"'])
 
     def test_read_config_include_reads_extra_files(self):
         dirname = tempfile.mkdtemp()
@@ -1927,7 +1927,7 @@ class ServerOptionsTests(unittest.TestCase):
         [eventlistener:cat]
         events=PROCESS_COMMUNICATION
         command = /bin/cat
-        result_handler = supervisor.tests.base:nonexistant
+        result_handler = supervisor.tests.base:nonexistent
         """)
         from supervisor.options import UnhosedConfigParser
         config = UnhosedConfigParser()
@@ -1938,7 +1938,7 @@ class ServerOptionsTests(unittest.TestCase):
             self.fail('nothing raised')
         except ValueError as exc:
             self.assertEqual(exc.args[0],
-                'supervisor.tests.base:nonexistant cannot be '
+                'supervisor.tests.base:nonexistent cannot be '
                 'resolved within [eventlistener:cat]')
 
     def test_event_listener_pool_noeventsline(self):
@@ -2408,7 +2408,7 @@ class ServerOptionsTests(unittest.TestCase):
     def test_rpcinterfaces_from_parser_factory_not_importable(self):
         text = lstrip("""\
         [rpcinterface:dummy]
-        supervisor.rpcinterface_factory = nonexistant
+        supervisor.rpcinterface_factory = nonexistent
         """)
         from supervisor.options import UnhosedConfigParser
         config = UnhosedConfigParser()
@@ -2420,7 +2420,7 @@ class ServerOptionsTests(unittest.TestCase):
                                  'rpcinterface:')
             self.fail('nothing raised')
         except ValueError as exc:
-            self.assertEqual(exc.args[0], 'nonexistant cannot be resolved '
+            self.assertEqual(exc.args[0], 'nonexistent cannot be resolved '
                 'within [rpcinterface:dummy]')
 
     def test_clear_autochildlogdir(self):
@@ -2940,12 +2940,12 @@ class UnhosedConfigParserTests(unittest.TestCase):
         self.assertEqual(ok_filenames, [f.name])
 
     def test_read_returns_ok_filenames_like_rawconfigparser(self):
-        nonexistant = os.path.join(os.path.dirname(__file__), "nonexistant")
+        nonexistent = os.path.join(os.path.dirname(__file__), "nonexistent")
         parser = self._makeOne()
         with tempfile.NamedTemporaryFile(mode="w+") as f:
             f.write("[foo]\n")
             f.flush()
-            ok_filenames = parser.read([nonexistant, f.name])
+            ok_filenames = parser.read([nonexistent, f.name])
         self.assertEqual(ok_filenames, [f.name])
 
     def test_read_section_to_file_initially_empty(self):
