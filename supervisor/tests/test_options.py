@@ -351,19 +351,15 @@ class ClientOptionsTests(unittest.TestCase):
 
     def test_read_config_unreadable(self):
         instance = self._makeOne()
-        def dummy_exists(fn):
-            return True
-        instance.exists = dummy_exists
         def dummy_open(fn, mode):
             raise IOError(errno.EACCES, 'Permission denied: %s' % fn)
         instance.open = dummy_open
 
         try:
-            instance.read_config('filename')
-        except ValueError, e:
-            self.assertTrue("could not read config file" in str(e))
-        else:
+            instance.read_config(__file__)
             self.fail("expected exception")
+        except ValueError, exc:
+            self.assertTrue("could not read config file" in exc.args[0])
 
     def test_read_config_no_supervisord_section_raises_valueerror(self):
         instance = self._makeOne()
@@ -780,33 +776,25 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertFalse(old_warning in instance.parse_warnings)
 
     def test_read_config_not_found(self):
+        nonexistent = os.path.join(os.path.dirname(__file__), 'nonexistent')
         instance = self._makeOne()
-        def dummy_exists(fn):
-            return False
-        instance.exists = dummy_exists
-
         try:
-            instance.read_config('filename')
-        except ValueError, e:
-            self.assertTrue("could not find config file" in str(e))
-        else:
-            self.fail("expected exception")
+            instance.read_config(nonexistent)
+            self.fail("nothing raised")
+        except ValueError, exc:
+            self.assertTrue("could not find config file" in exc.args[0])
 
     def test_read_config_unreadable(self):
         instance = self._makeOne()
-        def dummy_exists(fn):
-            return True
-        instance.exists = dummy_exists
         def dummy_open(fn, mode):
             raise IOError(errno.EACCES, 'Permission denied: %s' % fn)
         instance.open = dummy_open
 
         try:
-            instance.read_config('filename')
-        except ValueError, e:
-            self.assertTrue("could not read config file" in str(e))
-        else:
-            self.fail("expected exception")
+            instance.read_config(__file__)
+            self.fail("nothing raised")
+        except ValueError, exc:
+            self.assertTrue("could not read config file" in exc.args[0])
 
     def test_read_config_malformed_config_file_raises_valueerror(self):
         instance = self._makeOne()
