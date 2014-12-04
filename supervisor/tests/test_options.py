@@ -1224,6 +1224,22 @@ class ServerOptionsTests(unittest.TestCase):
         instance.pidfile = notfound
         instance.cleanup() # shouldn't raise
 
+    def test_cleanup_fds_closes_5_upto_minfds_ignores_oserror(self):
+        instance = self._makeOne()
+        instance.minfds = 10
+
+        closed = []
+        def close(fd):
+            if fd == 7:
+                raise OSError
+            closed.append(fd)
+
+        @patch('os.close', close)
+        def f():
+            instance.cleanup_fds()
+        f()
+        self.assertEqual(closed, [5,6,8,9])
+
     def test_close_httpservers(self):
         instance = self._makeOne()
         class Server:
@@ -1330,6 +1346,11 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertRaises(OSError, os.read, innie, 0)
         instance.close_fd(outie)
         self.assertRaises(OSError, os.write, outie, as_bytes('foo'))
+
+    @patch('os.close', Mock(side_effect=OSError))
+    def test_close_fd_ignores_oserror(self):
+        instance = self._makeOne()
+        instance.close_fd(0) # shouldn't raise
 
     def test_processes_from_section(self):
         instance = self._makeOne()
@@ -2081,9 +2102,9 @@ class ServerOptionsTests(unittest.TestCase):
         config.expansions = instance.environ_expansions
         config.read_string(text)
 
-        #Patch pwd and grp module functions to give us sentinel
-        #uid/gid values so that the test does not depend on
-        #any specific system users
+        # Patch pwd and grp module functions to give us sentinel
+        # uid/gid values so that the test does not depend on
+        # any specific system users
         pwd_mock = Mock()
         pwd_mock.return_value = (None, None, sentinel.uid, sentinel.gid)
         grp_mock = Mock()
