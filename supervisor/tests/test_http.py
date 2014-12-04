@@ -1,4 +1,5 @@
 import base64
+import cgi
 import os
 import stat
 import sys
@@ -18,6 +19,8 @@ from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyRequest
 
 from supervisor.http import NOT_DONE_YET
+
+TAILF_LOG_WRAPPER = '<pre style="word-wrap: break-word;">{0}</pre>'
 
 class HandlerTests:
     def _makeOne(self, supervisord):
@@ -68,7 +71,7 @@ class LogtailHandlerTests(HandlerTests, unittest.TestCase):
         from supervisor.medusa import http_date
         self.assertEqual(request.headers['Last-Modified'],
                          http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
-        self.assertEqual(request.headers['Content-Type'], 'text/plain')
+        self.assertEqual(request.headers['Content-Type'], 'text/html')
         self.assertEqual(len(request.producers), 1)
         self.assertEqual(request._done, True)
 
@@ -104,7 +107,7 @@ class MainLogTailHandlerTests(HandlerTests, unittest.TestCase):
         from supervisor.medusa import http_date
         self.assertEqual(request.headers['Last-Modified'],
                          http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
-        self.assertEqual(request.headers['Content-Type'], 'text/plain')
+        self.assertEqual(request.headers['Content-Type'], 'text/html')
         self.assertEqual(len(request.producers), 1)
         self.assertEqual(request._done, True)
 
@@ -125,11 +128,11 @@ class TailFProducerTests(unittest.TestCase):
         f.flush()
         producer = self._makeOne(request, f.name, 80)
         result = producer.more()
-        self.assertEqual(result, as_bytes('a' * 80))
+        self.assertEqual(result, TAILF_LOG_WRAPPER.format(cgi.escape(as_bytes('a' * 80).decode('utf-8'))))
         f.write(as_bytes('w' * 100))
         f.flush()
         result = producer.more()
-        self.assertEqual(result, as_bytes('w' * 100))
+        self.assertEqual(result, TAILF_LOG_WRAPPER.format(cgi.escape(as_bytes('w' * 100).decode('utf-8'))))
         result = producer.more()
         self.assertEqual(result, http.NOT_DONE_YET)
         f.truncate(0)

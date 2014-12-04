@@ -1,3 +1,4 @@
+import cgi
 import os
 import stat
 import time
@@ -664,7 +665,7 @@ class tail_f_producer:
             self.file.seek(-bytes_added, 2)
             bytes = self.file.read(bytes_added)
             self.sz = newsz
-            return bytes
+            return '<pre style="word-wrap: break-word;">{0}</pre>'.format(cgi.escape(bytes.decode('utf-8')))
         return NOT_DONE_YET
 
     def _open(self):
@@ -746,7 +747,7 @@ class logtail_handler:
 
         mtime = os.stat(logfile)[stat.ST_MTIME]
         request['Last-Modified'] = http_date.build_http_date(mtime)
-        request['Content-Type'] = 'text/plain'
+        request['Content-Type'] = 'text/html'
         # the lack of a Content-Length header makes the outputter
         # send a 'Transfer-Encoding: chunked' response
 
@@ -777,7 +778,7 @@ class mainlogtail_handler:
 
         mtime = os.stat(logfile)[stat.ST_MTIME]
         request['Last-Modified'] = http_date.build_http_date(mtime)
-        request['Content-Type'] = 'text/plain'
+        request['Content-Type'] = 'text/html'
         # the lack of a Content-Length header makes the outputter
         # send a 'Transfer-Encoding: chunked' response
 
