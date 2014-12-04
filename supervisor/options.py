@@ -1538,13 +1538,13 @@ class ServerOptions(Options):
 
     def close_parent_pipes(self, pipes):
         for fdname in ('stdin', 'stdout', 'stderr'):
-            fd = pipes[fdname]
+            fd = pipes.get(fdname)
             if fd is not None:
                 self.close_fd(fd)
 
     def close_child_pipes(self, pipes):
         for fdname in ('child_stdin', 'child_stdout', 'child_stderr'):
-            fd = pipes[fdname]
+            fd = pipes.get(fdname)
             if fd is not None:
                 self.close_fd(fd)
 
