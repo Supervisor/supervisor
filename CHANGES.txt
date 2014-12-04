@@ -1,6 +1,9 @@
 3.2.0 (Next 3.x Release)
 ------------------------
 
+- Files included via the ``[include]`` section are read in sorted order.  In
+  past versions, the order was undefined.  Patch by Ionel Cristian Mărieș.
+
 - ``supervisorctl start`` and ``supervisorctl stop`` now complete more quickly
   when handling many processes.  Thanks to Chris McDonough for this patch.
   See: https://github.com/Supervisor/supervisor/issues/131
