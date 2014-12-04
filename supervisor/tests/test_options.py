@@ -700,12 +700,12 @@ class ServerOptionsTests(unittest.TestCase):
         user=root
 
         [include]
-        files=nonexistant/*
+        files=nonexistent/*
         """)
         instance.configfile = StringIO(text)
         instance.realize(args=[])
         self.assertEqual(instance.parse_warnings,
-                         ['No file matches via include "./nonexistant/*"'])
+                         ['No file matches via include "./nonexistent/*"'])
 
     def test_get_pid(self):
         instance = self._makeOne()
@@ -2320,13 +2320,13 @@ class UnhosedConfigParserTests(unittest.TestCase):
         self.assertEqual(ok_filenames, [f.name])
 
     def test_read_returns_ok_filenames_like_rawconfigparser(self):
-        nonexistant = os.path.join(os.path.dirname(__file__), "nonexistant")
+        nonexistent = os.path.join(os.path.dirname(__file__), "nonexistent")
         f = tempfile.NamedTemporaryFile(mode="w+")
         parser = self._makeOne()
         try:
             f.write("[foo]\n")
             f.flush()
-            ok_filenames = parser.read([nonexistant, f.name])
+            ok_filenames = parser.read([nonexistent, f.name])
         finally:
             f.close()
         self.assertEqual(ok_filenames, [f.name])

@@ -396,7 +396,7 @@ log: closing channel 4:&lt;http_client connected at 80ef3e8&gt;
       The <code>handle_connect</code> method no longer assumes it can
       send its request string successfully.  We move its work over to
       <code>handle_write</code>; which trims <code>self.buffer</code>
-      as pieces of it are sent succesfully.
+      as pieces of it are sent successfully.
 
     <p>
       We also introduce the <code>writable</code> method.  Each time

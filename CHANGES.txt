@@ -762,7 +762,7 @@
   "groupname", and "from_state" (the name of the previous state) in
   their serializations.
 
-  PROCESS_STATE_EXITED additionaly has "expected" (1 or 0) and "pid"
+  PROCESS_STATE_EXITED additionally has "expected" (1 or 0) and "pid"
   (the process id) in its serialization.
 
   PROCESS_STATE_RUNNING, PROCESS_STATE_STOPPING,
@@ -1069,7 +1069,7 @@
 - Some child processes may not have been shut down properly at
   supervisor shutdown time.
 
-- Move to ZPL-derived (but not ZPL) license availble from
+- Move to ZPL-derived (but not ZPL) license available from
   http://www.repoze.org/LICENSE.txt; it's slightly less restrictive
   than the ZPL (no servicemark clause).
 

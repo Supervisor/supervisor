@@ -265,7 +265,7 @@ by a carriage return, follwed by the result content.  For example,
 listener will use either ``OK`` or ``FAIL`` as the result content.
 These strings have special meaning to the default result handler.
 
-If the defaut result handler receives ``OK`` as result content, it
+If the default result handler receives ``OK`` as result content, it
 will assume that the listener processed the event notification
 successfully.  If it receives ``FAIL``, it will assume that the
 listener has failed to process the event, and the event will be
@@ -350,7 +350,7 @@ in" to Supervisor.  As such, event listeners can impact the state of a
 Supervisor subprocess as a result of receiving an event notification.
 For example, you may want to generate an event every few minutes
 related to process usage of Supervisor-controlled subprocesses, and if
-any of those processes exceed some memory threshhold, you would like
+any of those processes exceed some memory threshold, you would like
 to restart it.  You would write a program that caused supervisor to
 generate ``PROCESS_COMMUNICATION`` events every so often with memory
 information in them, and an event listener to perform an action based

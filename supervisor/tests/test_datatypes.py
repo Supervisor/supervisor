@@ -315,7 +315,7 @@ class ExistingDirectoryTests(unittest.TestCase):
         self.assertEqual(path, self._callFUT(path))
 
     def test_dir_does_not_exist(self):
-        path = os.path.join(os.path.dirname(__file__), 'nonexistant')
+        path = os.path.join(os.path.dirname(__file__), 'nonexistent')
         try:
             self._callFUT(path)
             self.fail()
@@ -356,7 +356,7 @@ class ExistingDirpathTests(unittest.TestCase):
         self.assertEqual(self._callFUT('foo'), 'foo')
 
     def test_raises_if_dir_does_not_exist(self):
-        path = os.path.join(os.path.dirname(__file__), 'nonexistant', 'foo')
+        path = os.path.join(os.path.dirname(__file__), 'nonexistent', 'foo')
         try:
             self._callFUT(path)
             self.fail()

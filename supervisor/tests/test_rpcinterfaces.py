@@ -1248,7 +1248,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
-                             interface.getProcessInfo, 'nonexistant')
+                             interface.getProcessInfo, 'nonexistent')
 
     def test_getProcessInfo_bad_name_when_no_process(self):
         from supervisor import xmlrpc
@@ -1849,7 +1849,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         from supervisor import xmlrpc
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
                              interface.sendProcessStdin,
-                             'nonexistant', 'chars for stdin')
+                             'nonexistent', 'chars for stdin')
 
     def test_sendProcessStdin_raises_bad_name_when_no_process(self):
         options = DummyOptions()

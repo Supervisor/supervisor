@@ -184,7 +184,7 @@ the ``user=`` program config option.  If you need to set environment
 variables for a particular program that might otherwise be set by a
 shell invocation for a particular user, you must do it explicitly
 within the ``environment=`` program config option.  An
-example of setting these enviroment variables is as below.
+example of setting these environment variables is as below.
 
 .. code-block:: ini
 

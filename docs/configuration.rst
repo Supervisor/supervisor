@@ -673,7 +673,7 @@ where specified.
 
   The number of serial failure attempts that :program:`supervisord`
   will allow when attempting to start the program before giving up and
-  puting the process into an ``FATAL`` state.  See
+  putting the process into an ``FATAL`` state.  See
   :ref:`process_states` for explanation of the ``FATAL`` state.
 
   *Default*: 3

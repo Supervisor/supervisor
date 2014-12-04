@@ -46,7 +46,7 @@ finally install Supervisor itself.
 .. note::
 
    Depending on the permissions of your system's Python, you might
-   need to be the root user to sucessfully invoke ``python
+   need to be the root user to successfully invoke ``python
    setup.py install``.
 
 Installing To A System Without Internet Access
@@ -80,7 +80,7 @@ Finally, run supervisor's ``python setup.py install``.
 
    Depending on the permissions of your system's Python, you might
    need to be the root user to invoke ``python setup.py install``
-   sucessfully for each package.
+   successfully for each package.
 
 Installing a Distribution Package
 ---------------------------------
