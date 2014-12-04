@@ -25,9 +25,6 @@ from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import lstrip
 
 
-logger = logging.getLogger(__name__)
-
-
 class OptionTests(unittest.TestCase):
 
     def _getTargetClass(self):
@@ -2641,10 +2638,6 @@ class TestProcessConfig(unittest.TestCase):
             with tempfile.NamedTemporaryFile() as stderr_logfile:
                 instance.stdout_logfile = stdout_logfile.name
                 instance.stderr_logfile = stderr_logfile.name
-                logger.debug('instance.stdout_logfile = %r',
-                             instance.stdout_logfile)
-                logger.debug('instance.stderr_logfile = %r',
-                             instance.stderr_logfile)
                 instance.redirect_stderr = False
                 process1 = DummyProcess(instance)
                 dispatchers, pipes = instance.make_dispatchers(process1)
@@ -2664,8 +2657,6 @@ class TestProcessConfig(unittest.TestCase):
         instance = self._makeOne(options)
         with tempfile.NamedTemporaryFile() as stdout_logfile:
             instance.stdout_logfile = stdout_logfile.name
-            logger.debug('instance.stdout_logfile = %r',
-                         instance.stdout_logfile)
             process1 = DummyProcess(instance)
             dispatchers, pipes = instance.make_dispatchers(process1)
             self.assertEqual(dispatchers[5].channel, 'stdout')
@@ -2716,10 +2707,6 @@ class FastCGIProcessConfigTest(unittest.TestCase):
             with tempfile.NamedTemporaryFile() as stderr_logfile:
                 instance.stdout_logfile = stdout_logfile.name
                 instance.stderr_logfile = stderr_logfile.name
-                logger.debug('instance.stdout_logfile = %r',
-                             instance.stdout_logfile)
-                logger.debug('instance.stderr_logfile = %r',
-                             instance.stderr_logfile)
                 instance.redirect_stderr = False
                 process1 = DummyProcess(instance)
                 dispatchers, pipes = instance.make_dispatchers(process1)
