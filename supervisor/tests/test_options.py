@@ -25,16 +25,6 @@ from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import lstrip
 
 
-class DummyExitException(Exception):
-    def __init__(self, exitcode):
-        self.exitcode = exitcode
-
-def dummy_exit():
-    """Dummy out exit so we don't actually exit"""
-    def dummy_exit(_exitcode=0):
-        raise DummyExitException(exitcode=_exitcode)
-    return dummy_exit
-
 logger = logging.getLogger(__name__)
 
 
@@ -213,15 +203,13 @@ class OptionTests(unittest.TestCase):
 
     def test_config_reload_do_usage_true(self):
         options = self._makeOptions(read_error='error')
-        L = []
-        def exit(num):
-            L.append(num)
+        exitcodes = []
+        options.exit = lambda x: exitcodes.append(x)
         options.stderr = options.stdout = StringIO()
-        options.exit = exit
         options.configroot.anoption = 1
         options.configroot.other = 1
         options.process_config(True)
-        self.assertEqual(L, [2])
+        self.assertEqual(exitcodes, [2])
 
     def test__set(self):
         from supervisor.options import Options
@@ -241,14 +229,11 @@ class OptionTests(unittest.TestCase):
     def test_missing_default_config(self):
         options = self._makeOptions()
         options.searchpaths = []
-        options.exit = dummy_exit()
+        exitcodes = []
+        options.exit = lambda x: exitcodes.append(x)
         options.stderr = StringIO()
-        try:
-            options.default_configfile()
-        except DummyExitException as e:
-            self.assertEqual(e.exitcode, 2)
-        else:
-            self.fail("expected exception")
+        options.default_configfile()
+        self.assertEqual(exitcodes, [2])
         msg = "Error: No config file found at default paths"
         self.assertTrue(options.stderr.getvalue().startswith(msg))
 
@@ -261,12 +246,13 @@ class OptionTests(unittest.TestCase):
 
     def test_help(self):
         options = self._makeOptions()
-        options.exit = dummy_exit()
+        exitcodes = []
+        options.exit = lambda x: exitcodes.append(x)
         options.stdout = StringIO()
         options.progname = 'test_help'
         options.doc = 'A sample docstring for %s'
-        self.assertRaises(DummyExitException,
-            options.help, 'Argument ignored?')
+        options.help('')
+        self.assertEqual(exitcodes, [0])
         msg = 'A sample docstring for test_help\n'
         self.assertEqual(options.stdout.getvalue(), msg)
 
@@ -281,16 +267,14 @@ class ClientOptionsTests(unittest.TestCase):
     def test_no_config_file(self):
         """Making sure config file is not required."""
         instance = self._makeOne()
-
-        # No default config file search in case they would exist
-        self.assertTrue(len(instance.searchpaths) > 0)
         instance.searchpaths = []
-
-        instance.exit = dummy_exit()
+        exitcodes = []
+        instance.exit = lambda x: exitcodes.append(x)
 
         instance.realize(args=['-s', 'http://localhost:9001', '-u', 'chris',
                                '-p', '123'])
 
+        self.assertEqual(exitcodes, [])
         self.assertEqual(instance.interactive, 1)
         self.assertEqual(instance.serverurl, 'http://localhost:9001')
         self.assertEqual(instance.username, 'chris')
@@ -668,30 +652,6 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.nocleanup, True)
         self.assertEqual(instance.minfds, 2048)
         self.assertEqual(instance.minprocs, 300)
-
-    def test_no_config_file_exits(self):
-        instance = self._makeOne()
-
-        # No default config file search in case they would exist
-        self.assertTrue(len(instance.searchpaths) > 0)
-        instance.searchpaths = []
-
-        instance.exit = dummy_exit()
-
-        # Making sure we capture stdout and stderr
-        instance.stderr = StringIO()
-
-        try:
-            instance.realize(args=[])
-        except DummyExitException as e:
-            # Caught expected exception
-            import traceback
-            self.assertEqual(
-                e.exitcode, 2,
-                "Wrong exitcode for: %s" % traceback.format_exc()
-                )
-        else:
-            self.fail("Did not get a DummyExitException.")
 
     def test_reload(self):
         text = lstrip("""\
