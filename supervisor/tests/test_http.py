@@ -56,21 +56,21 @@ class LogtailHandlerTests(HandlerTests, unittest.TestCase):
         self.assertEqual(request._error, 410)
 
     def test_handle_request(self):
-        f = tempfile.NamedTemporaryFile()
-        t = f.name
-        options = DummyOptions()
-        pconfig = DummyPConfig(options, 'foo', 'foo', stdout_logfile=t)
-        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
-        handler = self._makeOne(supervisord)
-        request = DummyRequest('/logtail/foo', None, None, None)
-        handler.handle_request(request)
-        self.assertEqual(request._error, None)
-        from supervisor.medusa import http_date
-        self.assertEqual(request.headers['Last-Modified'],
-                         http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
-        self.assertEqual(request.headers['Content-Type'], 'text/plain')
-        self.assertEqual(len(request.producers), 1)
-        self.assertEqual(request._done, True)
+        with tempfile.NamedTemporaryFile() as f:
+            t = f.name
+            options = DummyOptions()
+            pconfig = DummyPConfig(options, 'foo', 'foo', stdout_logfile=t)
+            supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+            handler = self._makeOne(supervisord)
+            request = DummyRequest('/logtail/foo', None, None, None)
+            handler.handle_request(request)
+            self.assertEqual(request._error, None)
+            from supervisor.medusa import http_date
+            self.assertEqual(request.headers['Last-Modified'],
+                http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
+            self.assertEqual(request.headers['Content-Type'], 'text/plain')
+            self.assertEqual(len(request.producers), 1)
+            self.assertEqual(request._done, True)
 
 class MainLogTailHandlerTests(HandlerTests, unittest.TestCase):
     def _getTargetClass(self):
@@ -94,19 +94,19 @@ class MainLogTailHandlerTests(HandlerTests, unittest.TestCase):
 
     def test_handle_request(self):
         supervisor = DummySupervisor()
-        f = tempfile.NamedTemporaryFile()
-        t = f.name
-        supervisor.options.logfile = t
-        handler = self._makeOne(supervisor)
-        request = DummyRequest('/mainlogtail', None, None, None)
-        handler.handle_request(request)
-        self.assertEqual(request._error, None)
-        from supervisor.medusa import http_date
-        self.assertEqual(request.headers['Last-Modified'],
-                         http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
-        self.assertEqual(request.headers['Content-Type'], 'text/plain')
-        self.assertEqual(len(request.producers), 1)
-        self.assertEqual(request._done, True)
+        with tempfile.NamedTemporaryFile() as f:
+            t = f.name
+            supervisor.options.logfile = t
+            handler = self._makeOne(supervisor)
+            request = DummyRequest('/mainlogtail', None, None, None)
+            handler.handle_request(request)
+            self.assertEqual(request._error, None)
+            from supervisor.medusa import http_date
+            self.assertEqual(request.headers['Last-Modified'],
+                http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
+            self.assertEqual(request.headers['Content-Type'], 'text/plain')
+            self.assertEqual(len(request.producers), 1)
+            self.assertEqual(request._done, True)
 
 
 class TailFProducerTests(unittest.TestCase):
@@ -139,12 +139,12 @@ class TailFProducerTests(unittest.TestCase):
 
     def test_handle_more_fd_closed(self):
         request = DummyRequest('/logtail/foo', None, None, None)
-        f = tempfile.NamedTemporaryFile()
-        f.write(as_bytes('a' * 80))
-        f.flush()
-        producer = self._makeOne(request, f.name, 80)
-        producer.file.close()
-        result = producer.more()
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(as_bytes('a' * 80))
+            f.flush()
+            producer = self._makeOne(request, f.name, 80)
+            producer.file.close()
+            result = producer.more()
         self.assertEqual(result, producer.more())
 
     def test_handle_more_follow_file_recreated(self):

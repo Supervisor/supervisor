@@ -35,10 +35,6 @@ def dummy_exit():
         raise DummyExitException(exitcode=_exitcode)
     return dummy_exit
 
-def _getTempFile(name):
-    prefix = 'supervisor.{0}.'.format(name)
-    return tempfile.NamedTemporaryFile(prefix=prefix)
-
 logger = logging.getLogger(__name__)
 
 
@@ -258,11 +254,10 @@ class OptionTests(unittest.TestCase):
 
     def test_default_config(self):
         options = self._makeOptions()
-        tempf = tempfile.NamedTemporaryFile()
-        options.searchpaths = [tempf.name]
-        config = options.default_configfile()
-        self.assertEqual(config, tempf.name)
-        tempf.close()
+        with tempfile.NamedTemporaryFile() as f:
+            options.searchpaths = [f.name]
+            config = options.default_configfile()
+            self.assertEqual(config, f.name)
 
     def test_help(self):
         options = self._makeOptions()
@@ -813,17 +808,16 @@ class ServerOptionsTests(unittest.TestCase):
 
     def test_read_config_malformed_config_file_raises_valueerror(self):
         instance = self._makeOne()
-        f = tempfile.NamedTemporaryFile(mode="w+")
-        try:
-            f.write("[supervisord]\njunk")
-            f.flush()
-            instance.read_config(f.name)
-            self.fail("nothing raised")
-        except ValueError as exc:
-            self.assertTrue('contains parsing errors:' in exc.args[0])
-            self.assertTrue(f.name in exc.args[0])
-        finally:
-            f.close()
+
+        with tempfile.NamedTemporaryFile(mode="w+") as f:
+            try:
+                f.write("[supervisord]\njunk")
+                f.flush()
+                instance.read_config(f.name)
+                self.fail("nothing raised")
+            except ValueError as exc:
+                self.assertTrue('contains parsing errors:' in exc.args[0])
+                self.assertTrue(f.name in exc.args[0])
 
     def test_read_config_no_supervisord_section_raises_valueerror(self):
         instance = self._makeOne()
@@ -1778,22 +1772,20 @@ class ServerOptionsTests(unittest.TestCase):
         [program:foo]
         ;no command
         """)
-        f = tempfile.NamedTemporaryFile(mode="w+")
-        try:
-            f.write(text)
-            f.flush()
-            from supervisor.options import UnhosedConfigParser
-            config = UnhosedConfigParser()
-            config.read(f.name)
-            instance.processes_from_section(config, 'program:foo', None)
-        except ValueError as e:
-            self.assertEqual(e.args[0],
-                "program section program:foo does not specify a command "
-                "in section 'program:foo' (file: %s)" % f.name)
-        else:
-            self.fail('nothing raised')
-        finally:
-            f.close()
+        with tempfile.NamedTemporaryFile(mode="w+") as f:
+            try:
+                f.write(text)
+                f.flush()
+                from supervisor.options import UnhosedConfigParser
+                config = UnhosedConfigParser()
+                config.read(f.name)
+                instance.processes_from_section(config, 'program:foo', None)
+            except ValueError as e:
+                self.assertEqual(e.args[0],
+                    "program section program:foo does not specify a command "
+                    "in section 'program:foo' (file: %s)" % f.name)
+            else:
+                self.fail('nothing raised')
 
     def test_processes_from_section_autolog_without_rollover(self):
         instance = self._makeOne()
@@ -2685,8 +2677,8 @@ class TestProcessConfig(unittest.TestCase):
     def test_make_dispatchers_stderr_not_redirected(self):
         options = DummyOptions()
         instance = self._makeOne(options)
-        with _getTempFile('stderr_logfile') as stdout_logfile:
-            with _getTempFile('stderr_logfile') as stderr_logfile:
+        with tempfile.NamedTemporaryFile() as stdout_logfile:
+            with tempfile.NamedTemporaryFile() as stderr_logfile:
                 instance.stdout_logfile = stdout_logfile.name
                 instance.stderr_logfile = stderr_logfile.name
                 logger.debug('instance.stdout_logfile = %r',
@@ -2710,7 +2702,7 @@ class TestProcessConfig(unittest.TestCase):
     def test_make_dispatchers_stderr_redirected(self):
         options = DummyOptions()
         instance = self._makeOne(options)
-        with _getTempFile('stderr_logfile') as stdout_logfile:
+        with tempfile.NamedTemporaryFile() as stdout_logfile:
             instance.stdout_logfile = stdout_logfile.name
             logger.debug('instance.stdout_logfile = %r',
                          instance.stdout_logfile)
@@ -2760,8 +2752,8 @@ class FastCGIProcessConfigTest(unittest.TestCase):
     def test_make_dispatchers(self):
         options = DummyOptions()
         instance = self._makeOne(options)
-        with _getTempFile('stderr_logfile') as stdout_logfile:
-            with _getTempFile('stderr_logfile') as stderr_logfile:
+        with tempfile.NamedTemporaryFile() as stdout_logfile:
+            with tempfile.NamedTemporaryFile() as stderr_logfile:
                 instance.stdout_logfile = stdout_logfile.name
                 instance.stderr_logfile = stderr_logfile.name
                 logger.debug('instance.stdout_logfile = %r',
@@ -2985,37 +2977,28 @@ class UnhosedConfigParserTests(unittest.TestCase):
         self.assertEqual(parser.getdefault("foo"), "bar")
 
     def test_read_filenames_as_string(self):
-        f = tempfile.NamedTemporaryFile(mode="w+")
         parser = self._makeOne()
-        try:
+        with tempfile.NamedTemporaryFile(mode="w+") as f:
             f.write("[foo]\n")
             f.flush()
             ok_filenames = parser.read(f.name)
-        finally:
-            f.close()
         self.assertEqual(ok_filenames, [f.name])
 
     def test_read_filenames_as_list(self):
-        f = tempfile.NamedTemporaryFile(mode="w+")
         parser = self._makeOne()
-        try:
+        with tempfile.NamedTemporaryFile(mode="w+") as f:
             f.write("[foo]\n")
             f.flush()
             ok_filenames = parser.read([f.name])
-        finally:
-            f.close()
         self.assertEqual(ok_filenames, [f.name])
 
     def test_read_returns_ok_filenames_like_rawconfigparser(self):
         nonexistant = os.path.join(os.path.dirname(__file__), "nonexistant")
-        f = tempfile.NamedTemporaryFile(mode="w+")
         parser = self._makeOne()
-        try:
+        with tempfile.NamedTemporaryFile(mode="w+") as f:
             f.write("[foo]\n")
             f.flush()
             ok_filenames = parser.read([nonexistant, f.name])
-        finally:
-            f.close()
         self.assertEqual(ok_filenames, [f.name])
 
     def test_read_section_to_file_initially_empty(self):
@@ -3023,29 +3006,22 @@ class UnhosedConfigParserTests(unittest.TestCase):
         self.assertEqual(parser.section_to_file, {})
 
     def test_read_section_to_file_read_one_file(self):
-        f = tempfile.NamedTemporaryFile(mode="w+")
-        try:
+        parser = self._makeOne()
+        with tempfile.NamedTemporaryFile(mode="w+") as f:
             f.write("[foo]\n")
             f.flush()
-            parser = self._makeOne()
             parser.read([f.name])
-        finally:
-            f.close()
         self.assertEqual(parser.section_to_file['foo'], f.name)
 
     def test_read_section_to_file_read_multiple_files(self):
-        f1 = tempfile.NamedTemporaryFile(mode="w+")
-        f2 = tempfile.NamedTemporaryFile(mode="w+")
-        try:
-            f1.write("[foo]\n")
-            f1.flush()
-            f2.write("[bar]\n")
-            f2.flush()
-            parser = self._makeOne()
-            parser.read([f1.name, f2.name])
-        finally:
-            f1.close()
-            f2.close()
+        parser = self._makeOne()
+        with tempfile.NamedTemporaryFile(mode="w+") as f1:
+            with tempfile.NamedTemporaryFile(mode="w+") as f2:
+                f1.write("[foo]\n")
+                f1.flush()
+                f2.write("[bar]\n")
+                f2.flush()
+                parser.read([f1.name, f2.name])
         self.assertEqual(parser.section_to_file['foo'], f1.name)
         self.assertEqual(parser.section_to_file['bar'], f2.name)
 
