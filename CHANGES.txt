@@ -48,6 +48,9 @@
   happen is if a log filename was accidentally set to a directory instead
   of a file.  Thanks to Grzegorz Nosek for reporting this issue.
 
+- Files included via the `[include]` section are read in sorted order.  In
+  past versions, the order was undefined.  Patch by Ionel Cristian Mărieș.
+
 3.1.3 (2014-10-28)
 ------------------
 

@@ -896,6 +896,41 @@ class ServerOptionsTests(unittest.TestCase):
         finally:
             shutil.rmtree(dirname)
 
+    def test_include_reads_files_in_sorted_order(self):
+        dirname = tempfile.mkdtemp()
+        conf_d = os.path.join(dirname, "conf.d")
+        os.mkdir(conf_d)
+
+        supervisord_conf = os.path.join(dirname, "supervisord.conf")
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        files=%s/conf.d/*.conf
+        """ % dirname)
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+
+        from supervisor.compat import letters
+        a_z = letters[:26]
+        for letter in reversed(a_z):
+            filename = os.path.join(conf_d, "%s.conf" % letter)
+            with open(filename, "w") as f:
+                f.write("[program:%s]\n"
+                        "command=/bin/%s\n" % (letter, letter))
+
+        instance = self._makeOne()
+        try:
+            instance.read_config(supervisord_conf)
+            expected_msgs = []
+            for letter in sorted(a_z):
+                filename = os.path.join(conf_d, "%s.conf" % letter)
+                expected_msgs.append(
+                    'Included extra file "%s" during parsing' % filename)
+            self.assertEqual(instance.parse_warnings, expected_msgs)
+        finally:
+            shutil.rmtree(dirname)
+
     def test_read_config_include_extra_file_malformed(self):
         dirname = tempfile.mkdtemp()
         conf_d = os.path.join(dirname, "conf.d")
