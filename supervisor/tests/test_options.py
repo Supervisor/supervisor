@@ -1076,6 +1076,57 @@ class ServerOptionsTests(unittest.TestCase):
         instance.close_logger()
         self.assertEqual(logger.closed, True)
 
+    def test_close_parent_pipes(self):
+        instance = self._makeOne()
+        closed = []
+        def close_fd(fd):
+            closed.append(fd)
+        instance.close_fd = close_fd
+        pipes = {'stdin': 0, 'stdout': 1, 'stderr': 2,
+                 'child_stdin': 3, 'child_stdout': 4, 'child_stderr': 5}
+        instance.close_parent_pipes(pipes)
+        self.assertEqual(sorted(closed), [0, 1, 2])
+
+    def test_close_parent_pipes_ignores_fd_of_none(self):
+        instance = self._makeOne()
+        closed = []
+        def close_fd(fd):
+            closed.append(fd)
+        instance.close_fd = close_fd
+        pipes = {'stdin': None}
+        instance.close_parent_pipes(pipes)
+        self.assertEqual(closed, [])
+
+    def test_close_child_pipes(self):
+        instance = self._makeOne()
+        closed = []
+        def close_fd(fd):
+            closed.append(fd)
+        instance.close_fd = close_fd
+        pipes = {'stdin': 0, 'stdout': 1, 'stderr': 2,
+                 'child_stdin': 3, 'child_stdout': 4, 'child_stderr': 5}
+        instance.close_child_pipes(pipes)
+        self.assertEqual(sorted(closed), [3, 4, 5])
+
+    def test_close_child_pipes_ignores_fd_of_none(self):
+        instance = self._makeOne()
+        closed = []
+        def close_fd(fd):
+            closed.append(fd)
+        instance.close_fd = close_fd
+        pipes = {'child_stdin': None}
+        instance.close_parent_pipes(pipes)
+        self.assertEqual(sorted(closed), [])
+
+    def test_reopenlogs(self):
+        instance = self._makeOne()
+        logger = DummyLogger()
+        logger.handlers = [DummyLogger()]
+        instance.logger = logger
+        instance.reopenlogs()
+        self.assertEqual(logger.handlers[0].reopened, True)
+        self.assertEqual(logger.data[0], 'supervisord logreopen')
+
     def test_write_pidfile_ok(self):
         fn = tempfile.mktemp()
         try:
