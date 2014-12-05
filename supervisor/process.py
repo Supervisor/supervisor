@@ -483,7 +483,10 @@ class Subprocess(object):
         self.laststop = now
         processname = self.config.name
 
-        tooquickly = now - self.laststart < self.config.startsecs
+        """ In some rare circumstances self.laststart > now and the frequently
+            exiting processes will fail on this condition
+        """
+        tooquickly = max(0, (now - self.laststart)) < self.config.startsecs
         exit_expected = es in self.config.exitcodes
 
         if self.killing:
