@@ -1,6 +1,5 @@
 """Test suite for supervisor.options"""
 
-import logging
 import os
 import sys
 import tempfile
