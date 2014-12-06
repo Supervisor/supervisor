@@ -1271,7 +1271,7 @@ above constraints and additions.
    stdout_logfile_backups=10
    stderr_logfile=/a/path
    stderr_logfile_maxbytes=1MB
-   stderr_logfile_backups
+   stderr_logfile_backups=10
    environment=A="1",B="2"
 
 ``[eventlistener:x]`` Section Settings
@@ -1347,7 +1347,7 @@ above constraints and additions.
    stdout_logfile_backups=10
    stderr_logfile=/a/path
    stderr_logfile_maxbytes=1MB
-   stderr_logfile_backups
+   stderr_logfile_backups=10
    environment=A="1",B="2"
 
 ``[rpcinterface:x]`` Section Settings
