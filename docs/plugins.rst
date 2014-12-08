@@ -34,6 +34,9 @@ instances running on different servers.
     Command line tool for controlling multiple Supervisor instances
     using Ansible.
 
+`suponoff <https://github.com/GambitResearch/suponoff>`_
+    Web-based dashboard written in Python 3.  Requires Django 1.7 or later.
+
 Third Party Plugins and Libraries for Supervisor
 ------------------------------------------------
 
