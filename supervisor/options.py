@@ -1555,6 +1555,7 @@ class ClientOptions(Options):
     positional_args_allowed = 1
 
     interactive = None
+    supress_exit = None
     prompt = None
     serverurl = None
     username = None
@@ -1566,6 +1567,7 @@ class ClientOptions(Options):
         self.configroot = Dummy()
         self.configroot.supervisorctl = Dummy()
         self.configroot.supervisorctl.interactive = None
+        self.configroot.supervisorctl.supress_exit = None
         self.configroot.supervisorctl.prompt = 'supervisor'
         self.configroot.supervisorctl.serverurl = None
         self.configroot.supervisorctl.username = None
@@ -1580,6 +1582,8 @@ class ClientOptions(Options):
 
         self.add("interactive", "supervisorctl.interactive", "i",
                  "interactive", flag=1, default=0)
+        self.add("supress_exit", "supervisorctl.supress_exit", "e",
+                 "supress_exit", flag=1, default=0)
         self.add("prompt", "supervisorctl.prompt", default="supervisor")
         self.add("serverurl", "supervisorctl.serverurl", "s:", "serverurl=",
                  url, default="http://localhost:9001")
@@ -1591,6 +1595,7 @@ class ClientOptions(Options):
         Options.realize(self, *arg, **kw)
         if not self.args:
             self.interactive = 1
+            self.supress_exit = 1
 
     def read_config(self, fp):
         section = self.configroot.supervisorctl

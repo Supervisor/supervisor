@@ -222,7 +222,6 @@ Process Control
 
             {'name':           'process name',
              'group':          'group name',
-             'description':    'pid 18806, uptime 0:03:12'
              'start':          1200361776,
              'stop':           0,
              'now':            1200361812,
