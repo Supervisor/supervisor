@@ -128,6 +128,7 @@ class ControllerTests(unittest.TestCase):
         def raise_fault(*arg, **kw):
             raise socket.error(errno.ECONNREFUSED, 'nobody home')
         options._server.supervisor.getVersion = raise_fault
+        options.interactive = True
 
         controller = self._makeOne(options)
         controller.stdout = StringIO()
@@ -138,6 +139,19 @@ class ControllerTests(unittest.TestCase):
         output = controller.stdout.getvalue()
         self.assertTrue('refused connection' in output)
 
+    def test__upcheck_catches_socket_error_ECONNREFUSED_noninteractive(self):
+        options = DummyClientOptions()
+        import socket
+        import errno
+        def raise_fault(*arg, **kw):
+            raise socket.error(errno.ECONNREFUSED, 'nobody home')
+        options._server.supervisor.getVersion = raise_fault
+
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+
+        self.assertRaises(SystemExit, controller.upcheck)
+
     def test__upcheck_catches_socket_error_ENOENT(self):
         options = DummyClientOptions()
         import socket
@@ -145,6 +159,7 @@ class ControllerTests(unittest.TestCase):
         def raise_fault(*arg, **kw):
             raise socket.error(errno.ENOENT, 'nobody home')
         options._server.supervisor.getVersion = raise_fault
+        options.interactive = True
 
         controller = self._makeOne(options)
         controller.stdout = StringIO()
@@ -165,6 +180,19 @@ class ControllerTests(unittest.TestCase):
         controller = self._makeOne(options)
         controller.stdout = StringIO()
         self.assertRaises(socket.error, controller.upcheck)
+
+    def test__upcheck_catches_socket_error_ENOENT_noninteractive(self):
+        options = DummyClientOptions()
+        import socket
+        import errno
+        def raise_fault(*arg, **kw):
+            raise socket.error(errno.ENOENT, 'nobody home')
+        options._server.supervisor.getVersion = raise_fault
+
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+
+        self.assertRaises(SystemExit, controller.upcheck)
 
     def test_onecmd(self):
         options = DummyClientOptions()

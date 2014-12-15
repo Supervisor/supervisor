@@ -91,7 +91,7 @@ class fgthread(threading.Thread):
     def localtrace(self, frame, why, arg):
         if self.killed:
             if why == 'line':
-                raise SystemExit()
+                raise SystemExit(1)
         return self.localtrace
 
     def kill(self):
@@ -223,9 +223,13 @@ class Controller(cmd.Cmd):
         except socket.error as why:
             if why.args[0] == errno.ECONNREFUSED:
                 self.output('%s refused connection' % self.options.serverurl)
+                if not self.options.interactive:
+                    raise SystemExit(4)
                 return False
             elif why.args[0] == errno.ENOENT:
                 self.output('%s no such file' % self.options.serverurl)
+                if not self.options.interactive:
+                    raise SystemExit(5)
                 return False
             raise
         return True
