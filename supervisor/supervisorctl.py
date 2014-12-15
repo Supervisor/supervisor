@@ -169,7 +169,7 @@ class Controller(cmd.Cmd):
             except Exception:
                 (file, fun, line), t, v, tbinfo = asyncore.compact_traceback()
                 error = 'error: %s, %s: file: %s line: %s' % (t, v, file, line)
-                self.output(error)
+                self.error_output(error)
                 if not self.options.interactive:
                     sys.exit(2)
 
@@ -189,6 +189,12 @@ class Controller(cmd.Cmd):
                 stuff = stuff.encode('utf-8')
             self.stdout.write(stuff + '\n')
 
+    def error_output(self, stuff):
+        if stuff is not None:
+            if isinstance(stuff, unicode):
+                stuff = stuff.encode('utf-8')
+            self.stderr.write(stuff + '\n')
+
     def get_supervisor(self):
         return self.get_server_proxy('supervisor')
 
@@ -205,14 +211,14 @@ class Controller(cmd.Cmd):
             api = supervisor.getVersion() # deprecated
             from supervisor import rpcinterface
             if api != rpcinterface.API_VERSION:
-                self.output(
+                self.error_output(
                     'Sorry, this version of supervisorctl expects to '
                     'talk to a server with API version %s, but the '
                     'remote version is %s.' % (rpcinterface.API_VERSION, api))
                 return False
         except xmlrpclib.Fault as e:
             if e.faultCode == xmlrpc.Faults.UNKNOWN_METHOD:
-                self.output(
+                self.error_output(
                     'Sorry, supervisord responded but did not recognize '
                     'the supervisor namespace commands that supervisorctl '
                     'uses to control it.  Please check that the '
@@ -222,12 +228,12 @@ class Controller(cmd.Cmd):
             raise
         except socket.error as why:
             if why.args[0] == errno.ECONNREFUSED:
-                self.output('%s refused connection' % self.options.serverurl)
+                self.error_output('%s refused connection' % self.options.serverurl)
                 if not self.options.interactive:
                     raise SystemExit(4)
                 return False
             elif why.args[0] == errno.ENOENT:
-                self.output('%s no such file' % self.options.serverurl)
+                self.error_output('%s no such file' % self.options.serverurl)
                 if not self.options.interactive:
                     raise SystemExit(5)
                 return False
@@ -789,7 +795,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                                                   'name': process_name,
                                                   'group': group_name,
                                                   'description':e.faultString})
-                        self.ctl.output(error)
+                        self.ctl.error_output(error)
                     else:
                         name = make_namespec(group_name, process_name)
                         self.ctl.output('%s: stopped' % name)
@@ -806,7 +812,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
         args = arg.split()
         if len(args) < 2:
-            self.ctl.output(
+            self.ctl.error_output(
                 'Error: signal requires a signal name and a process name')
             self.help_signal()
             return
@@ -835,7 +841,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     except xmlrpclib.Fault as e:
                         if e.faultCode == xmlrpc.Faults.BAD_NAME:
                             error = "%s: ERROR (no such group)" % group_name
-                            self.ctl.output(error)
+                            self.ctl.error_output(error)
                         else:
                             raise
                 else:
@@ -846,7 +852,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                                                     'name': process_name,
                                                     'group': group_name,
                                                     'description':e.faultString})
-                        self.ctl.output(error)
+                        self.ctl.error_output(error)
                     else:
                         name = make_namespec(group_name, process_name)
                         self.ctl.output('%s: signalled' % name)
@@ -882,9 +888,9 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
     def do_shutdown(self, arg):
         if self.ctl.options.interactive:
-           yesno = raw_input('Really shut the remote supervisord process '
-                             'down y/N? ')
-           really = yesno.lower().startswith('y')
+            yesno = raw_input('Really shut the remote supervisord process '
+                              'down y/N? ')
+            really = yesno.lower().startswith('y')
         else:
             really = 1
 
@@ -999,7 +1005,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
     def handle_error(self, message=None, unhandled=False, logOnly=False):
         if message:
-            self.ctl.output(message)
+            self.ctl.error_output(message)
         if (not self.ctl.options.supress_exit and not self.ctl.options.interactive
                 and not logOnly):
             raise SystemExit(2)
@@ -1164,7 +1170,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                                                'name': process_name,
                                                'group': group_name,
                                                'description': e.faultString})
-                    self.ctl.output(error)
+                    self.ctl.error_output(error)
                 else:
                     name = make_namespec(group_name, process_name)
                     self.ctl.output('%s: cleared' % name)
@@ -1219,7 +1225,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 self.handle_error('Error: bad process name supplied')
                 return
             # for any other fault
-            self.ctl.output(str(msg))
+            self.ctl.error_output(str(msg))
             return
         if not info['state'] == states.ProcessStates.RUNNING:
             self.handle_error('Error: process not running')
@@ -1238,21 +1244,21 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     supervisor.sendProcessStdin(program, inp)
                 except xmlrpclib.Fault as msg:
                     if msg.faultCode == xmlrpc.Faults.NOT_RUNNING:
-                        self.ctl.output('Process got killed')
-                        self.ctl.output('Exiting foreground')
+                        self.ctl.error_output('Process got killed')
+                        self.ctl.error_output('Exiting foreground')
                         a.kill()
                         return
                 info = supervisor.getProcessInfo(program)
                 if not info['state'] == states.ProcessStates.RUNNING:
-                    self.ctl.output('Process got killed')
-                    self.ctl.output('Exiting foreground')
+                    self.ctl.error_output('Process got killed')
+                    self.ctl.error_output('Exiting foreground')
                     a.kill()
                     return
                 continue
         except (KeyboardInterrupt, EOFError):
             if a:
                 a.kill()
-            self.ctl.output('Exiting foreground')
+            self.ctl.error_output('Exiting foreground')
         return
 
     def help_fg(self,args=None):
@@ -1294,7 +1300,7 @@ def main(args=None, options=None):
             c.cmdqueue.append('status')
             c.cmdloop()
         except KeyboardInterrupt:
-            c.output('')
+            c.error_output('')
             pass
 
 if __name__ == "__main__":

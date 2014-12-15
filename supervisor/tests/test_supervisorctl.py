@@ -153,19 +153,6 @@ class ControllerTests(unittest.TestCase):
 
         self.assertRaises(SystemExit, controller.upcheck)
 
-    def test__upcheck_catches_socket_error_ECONNREFUSED_noninteractive(self):
-        options = DummyClientOptions()
-        import socket
-        import errno
-        def raise_fault(*arg, **kw):
-            raise socket.error(errno.ECONNREFUSED, 'nobody home')
-        options._server.supervisor.getVersion = raise_fault
-
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-
-        self.assertRaises(SystemExit, controller.upcheck)
-
     def test__upcheck_catches_socket_error_ENOENT(self):
         options = DummyClientOptions()
         import socket
