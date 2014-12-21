@@ -496,7 +496,7 @@ follows.
 
   *Required*:  No.
 
-  *Introduced*: post-3.0a4 (not including 3.0a4)
+  *Introduced*: 3.0a5
 
 ``[supervisorctl]`` Section Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -680,7 +680,7 @@ where specified.
 
   The number of serial failure attempts that :program:`supervisord`
   will allow when attempting to start the program before giving up and
-  puting the process into an ``FATAL`` state.  See
+  putting the process into an ``FATAL`` state.  See
   :ref:`process_states` for explanation of the ``FATAL`` state.
 
   *Default*: 3
@@ -771,6 +771,13 @@ where specified.
   If true, cause the process' stderr output to be sent back to
   :program:`supervisord` on its stdout file descriptor (in UNIX shell
   terms, this is the equivalent of executing ``/the/program 2>&1``).
+
+  .. note::
+
+     Do not set ``redirect_stderr=true`` in an ``[eventlistener:x]`` section.
+     Eventlisteners use ``stdout`` and ``stdin`` to communicate with
+     ``supervisord``.  If ``stderr`` is redirected, output from
+     ``stderr`` will interfere with the eventlistener protocol.
 
   *Default*: false
 
@@ -1013,22 +1020,26 @@ where specified.
    umask=022
    priority=999
    autostart=true
-   autorestart=true
+   autorestart=unexpected
    startsecs=10
    startretries=3
    exitcodes=0,2
    stopsignal=TERM
    stopwaitsecs=10
+   stopasgroup=false
+   killasgroup=false
    user=chrism
    redirect_stderr=false
    stdout_logfile=/a/path
    stdout_logfile_maxbytes=1MB
    stdout_logfile_backups=10
    stdout_capture_maxbytes=1MB
+   stdout_events_enabled=false
    stderr_logfile=/a/path
    stderr_logfile_maxbytes=1MB
    stderr_logfile_backups=10
    stderr_capture_maxbytes=1MB
+   stderr_events_enabled=false
    environment=A="1",B="2"
    serverurl=AUTO
 
@@ -1247,8 +1258,12 @@ above constraints and additions.
    [fcgi-program:fcgiprogramname]
    command=/usr/bin/example.fcgi
    socket=unix:///var/run/supervisor/%(program_name)s.sock
+   socket_owner=chrism
+   socket_mode=0700
    process_name=%(program_name)s_%(process_num)02d
    numprocs=5
+   directory=/tmp
+   umask=022
    priority=999
    autostart=true
    autorestart=unexpected
@@ -1256,16 +1271,21 @@ above constraints and additions.
    startretries=3
    exitcodes=0,2
    stopsignal=QUIT
+   stopasgroup=false
+   killasgroup=false
    stopwaitsecs=10
    user=chrism
    redirect_stderr=true
    stdout_logfile=/a/path
    stdout_logfile_maxbytes=1MB
    stdout_logfile_backups=10
+   stdout_events_enabled=false
    stderr_logfile=/a/path
    stderr_logfile_maxbytes=1MB
-   stderr_logfile_backups
+   stderr_logfile_backups=10
+   stderr_events_enabled=false
    environment=A="1",B="2"
+   serverurl=AUTO
 
 ``[eventlistener:x]`` Section Settings
 --------------------------------------
@@ -1325,6 +1345,8 @@ above constraints and additions.
    numprocs=5
    events=PROCESS_STATE
    buffer_size=10
+   directory=/tmp
+   umask=022
    priority=-1
    autostart=true
    autorestart=unexpected
@@ -1333,15 +1355,20 @@ above constraints and additions.
    exitcodes=0,2
    stopsignal=QUIT
    stopwaitsecs=10
+   stopasgroup=false
+   killasgroup=false
    user=chrism
-   redirect_stderr=true
+   redirect_stderr=false
    stdout_logfile=/a/path
    stdout_logfile_maxbytes=1MB
    stdout_logfile_backups=10
+   stdout_events_enabled=false
    stderr_logfile=/a/path
    stderr_logfile_maxbytes=1MB
-   stderr_logfile_backups
+   stderr_logfile_backups=10
+   stderr_events_enabled=false
    environment=A="1",B="2"
+   serverurl=AUTO
 
 ``[rpcinterface:x]`` Section Settings
 -------------------------------------
@@ -1468,7 +1495,7 @@ An example configuration snippet with customizable values:
    umask=022
    priority=999
    autostart=true
-   autorestart=true
+   autorestart=unexpected
    exitcodes=0,2
    user=%(ENV_USER)s
    redirect_stderr=false

@@ -24,11 +24,6 @@ else: # pragma: no cover
     def as_string(s): return s if isinstance(s, unicode) else s.decode('utf-8')
     reduce = reduce
 
-def print_function(*args,**kwargs): # pragma: no cover
-    kwargs.get('file', sys.stdout).write(
-        ' '.join(i for i in args)+kwargs.get('end','\n')
-        )
-
 def total_ordering(cls): # pragma: no cover
     """Class decorator that fills in missing ordering methods"""
     convert = {
@@ -77,11 +72,6 @@ try: # pragma: no cover
 except ImportError: # pragma: no cover
     import urlparse
     import urllib
-
-if PY3: # pragma: no cover
-    from base64 import encodebytes as encodestring
-else: # pragma: no cover
-    from base64 import encodestring
 
 try: # pragma: no cover
     from hashlib import sha1

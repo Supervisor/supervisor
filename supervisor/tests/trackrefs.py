@@ -67,19 +67,18 @@ class TrackRefs(object):
             all = sys.getrefcount(o) - 3
             n += all
 
-            t = type(o)
+            typ = type(o)
             try:
-                t = o.__class__
+                typ = o.__class__
             except Exception:
                 pass
 
-            if t in type2count:
-                type2count[t] += 1
-                type2all[t] += all
+            if typ in type2count:
+                type2count[typ] += 1
+                type2all[typ] += all
             else:
-                type2count[t] = 1
-                type2all[t] = all
-
+                type2count[typ] = 1
+                type2all[typ] = all
 
         ct = [(
                type_or_class_title(t),

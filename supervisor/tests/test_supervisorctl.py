@@ -4,6 +4,64 @@ from supervisor.compat import StringIO
 from supervisor.compat import xmlrpclib
 from supervisor.tests.base import DummyRPCServer
 
+class fgthread_Tests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.supervisorctl import fgthread
+        return fgthread
+
+    def _makeOne(self, program, ctl):
+        return self._getTargetClass()(program, ctl)
+
+    def test_ctor(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        self.assertEqual(inst.killed, False)
+
+    def test_globaltrace_call(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        result = inst.globaltrace(None, 'call', None)
+        self.assertEqual(result, inst.localtrace)
+
+    def test_globaltrace_noncall(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        result = inst.globaltrace(None, None, None)
+        self.assertEqual(result, None)
+
+    def test_localtrace_killed_whyline(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        inst.killed = True
+        self.assertRaises(SystemExit, inst.localtrace, None, 'line', None)
+
+    def test_localtrace_killed_not_whyline(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        inst.killed = True
+        result = inst.localtrace(None, None, None)
+        self.assertEqual(result, inst.localtrace)
+
+    def test_kill(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        inst.killed = True
+        class DummyCloseable(object):
+            def close(self):
+                self.closed = True
+        inst.output_handler = DummyCloseable()
+        inst.error_handler = DummyCloseable()
+        inst.kill()
+        self.assertTrue(inst.killed)
+        self.assertTrue(inst.output_handler.closed)
+        self.assertTrue(inst.error_handler.closed)
+
 class ControllerTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.supervisorctl import Controller
@@ -65,7 +123,7 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_catches_socket_error_ECONNREFUSED(self):
         options = DummyClientOptions()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
         def raise_fault(*arg, **kw):
             raise socket.error(errno.ECONNREFUSED, 'nobody home')
@@ -82,7 +140,7 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_catches_socket_error_ENOENT(self):
         options = DummyClientOptions()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
         def raise_fault(*arg, **kw):
             raise socket.error(errno.ENOENT, 'nobody home')
@@ -99,7 +157,7 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_reraises_other_socket_faults(self):
         options = DummyClientOptions()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
         def f(*arg, **kw):
             raise socket.error(errno.EBADF, '')
@@ -860,6 +918,103 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin.do_stop('foo')
         self.assertEqual(called, [])
 
+    def test_signal_help(self):
+        plugin = self._makeOne()
+        plugin.help_signal()
+        out = plugin.ctl.stdout.getvalue()
+        self.assertTrue("signal <signal name> <name>" in out)
+
+    def test_signal_fail_no_arg(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('')
+        self.assertEqual(result, None)
+        msg = 'Error: signal requires a signal name and a process name'
+        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0], msg)
+
+    def test_signal_fail_one_arg(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('hup')
+        self.assertEqual(result, None)
+        msg = 'Error: signal requires a signal name and a process name'
+        self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0], msg)
+
+    def test_signal_bad_signal(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('BAD_SIGNAL foo')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: ERROR (bad signal name)\n')
+
+    def test_signal_bad_name(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP BAD_NAME')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'BAD_NAME: ERROR (no such process)\n')
+
+    def test_signal_bad_group(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP BAD_NAME:')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'BAD_NAME: ERROR (no such group)\n')
+
+    def test_signal_not_running(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP NOT_RUNNING')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'NOT_RUNNING: ERROR (not running)\n')
+
+    def test_signal_failed(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP FAILED')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 'FAILED\n')
+
+    def test_signal_one_success(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP foo')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(), 'foo: signalled\n')
+
+    def test_signal_many(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP foo bar')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: signalled\n'
+                         'bar: signalled\n')
+
+    def test_signal_group(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP foo:')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo:foo_00: signalled\n'
+                         'foo:foo_01: signalled\n')
+
+    def test_signal_all(self):
+        plugin = self._makeOne()
+        result = plugin.do_signal('HUP all')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo: signalled\n'
+                         'foo2: signalled\n'
+                         'failed_group:failed: ERROR (no such process)\n')
+
+    def test_signal_upcheck_failed(self):
+        plugin = self._makeOne()
+        plugin.ctl.upcheck = lambda: False
+        called = []
+        def f(*arg, **kw):
+            called.append(True)
+        supervisor = plugin.ctl.options._server.supervisor
+        supervisor.signalAllProcesses = f
+        supervisor.signalProcessGroup = f
+        plugin.do_signal('term foo')
+        self.assertEqual(called, [])
+
     def test_restart_help(self):
         plugin = self._makeOne()
         plugin.help_restart()
@@ -1071,7 +1226,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_catches_socket_error_ECONNREFUSED(self):
         plugin = self._makeOne()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
 
         def raise_fault(*arg, **kw):
@@ -1086,7 +1241,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_catches_socket_error_ENOENT(self):
         plugin = self._makeOne()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
 
         def raise_fault(*arg, **kw):
@@ -1101,7 +1256,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_reraises_other_socket_errors(self):
         plugin = self._makeOne()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
 
         def raise_fault(*arg, **kw):

@@ -2,7 +2,7 @@ import base64
 import os
 import stat
 import sys
-import supervisor.medusa.text_socket as socket
+import socket
 import tempfile
 import unittest
 
@@ -56,21 +56,21 @@ class LogtailHandlerTests(HandlerTests, unittest.TestCase):
         self.assertEqual(request._error, 410)
 
     def test_handle_request(self):
-        f = tempfile.NamedTemporaryFile()
-        t = f.name
-        options = DummyOptions()
-        pconfig = DummyPConfig(options, 'foo', 'foo', stdout_logfile=t)
-        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
-        handler = self._makeOne(supervisord)
-        request = DummyRequest('/logtail/foo', None, None, None)
-        handler.handle_request(request)
-        self.assertEqual(request._error, None)
-        from supervisor.medusa import http_date
-        self.assertEqual(request.headers['Last-Modified'],
-                         http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
-        self.assertEqual(request.headers['Content-Type'], 'text/plain')
-        self.assertEqual(len(request.producers), 1)
-        self.assertEqual(request._done, True)
+        with tempfile.NamedTemporaryFile() as f:
+            t = f.name
+            options = DummyOptions()
+            pconfig = DummyPConfig(options, 'foo', 'foo', stdout_logfile=t)
+            supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+            handler = self._makeOne(supervisord)
+            request = DummyRequest('/logtail/foo', None, None, None)
+            handler.handle_request(request)
+            self.assertEqual(request._error, None)
+            from supervisor.medusa import http_date
+            self.assertEqual(request.headers['Last-Modified'],
+                http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
+            self.assertEqual(request.headers['Content-Type'], 'text/plain')
+            self.assertEqual(len(request.producers), 1)
+            self.assertEqual(request._done, True)
 
 class MainLogTailHandlerTests(HandlerTests, unittest.TestCase):
     def _getTargetClass(self):
@@ -94,19 +94,19 @@ class MainLogTailHandlerTests(HandlerTests, unittest.TestCase):
 
     def test_handle_request(self):
         supervisor = DummySupervisor()
-        f = tempfile.NamedTemporaryFile()
-        t = f.name
-        supervisor.options.logfile = t
-        handler = self._makeOne(supervisor)
-        request = DummyRequest('/mainlogtail', None, None, None)
-        handler.handle_request(request)
-        self.assertEqual(request._error, None)
-        from supervisor.medusa import http_date
-        self.assertEqual(request.headers['Last-Modified'],
-                         http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
-        self.assertEqual(request.headers['Content-Type'], 'text/plain')
-        self.assertEqual(len(request.producers), 1)
-        self.assertEqual(request._done, True)
+        with tempfile.NamedTemporaryFile() as f:
+            t = f.name
+            supervisor.options.logfile = t
+            handler = self._makeOne(supervisor)
+            request = DummyRequest('/mainlogtail', None, None, None)
+            handler.handle_request(request)
+            self.assertEqual(request._error, None)
+            from supervisor.medusa import http_date
+            self.assertEqual(request.headers['Last-Modified'],
+                http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
+            self.assertEqual(request.headers['Content-Type'], 'text/plain')
+            self.assertEqual(len(request.producers), 1)
+            self.assertEqual(request._done, True)
 
 
 class TailFProducerTests(unittest.TestCase):
@@ -123,8 +123,7 @@ class TailFProducerTests(unittest.TestCase):
         f = tempfile.NamedTemporaryFile()
         f.write(as_bytes('a' * 80))
         f.flush()
-        t = f.name
-        producer = self._makeOne(request, t, 80)
+        producer = self._makeOne(request, f.name, 80)
         result = producer.more()
         self.assertEqual(result, as_string('a' * 80))
         f.write(as_bytes('w' * 100))
@@ -137,6 +136,53 @@ class TailFProducerTests(unittest.TestCase):
         f.flush()
         result = producer.more()
         self.assertEqual(result, '==> File truncated <==\n')
+
+    def test_handle_more_fd_closed(self):
+        request = DummyRequest('/logtail/foo', None, None, None)
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(as_bytes('a' * 80))
+            f.flush()
+            producer = self._makeOne(request, f.name, 80)
+            producer.file.close()
+            result = producer.more()
+        self.assertEqual(result, producer.more())
+
+    def test_handle_more_follow_file_recreated(self):
+        request = DummyRequest('/logtail/foo', None, None, None)
+        f = tempfile.NamedTemporaryFile()
+        f.write(as_bytes('a' * 80))
+        f.flush()
+        producer = self._makeOne(request, f.name, 80)
+        result = producer.more()
+        self.assertEqual(result, as_bytes('a' * 80))
+        f.close()
+        f2 = open(f.name, 'wb')
+        try:
+            f2.write(as_bytes('b' * 80))
+            f2.close()
+            result = producer.more()
+        finally:
+            os.unlink(f2.name)
+        self.assertEqual(result, as_bytes('b' * 80))
+
+    def test_handle_more_follow_file_gone(self):
+        request = DummyRequest('/logtail/foo', None, None, None)
+        filename = tempfile.mktemp()
+        with open(filename, 'wb') as f:
+            f.write(as_bytes('a' * 80))
+        try:
+            producer = self._makeOne(request, f.name, 80)
+        finally:
+            os.unlink(f.name)
+        result = producer.more()
+        self.assertEqual(result, as_bytes('a' * 80))
+        with open(filename, 'wb') as f:
+            f.write(as_bytes('b' * 80))
+        try:
+            result = producer.more() # should open in new file
+            self.assertEqual(result, as_bytes('b' * 80))
+        finally:
+             os.unlink(f.name)
 
 class DeferringChunkedProducerTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -174,7 +220,7 @@ class DeferringChunkedProducerTests(unittest.TestCase):
     def test_more_noproducer(self):
         producer = self._makeOne(None)
         self.assertEqual(producer.more(), '')
-        
+
 class DeferringCompositeProducerTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.http import deferring_composite_producer
@@ -291,7 +337,7 @@ class Test_deferring_http_request(unittest.TestCase):
             def push_with_producer(self, producer):
                 self.producer = producer
         return Channel()
-    
+
     def test_done_http_10_nokeepalive(self):
         channel = self._makeChannel()
         inst = self._makeOne(channel=channel, version='1.0')
@@ -305,10 +351,10 @@ class Test_deferring_http_request(unittest.TestCase):
             version='1.0',
             header=['Connection: Keep-Alive'],
             )
-        
+
         inst.done()
         self.assertTrue(channel.closed)
-        
+
     def test_done_http_10_keepalive_and_content_length(self):
         channel = self._makeChannel()
         inst = self._makeOne(
@@ -380,7 +426,7 @@ class Test_deferring_http_request(unittest.TestCase):
             )
         inst.done()
         self.assertTrue(channel.closed)
-        
+
 class EncryptedDictionaryAuthorizedTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.http import encrypted_dictionary_authorizer
@@ -476,6 +522,16 @@ class TopLevelFunctionTests(unittest.TestCase):
             from asyncore import socket_map
             socket_map.clear()
         return servers
+
+    def test_make_http_servers_socket_type_error(self):
+        config = {'family':999, 'host':'localhost', 'port':17735,
+                  'username':None, 'password':None,
+                  'section':'inet_http_server'}
+        try:
+            self._make_http_servers([config])
+            self.fail('nothing raised')
+        except ValueError as exc:
+            self.assertEqual(exc.args[0], 'Cannot determine socket type 999')
 
     def test_make_http_servers_noauth(self):
         socketfile = tempfile.mktemp()

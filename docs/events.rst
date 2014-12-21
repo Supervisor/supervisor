@@ -260,12 +260,12 @@ After the event listener has processed the event serialization, in
 order to notify supervisord about the result, it should send back a
 result structure on its stdout.  A result structure is the word
 "RESULT", followed by a space, followed by the result length, followed
-by a carriage return, follwed by the result content.  For example,
+by a line feed, followed by the result content.  For example,
 ``RESULT 2\nOK`` is the result "OK".  Conventionally, an event
 listener will use either ``OK`` or ``FAIL`` as the result content.
 These strings have special meaning to the default result handler.
 
-If the defaut result handler receives ``OK`` as result content, it
+If the default result handler receives ``OK`` as result content, it
 will assume that the listener processed the event notification
 successfully.  If it receives ``FAIL``, it will assume that the
 listener has failed to process the event, and the event will be
@@ -280,7 +280,7 @@ Once the listener is in the ``ACKNOWLEDGED`` state, it may either exit
 ``autorestart`` config parameter is ``true``), or it may continue
 running.  If it continues to run, in order to be placed back into the
 ``READY`` state by supervisord, it must send a ``READY`` token
-followed immediately by a carriage return to its stdout.
+followed immediately by a line feed to its stdout.
 
 Example Event Listener Implementation
 +++++++++++++++++++++++++++++++++++++
@@ -343,7 +343,7 @@ in" to Supervisor.  As such, event listeners can impact the state of a
 Supervisor subprocess as a result of receiving an event notification.
 For example, you may want to generate an event every few minutes
 related to process usage of Supervisor-controlled subprocesses, and if
-any of those processes exceed some memory threshhold, you would like
+any of those processes exceed some memory threshold, you would like
 to restart it.  You would write a program that caused supervisor to
 generate ``PROCESS_COMMUNICATION`` events every so often with memory
 information in them, and an event listener to perform an action based

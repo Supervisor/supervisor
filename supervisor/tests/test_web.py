@@ -31,6 +31,15 @@ class DeferredWebProducerTests(unittest.TestCase):
         producer = self._makeOne(request, callback)
         self.assertEqual(producer.more(), NOT_DONE_YET)
 
+    def test_more_finished(self):
+        request = DummyRequest('/index.html', [], '', '')
+        callback = lambda *x: 'done'
+        callback.delay = 1
+        producer = self._makeOne(request, callback)
+        self.assertEqual(producer.more(), None)
+        self.assertTrue(producer.finished)
+        self.assertEqual(producer.more(), '')
+
     def test_more_exception_caught(self):
         request = DummyRequest('/index.html', [], '', '')
         def callback(*arg):

@@ -1,7 +1,6 @@
 import errno
 import os
 import signal
-import sys
 import time
 import unittest
 
@@ -248,9 +247,38 @@ class SubprocessTests(unittest.TestCase):
         events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         result = instance.spawn()
         self.assertEqual(result, None)
-        self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
+        self.assertEqual(instance.spawnerr,
+                         'unknown error making dispatchers: EPERM')
         self.assertEqual(options.logger.data[0],
-                         "spawnerr: unknown error: EPERM")
+                         "spawnerr: unknown error making dispatchers: EPERM")
+        self.assertTrue(instance.delay)
+        self.assertTrue(instance.backoff)
+        from supervisor.states import ProcessStates
+        self.assertEqual(instance.state, ProcessStates.BACKOFF)
+        self.assertEqual(len(L), 2)
+        event1, event2 = L
+        self.assertEqual(event1.__class__, events.ProcessStateStartingEvent)
+        self.assertEqual(event2.__class__, events.ProcessStateBackoffEvent)
+
+    def test_spawn_fail_make_dispatchers_eisdir(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, name='cat', command='/bin/cat',
+                              stdout_logfile='/a/directory') # not a file
+        def raise_eisdir(envelope):
+            raise IOError(errno.EISDIR)
+        config.make_dispatchers = raise_eisdir
+        instance = self._makeOne(config)
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.BACKOFF
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(instance.spawnerr,
+                         "unknown error making dispatchers: EISDIR")
+        self.assertEqual(options.logger.data[0],
+                         "spawnerr: unknown error making dispatchers: EISDIR")
         self.assertTrue(instance.delay)
         self.assertTrue(instance.backoff)
         from supervisor.states import ProcessStates
@@ -299,9 +327,10 @@ class SubprocessTests(unittest.TestCase):
         events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         result = instance.spawn()
         self.assertEqual(result, None)
-        self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
+        self.assertEqual(instance.spawnerr,
+                         'unknown error during fork: EPERM')
         self.assertEqual(options.logger.data[0],
-                         "spawnerr: unknown error: EPERM")
+                         "spawnerr: unknown error during fork: EPERM")
         self.assertEqual(len(options.parent_pipes_closed), 6)
         self.assertEqual(len(options.child_pipes_closed), 6)
         self.assertTrue(instance.delay)
@@ -840,6 +869,80 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(event.__class__, events.ProcessStateStoppingEvent)
         self.assertEqual(event.extra_values, [('pid', 11)])
         self.assertEqual(event.from_state, ProcessStates.RUNNING)
+
+    def test_signal(self):
+        options = DummyOptions()
+
+        killedpid = []
+        killedsig = []
+
+        def kill(pid, sig):
+            killedpid.append(pid)
+            killedsig.append(sig)
+
+        options.kill = kill
+
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        instance.pid = 11
+
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.RUNNING
+
+        instance.signal(signal.SIGWINCH )
+
+        self.assertEqual(killedpid, [instance.pid,])
+        self.assertEqual(killedsig, [signal.SIGWINCH,])
+
+        self.assertEqual(options.logger.data[0], 'sending test (pid 11) sig SIGWINCH')
+
+    def test_signal_stopped(self):
+        options = DummyOptions()
+
+        killedpid = []
+        killedsig = []
+
+        def kill(pid, sig):
+            killedpid.append(pid)
+            killedsig.append(sig)
+
+        options.kill = kill #don't actually start killing random processes...
+
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        instance.pid = None
+
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.STOPPED
+
+        instance.signal(signal.SIGWINCH )
+
+        self.assertEqual(options.logger.data[0], "attempted to send test sig SIGWINCH "
+                                                    "but it wasn't running")
+
+        self.assertEqual(killedpid, [])
+
+    def test_signal_error(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        options.kill_error = 1
+        instance = self._makeOne(config)
+        L = []
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        events.subscribe(events.ProcessStateEvent,
+                         lambda x: L.append(x))
+        instance.pid = 11
+        instance.state = ProcessStates.RUNNING
+        instance.signal(signal.SIGWINCH)
+        self.assertEqual(options.logger.data[0],
+            'sending test (pid 11) sig SIGWINCH')
+        self.assertTrue(options.logger.data[1].startswith(
+            'unknown problem sending sig test (11)'))
+        self.assertEqual(instance.killing, 0)
+        self.assertEqual(len(L), 1)
+        event = L[0]
+        self.assertEqual(event.__class__, events.ProcessStateUnknownEvent)
 
     def test_finish(self):
         options = DummyOptions()
@@ -1694,7 +1797,10 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         self.assertEqual(process1.listener_state, EventListenerStates.READY)
         self.assertEqual(pool.event_buffer, [event])
         self.assertEqual(options.logger.data[0],
-                         'rebuffering event abc for pool whatever (bufsize 0)')
+            'epipe occurred while sending event abc to listener '
+            'process1, listener state unchanged')
+        self.assertEqual(options.logger.data[1],
+            'rebuffering event abc for pool whatever (bufsize 0)')
 
     def test__acceptEvent_attaches_pool_serial_and_serial(self):
         from supervisor.process import GlobalSerial
@@ -1752,7 +1858,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [event])
-        self.assertEqual(process1.stdin_buffer, '')
+        self.assertEqual(process1.stdin_buffer, b'')
         self.assertEqual(process1.listener_state, EventListenerStates.READY)
 
     def test_transition_event_proc_running(self):
@@ -1773,8 +1879,8 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [])
-        header, payload = process1.stdin_buffer.split('\n', 1)
-        self.assertEqual(payload, 'dummy event', payload)
+        header, payload = process1.stdin_buffer.split(b'\n', 1)
+        self.assertEqual(payload, b'dummy event', payload)
         self.assertEqual(process1.listener_state, EventListenerStates.BUSY)
         self.assertEqual(process1.event, event)
 
@@ -1819,8 +1925,8 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         pool.transition()
         self.assertEqual(process1.transitioned, True)
         self.assertEqual(pool.event_buffer, [])
-        header, payload = process1.stdin_buffer.split('\n', 1)
-        self.assertEqual(payload, 'dummy event', payload)
+        header, payload = process1.stdin_buffer.split(b'\n', 1)
+        self.assertEqual(payload, b'dummy event', payload)
         self.assertEqual(process1.listener_state, EventListenerStates.BUSY)
         self.assertEqual(process1.event, event)
 

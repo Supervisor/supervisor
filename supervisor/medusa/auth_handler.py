@@ -10,12 +10,12 @@ RCS_ID =  '$Id: auth_handler.py,v 1.6 2002/11/25 19:40:23 akuchling Exp $'
 # support for 'basic' authentication.
 
 import re
+import sys
 import time
 
 from supervisor.compat import encodestring, decodestring
 from supervisor.compat import md5
 from supervisor.compat import as_string, as_bytes
-from supervisor.compat import print_function
 
 import supervisor.medusa.counter as counter
 import supervisor.medusa.default_handler as default_handler
@@ -53,7 +53,7 @@ class auth_handler:
                 try:
                     decoded = as_string(decodestring(as_bytes(cookie)))
                 except:
-                    print_function('malformed authorization info <%s>' % cookie)
+                    sys.stderr.write('malformed authorization info <%s>\n' % cookie)
                     request.error (400)
                     return
                 auth_info = decoded.split(':', 1)
@@ -66,7 +66,7 @@ class auth_handler:
             #elif scheme == 'digest':
             #       print 'digest: ',AUTHORIZATION.group(2)
             else:
-                print('unknown/unsupported auth method: %s' % scheme)
+                sys.stderr.write('unknown/unsupported auth method: %s\n' % scheme)
                 self.handle_unauthorized(request)
         else:
             # list both?  prefer one or the other?

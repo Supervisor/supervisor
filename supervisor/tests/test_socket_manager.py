@@ -4,14 +4,13 @@ import gc
 import sys
 import os
 import unittest
-import supervisor.medusa.text_socket as socket
+import socket
 import tempfile
 
 try:
     import __pypy__
-    PYPY = True
 except ImportError:
-    PYPY = False
+    __pypy__ = None
 
 from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import DummyLogger
@@ -232,7 +231,7 @@ class SocketManagerTest(unittest.TestCase):
             self.assertEqual(e.args[0], 'Socket has not been prepared')
 
 def gc_collect():
-    if PYPY:
+    if __pypy__ is not None:
         gc.collect()
         gc.collect()
         gc.collect()

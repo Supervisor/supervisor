@@ -117,7 +117,7 @@ Supervisor Components
 
   The server process uses a configuration file.  This is typically
   located in :file:`/etc/supervisord.conf`.  This configuration file
-  is an "Windows-INI" style config file.  It is important to keep this
+  is a "Windows-INI" style config file.  It is important to keep this
   file secure via proper filesystem permissions because it may contain
   unencrypted usernames and passwords.
 

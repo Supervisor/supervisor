@@ -320,6 +320,12 @@ Process Control
 
     .. automethod:: stopAllProcesses
 
+    .. automethod:: signalProcess
+
+    .. automethod:: signalProcessGroup
+
+    .. automethod:: signalAllProcesses
+
     .. automethod:: sendProcessStdin
 
     .. automethod:: sendRemoteCommEvent

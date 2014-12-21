@@ -5,7 +5,6 @@ Bring remaining code up to current standards
 Translate docs to RST
 Write README, INSTALL, docs
 What should __init__ import?  Anything?  Every single class?
-Use syslog module in m_syslog for the constants?
 Add abo's support for blocking producers
 Get all the producers into the producers module and write tests for them
 
