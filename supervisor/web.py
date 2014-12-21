@@ -10,7 +10,6 @@ from supervisor.compat import StringIO
 from supervisor.compat import urllib
 from supervisor.compat import parse_qs
 from supervisor.compat import parse_qsl
-from supervisor.compat import as_bytes
 from supervisor.compat import as_string
 from supervisor.compat import PY3
 
@@ -79,7 +78,7 @@ class DeferredWebProducer:
             return
 
         body = response.get('body', '')
-        self.request['Content-Length'] = len(as_bytes(body))
+        self.request['Content-Length'] = len(body)
 
         self.request.push(body)
 
