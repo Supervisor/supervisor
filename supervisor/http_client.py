@@ -1,11 +1,8 @@
 # this code based on Daniel Krech's RDFLib HTTP client code (see rdflib.net)
 
 import sys
-import supervisor.medusa.text_socket as socket
+import socket
 
-from supervisor.compat import PY3
-from supervisor.compat import long
-from supervisor.compat import print_function
 from supervisor.compat import urlparse
 from supervisor.compat import as_bytes
 from supervisor.compat import as_string
@@ -16,15 +13,13 @@ CR="\x0d"
 LF="\x0a"
 CRLF=CR+LF
 
-SUPERVISOR_USER_AGENT = 'Supervisor HTTP Client'
-
 class Listener(object):
 
     def status(self, url, status):
         pass
 
     def error(self, url, error):
-        print_function(url, error)
+        sys.stderr.write("%s %s\n" % (url, error))
 
     def response_header(self, url, name, value):
         pass
@@ -50,7 +45,7 @@ class HTTPHandler(asynchat.async_chat):
         ):
         asynchat.async_chat.__init__(self, conn, map)
         self.listener = listener
-        self.user_agent = SUPERVISOR_USER_AGENT
+        self.user_agent = 'Supervisor HTTP Client'
         self.buffer = ''
         self.set_terminator(CRLF)
         self.connected = 0
@@ -136,57 +131,12 @@ class HTTPHandler(asynchat.async_chat):
         self.push(CRLF)
         self.push(CRLF)
 
-    # To extract chunk size precisely in Python3,
-    # we need to work on bytes string not unicode string.
-    # Therefore, we will override this method of asynchat
-    def handle_read(self):
-
-        try:
-            data = self.recv(self.ac_in_buffer_size)
-        except socket.error:
-            self.handle_error()
-            return
-
-        self.ac_in_buffer = as_bytes(self.ac_in_buffer) + as_bytes(data)
-
-        while self.ac_in_buffer:
-            lb = len(self.ac_in_buffer)
-            terminator = self.get_terminator()
-            if not terminator:
-                self.collect_incoming_data(self.ac_in_buffer)
-                self.ac_in_buffer = ''
-            elif isinstance(terminator, int) or isinstance(terminator, long):
-                n = terminator
-                if lb < n:
-                    self.collect_incoming_data(self.ac_in_buffer)
-                    self.ac_in_buffer = ''
-                    self.terminator -= lb
-                else:
-                    self.collect_incoming_data(self.ac_in_buffer[:n])
-                    self.ac_in_buffer = self.ac_in_buffer[n:]
-                    self.terminator = 0
-                    self.found_terminator()
-            else:
-                terminator_len = len(as_bytes(terminator))
-                index = self.ac_in_buffer.find(as_bytes(terminator))
-                if index != -1:
-                    if index > 0:
-                        self.collect_incoming_data(self.ac_in_buffer[:index])
-
-                    self.ac_in_buffer = self.ac_in_buffer[index + terminator_len:]
-                    self.found_terminator()
-                else:
-                    self.collect_incoming_data(self.ac_in_buffer)
-                    self.ac_in_buffer = ''
 
     def feed(self, data):
-        self.listener.feed(self.url, as_string(data))
+        self.listener.feed(self.url, data)
 
-    def collect_incoming_data(self, data):
-        if PY3:
-            self.buffer = as_string(self.buffer) + as_string(data)
-        else:
-            self.buffer += data
+    def collect_incoming_data(self, bytes):
+        self.buffer = self.buffer + bytes
         if self.part==self.body:
             self.feed(self.buffer)
             self.buffer = ''
@@ -219,7 +169,6 @@ class HTTPHandler(asynchat.async_chat):
 
     def headers(self):
         line = self.buffer
-
         if not line:
             if self.encoding=="chunked":
                 self.part = self.chunked_size
@@ -249,13 +198,9 @@ class HTTPHandler(asynchat.async_chat):
 
     def chunked_size(self):
         line = self.buffer
-
         if not line:
             return
-        try:
-            chunk_size = int(line.split()[0], 16)
-        except ValueError:
-            return
+        chunk_size = int(line.split()[0], 16)
         if chunk_size==0:
             self.part = self.trailer
         else:

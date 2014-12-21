@@ -1,9 +1,8 @@
 import os
-import re
 import stat
 import time
 import sys
-import supervisor.medusa.text_socket as socket
+import socket
 import errno
 import pwd
 import weakref
@@ -11,13 +10,13 @@ import weakref
 from supervisor.compat import urllib
 from supervisor.compat import sha1
 from supervisor.compat import as_bytes
-from supervisor.compat import as_string
 from supervisor.medusa import asyncore_25 as asyncore
 from supervisor.medusa import http_date
 from supervisor.medusa import http_server
 from supervisor.medusa import producers
 from supervisor.medusa import filesys
 from supervisor.medusa import default_handler
+from supervisor.medusa import text_socket
 
 from supervisor.medusa.auth_handler import auth_handler
 
@@ -45,7 +44,7 @@ class deferring_chunked_producer:
             if data is NOT_DONE_YET:
                 return NOT_DONE_YET
             elif data:
-                return '%x\r\n%s\r\n' % (len(as_bytes(data)), data)
+                return '%x\r\n%s\r\n' % (len(data), data)
             else:
                 self.producer = None
                 if self.footers:
@@ -338,9 +337,9 @@ class deferring_http_channel(http_server.http_channel):
         if self.delay:
             # we called a deferred producer via this channel (see refill_buffer)
             last_writable_check = self.writable_check
-            self.writable_check = now
             elapsed = now - last_writable_check
             if elapsed > self.delay:
+                self.writable_check = now
                 return True
             else:
                 return False
@@ -376,8 +375,13 @@ class deferring_http_channel(http_server.http_channel):
                 if data is NOT_DONE_YET:
                     self.delay = p.delay
                     return
+
                 elif data:
-                    self.ac_out_buffer = as_bytes(self.ac_out_buffer) + as_bytes(data)
+                    try:
+                        self.ac_out_buffer = self.ac_out_buffer + data
+                    except TypeError:
+                        self.ac_out_buffer = as_bytes(self.ac_out_buffer) + as_bytes(data)
+
                     self.delay = False
                     return
                 else:
@@ -521,7 +525,7 @@ class supervisor_af_inet_http_server(supervisor_http_server):
     def __init__(self, ip, port, logger_object):
         self.ip = ip
         self.port = port
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock = text_socket.text_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.prebind(sock, logger_object)
         self.bind((ip, port))
 
@@ -566,7 +570,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
             pass
 
         while 1:
-            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock = text_socket.text_socket(socket.AF_UNIX, socket.SOCK_STREAM)
             try:
                 sock.bind(tempname)
                 os.chmod(tempname, sockchmod)
@@ -623,7 +627,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
             s.connect(socketname)
-            s.send("GET / HTTP/1.0\r\n\r\n")
+            s.send(as_bytes("GET / HTTP/1.0\r\n\r\n"))
             s.recv(1)
             s.close()
         except socket.error:
@@ -633,23 +637,23 @@ class supervisor_af_unix_http_server(supervisor_http_server):
 
 class tail_f_producer:
     def __init__(self, request, filename, head):
-        self.file = open(filename, 'rb')
         self.request = weakref.ref(request)
+        self.filename = filename
         self.delay = 0.1
-        sz = self.fsize()
+
+        self._open()
+        sz = self._fsize()
         if sz >= head:
             self.sz = sz - head
-        else:
-            self.sz = 0
 
     def __del__(self):
-        if self.file:
-            self.file.close()
+        self._close()
 
     def more(self):
+        self._follow()
         try:
-            newsz = self.fsize()
-        except OSError:
+            newsz = self._fsize()
+        except (OSError, ValueError):
             # file descriptor was closed
             return ''
         bytes_added = newsz - self.sz
@@ -660,10 +664,29 @@ class tail_f_producer:
             self.file.seek(-bytes_added, 2)
             bytes = self.file.read(bytes_added)
             self.sz = newsz
-            return as_string(bytes)
+            return bytes
         return NOT_DONE_YET
 
-    def fsize(self):
+    def _open(self):
+        self.file = open(self.filename, 'rb')
+        self.ino = os.fstat(self.file.fileno())[stat.ST_INO]
+        self.sz = 0
+
+    def _close(self):
+        self.file.close()
+
+    def _follow(self):
+        try:
+            ino = os.stat(self.filename)[stat.ST_INO]
+        except (OSError, ValueError):
+            # file was unlinked
+            return
+
+        if self.ino != ino: # log rotation occurred
+            self._close()
+            self._open()
+
+    def _fsize(self):
         return os.fstat(self.file.fileno())[stat.ST_SIZE]
 
 class logtail_handler:
