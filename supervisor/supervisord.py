@@ -230,7 +230,7 @@ class Supervisor:
                     try:
                         dispatcher = combined_map[fd]
                         self.options.logger.blather(
-                            'read event caused by %(dispatcher)s',
+                            'read event caused by %(dispatcher)r',
                             dispatcher=dispatcher)
                         dispatcher.handle_read_event()
                     except asyncore.ExitNow:
@@ -243,7 +243,7 @@ class Supervisor:
                     try:
                         dispatcher = combined_map[fd]
                         self.options.logger.blather(
-                            'write event caused by %(dispatcher)s',
+                            'write event caused by %(dispatcher)r',
                             dispatcher=dispatcher)
                         dispatcher.handle_write_event()
                     except asyncore.ExitNow:
