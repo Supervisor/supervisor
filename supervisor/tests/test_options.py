@@ -300,6 +300,17 @@ class ClientOptionsTests(unittest.TestCase):
         self.assertEqual(options.password, '123')
         self.assertEqual(options.history_file, history_file)
 
+    def test_options_ignores_inline_comments(self):
+        text = lstrip("""
+        [supervisorctl]
+        serverurl=http://localhost:9001 ;comment should not be in serverurl
+        """)
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        options = instance.configroot.supervisorctl
+        self.assertEqual(options.serverurl, 'http://localhost:9001')
+
     def test_options_with_environment_expansions(self):
         s = lstrip("""[supervisorctl]
         serverurl=http://localhost:%(ENV_SERVER_PORT)s
@@ -640,6 +651,17 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.nocleanup, True)
         self.assertEqual(instance.minfds, 2048)
         self.assertEqual(instance.minprocs, 300)
+
+    def test_options_ignores_inline_comments(self):
+        text = lstrip("""
+        [supervisord]
+        identifier=foo ;comment should not be in identifier
+        """)
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        options = instance.configroot.supervisord
+        self.assertEqual(options.identifier, 'foo')
 
     def test_reload(self):
         text = lstrip("""\
