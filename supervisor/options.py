@@ -630,6 +630,7 @@ class ServerOptions(Options):
         environ_str = get('environment', '')
         environ_str = expand(environ_str, expansions, 'environment')
         section.environment = dict_of_key_value_pairs(environ_str)
+        self.environment = section.environment
         # Process rpcinterface plugins before groups to allow custom events to
         # be registered.
         section.rpcinterface_factories = self.get_plugins(
