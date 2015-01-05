@@ -859,6 +859,7 @@ class ServerOptions(Options):
         priority = integer(get(section, 'priority', 999))
         autostart = boolean(get(section, 'autostart', 'true'))
         autorestart = auto_restart(get(section, 'autorestart', 'unexpected'))
+        startdelay = integer(get(section, 'startdelay', 0))
         startsecs = integer(get(section, 'startsecs', 1))
         startretries = integer(get(section, 'startretries', 3))
         stopsignal = signal_number(get(section, 'stopsignal', 'TERM'))
@@ -958,6 +959,7 @@ class ServerOptions(Options):
                 priority=priority,
                 autostart=autostart,
                 autorestart=autorestart,
+                startdelay=startdelay,
                 startsecs=startsecs,
                 startretries=startretries,
                 uid=uid,
@@ -1751,7 +1753,7 @@ class Config(object):
 class ProcessConfig(Config):
     req_param_names = [
         'name', 'uid', 'command', 'directory', 'umask', 'priority',
-        'autostart', 'autorestart', 'startsecs', 'startretries',
+        'autostart', 'autorestart', 'startdelay', 'startsecs', 'startretries',
         'stdout_logfile', 'stdout_capture_maxbytes',
         'stdout_events_enabled', 'stdout_syslog',
         'stdout_logfile_backups', 'stdout_logfile_maxbytes',
