@@ -661,6 +661,18 @@ where specified.
 
   *Introduced*: 3.0
 
+``startdelay``
+
+  The total number of seconds the supervisor should wait before
+  first starting the program. Set to ``0`` to indicate that
+  the program should be started without delay.
+
+  *Default*: 0
+
+  *Required*:  No.
+
+  *Introduced*: 4.0.0
+
 ``startsecs``
 
   The total number of seconds which the program needs to stay running
