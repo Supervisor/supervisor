@@ -484,7 +484,7 @@ class Subprocess(object):
         processname = self.config.name
 
         # tooquickly may be less than zero when system time changed
-        tooquickly = now - self.laststart < self.config.startsecs
+        tooquickly = 0 < now - self.laststart < self.config.startsecs
         exit_expected = es in self.config.exitcodes
 
         if self.killing:
@@ -498,7 +498,7 @@ class Subprocess(object):
             self._assertInState(ProcessStates.STOPPING)
             self.change_state(ProcessStates.STOPPED)
 
-        elif tooquickly and tooquickly > 0:
+        elif tooquickly:
             # the program did not stay up long enough to make it to RUNNING
             # implies STARTING -> BACKOFF
             self.exitstatus = None
