@@ -38,6 +38,7 @@ from supervisor.options import make_namespec
 from supervisor.options import split_namespec
 from supervisor import xmlrpc
 from supervisor import states
+from supervisor import http_client
 
 class fgthread(threading.Thread):
     """ A subclass of threading.Thread, with a kill() method.
@@ -47,7 +48,6 @@ class fgthread(threading.Thread):
 
     def __init__(self, program, ctl):
         threading.Thread.__init__(self)
-        import http_client
         self.killed = False
         self.program = program
         self.ctl = ctl
@@ -393,7 +393,6 @@ class DefaultControllerPlugin(ControllerPluginBase):
             # always sends a Connection: close header).  We use a
             # homegrown client based on asyncore instead.  This makes
             # me sad.
-            import http_client
             if self.listener is None:
                 listener = http_client.Listener()
             else:
