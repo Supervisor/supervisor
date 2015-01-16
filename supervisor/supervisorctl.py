@@ -5,13 +5,13 @@
 Usage: %s [options] [action [arguments]]
 
 Options:
--c/--configuration -- configuration file path (default /etc/supervisord.conf)
+-c/--configuration FILENAME -- configuration file path (default /etc/supervisord.conf)
 -h/--help -- print usage message and exit
 -i/--interactive -- start an interactive shell after executing commands
 -s/--serverurl URL -- URL on which supervisord server is listening
      (default "http://localhost:9001").
--u/--username -- username to use for authentication with server
--p/--password -- password to use for authentication with server
+-u/--username USERNAME -- username to use for authentication with server
+-p/--password PASSWORD -- password to use for authentication with server
 -r/--history-file -- keep a readline history (if readline is available)
 
 action [arguments] -- see below
