@@ -135,8 +135,8 @@ with third party applications:
     `Capistrano <https://github.com/capistrano/capistrano>`_ recipe to deploy supervisord based services.
 `chef-supervisor <https://github.com/opscode-cookbooks/supervisor>`_
     `Chef <http://www.opscode.com/chef/>`_ cookbook install and configure supervisord.
-`PHP Supervisor <https://github.com/indigophp/supervisor>`_
-    PHP client for the supervisord XML-RPC interface. Configuration generator. Event listener work in progress.
+`SupervisorPHP <http://supervisorphp.com>`_
+    Complete Supervisor suite in PHP: Client using XML-RPC interface, event listener and configuration builder implementation, console application and monitor UI.
 `Supervisord-Client <http://search.cpan.org/~skaufman/Supervisord-Client>`_
     Perl client for the supervisord XML-RPC interface.
 `Supermann <https://github.com/borntyping/supermann>`_
