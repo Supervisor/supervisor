@@ -116,8 +116,6 @@ with third party applications:
     PHP 5 library to manage Supervisor instances as object.
 `Symfony2 SupervisorBundle <https://github.com/yzalis/SupervisorBundle>`_
     Provide full integration of Supervisor multiple servers management into Symfony2 project.
-`supervisord-php-client <https://github.com/mondalaci/supervisord-php-client>`_
-    PHP client for the supervisord XML-RPC interface.
 `sd-supervisord <https://github.com/robcowie/sd-supervisord>`_
     `Server Density <http://www.serverdensity.com>`_ plugin for
     supervisor.
