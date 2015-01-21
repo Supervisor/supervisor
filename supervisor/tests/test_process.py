@@ -1016,7 +1016,6 @@ class SubprocessTests(unittest.TestCase):
         pipes = {'stdout':'','stderr':''}
         instance.pipes = pipes
         instance.config.exitcodes =[-1]
-        import time
         instance.laststart = time.time()
         from supervisor.states import ProcessStates
         from supervisor import events
@@ -1365,7 +1364,6 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(process.state, ProcessStates.STOPPING)
         self.assertEqual(options.logger.data[0],
                          "killing 'process' (1) with SIGKILL")
-        import signal
         self.assertEqual(options.kills[1], signal.SIGKILL)
         self.assertEqual(L, [])
 
