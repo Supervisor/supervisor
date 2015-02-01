@@ -2586,6 +2586,19 @@ class ServerOptionsTests(unittest.TestCase):
         instance.poller.before_daemonize.assert_called_once_with()
         instance.poller.after_daemonize.assert_called_once_with()
 
+    def test_include_here(self):
+        conf = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), 'fixtures',
+            'include.conf')
+        root_here = os.path.dirname(conf)
+        include_here = os.path.join(root_here, 'example')
+        parser = self._makeOne()
+        parser.configfile = conf
+        parser.process_config_file(True)
+        section = parser.configroot.supervisord
+        self.assertEqual(section.logfile, root_here)
+        self.assertEqual(section.childlogdir, include_here)
+
 class TestProcessConfig(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ProcessConfig
