@@ -88,14 +88,6 @@ OpenLDAP :program:`slapd`
 
 Other Examples
 ~~~~~~~~~~~~~~
-
-Other examples of shell scripts that could be used to start services
-under :program:`supervisord` can be found at
-`http://www.thedjbway.org/services.html
-<http://www.thedjbway.org/services.html>`_.  These examples are
-actually for :program:`daemontools` but the premise is the same for
-supervisor.
-
 Another collection of recipes for starting various programs in the
 foreground is available from `http://smarden.org/runit/runscripts.html
 <http://smarden.org/runit/runscripts.html>`_.
