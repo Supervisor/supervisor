@@ -91,8 +91,8 @@ Other Examples
 
 Other examples of shell scripts that could be used to start services
 under :program:`supervisord` can be found at
-`http://www.thedjbway.org/services.html
-<http://www.thedjbway.org/services.html>`_.  These examples are
+`http://thedjbway.b0llix.net/services.html
+<http://thedjbway.b0llix.net/services.html>`_.  These examples are
 actually for :program:`daemontools` but the premise is the same for
 supervisor.
 
