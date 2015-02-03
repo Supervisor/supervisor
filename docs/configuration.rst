@@ -204,6 +204,19 @@ follows.
 
   *Introduced*: 3.0
 
+``syslog``
+
+  If true, then supervisor will send all of its messages to syslog.
+  Messages are currently sent with the default facility (user) and a
+  range of priorities, with a tag of "supervisord" and a process ID.
+
+  *Default*:  false
+
+  *Required*:  No.
+
+  *Introduced*: 3.1a1
+
+
 ``logfile_maxbytes``
 
   The maximum number of bytes that may be consumed by the activity log

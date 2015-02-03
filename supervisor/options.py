@@ -943,7 +943,7 @@ class ServerOptions(Options):
                 logfiles[mb_key] = maxbytes
 
                 sy_key = '%s_syslog' % k
-                syslog = boolean(get(section, sy_key, False))
+                syslog = boolean(get(section, sy_key, logfiles[n] == "syslog"))
                 logfiles[sy_key] = syslog
 
                 if lf_val is Automatic and not maxbytes:
@@ -1405,14 +1405,18 @@ class ServerOptions(Options):
         self.logger = loggers.getLogger(self.loglevel)
         if self.nodaemon:
             loggers.handle_stdout(self.logger, format)
-        loggers.handle_file(
-            self.logger,
-            self.logfile,
-            format,
-            rotating=True,
-            maxbytes=self.logfile_maxbytes,
-            backups=self.logfile_backups,
-        )
+        if self.syslog or self.logfile == "syslog":
+            loggers.handle_syslog(self.logger, '%(message)s',
+                                  tag="supervisord", show_pid=True)
+        else:
+            loggers.handle_file(
+                self.logger,
+                self.logfile,
+                format,
+                rotating=True,
+                maxbytes=self.logfile_maxbytes,
+                backups=self.logfile_backups,
+            )
         for msg in critical_messages:
             self.logger.critical(msg)
         for msg in warn_messages:

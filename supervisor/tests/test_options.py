@@ -674,7 +674,7 @@ class ServerOptionsTests(unittest.TestCase):
 
         [program:cat1]
         command=/bin/cat
-        stdout_logfile=/tmp/cat.log
+        stdout_logfile=syslog
 
         [program:cat2syslog]
         command=/bin/cat""")
@@ -686,6 +686,15 @@ class ServerOptionsTests(unittest.TestCase):
         options = instance.configroot.supervisord
         self.assertTrue(options.syslog)
         self.assertEqual(instance.logfile, 'syslog')
+
+        cat1 = options.process_group_configs[0]
+        proc1 = cat1.process_configs[0]
+        self.assertEqual(proc1.stdout_logfile, 'syslog')
+        self.assertEqual(proc1.stdout_syslog, True)
+
+        cat2 = options.process_group_configs[1]
+        proc2 = cat2.process_configs[0]
+        self.assertEqual(proc2.stdout_syslog, False)
 
         s = s.replace("syslog=true", "logfile=syslog")
 

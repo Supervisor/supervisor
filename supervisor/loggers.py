@@ -380,14 +380,10 @@ def handle_syslog(logger, fmt):
     logger.addHandler(handler)
 
 def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
-    if filename == 'syslog':
-        handler = SyslogHandler()
-
+    if rotating is False:
+        handler = FileHandler(filename)
     else:
-        if rotating is False:
-            handler = FileHandler(filename)
-        else:
-            handler = RotatingFileHandler(filename, 'a', maxbytes, backups)
+        handler = RotatingFileHandler(filename, 'a', maxbytes, backups)
 
     handler.setFormat(fmt)
     handler.setLevel(logger.level)
