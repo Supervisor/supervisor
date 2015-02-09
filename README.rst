@@ -13,8 +13,15 @@ likely work fine on most UNIX systems.
 
 Supervisor will not run at all under any version of Windows.
 
-Supervisor works under Python 2 version 2.6 or greater and Python 3 version 3.2
-or greater.
+*This is the master branch, which will become Supervisor 4.0.  The main
+change from Supervisor 3.x is added support for Python 3, which is still a
+work-in-progress, and has not been released yet.  If Python 3 support is
+important to you, we would appreciate if you would test this branch and
+report any issues you encounter.  If you depend on Supervisor in production,
+you should probably be running a release version of Supervisor 3.x.*
+
+Supervisor 4.0 will work under Python 2 version 2.6 or greater and Python 3
+version 3.2 or greater.
 
 Documentation
 -------------
