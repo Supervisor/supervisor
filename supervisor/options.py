@@ -104,10 +104,14 @@ class Options:
         self.add(None, None, "h", "help", self.help)
         self.add("configfile", None, "c:", "configuration=")
 
+        default_userdir = os.path.join(os.environ['HOME'], '.config')
+        userdir = os.environ.get('XDG_CONFIG_HOME', default_userdir)
+
         here = os.path.dirname(os.path.dirname(sys.argv[0]))
         searchpaths = [os.path.join(here, 'etc', 'supervisord.conf'),
                        os.path.join(here, 'supervisord.conf'),
                        'supervisord.conf',
+                       os.path.join(userdir, 'supervisor', 'config.conf'),
                        'etc/supervisord.conf',
                        '/etc/supervisord.conf']
         self.searchpaths = searchpaths
