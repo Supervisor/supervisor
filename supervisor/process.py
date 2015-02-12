@@ -198,6 +198,8 @@ class Subprocess(object):
             options.logger.warn(msg)
             return
 
+        delaystart = (self.laststart == 0) and (self.config.startdelay > 0)
+
         self.killing = 0
         self.spawnerr = None
         self.exitstatus = None
@@ -208,6 +210,9 @@ class Subprocess(object):
 
         self._assertInState(ProcessStates.EXITED, ProcessStates.FATAL,
                             ProcessStates.BACKOFF, ProcessStates.STOPPED)
+
+        if delaystart:
+            time.sleep(self.config.startdelay)
 
         self.change_state(ProcessStates.STARTING)
 
