@@ -140,8 +140,8 @@ The configuration keys that influence child process logging in
 ``stderr_syslog``.
 
 ``[eventlistener:x]`` sections may not specify
-``stdout_capture_maxbytes`` or ``stderr_capture_maxbytes``,
-but otherwise they accept the same values.
+``redirect_stderr``, ``stdout_capture_maxbytes``, or
+``stderr_capture_maxbytes``, but otherwise they accept the same values.
 
 The configuration keys that influence child process logging in the
 ``[supervisord]`` config file section are these:

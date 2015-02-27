@@ -30,6 +30,12 @@ instances running on different servers.
 `SupervisorUI <https://github.com/luxbet/supervisorui>`_
     Another Web-based dashboard written in PHP.
 
+`supervisorclusterctl <https://github.com/RobWin/supervisorclusterctl>`_
+    Command line tool for controlling multiple Supervisor instances
+    using Ansible.
+
+`suponoff <https://github.com/GambitResearch/suponoff>`_
+    Web-based dashboard written in Python 3.  Requires Django 1.7 or later.
 
 Third Party Plugins and Libraries for Supervisor
 ------------------------------------------------
@@ -106,8 +112,6 @@ with third party applications:
     PHP 5 library to manage Supervisor instances as object.
 `Symfony2 SupervisorBundle <https://github.com/yzalis/SupervisorBundle>`_
     Provide full integration of Supervisor multiple servers management into Symfony2 project.
-`supervisord-php-client <https://github.com/mondalaci/supervisord-php-client>`_
-    PHP client for the supervisord XML-RPC interface.
 `sd-supervisord <https://github.com/robcowie/sd-supervisord>`_
     `Server Density <http://www.serverdensity.com>`_ plugin for
     supervisor.
@@ -125,8 +129,8 @@ with third party applications:
     `Capistrano <https://github.com/capistrano/capistrano>`_ recipe to deploy supervisord based services.
 `chef-supervisor <https://github.com/opscode-cookbooks/supervisor>`_
     `Chef <http://www.opscode.com/chef/>`_ cookbook install and configure supervisord.
-`PHP Supervisor <https://github.com/indigophp/supervisor>`_
-    PHP client for the supervisord XML-RPC interface. Configuration generator. Event listener work in progress.
+`SupervisorPHP <http://supervisorphp.com>`_
+    Complete Supervisor suite in PHP: Client using XML-RPC interface, event listener and configuration builder implementation, console application and monitor UI.
 `Supervisord-Client <http://search.cpan.org/~skaufman/Supervisord-Client>`_
     Perl client for the supervisord XML-RPC interface.
 `Supermann <https://github.com/borntyping/supermann>`_

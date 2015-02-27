@@ -4,6 +4,64 @@ from supervisor.compat import StringIO
 from supervisor.compat import xmlrpclib
 from supervisor.tests.base import DummyRPCServer
 
+class fgthread_Tests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.supervisorctl import fgthread
+        return fgthread
+
+    def _makeOne(self, program, ctl):
+        return self._getTargetClass()(program, ctl)
+
+    def test_ctor(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        self.assertEqual(inst.killed, False)
+
+    def test_globaltrace_call(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        result = inst.globaltrace(None, 'call', None)
+        self.assertEqual(result, inst.localtrace)
+
+    def test_globaltrace_noncall(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        result = inst.globaltrace(None, None, None)
+        self.assertEqual(result, None)
+
+    def test_localtrace_killed_whyline(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        inst.killed = True
+        self.assertRaises(SystemExit, inst.localtrace, None, 'line', None)
+
+    def test_localtrace_killed_not_whyline(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        inst.killed = True
+        result = inst.localtrace(None, None, None)
+        self.assertEqual(result, inst.localtrace)
+
+    def test_kill(self):
+        options = DummyClientOptions()
+        ctl = DummyController(options)
+        inst = self._makeOne(None, ctl)
+        inst.killed = True
+        class DummyCloseable(object):
+            def close(self):
+                self.closed = True
+        inst.output_handler = DummyCloseable()
+        inst.error_handler = DummyCloseable()
+        inst.kill()
+        self.assertTrue(inst.killed)
+        self.assertTrue(inst.output_handler.closed)
+        self.assertTrue(inst.error_handler.closed)
+
 class ControllerTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.supervisorctl import Controller
@@ -65,7 +123,7 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_catches_socket_error_ECONNREFUSED(self):
         options = DummyClientOptions()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
         def raise_fault(*arg, **kw):
             raise socket.error(errno.ECONNREFUSED, 'nobody home')
@@ -82,7 +140,7 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_catches_socket_error_ENOENT(self):
         options = DummyClientOptions()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
         def raise_fault(*arg, **kw):
             raise socket.error(errno.ENOENT, 'nobody home')
@@ -99,7 +157,7 @@ class ControllerTests(unittest.TestCase):
 
     def test__upcheck_reraises_other_socket_faults(self):
         options = DummyClientOptions()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
         def f(*arg, **kw):
             raise socket.error(errno.EBADF, '')
@@ -1168,7 +1226,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_catches_socket_error_ECONNREFUSED(self):
         plugin = self._makeOne()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
 
         def raise_fault(*arg, **kw):
@@ -1183,7 +1241,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_catches_socket_error_ENOENT(self):
         plugin = self._makeOne()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
 
         def raise_fault(*arg, **kw):
@@ -1198,7 +1256,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
 
     def test_shutdown_reraises_other_socket_errors(self):
         plugin = self._makeOne()
-        import supervisor.medusa.text_socket as socket
+        import socket
         import errno
 
         def raise_fault(*arg, **kw):

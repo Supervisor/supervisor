@@ -50,6 +50,7 @@ def getLevelNumByDescription(description):
 class Handler:
     fmt = '%(message)s'
     level = LevelsByName.INFO
+
     def __init__(self, stream=None):
         self.stream = stream
         self.closed = False
@@ -71,9 +72,15 @@ class Handler:
     def close(self):
         if not self.closed:
             if hasattr(self.stream, 'fileno'):
-                fd = self.stream.fileno()
-                if fd < 3: # don't ever close stdout or stderr
-                    return
+                try:
+                    fd = self.stream.fileno()
+                except IOError:
+                    # on python 3, io.IOBase objects always have fileno()
+                    # but calling it may raise io.UnsupportedOperation
+                    pass
+                else:
+                    if fd < 3: # don't ever close stdout or stderr
+                        return
             self.stream.close()
             self.closed = True
 
@@ -92,28 +99,6 @@ class Handler:
         ei = sys.exc_info()
         traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
         del ei
-
-class FileHandler(Handler):
-    """File handler which supports reopening of logs.
-    """
-
-    def __init__(self, filename, mode="a"):
-        Handler.__init__(self, open(filename, mode))
-        self.baseFilename = filename
-        self.mode = mode
-
-    def reopen(self):
-        self.close()
-        self.stream = open(self.baseFilename, self.mode)
-        self.closed = False
-
-    def remove(self):
-        self.close()
-        try:
-            os.remove(self.baseFilename)
-        except OSError as why:
-            if why.args[0] != errno.ENOENT:
-                raise
 
 class StreamHandler(Handler):
     def __init__(self, strm=None):
@@ -149,6 +134,29 @@ class BoundIO:
     def clear(self):
         self.buf = ''
 
+class FileHandler(Handler):
+    """File handler which supports reopening of logs.
+    """
+
+    def __init__(self, filename, mode="a"):
+        Handler.__init__(self)
+        self.stream = open(filename, mode)
+        self.baseFilename = filename
+        self.mode = mode
+
+    def reopen(self):
+        self.close()
+        self.stream = open(self.baseFilename, self.mode)
+        self.closed = False
+
+    def remove(self):
+        self.close()
+        try:
+            os.remove(self.baseFilename)
+        except OSError as why:
+            if why.args[0] != errno.ENOENT:
+                raise
+
 class RotatingFileHandler(FileHandler):
     def __init__(self, filename, mode='a', maxBytes=512*1024*1024,
                  backupCount=10):
@@ -172,7 +180,6 @@ class RotatingFileHandler(FileHandler):
 
         If maxBytes is zero, rollover never occurs.
         """
-#        FileHandler.__init__(self, filename, mode)
         if maxBytes > 0:
             mode = 'a' # doesn't make sense otherwise!
         FileHandler.__init__(self, filename, mode)
@@ -180,13 +187,6 @@ class RotatingFileHandler(FileHandler):
         self.backupCount = backupCount
         self.counter = 0
         self.every = 10
-
-    def __del__(self):
-        if self.stream:
-            try:
-                self.stream.close()
-            except OSError:
-                pass
 
     def emit(self, record):
         """

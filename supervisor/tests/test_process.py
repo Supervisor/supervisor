@@ -247,9 +247,38 @@ class SubprocessTests(unittest.TestCase):
         events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         result = instance.spawn()
         self.assertEqual(result, None)
-        self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
+        self.assertEqual(instance.spawnerr,
+                         'unknown error making dispatchers: EPERM')
         self.assertEqual(options.logger.data[0],
-                         "spawnerr: unknown error: EPERM")
+                         "spawnerr: unknown error making dispatchers: EPERM")
+        self.assertTrue(instance.delay)
+        self.assertTrue(instance.backoff)
+        from supervisor.states import ProcessStates
+        self.assertEqual(instance.state, ProcessStates.BACKOFF)
+        self.assertEqual(len(L), 2)
+        event1, event2 = L
+        self.assertEqual(event1.__class__, events.ProcessStateStartingEvent)
+        self.assertEqual(event2.__class__, events.ProcessStateBackoffEvent)
+
+    def test_spawn_fail_make_dispatchers_eisdir(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, name='cat', command='/bin/cat',
+                              stdout_logfile='/a/directory') # not a file
+        def raise_eisdir(envelope):
+            raise IOError(errno.EISDIR)
+        config.make_dispatchers = raise_eisdir
+        instance = self._makeOne(config)
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.BACKOFF
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(instance.spawnerr,
+                         "unknown error making dispatchers: EISDIR")
+        self.assertEqual(options.logger.data[0],
+                         "spawnerr: unknown error making dispatchers: EISDIR")
         self.assertTrue(instance.delay)
         self.assertTrue(instance.backoff)
         from supervisor.states import ProcessStates
@@ -298,9 +327,10 @@ class SubprocessTests(unittest.TestCase):
         events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         result = instance.spawn()
         self.assertEqual(result, None)
-        self.assertEqual(instance.spawnerr, 'unknown error: EPERM')
+        self.assertEqual(instance.spawnerr,
+                         'unknown error during fork: EPERM')
         self.assertEqual(options.logger.data[0],
-                         "spawnerr: unknown error: EPERM")
+                         "spawnerr: unknown error during fork: EPERM")
         self.assertEqual(len(options.parent_pipes_closed), 6)
         self.assertEqual(len(options.child_pipes_closed), 6)
         self.assertTrue(instance.delay)
@@ -986,7 +1016,6 @@ class SubprocessTests(unittest.TestCase):
         pipes = {'stdout':'','stderr':''}
         instance.pipes = pipes
         instance.config.exitcodes =[-1]
-        import time
         instance.laststart = time.time()
         from supervisor.states import ProcessStates
         from supervisor import events
@@ -1335,7 +1364,6 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(process.state, ProcessStates.STOPPING)
         self.assertEqual(options.logger.data[0],
                          "killing 'process' (1) with SIGKILL")
-        import signal
         self.assertEqual(options.kills[1], signal.SIGKILL)
         self.assertEqual(L, [])
 
@@ -1767,7 +1795,10 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         self.assertEqual(process1.listener_state, EventListenerStates.READY)
         self.assertEqual(pool.event_buffer, [event])
         self.assertEqual(options.logger.data[0],
-                         'rebuffering event abc for pool whatever (bufsize 0)')
+            'epipe occurred while sending event abc to listener '
+            'process1, listener state unchanged')
+        self.assertEqual(options.logger.data[1],
+            'rebuffering event abc for pool whatever (bufsize 0)')
 
     def test__acceptEvent_attaches_pool_serial_and_serial(self):
         from supervisor.process import GlobalSerial

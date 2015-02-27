@@ -29,6 +29,7 @@ class EntryPointTests(unittest.TestCase):
             os.path.abspath(os.path.dirname(__file__)), 'fixtures',
             'donothing.conf')
         new_stdout = StringIO()
+        new_stdout.fileno = lambda: 1
         old_stdout = sys.stdout
         try:
             tempdir = tempfile.mkdtemp()
@@ -50,6 +51,7 @@ class EntryPointTests(unittest.TestCase):
                 os.path.abspath(os.path.dirname(__file__)), 'fixtures',
                 'donothing.conf')
             new_stdout = StringIO()
+            new_stdout.fileno = lambda: 1
             old_stdout = sys.stdout
             try:
                 tempdir = tempfile.mkdtemp()
@@ -142,6 +144,27 @@ class SupervisordTests(unittest.TestCase):
         supervisord.reap(once=True)
         self.assertEqual(process.finished, (1,1))
 
+    def test_reap_recursionguard(self):
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+        result = supervisord.reap(once=True, recursionguard=100)
+        self.assertEqual(result, None)
+
+    def test_reap_more_than_once(self):
+        options = DummyOptions()
+        options.waitpid_return = 1, 1
+        pconfig = DummyPConfig(options, 'process', 'process', '/bin/process1')
+        process = DummyProcess(pconfig)
+        process.drained = False
+        process.killing = 1
+        process.laststop = None
+        process.waitstatus = None, None
+        options.pidhistory = {1:process}
+        supervisord = self._makeOne(options)
+
+        supervisord.reap(recursionguard=99)
+        self.assertEqual(process.finished, (1,1))
+
     def test_reap_unknown_pid(self):
         options = DummyOptions()
         options.waitpid_return = 2, 0 # pid, status
@@ -219,11 +242,14 @@ class SupervisordTests(unittest.TestCase):
         options.process_group_configs = DummyPGroupConfig(
             options, 'foo',
             pconfigs=pconfigs)
+        dummypgroup = DummyProcessGroup(options)
+        supervisord.process_groups = {None:dummypgroup}
         supervisord.handle_signal()
         self.assertEqual(supervisord.options.mood, 1)
         self.assertEqual(options.logs_reopened, True)
         self.assertEqual(options.logger.data[0],
                          'received SIGUSR2 indicating log reopen request')
+        self.assertEqual(dummypgroup.logs_reopened, True)
 
     def test_handle_unknown_signal(self):
         options = DummyOptions()
@@ -233,6 +259,12 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(supervisord.options.mood, 1)
         self.assertEqual(options.logger.data[0],
                          'received SIGUSR1 indicating nothing')
+
+    def test_get_state(self):
+        from supervisor.states import SupervisorStates
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+        self.assertEqual(supervisord.get_state(), SupervisorStates.RUNNING)
 
     def test_diff_add_remove(self):
         options = DummyOptions()
@@ -467,7 +499,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(writable.write_event_handled, True)
         self.assertEqual(error.error_handled, True)
 
-    def test_runforever_select_dispatcher_exitnow(self):
+    def test_runforever_select_dispatcher_exitnow_via_read(self):
         options = DummyOptions()
         options.poller.result = [6], []
         supervisord = self._makeOne(options)
@@ -480,6 +512,48 @@ class SupervisordTests(unittest.TestCase):
         supervisord.process_groups = {'foo': pgroup}
         options.test = True
         self.assertRaises(asyncore.ExitNow, supervisord.runforever)
+
+    def test_runforever_select_dispatcher_exitnow_via_write(self):
+        options = DummyOptions()
+        options.poller.result = [], [6]
+        supervisord = self._makeOne(options)
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
+        pgroup = DummyProcessGroup(gconfig)
+        from supervisor.medusa import asyncore_25 as asyncore
+        exitnow = DummyDispatcher(readable=True, error=asyncore.ExitNow)
+        pgroup.dispatchers = {6:exitnow}
+        supervisord.process_groups = {'foo': pgroup}
+        options.test = True
+        self.assertRaises(asyncore.ExitNow, supervisord.runforever)
+
+    def test_runforever_select_dispatcher_handle_error_via_read(self):
+        options = DummyOptions()
+        options.poller.result = [6], []
+        supervisord = self._makeOne(options)
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
+        pgroup = DummyProcessGroup(gconfig)
+        notimpl = DummyDispatcher(readable=True, error=NotImplementedError)
+        pgroup.dispatchers = {6:notimpl}
+        supervisord.process_groups = {'foo': pgroup}
+        options.test = True
+        supervisord.runforever()
+        self.assertEqual(notimpl.error_handled, True)
+
+    def test_runforever_select_dispatcher_handle_error_via_write(self):
+        options = DummyOptions()
+        options.poller.result = [], [6]
+        supervisord = self._makeOne(options)
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo',)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig])
+        pgroup = DummyProcessGroup(gconfig)
+        notimpl = DummyDispatcher(readable=True, error=NotImplementedError)
+        pgroup.dispatchers = {6:notimpl}
+        supervisord.process_groups = {'foo': pgroup}
+        options.test = True
+        supervisord.runforever()
+        self.assertEqual(notimpl.error_handled, True)
 
     def test_runforever_stopping_emits_events(self):
         options = DummyOptions()

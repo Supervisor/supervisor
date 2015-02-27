@@ -281,7 +281,7 @@ class DummyLogger:
         self.data.append(msg)
 
     def addHandler(self, handler):
-        pass
+        handler.close()
 
     def reopen(self):
         self.reopened = True
@@ -583,9 +583,8 @@ def makeExecutable(file, substitutions=None):
         data = data.replace('<<%s>>' % key.upper(), substitutions[key])
 
     tmpnam = tempfile.mktemp(prefix=last)
-    f = open(tmpnam, 'w')
-    f.write(data)
-    f.close()
+    with open(tmpnam, 'w') as f:
+        f.write(data)
     os.chmod(tmpnam, 493) # 0755 on Py2, 0o755 on Py3
     return tmpnam
 
@@ -1042,6 +1041,9 @@ class DummyProcessGroup(object):
 
     def __eq__(self, other):
         return self.config.priority == other.config.priority
+
+    def reopenlogs(self):
+        self.logs_reopened = True
 
 class DummyFCGIProcessGroup(DummyProcessGroup):
 

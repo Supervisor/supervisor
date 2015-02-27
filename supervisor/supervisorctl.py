@@ -5,13 +5,13 @@
 Usage: %s [options] [action [arguments]]
 
 Options:
--c/--configuration -- configuration file path (default /etc/supervisord.conf)
+-c/--configuration FILENAME -- configuration file path (default /etc/supervisord.conf)
 -h/--help -- print usage message and exit
 -i/--interactive -- start an interactive shell after executing commands
 -s/--serverurl URL -- URL on which supervisord server is listening
      (default "http://localhost:9001").
--u/--username -- username to use for authentication with server
--p/--password -- password to use for authentication with server
+-u/--username USERNAME -- username to use for authentication with server
+-p/--password PASSWORD -- password to use for authentication with server
 -r/--history-file -- keep a readline history (if readline is available)
 
 action [arguments] -- see below
@@ -26,7 +26,7 @@ import cmd
 import sys
 import getpass
 
-import supervisor.medusa.text_socket as socket
+import socket
 import errno
 import threading
 
@@ -42,6 +42,7 @@ from supervisor.options import make_namespec
 from supervisor.options import split_namespec
 from supervisor import xmlrpc
 from supervisor import states
+from supervisor import http_client
 
 class fgthread(threading.Thread):
     """ A subclass of threading.Thread, with a kill() method.
@@ -51,7 +52,6 @@ class fgthread(threading.Thread):
 
     def __init__(self, program, ctl):
         threading.Thread.__init__(self)
-        import supervisor.http_client as http_client
         self.killed = False
         self.program = program
         self.ctl = ctl
@@ -63,20 +63,20 @@ class fgthread(threading.Thread):
                                                      self.ctl.options.username,
                                                      self.ctl.options.password)
 
-    def start(self):
+    def start(self): # pragma: no cover
         # Start the thread
         self.__run_backup = self.run
         self.run = self.__run
         threading.Thread.start(self)
 
-    def run(self):
+    def run(self): # pragma: no cover
         self.output_handler.get(self.ctl.options.serverurl,
                                 '/logtail/%s/stdout'%self.program)
         self.error_handler.get(self.ctl.options.serverurl,
                                '/logtail/%s/stderr'%self.program)
         asyncore.loop()
 
-    def __run(self):
+    def __run(self): # pragma: no cover
         # Hacked run function, which installs the trace
         sys.settrace(self.globaltrace)
         self.__run_backup()
@@ -120,6 +120,38 @@ class Controller(cmd.Cmd):
     def emptyline(self):
         # We don't want a blank line to repeat the last command.
         return
+
+    def exec_cmdloop(self, args, options):
+        try:
+            import readline
+            delims = readline.get_completer_delims()
+            delims = delims.replace(':', '')  # "group:process" as one word
+            delims = delims.replace('*', '')  # "group:*" as one word
+            delims = delims.replace('-', '')  # names with "-" as one word
+            readline.set_completer_delims(delims)
+
+            if options.history_file:
+                try:
+                    readline.read_history_file(options.history_file)
+                except IOError:
+                    pass
+
+                def save():
+                    try:
+                        readline.write_history_file(options.history_file)
+                    except IOError:
+                        pass
+
+                import atexit
+                atexit.register(save)
+        except ImportError:
+            pass
+        try:
+            self.cmdqueue.append('status')
+            self.cmdloop()
+        except KeyboardInterrupt:
+            self.output('')
+            pass
 
     def onecmd(self, line):
         """ Override the onecmd method to:
@@ -395,7 +427,6 @@ class DefaultControllerPlugin(ControllerPluginBase):
             # always sends a Connection: close header).  We use a
             # homegrown client based on asyncore instead.  This makes
             # me sad.
-            import supervisor.http_client as http_client
             if self.listener is None:
                 listener = http_client.Listener()
             else:
@@ -1246,43 +1277,20 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output('fg <process>\tConnect to a process in foreground mode')
         self.ctl.output('Press Ctrl+C to exit foreground')
 
+
 def main(args=None, options=None):
     if options is None:
         options = ClientOptions()
+
     options.realize(args, doc=__doc__)
     c = Controller(options)
+
     if options.args:
         c.onecmd(" ".join(options.args))
+
     if options.interactive:
-        try:
-            import readline
-            delims = readline.get_completer_delims()
-            delims = delims.replace(':', '') # "group:process" as one word
-            delims = delims.replace('*', '') # "group:*" as one word
-            delims = delims.replace('-', '') # names with "-" as one word
-            readline.set_completer_delims(delims)
+        c.exec_cmdloop(args, options)
 
-            if options.history_file:
-                try:
-                    readline.read_history_file(options.history_file)
-                except IOError:
-                    pass
-                def save():
-                    try:
-                        readline.write_history_file(options.history_file)
-                    except IOError:
-                        pass
-
-                import atexit
-                atexit.register(save)
-        except ImportError:
-            pass
-        try:
-            c.cmdqueue.append('status')
-            c.cmdloop()
-        except KeyboardInterrupt:
-            c.output('')
-            pass
 
 if __name__ == "__main__":
     main()

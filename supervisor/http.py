@@ -2,7 +2,7 @@ import os
 import stat
 import time
 import sys
-import supervisor.medusa.text_socket as socket
+import socket
 import errno
 import pwd
 import weakref
@@ -17,6 +17,7 @@ from supervisor.medusa import http_server
 from supervisor.medusa import producers
 from supervisor.medusa import filesys
 from supervisor.medusa import default_handler
+from supervisor.medusa import text_socket
 
 from supervisor.medusa.auth_handler import auth_handler
 
@@ -520,7 +521,7 @@ class supervisor_af_inet_http_server(supervisor_http_server):
     def __init__(self, ip, port, logger_object):
         self.ip = ip
         self.port = port
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock = text_socket.text_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.prebind(sock, logger_object)
         self.bind((ip, port))
 
@@ -565,7 +566,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
             pass
 
         while 1:
-            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock = text_socket.text_socket(socket.AF_UNIX, socket.SOCK_STREAM)
             try:
                 sock.bind(tempname)
                 os.chmod(tempname, sockchmod)
@@ -622,7 +623,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
             s.connect(socketname)
-            s.send("GET / HTTP/1.0\r\n\r\n")
+            s.send(as_bytes("GET / HTTP/1.0\r\n\r\n"))
             s.recv(1)
             s.close()
         except socket.error:
@@ -648,7 +649,7 @@ class tail_f_producer:
         self._follow()
         try:
             newsz = self._fsize()
-        except OSError:
+        except (OSError, ValueError):
             # file descriptor was closed
             return ''
         bytes_added = newsz - self.sz
@@ -673,7 +674,8 @@ class tail_f_producer:
     def _follow(self):
         try:
             ino = os.stat(self.filename)[stat.ST_INO]
-        except OSError:
+        except (OSError, ValueError):
+            # file was unlinked
             return
 
         if self.ino != ino: # log rotation occurred

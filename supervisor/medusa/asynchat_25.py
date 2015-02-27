@@ -46,7 +46,7 @@ method) up to the terminator, and then control will be returned to
 you - by calling your self.found_terminator() method.
 """
 
-import supervisor.medusa.text_socket as socket
+import socket
 from supervisor.medusa import asyncore_25 as asyncore
 from supervisor.compat import long
 

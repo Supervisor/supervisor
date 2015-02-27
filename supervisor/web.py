@@ -210,8 +210,8 @@ class TailView(MeldView):
             else:
                 rpcinterface = SupervisorNamespaceRPCInterface(supervisord)
                 try:
-                    tail = rpcinterface.readProcessLog(processname, limit, offset)
-                    tail = rpcinterface.readProcessLog(processname, -1024, 0)
+                    tail = rpcinterface.readProcessStdoutLog(processname,
+                                                             limit, offset)
                 except RPCError as e:
                     if e.code == Faults.NO_FILE:
                         tail = 'No file for %s' % processname
@@ -404,7 +404,7 @@ class StatusView(MeldView):
                     return startprocess
 
                 elif action == 'clearlog':
-                    callback = rpcinterface.supervisor.clearProcessLog(
+                    callback = rpcinterface.supervisor.clearProcessLogs(
                         namespec)
                     def clearlog():
                         return 'Log for %s cleared' % namespec

@@ -15,8 +15,9 @@ import stat
 # medusa modules
 import supervisor.medusa.http_date as http_date
 import supervisor.medusa.http_server as http_server
-import supervisor.medusa.status_handler as status_handler
 import supervisor.medusa.producers as producers
+
+from supervisor.medusa.util import html_repr
 
 unquote = http_server.unquote
 
@@ -178,7 +179,7 @@ class default_handler:
 
     def status (self):
         return producers.simple_producer (
-                '<li>%s' % status_handler.html_repr (self)
+                '<li>%s' % html_repr (self)
                 + '<ul>'
                 + '  <li><b>Total Hits:</b> %s'                 % self.hit_counter
                 + '  <li><b>Files Delivered:</b> %s'    % self.file_counter

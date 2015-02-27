@@ -1248,7 +1248,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
-                             interface.getProcessInfo, 'nonexistant')
+                             interface.getProcessInfo, 'nonexistent')
 
     def test_getProcessInfo_bad_name_when_no_process(self):
         from supervisor import xmlrpc
@@ -1839,7 +1839,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         from supervisor import xmlrpc
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
                              interface.sendProcessStdin,
-                             'nonexistant', 'chars for stdin')
+                             'nonexistent', 'chars for stdin')
 
     def test_sendProcessStdin_raises_bad_name_when_no_process(self):
         options = DummyOptions()
@@ -2181,8 +2181,64 @@ class Test_make_allfunc(unittest.TestCase):
             'name': 'process1',
             'status': xmlrpc.Faults.FAILED}])
 
+    def test_func_callback_normal_return_val(self):
+        def cb(name, **kw):
+            return lambda: 1
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'foo')
+        proc = DummyProcess(pconfig1)
+        group = DummyProcessGroup(pconfig1)
+        def pred(proc):
+            return True
+        af = self._callFUT([(group, proc)], pred, cb)
+        result = af()
+        self.assertEqual(
+            result,
+            [{'group': 'process1',
+              'description': 'OK',
+              'status': 80, 'name': 'process1'}]
+            )
 
+    def test_func_callback_raises_RPCError(self):
+        from supervisor import xmlrpc
+        def cb(name, **kw):
+            def inner():
+                raise xmlrpc.RPCError(xmlrpc.Faults.FAILED)
+            return inner
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'foo')
+        proc = DummyProcess(pconfig1)
+        group = DummyProcessGroup(pconfig1)
+        def pred(proc):
+            return True
+        af = self._callFUT([(group, proc)], pred, cb)
+        result = af()
+        self.assertEqual(
+            result,
+            [{'description': 'FAILED',
+              'group': 'process1',
+              'status': 30,
+              'name': 'process1'}]
+            )
 
+    def test_func_callback_returns_NOT_DONE_YET(self):
+        from supervisor.http import NOT_DONE_YET
+        def cb(name, **kw):
+            def inner():
+                return NOT_DONE_YET
+            return inner
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'foo')
+        proc = DummyProcess(pconfig1)
+        group = DummyProcessGroup(pconfig1)
+        def pred(proc):
+            return True
+        af = self._callFUT([(group, proc)], pred, cb)
+        result = af()
+        self.assertEqual(
+            result,
+            NOT_DONE_YET,
+            )
 
 class Test_make_main_rpcinterface(unittest.TestCase):
     def _callFUT(self, supervisord):

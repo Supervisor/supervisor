@@ -221,13 +221,14 @@ class Subprocess(object):
 
         try:
             self.dispatchers, self.pipes = self.config.make_dispatchers(self)
-        except OSError as why:
+        except (OSError, IOError) as why:
             code = why.args[0]
             if code == errno.EMFILE:
                 # too many file descriptors open
                 msg = 'too many open files to spawn %r' % self.config.name
             else:
-                msg = 'unknown error: %s' % errno.errorcode.get(code, code)
+                msg = ('unknown error making dispatchers: %s' %
+                       errno.errorcode.get(code, code))
             self.record_spawnerr(msg)
             self._assertInState(ProcessStates.STARTING)
             self.change_state(ProcessStates.BACKOFF)
@@ -242,8 +243,8 @@ class Subprocess(object):
                 msg  = ('Too many processes in process table to spawn %r' %
                         self.config.name)
             else:
-                msg = 'unknown error: %s' % errno.errorcode.get(code, code)
-
+                msg = ('unknown error during fork: %s' %
+                       errno.errorcode.get(code, code))
             self.record_spawnerr(msg)
             self._assertInState(ProcessStates.STARTING)
             self.change_state(ProcessStates.BACKOFF)
@@ -861,6 +862,11 @@ class EventListenerPool(ProcessGroupBase):
                 except OSError as why:
                     if why.args[0] != errno.EPIPE:
                         raise
+
+                    self.config.options.logger.debug(
+                        'epipe occurred while sending event %s '
+                        'to listener %s, listener state unchanged' % (
+                        event.serial, process.config.name))
                     continue
 
                 process.listener_state = EventListenerStates.BUSY

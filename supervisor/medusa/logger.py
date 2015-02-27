@@ -1,21 +1,18 @@
 # -*- Mode: Python -*-
 
 import supervisor.medusa.asynchat_25 as asynchat
-import supervisor.medusa.text_socket as socket
+import socket
 import time         # these three are for the rotating logger
 import os           # |
 import stat         # v
 
 #
-# three types of log:
+# two types of log:
 # 1) file
 #    with optional flushing.  Also, one that rotates the log.
 # 2) socket
 #    dump output directly to a socket connection. [how do we
 #    keep it open?]
-# 3) syslog
-#    log to syslog via tcp.  this is a per-line protocol.
-#
 
 #
 # The 'standard' interface to a logging object is simply
@@ -139,35 +136,6 @@ class rotating_file_logger (file_logger):
             self.file = open(self.filename, self.mode)
         except:
             pass
-
-# syslog is a line-oriented log protocol - this class would be
-# appropriate for FTP or HTTP logs, but not for dumping stderr to.
-
-# TODO: a simple safety wrapper that will ensure that the line sent
-# to syslog is reasonable.
-
-# TODO: async version of syslog_client: now, log entries use blocking
-# send()
-
-import supervisor.medusa.m_syslog as m_syslog
-syslog_logger = m_syslog.syslog_client
-
-class syslog_logger (m_syslog.syslog_client):
-    def __init__ (self, address, facility='user'):
-        m_syslog.syslog_client.__init__ (self, address)
-        self.facility = m_syslog.facility_names[facility]
-        self.address=address
-
-    def __repr__ (self):
-        return '<syslog logger address=%s>' % (repr(self.address))
-
-    def log(self, message):
-        m_syslog.syslog_client.log (
-                self,
-                message,
-                facility=self.facility,
-                priority=m_syslog.LOG_INFO
-                )
 
 # log to a stream socket, asynchronously
 

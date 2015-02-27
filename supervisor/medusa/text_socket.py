@@ -1,16 +1,12 @@
-# -*- Mode: Python -*-
+import socket
+from supervisor.compat import PY3, as_string, as_bytes
 
-__author__ = 'Scott Maxwell'
-
-from supervisor.compat import PY3
-from supervisor.compat import as_string, as_bytes
-
-from socket import * # relied on to be imported from elsewhere
+bin_socket = socket.socket
 
 if PY3:
-    bin_socket = socket
-    class text_socket(socket):
-        def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, fileno=None):
+    class text_socket(bin_socket):
+        def __init__(self, family=socket.AF_INET, type=socket.SOCK_STREAM,
+                           proto=0, fileno=None):
             bin_socket.__init__(self, family, type, proto, fileno)
 
         def recv(self, *args, **kwargs):
@@ -39,9 +35,11 @@ if PY3:
             # Issue #7995: if no default timeout is set and the listening
             # socket had a (non-zero) timeout, force the new socket in blocking
             # mode to override platform-specific socket flags inheritance.
-            if getdefaulttimeout() is None and self.gettimeout():
+            if socket.getdefaulttimeout() is None and self.gettimeout():
                 sock.setblocking(True)
             return sock, addr
 
     text_socket.__init__.__doc__ = bin_socket.__init__.__doc__
-    socket = text_socket
+
+else:
+    text_socket = bin_socket

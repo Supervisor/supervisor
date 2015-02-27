@@ -217,7 +217,7 @@ class Supervisor:
                     try:
                         dispatcher = combined_map[fd]
                         self.options.logger.blather(
-                            'read event caused by %(dispatcher)s',
+                            'read event caused by %(dispatcher)r',
                             dispatcher=dispatcher)
                         dispatcher.handle_read_event()
                     except asyncore.ExitNow:
@@ -230,7 +230,7 @@ class Supervisor:
                     try:
                         dispatcher = combined_map[fd]
                         self.options.logger.blather(
-                            'write event caused by %(dispatcher)s',
+                            'write event caused by %(dispatcher)r',
                             dispatcher=dispatcher)
                         dispatcher.handle_write_event()
                     except asyncore.ExitNow:
@@ -314,7 +314,7 @@ def timeslice(period, when):
     return int(when - (when % period))
 
 # profile entry point
-def profile(cmd, globals, locals, sort_order, callers):
+def profile(cmd, globals, locals, sort_order, callers): # pragma: no cover
     try:
         import cProfile as profile
     except ImportError:
@@ -351,18 +351,18 @@ def main(args=None, test=False):
             profile('go(options)', globals(), locals(), sort_order, callers)
         else:
             go(options)
-        if test or (options.mood < SupervisorStates.RESTARTING):
-            break
         options.close_httpservers()
         options.close_logger()
         first = False
+        if test or (options.mood < SupervisorStates.RESTARTING):
+            break
 
-def go(options):
+def go(options): # pragma: no cover
     d = Supervisor(options)
     try:
         d.main()
     except asyncore.ExitNow:
         pass
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
     main()
