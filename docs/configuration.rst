@@ -760,6 +760,12 @@ where specified.
   be used as the account which runs the program.  If :program:`supervisord`
   can't switch to the specified user, the program will not be started.
 
+  .. note::
+
+      The user will be changed using ``setuid`` only.  This does not start
+      a login shell and does not change environment variables like
+      ``USER`` or ``HOME``.  See :ref:`subprocess_environment` for details.
+
   *Default*: Do not switch users
 
   *Required*:  No.
