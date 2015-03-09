@@ -25,7 +25,7 @@ actions.
 import cmd
 import sys
 import getpass
-
+import operator
 import socket
 import errno
 import threading
@@ -612,8 +612,19 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
         supervisor = self.ctl.get_supervisor()
         all_infos = supervisor.getAllProcessInfo()
+        sort_by_starttime = False
+        reverse = False
 
-        names = arg.split()
+        args = arg.split()
+
+        options = [arg for arg in args if arg.startswith('--')]
+        for option in options:
+            if option.startswith('--sort=start'):
+                sort_by_starttime = True
+            if option.startswith('--reverse'):
+                reverse = True
+
+        names = [arg for arg in args if not arg.startswith('--')]
         if not names or "all" in names:
             matching_infos = all_infos
         else:
@@ -638,6 +649,9 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     else:
                         msg = "%s: ERROR (no such process)" % name
                     self.ctl.output(msg)
+        if sort_by_starttime:
+            matching_infos.sort(key=operator.itemgetter('start'),
+                                reverse=reverse)
         self._show_statuses(matching_infos)
 
     def help_status(self):
