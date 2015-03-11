@@ -90,9 +90,10 @@ class SupervisordTests(unittest.TestCase):
         supervisord.main()
         self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.fds_cleaned_up, False)
-        self.assertEqual(options.rlimits_set, True)
+        self.assertTrue(options.rlimits_set)
         self.assertEqual(options.make_logger_messages,
-                         (['setuid_called'], [], ['rlimits_set']))
+                         (['setuid_called'], [],
+                          ['rlimits_set enforce_max=False limit_fds=None limit_procs=None limit_memlock=None']))
         self.assertEqual(options.autochildlogdir_cleared, True)
         self.assertEqual(len(supervisord.process_groups), 1)
         self.assertEqual(supervisord.process_groups['foo'].config.options,

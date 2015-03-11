@@ -293,6 +293,26 @@ class Subprocess(object):
             # supervisord from being sent to children.
             options.setpgrp()
 
+            # update rlimits
+            limit_fds = None
+            limit_procs = None
+            limit_memlock = None
+            if hasattr(self.config, 'limit_fds'):
+                limit_fds = self.config.limit_fds
+            if hasattr(self.config, 'limit_procs'):
+                limit_procs = self.config.limit_procs
+            if hasattr(self.config, 'limit_memlock'):
+                limit_memlock = self.config.limit_memlock
+            try:
+                for message in options.set_rlimits(
+                        enforce_max=True,
+                        limit_fds=limit_fds,
+                        limit_procs=limit_procs,
+                        limit_memlock=limit_memlock):
+                    options.logger.info(message)
+            except ValueError, e:
+                options.write(2, "Error when setting rlimits: %s\n" % str(e))
+
             self._prepare_child_fds()
             # sending to fd 2 will put this output in the stderr log
 

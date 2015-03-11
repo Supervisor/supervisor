@@ -104,9 +104,14 @@ class DummyOptions:
     def cleanup_fds(self):
         self.fds_cleaned_up = True
 
-    def set_rlimits(self):
-        self.rlimits_set = True
-        return ['rlimits_set']
+    def set_rlimits(self, enforce_max=False, limit_fds=None, limit_procs=None,
+                    limit_memlock=None):
+        self.rlimits_set = {'enforce_max': enforce_max,
+                            'limit_fds':   limit_fds,
+                            'limit_procs': limit_procs,
+                            'limit_memlock': limit_memlock}
+        return ['rlimits_set enforce_max=%s limit_fds=%s limit_procs=%s limit_memlock=%s'
+                % (enforce_max, limit_fds, limit_procs, limit_memlock)]
 
     def set_uid(self):
         self.setuid_called = True
@@ -511,7 +516,8 @@ class DummyPConfig:
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
-                 exitcodes=(0,2), environment=None, serverurl=None):
+                 exitcodes=(0,2), environment=None, serverurl=None,
+                 limit_fds=None, limit_procs=None, limit_memlock=None):
         self.options = options
         self.name = name
         self.command = command
@@ -541,6 +547,9 @@ class DummyPConfig:
         self.killasgroup = killasgroup
         self.exitcodes = exitcodes
         self.environment = environment
+        self.limit_fds = limit_fds
+        self.limit_procs = limit_procs
+        self.limit_memlock = limit_memlock
         self.directory = directory
         self.umask = umask
         self.autochildlogs_created = False
