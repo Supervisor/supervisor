@@ -185,6 +185,10 @@ class MeldView:
         response['body'] = as_string(body)
         return response
 
+    @property
+    def base_path(self):
+        return self.context.request.channel.server.base_path
+
     def render(self):
         pass
 
@@ -429,9 +433,7 @@ class StatusView(MeldView):
                 if message is NOT_DONE_YET:
                     return NOT_DONE_YET
                 if message is not None:
-                    server_url = form['SERVER_URL']
-                    location = server_url + '?message=%s' % urllib.quote(
-                        message)
+                    location = '%s?message=%s' % (self.base_path, urllib.quote(message))
                     response['headers']['Location'] = location
 
         supervisord = self.context.supervisord
@@ -511,6 +513,7 @@ class StatusView(MeldView):
         root.findmeld('supervisor_version').content(VERSION)
         copyright_year = str(datetime.date.today().year)
         root.findmeld('copyright_date').content(copyright_year)
+        root.findmeld('base_path').attrib['href'] = self.base_path
 
         return as_string(root.write_xhtmlstring())
 
@@ -556,9 +559,7 @@ class supervisor_ui_handler:
         if not path:
             path = 'index.html'
 
-        for viewname in VIEWS.keys():
-            if viewname == path:
-                return True
+        return path in VIEWS.keys()
 
     def handle_request(self, request):
         if request.command == 'POST':
