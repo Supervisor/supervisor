@@ -1369,7 +1369,7 @@ class ServerOptions(Options):
 
         for limit in limits:
 
-            lmin = limit['min']
+            min = limit['min']
             res = limit['resource']
             msg = limit['msg']
             name = limit['name']
@@ -1377,15 +1377,15 @@ class ServerOptions(Options):
 
             soft, hard = resource.getrlimit(res)
 
-            if (soft < lmin) and (soft != -1): # -1 means unlimited
-                if (hard < lmin) and (hard != -1):
+            if (soft < min) and (soft != -1): # -1 means unlimited
+                if (hard < min) and (hard != -1):
                     # setrlimit should increase the hard limit if we are
                     # root, if not then setrlimit raises and we print usage
-                    hard = lmin
+                    hard = min
 
                 try:
-                    resource.setrlimit(res, (lmin, hard))
-                    msgs.append('Increased %(name)s limit to %(lmin)s' %
+                    resource.setrlimit(res, (min, hard))
+                    msgs.append('Increased %(name)s limit to %(min)s' %
                                 locals())
                 except (resource.error, ValueError):
                     self.usage(msg % locals())
