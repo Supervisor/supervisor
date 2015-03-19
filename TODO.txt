@@ -69,8 +69,6 @@
 
    - Option to automatically refresh the status page (issue #73).
 
-   - Better support for use with proxy servers (issue #29)
-
 - Expat error on Jens' system running slapd as root after reload.
 
 - Command-line arg tests.

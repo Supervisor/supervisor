@@ -171,6 +171,18 @@ configuration values are as follows.
 
   *Introduced*: 3.0
 
+``base_path``
+
+  Specify the base path for the web interface. For example,
+  ``base_path=/supervisor/`` yields the web interface accessible at
+  ``http://localhost:4567/supervisor/``.
+
+  *Default*:  ``/``
+
+  *Required*:  No.
+
+  *Introduced*: 4.0
+
 ``[inet_http_server]`` Section Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

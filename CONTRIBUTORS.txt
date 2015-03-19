@@ -48,3 +48,5 @@ Contributors
 - Márk Sági-Kazár, 2013-12-16
 
 - Gülşah Köse, 2014-07-17
+
+- Seyeong Jeong, 2016-03-19
