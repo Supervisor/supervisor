@@ -330,6 +330,8 @@ Process Control
 
     .. automethod:: sendRemoteCommEvent
 
+    .. automethod:: reloadConfig
+
     .. automethod:: addProcessGroup
 
     .. automethod:: removeProcessGroup
