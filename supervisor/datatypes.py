@@ -113,9 +113,9 @@ def logfile_name(val):
 class RangeCheckedConversion:
     """Conversion helper that range checks another conversion."""
 
-    def __init__(self, conversion, rmin=None, rmax=None):
-        self._min = rmin
-        self._max = rmax
+    def __init__(self, conversion, min=None, max=None):
+        self._min = min
+        self._max = max
         self._conversion = conversion
 
     def __call__(self, value):
@@ -128,7 +128,7 @@ class RangeCheckedConversion:
                              % (repr(v), repr(self._max)))
         return v
 
-port_number = RangeCheckedConversion(integer, rmin=1, rmax=0xffff).__call__
+port_number = RangeCheckedConversion(integer, min=1, max=0xffff).__call__
 
 def inet_address(s):
     # returns (host, port) tuple

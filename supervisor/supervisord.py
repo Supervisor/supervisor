@@ -6,7 +6,7 @@ Usage: %s [options]
 
 Options:
 -c/--configuration FILENAME -- configuration file
--n/--nodaemon -- run in the foreground (same as 'nodaemon true' in config file)
+-n/--nodaemon -- run in the foreground (same as 'nodaemon=true' in config file)
 -h/--help -- print this usage message and exit
 -v/--version -- print supervisord version number and exit
 -u/--user USER -- run supervisord as this user (or numeric uid)

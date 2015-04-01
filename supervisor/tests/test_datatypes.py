@@ -240,8 +240,8 @@ class RangeCheckedConversionTests(unittest.TestCase):
     def _getTargetClass(self):
         return datatypes.RangeCheckedConversion
 
-    def _makeOne(self, conversion, rmin=None, rmax=None):
-        return self._getTargetClass()(conversion, rmin, rmax)
+    def _makeOne(self, conversion, min=None, max=None):
+        return self._getTargetClass()(conversion, min, max)
 
     def test_below_lower_bound(self):
         conversion = self._makeOne(lambda *arg: -1, 0)

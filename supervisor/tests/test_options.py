@@ -1461,6 +1461,20 @@ class ServerOptionsTests(unittest.TestCase):
         expected = "/bin/foo --path='%s'" % os.environ['PATH']
         self.assertEqual(pconfigs[0].command, expected)
 
+    def test_processes_from_section_expands_env_in_environment(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo
+        environment = PATH='/foo/bar:%(ENV_PATH)s'
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        expected = "/foo/bar:%s" % os.environ['PATH']
+        self.assertEqual(pconfigs[0].environment['PATH'], expected)
+
     def test_options_with_environment_expansions(self):
         text = lstrip("""\
         [inet_http_server]

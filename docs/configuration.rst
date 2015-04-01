@@ -16,6 +16,10 @@ file it finds.
 
 #. :file:`/etc/supervisord.conf`
 
+#. :file:`../etc/supervisord.conf` (Relative to the executable)
+
+#. :file:`../supervisord.conf` (Relative to the executable)
+
 :file:`supervisord.conf` is a Windows-INI-style (Python ConfigParser)
 file.  It has sections (each denoted by a ``[header]``) and key / value
 pairs within the sections.  The sections and their allowable values
