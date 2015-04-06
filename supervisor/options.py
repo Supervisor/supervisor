@@ -447,9 +447,9 @@ class ServerOptions(Options):
         self.exit(0)
 
     def getLogger(self, filename, level, fmt, rotating=False, maxbytes=0,
-                  backups=0, stdout=False):
+                  backups=0, stdout=False, identifier=None):
         return loggers.getLogger(filename, level, fmt, rotating, maxbytes,
-                                 backups, stdout)
+                                 backups, stdout, identifier=identifier)
 
     def realize(self, *arg, **kw):
         Options.realize(self, *arg, **kw)
@@ -872,6 +872,12 @@ class ServerOptions(Options):
                 maxbytes = byte_size(get(section, mb_key, '50MB'))
                 logfiles[mb_key] = maxbytes
 
+                id_key = '%s_identifier' % k
+                id_val = get(section, id_key, 'supervisor')
+                id_val = expand(id_val, expansions, id_val)
+                logfiles[id_key] = id_val
+
+
                 if lf_val is Automatic and not maxbytes:
                     self.parse_warnings.append(
                         'For [%s], AUTO logging used for %s without '
@@ -891,11 +897,13 @@ class ServerOptions(Options):
                 startretries=startretries,
                 uid=uid,
                 stdout_logfile=logfiles['stdout_logfile'],
+                stdout_identifier=logfiles['stdout_identifier'],
                 stdout_capture_maxbytes = stdout_cmaxbytes,
                 stdout_events_enabled = stdout_events,
                 stdout_logfile_backups=logfiles['stdout_logfile_backups'],
                 stdout_logfile_maxbytes=logfiles['stdout_logfile_maxbytes'],
                 stderr_logfile=logfiles['stderr_logfile'],
+                stderr_identifier=logfiles['stderr_identifier'],
                 stderr_capture_maxbytes = stderr_cmaxbytes,
                 stderr_events_enabled = stderr_events,
                 stderr_logfile_backups=logfiles['stderr_logfile_backups'],
@@ -1633,11 +1641,11 @@ class ProcessConfig(Config):
         'name', 'uid', 'command', 'directory', 'umask', 'priority',
         'autostart', 'autorestart', 'startsecs', 'startretries',
         'stdout_logfile', 'stdout_capture_maxbytes',
-        'stdout_events_enabled',
+        'stdout_events_enabled', 'stdout_identifier',
         'stdout_logfile_backups', 'stdout_logfile_maxbytes',
         'stderr_logfile', 'stderr_capture_maxbytes',
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
-        'stderr_events_enabled',
+        'stderr_events_enabled', 'stderr_identifier',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
         'exitcodes', 'redirect_stderr' ]
     optional_param_names = [ 'environment', 'serverurl' ]

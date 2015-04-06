@@ -299,14 +299,17 @@ class Logger:
         raise NotImplementedError
 
 class SyslogHandler(Handler):
-    def __init__(self):
+    def __init__(self, identifier):
         assert 'syslog' in globals(), "Syslog module not present"
+        self.identifier = identifier
+        self.reopen()
 
     def close(self):
-        pass
+        syslog.closelog()
 
     def reopen(self):
-        pass
+        self.close()
+        syslog.openlog(self.identifier)
 
     def emit(self, record):
         try:
@@ -323,7 +326,7 @@ class SyslogHandler(Handler):
             self.handleError()
 
 def getLogger(filename, level, fmt, rotating=False, maxbytes=0, backups=0,
-              stdout=False):
+              stdout=False, identifier=None):
 
     handlers = []
 
@@ -337,7 +340,7 @@ def getLogger(filename, level, fmt, rotating=False, maxbytes=0, backups=0,
         logger.getvalue = io.getvalue
 
     elif filename == 'syslog':
-        handlers.append(SyslogHandler())
+        handlers.append(SyslogHandler(identifier=identifier))
 
     else:
         if rotating is False:

@@ -87,6 +87,8 @@ class POutputDispatcher(PDispatcher):
             maxbytes = getattr(process.config, '%s_logfile_maxbytes' % channel)
             backups = getattr(process.config, '%s_logfile_backups' % channel)
             fmt = '%(message)s'
+            identifier = getattr(process.config,
+                                 '%s_identifier' % channel)
             if logfile == 'syslog':
                 fmt = ' '.join((process.config.name, fmt))
             self.mainlog = process.config.options.getLogger(
@@ -95,7 +97,9 @@ class POutputDispatcher(PDispatcher):
                 fmt=fmt,
                 rotating=not not maxbytes, # optimization
                 maxbytes=maxbytes,
-                backups=backups)
+                backups=backups,
+                identifier=identifier
+            )
 
         if capture_maxbytes:
             self.capturelog = self.process.config.options.getLogger(
@@ -103,7 +107,7 @@ class POutputDispatcher(PDispatcher):
                 loggers.LevelsByName.INFO,
                 '%(message)s',
                 rotating=False,
-                maxbytes=capture_maxbytes,
+                maxbytes=capture_maxbytes
                 )
 
         self.childlog = self.mainlog
