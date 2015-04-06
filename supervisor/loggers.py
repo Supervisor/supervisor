@@ -309,7 +309,7 @@ class SyslogHandler(Handler):
 
     def reopen(self):
         self.close()
-        syslog.openlog(ident=self.identifier)
+        syslog.openlog(self.identifier)
 
     def emit(self, record):
         try:
