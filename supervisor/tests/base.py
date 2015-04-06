@@ -480,10 +480,10 @@ class DummyPConfig:
                  priority=999, autostart=True,
                  autorestart=True, startsecs=10, startretries=999,
                  uid=None, stdout_logfile=None, stdout_capture_maxbytes=0,
-                 stdout_events_enabled=False,
+                 stdout_events_enabled=False, stdout_identifier='mockident',
                  stdout_logfile_backups=0, stdout_logfile_maxbytes=0,
                  stderr_logfile=None, stderr_capture_maxbytes=0,
-                 stderr_events_enabled=False,
+                 stderr_events_enabled=False, stderr_identifier='mockident',
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
@@ -521,6 +521,8 @@ class DummyPConfig:
         self.umask = umask
         self.autochildlogs_created = False
         self.serverurl = serverurl
+        self.stdout_identifier = stdout_identifier
+        self.stderr_identifier = stderr_identifier
 
     def create_autochildlogs(self):
         self.autochildlogs_created = True

@@ -326,7 +326,7 @@ class SyslogHandlerTests(HandlerTests, unittest.TestCase):
         return __import__('supervisor.loggers').loggers.SyslogHandler
 
     def _makeOne(self):
-        return self._getTargetClass()()
+        return self._getTargetClass()('mockident')
 
     @mock.patch('syslog.syslog', MockSysLog())
     def test_emit_ascii_noerror(self):
