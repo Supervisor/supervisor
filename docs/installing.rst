@@ -105,13 +105,7 @@ management infrastructure of your distribution.
 Installing via pip
 ------------------
 
-With pip >= 1.4
-
-.. code-block:: bash
-
-    pip install supervisor --pre
-
-With previous versions of pip:
+Supervisor can be installed with ``pip install``:
 
 .. code-block:: bash
 
