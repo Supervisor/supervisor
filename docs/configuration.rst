@@ -553,6 +553,8 @@ where specified.
    logfile names, all environment strings, and the command of programs
    can also contain similar Python string expressions, to pass
    slightly different parameters to each process.
+   
+   From the command line you can stop, start and restart all of the processes in the group using a wildcard, e.g. ``supervisorctl restart foo_*`` 
 
 ``[program:x]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
