@@ -244,7 +244,8 @@ class Supervisor:
                     except:
                         combined_map[fd].handle_error()
 
-            [ group.transition() for group  in pgroups ]
+            for group in pgroups:
+                group.transition()
 
             self.reap()
             self.handle_signal()
