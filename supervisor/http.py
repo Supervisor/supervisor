@@ -420,6 +420,11 @@ class deferring_http_channel(http_server.http_channel):
             command, uri, version = http_server.crack_request (request)
             header = http_server.join_headers (lines[1:])
 
+            # strip the ``base_path`` so that the handlers don't need to know
+            # about the ``base_path``.
+            if uri.startswith(self.server.base_path):
+                uri = '/' + uri[len(self.server.base_path):]
+
             # unquote path if necessary (thanks to Skip Montanaro for pointing
             # out that we must unquote in piecemeal fashion).
             rpath, rquery = http_server.splitquery(uri)
@@ -522,12 +527,13 @@ class supervisor_http_server(http_server.http_server):
 class supervisor_af_inet_http_server(supervisor_http_server):
     """ AF_INET version of supervisor HTTP server """
 
-    def __init__(self, ip, port, logger_object):
+    def __init__(self, ip, port, logger_object, base_path='/'):
         self.ip = ip
         self.port = port
         sock = text_socket.text_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.prebind(sock, logger_object)
         self.bind((ip, port))
+        self.base_path = base_path
 
         if not ip:
             self.log_info('Computing default hostname', 'warning')
@@ -799,8 +805,10 @@ def make_http_servers(options, supervisord):
 
         if family == socket.AF_INET:
             host, port = config['host'], config['port']
+            base_path = config.get('base_path', '/')
             hs = supervisor_af_inet_http_server(host, port,
-                                                logger_object=wrapper)
+                                                logger_object=wrapper,
+                                                base_path=base_path)
         elif family == socket.AF_UNIX:
             socketname = config['file']
             sockchmod = config['chmod']

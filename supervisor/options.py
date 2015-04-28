@@ -1025,6 +1025,15 @@ class ServerOptions(Options):
             config['host'] = host
             config['port'] = port
             config['section'] = section
+
+            # sanitize base_path
+            base_path = get(section, 'base_path', '/')
+            if not base_path.endswith('/'):
+                base_path += '/'
+            if not base_path.startswith('/'):
+                base_path = '/' + base_path
+            config['base_path'] = base_path
+
             configs.append(config)
 
         unix_serverdefs = self._parse_servernames(parser, 'unix_http_server')

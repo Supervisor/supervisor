@@ -51,6 +51,10 @@
 - Files included via the `[include]` section are read in sorted order.  In
   past versions, the order was undefined.  Patch by Ionel Cristian Mărieș.
 
+- Added ``base_path`` option in the `[inet_http_server]` section. This
+  allows to put the web interface behind a reverse proxy (i.e. web server).
+  The default value is ``/``.
+
 - Fixed a bug introduced in 3.1.0 where ``supervisord`` could crash when
   attempting to display a resource limit error.
 
