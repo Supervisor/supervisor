@@ -100,7 +100,7 @@ class Supervisor:
             self.options.cleanup()
 
     def diff_to_active(self, new=None):
-        if not new:
+        if new is None:
             new = self.options.process_group_configs
         cur = [group.config for group in self.process_groups.values()]
 
@@ -181,7 +181,7 @@ class Supervisor:
 
         socket_map = self.options.get_socket_map()
 
-        while 1:
+        while True:
             combined_map = {}
             combined_map.update(socket_map)
             combined_map.update(self.get_process_map())
@@ -244,7 +244,8 @@ class Supervisor:
                     except:
                         combined_map[fd].handle_error()
 
-            [ group.transition() for group  in pgroups ]
+            for group  in pgroups:
+                group.transition()
 
             self.reap()
             self.handle_signal()
@@ -285,8 +286,8 @@ class Supervisor:
                 process.finish(pid, sts)
                 del self.options.pidhistory[pid]
             if not once:
-                # keep reaping until no more kids to reap, but don't recurse
-                # infintely
+                # Keep reaping until no more kids to reap, but don't recurse
+                # infinitely.
                 self.reap(once=False, recursionguard=recursionguard+1)
 
     def handle_signal(self):
@@ -320,24 +321,24 @@ def timeslice(period, when):
     return int(when - (when % period))
 
 # profile entry point
-def profile(cmd, globals, locals, sort_order, callers): # pragma: no cover
+def profile(cmd, global_vars, local_vars, sort_order, callers): # pragma: no cover
     try:
-        import cProfile as profile
+        import cProfile as profile  # TODO: Rename, it masks function name!
     except ImportError:
         import profile
     import pstats
     import tempfile
     fd, fn = tempfile.mkstemp()
     try:
-        profile.runctx(cmd, globals, locals, fn)
+        profile.runctx(cmd, global_vars, local_vars, fn)
         stats = pstats.Stats(fn)
         stats.strip_dirs()
         # calls,time,cumulative and cumulative,calls,time are useful
         stats.sort_stats(*sort_order or ('cumulative', 'calls', 'time'))
         if callers:
-            stats.print_callers(.3)
+            stats.print_callers(0.3)
         else:
-            stats.print_stats(.3)
+            stats.print_stats(0.3)
     finally:
         os.remove(fn)
 
@@ -347,7 +348,7 @@ def main(args=None, test=False):
     assert os.name == "posix", "This code makes Unix-specific assumptions"
     # if we hup, restart by making a new Supervisor()
     first = True
-    while 1:
+    while True:
         options = ServerOptions()
         options.realize(args, doc=__doc__)
         options.first = first
