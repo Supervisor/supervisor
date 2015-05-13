@@ -18,16 +18,19 @@
   same time.  Specifying a log filename of ``syslog`` is still supported
   but deprecated.  Patch by Jason R. Coombs.
 
-- Environment variables are now expanded for all config file options.
-  Patch by Dexter Tad-y.
+- Allow > 1023 file descriptors by using poll/kqueue on platforms which
+  support it.  See https://github.com/Supervisor/supervisor/pull/129.
+  Patch by Igor Sobreira.
+
+- Files included via the `[include]` section are read in sorted order.  In
+  past versions, the order was undefined.  Patch by Ionel Cristian Mărieș.
 
 - "supervisorctl start [spec naming lots of processes]" and "supervisorctl
   stop [spec naming lots of processes]" both now complete much more quickly.
   See https://github.com/Supervisor/supervisor/issues/131 .
 
-- Allow > 1023 file descriptors by using poll/kqueue on platforms which
-  support it.  See https://github.com/Supervisor/supervisor/pull/129.
-  Patch by Igor Sobreira.
+- Environment variables are now expanded for all config file options.
+  Patch by Dexter Tad-y.
 
 - Added ``signalProcess``, ``signalProcessGroup``, and ``signalAllProcesses``
   XML-RPC methods to supervisor RPC interface.  Thanks to Casey Callendrello,
@@ -47,9 +50,6 @@
   if an ``IOError`` occurred while setting up logging.  One way this could
   happen is if a log filename was accidentally set to a directory instead
   of a file.  Thanks to Grzegorz Nosek for reporting this issue.
-
-- Files included via the `[include]` section are read in sorted order.  In
-  past versions, the order was undefined.  Patch by Ionel Cristian Mărieș.
 
 - Fixed a bug introduced in 3.1.0 where ``supervisord`` could crash when
   attempting to display a resource limit error.
