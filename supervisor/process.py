@@ -483,7 +483,7 @@ class Subprocess(object):
         self.laststop = now
         processname = self.config.name
 
-        tooquickly = now - self.laststart < self.config.startsecs
+        tooquickly = now - self.laststart < self.config.startsecs if now > self.laststart else False
         exit_expected = es in self.config.exitcodes
 
         if self.killing:
