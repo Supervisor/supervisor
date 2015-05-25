@@ -406,5 +406,8 @@ def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0,
     return logger
 
 def handle_compression(sfn, dfn):
-    with tarfile.open(dfn, "w:gz") as archive:
+    archive = tarfile.open(dfn, "w:gz")
+    try:
         archive.add(sfn, arcname=os.path.basename(sfn))
+    finally:
+        archive.close()
