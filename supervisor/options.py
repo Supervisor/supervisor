@@ -1771,7 +1771,6 @@ class ProcessConfig(Config):
     optional_param_names = [ 'environment', 'serverurl' ]
 
     def __init__(self, options, **params):
-        print params
         self.options = options
         for name in self.req_param_names:
             setattr(self, name, params[name])
