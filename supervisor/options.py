@@ -934,6 +934,10 @@ class ServerOptions(Options):
                 maxbytes = byte_size(get(section, mb_key, '50MB'))
                 logfiles[mb_key] = maxbytes
 
+                cp_key = '%s_logfile_compress' % k
+                compress = boolean(get(section, cp_key, False))
+                logfiles[cp_key] = compress
+
                 sy_key = '%s_syslog' % k
                 syslog = boolean(get(section, sy_key, False))
                 logfiles[sy_key] = syslog
@@ -966,12 +970,14 @@ class ServerOptions(Options):
                 stdout_events_enabled = stdout_events,
                 stdout_logfile_backups=logfiles['stdout_logfile_backups'],
                 stdout_logfile_maxbytes=logfiles['stdout_logfile_maxbytes'],
+                stdout_logfile_compress=logfiles['stdout_logfile_compress'],
                 stdout_syslog=logfiles['stdout_syslog'],
                 stderr_logfile=logfiles['stderr_logfile'],
                 stderr_capture_maxbytes = stderr_cmaxbytes,
                 stderr_events_enabled = stderr_events,
                 stderr_logfile_backups=logfiles['stderr_logfile_backups'],
                 stderr_logfile_maxbytes=logfiles['stderr_logfile_maxbytes'],
+                stderr_logfile_compress=logfiles['stderr_logfile_compress'],
                 stderr_syslog=logfiles['stderr_syslog'],
                 stopsignal=stopsignal,
                 stopwaitsecs=stopwaitsecs,

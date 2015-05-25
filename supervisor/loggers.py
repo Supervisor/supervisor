@@ -11,6 +11,7 @@ import os
 import errno
 import sys
 import time
+import tarfile
 import traceback
 
 from supervisor.compat import syslog
