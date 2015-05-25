@@ -159,7 +159,7 @@ class FileHandler(Handler):
 
 class RotatingFileHandler(FileHandler):
     def __init__(self, filename, mode='a', maxBytes=512*1024*1024,
-                 backupCount=10):
+                 backupCount=10, compress=False):
         """
         Open the specified file and use it as the stream for logging.
 
@@ -179,6 +179,8 @@ class RotatingFileHandler(FileHandler):
         respectively.
 
         If maxBytes is zero, rollover never occurs.
+
+        If compress is True, the backup files will be compressed as tar.gz.
         """
         if maxBytes > 0:
             mode = 'a' # doesn't make sense otherwise!
@@ -187,6 +189,7 @@ class RotatingFileHandler(FileHandler):
         self.backupCount = backupCount
         self.counter = 0
         self.every = 10
+        self.compress = compress
 
     def emit(self, record):
         """
@@ -238,13 +241,17 @@ class RotatingFileHandler(FileHandler):
 
         self.stream.close()
         if self.backupCount > 0:
+            strfmt = self.compress and "%s.%d.tar.gz" or "%s.%d"
+
             for i in range(self.backupCount - 1, 0, -1):
-                sfn = "%s.%d" % (self.baseFilename, i)
-                dfn = "%s.%d" % (self.baseFilename, i + 1)
+                sfn = strfmt % (self.baseFilename, i)
+                dfn = strfmt % (self.baseFilename, i + 1)
                 if os.path.exists(sfn):
                     self.removeAndRename(sfn, dfn)
             dfn = self.baseFilename + ".1"
             self.removeAndRename(self.baseFilename, dfn)
+            if self.compress:
+                handle_compression(dfn, "%s.%s" % (dfn, 'tar.gz'))
         self.stream = open(self.baseFilename, 'w')
 
 class LogRecord:
@@ -379,7 +386,8 @@ def handle_syslog(logger, fmt):
     handler.setLevel(logger.level)
     logger.addHandler(handler)
 
-def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
+def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0,
+                compress=False):
     if filename == 'syslog':
         handler = SyslogHandler()
 
@@ -387,10 +395,15 @@ def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
         if rotating is False:
             handler = FileHandler(filename)
         else:
-            handler = RotatingFileHandler(filename, 'a', maxbytes, backups)
+            handler = RotatingFileHandler(filename, 'a', maxbytes, backups,
+                                          compress)
 
     handler.setFormat(fmt)
     handler.setLevel(logger.level)
     logger.addHandler(handler)
 
     return logger
+
+def handle_compression(sfn, dfn):
+    with tarfile.open(dfn, "w:gz") as archive:
+        archive.add(sfn, arcname=os.path.basename(sfn))
