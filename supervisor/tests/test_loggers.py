@@ -275,6 +275,21 @@ class RotatingFileHandlerTests(FileHandlerTests):
         with open(self.filename+'.2', 'r') as f:
             self.assertEqual(f.read(), 'a' * 12)
 
+    def test_emit_does_rollover_with_compression(self):
+        handler = self._makeOne(self.filename, maxBytes=10, backupCount=2,
+                                compress=True)
+        record = self._makeLogRecord('a' * 4)
+
+        handler.emit(record) # 4 bytes
+        handler.emit(record) # 8 bytes
+        handler.emit(record) # 12 bytes, do rollover and compress
+        self.assertTrue(os.path.exists(self.filename + '.1.tar.gz'))
+        handler.emit(record) # 16 bytes
+        handler.emit(record) # 20 bytes
+        handler.emit(record) # 24 bytes, do rollover and compress
+        self.assertTrue(os.path.exists(self.filename + '.2.tar.gz'))
+        handler.close()
+
     def test_current_logfile_removed(self):
         handler = self._makeOne(self.filename, maxBytes=6, backupCount=1)
         record = self._makeLogRecord('a' * 4)

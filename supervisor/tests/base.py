@@ -505,8 +505,11 @@ class DummyPConfig:
                  autorestart=True, startsecs=10, startretries=999,
                  uid=None, stdout_logfile=None, stdout_capture_maxbytes=0,
                  stdout_events_enabled=False,
-                 stdout_logfile_backups=0, stdout_logfile_maxbytes=0,
+                 stdout_logfile_backups=0,
+                 stdout_logfile_backups_compress=False,
+                 stdout_logfile_maxbytes=0,
                  stderr_logfile=None, stderr_capture_maxbytes=0,
+                 stderr_logfile_backups_compress=False,
                  stderr_events_enabled=False,
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  redirect_stderr=False,
@@ -525,11 +528,13 @@ class DummyPConfig:
         self.stdout_capture_maxbytes = stdout_capture_maxbytes
         self.stdout_events_enabled = stdout_events_enabled
         self.stdout_logfile_backups = stdout_logfile_backups
+        self.stdout_logfile_backups_compress = stdout_logfile_backups_compress
         self.stdout_logfile_maxbytes = stdout_logfile_maxbytes
         self.stderr_logfile = stderr_logfile
         self.stderr_capture_maxbytes = stderr_capture_maxbytes
         self.stderr_events_enabled = stderr_events_enabled
         self.stderr_logfile_backups = stderr_logfile_backups
+        self.stderr_logfile_backups_compress = stderr_logfile_backups_compress
         self.stderr_logfile_maxbytes = stderr_logfile_maxbytes
         self.redirect_stderr = redirect_stderr
         if stopsignal is None:

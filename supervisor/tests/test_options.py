@@ -446,6 +446,7 @@ class ServerOptionsTests(unittest.TestCase):
         autorestart=false
         stdout_logfile_maxbytes = 1024
         stdout_logfile_backups = 2
+        stdout_logfile_backups_compress = true
         stdout_logfile = /tmp/cat2.log
 
         [program:cat3]
@@ -518,6 +519,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.startretries, 10)
         self.assertEqual(proc1.uid, 0)
         self.assertEqual(proc1.stdout_logfile, '/tmp/cat.log')
+        self.assertEqual(proc1.stdout_logfile_backups_compress, False)
         self.assertEqual(proc1.stopsignal, signal.SIGKILL)
         self.assertEqual(proc1.stopwaitsecs, 5)
         self.assertEqual(proc1.stopasgroup, False)
@@ -548,6 +550,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc2.killasgroup, False)
         self.assertEqual(proc2.stdout_logfile_maxbytes, 1024)
         self.assertEqual(proc2.stdout_logfile_backups, 2)
+        self.assertEqual(proc2.stdout_logfile_backups_compress, True)
         self.assertEqual(proc2.exitcodes, [0,2])
         self.assertEqual(proc2.directory, None)
 
@@ -2616,6 +2619,8 @@ class TestProcessConfig(unittest.TestCase):
                      'stderr_events_enabled', 'stderr_syslog',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup',
                      'killasgroup', 'exitcodes', 'redirect_stderr',
+                     'stdout_logfile_backups_compress',
+                     'stderr_logfile_backups_compress',
                      'environment'):
             defaults[name] = name
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
@@ -2698,6 +2703,8 @@ class EventListenerConfigTests(unittest.TestCase):
                      'stderr_events_enabled', 'stderr_syslog',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup',
                      'killasgroup', 'exitcodes', 'redirect_stderr',
+                     'stdout_logfile_backups_compress',
+                     'stderr_logfile_backups_compress',
                      'environment'):
             defaults[name] = name
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
@@ -2746,6 +2753,8 @@ class FastCGIProcessConfigTest(unittest.TestCase):
                      'stderr_events_enabled', 'stderr_syslog',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup',
                      'killasgroup', 'exitcodes', 'redirect_stderr',
+                     'stdout_logfile_backups_compress',
+                     'stderr_logfile_backups_compress',
                      'environment'):
             defaults[name] = name
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
@@ -3058,4 +3067,3 @@ def test_suite():
 
 if __name__ == '__main__':
     unittest.main(defaultTest='test_suite')
-
