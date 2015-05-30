@@ -700,8 +700,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
         raise ValueError('Unknown result code %s for %s' % (code, name))
 
     def do_start(self, arg):
+        exitval = 0
+
         if not self.ctl.upcheck():
-            return
+            return exitval
 
         names = arg.split()
         supervisor = self.ctl.get_supervisor()
@@ -709,7 +711,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not names:
             self.ctl.output("Error: start requires a process name")
             self.help_start()
-            return
+            exitval = -1
+            return exitval
 
         if 'all' in names:
             results = supervisor.startAllProcesses()
@@ -717,6 +720,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 result = self._startresult(result)
                 self.ctl.output(result)
 
+            return exitval
         else:
             for name in names:
                 group_name, process_name = split_namespec(name)
@@ -724,6 +728,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     try:
                         results = supervisor.startProcessGroup(group_name)
                         for result in results:
+                            if result['status'] != 200:
+                                exitval = -2
                             result = self._startresult(result)
                             self.ctl.output(result)
                     except xmlrpclib.Fault as e:
@@ -744,6 +750,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     else:
                         name = make_namespec(group_name, process_name)
                         self.ctl.output('%s: started' % name)
+
+            return exitval
 
     def help_start(self):
         self.ctl.output("start <name>\t\tStart a process")
@@ -1286,7 +1294,10 @@ def main(args=None, options=None):
     c = Controller(options)
 
     if options.args:
-        c.onecmd(" ".join(options.args))
+        exitval = c.onecmd(" ".join(options.args))
+        if exitval:
+            sys.stderr.write('supervisorctl: Exiting with %d\n' % exitval)
+        sys.exit(exitval)
 
     if options.interactive:
         c.exec_cmdloop(args, options)
