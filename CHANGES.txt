@@ -22,11 +22,11 @@
   support it.  See https://github.com/Supervisor/supervisor/pull/129.
   Patch by Igor Sobreira.
 
-- The behavior of the config file expansion `%(here)s` has changed.  In
-  previous versions, a bug caused `%(here)s` to always expand to the
-  directory of the root config file.  Now, when `%(here)s` is used inside
-  a file included via `[include]`, it will expand to the directory of
-  that file.
+- The behavior of the config file expansion ``%(here)s`` has changed.  In
+  previous versions, a bug caused ``%(here)s`` to always expand to the
+  directory of the root config file.  Now, when ``%(here)s`` is used inside
+  a file included via ``[include]``, it will expand to the directory of
+  that file.  Thanks to Alex Eftimie and Zoltan Toth-Czifra for the patches.
 
 - Files included via the `[include]` section are read in sorted order.  In
   past versions, the order was undefined.  Patch by Ionel Cristian Mărieș.
