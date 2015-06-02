@@ -567,6 +567,7 @@ class ServerOptions(Options):
         expansions = {'here':self.here}
         expansions.update(self.environ_expansions)
         if parser.has_section('include'):
+            parser.expand_here(self.here)
             if not parser.has_option('include', 'files'):
                 raise ValueError(".ini file has [include] section, but no "
                 "files setting")
@@ -591,6 +592,10 @@ class ServerOptions(Options):
                         parser.read(filename)
                     except ConfigParser.ParsingError as why:
                         raise ValueError(str(why))
+                    else:
+                        parser.expand_here(
+                            os.path.abspath(os.path.dirname(filename))
+                        )
 
         sections = parser.sections()
         if not 'supervisord' in sections:
@@ -1714,6 +1719,16 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
             for section in diff:
                 self.section_to_file[section] = filename
         return ok_filenames
+
+    def expand_here(self, here):
+        if here is None:
+            return
+        HERE_FORMAT = '%(here)s'
+        for section in self.sections():
+            for key, value in self.items(section):
+                if HERE_FORMAT in value:
+                    value = value.replace(HERE_FORMAT, here)
+                    self.set(section, key, value)
 
 
 class Config(object):
