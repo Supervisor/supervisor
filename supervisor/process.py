@@ -453,7 +453,15 @@ class Subprocess:
         self.laststop = now
         processname = self.config.name
 
-        tooquickly = now - self.laststart < self.config.startsecs
+        if now > self.laststart:
+            too_quickly = now - self.laststart < self.config.startsecs
+        else:
+            too_quickly = False
+            self.config.options.logger.warn(
+                "process %r (%s) laststart time is in the future, don't "
+                "know how long process was running so assuming it did "
+                "not exit too quickly" % (self.config.name, self.pid))
+
         exit_expected = es in self.config.exitcodes
 
         if self.killing:
@@ -467,7 +475,7 @@ class Subprocess:
             self._assertInState(ProcessStates.STOPPING)
             self.change_state(ProcessStates.STOPPED)
 
-        elif tooquickly:
+        elif too_quickly:
             # the program did not stay up long enough to make it to RUNNING
             # implies STARTING -> BACKOFF
             self.exitstatus = None
@@ -478,18 +486,16 @@ class Subprocess:
 
         else:
             # this finish was not the result of a stop request, the
-            # program was in the RUNNING state but exited implies
-            # RUNNING -> EXITED
+            # program was in the RUNNING state but exited
+            # implies RUNNING -> EXITED normally but see next comment
             self.delay = 0
             self.backoff = 0
             self.exitstatus = es
 
-            if self.state == ProcessStates.STARTING: # pragma: no cover
-                # XXX I don't know under which circumstances this
-                # happens, but in the wild, there is a transition that
-                # subverts the RUNNING state (directly from STARTING
-                # to EXITED), so we perform the correct transition
-                # here.
+            # if the process was STARTING but a system time change causes
+            # self.laststart to be in the future, the normal STARTING->RUNNING
+            # transition can be subverted so we perform the transition here.
+            if self.state == ProcessStates.STARTING:
                 self.change_state(ProcessStates.RUNNING)
 
             self._assertInState(ProcessStates.RUNNING)

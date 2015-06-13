@@ -23,6 +23,11 @@
 - Fixed a bug introduced in 3.1.0 where ``supervisord`` could crash when
   attempting to display a resource limit error.
 
+- Fixed a bug where ``supervisord`` could crash with the message
+  ``Assertion failed for processname: RUNNING not in STARTING`` if a time
+  change caused the last start time of the process to be in the future.
+  Thanks to Róbert Nagy, Sergey Leschenko, and samhair for the patches.
+
 - Errors from the web interface are now logged at the ``ERROR`` level.
   Previously, they were logged at the ``TRACE`` level and easily
   missed.  Thanks to Thomas Güttler for reporting this issue.
