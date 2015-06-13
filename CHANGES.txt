@@ -60,6 +60,11 @@
 - Fixed a bug introduced in 3.1.0 where ``supervisord`` could crash when
   attempting to display a resource limit error.
 
+- Fixed a bug where ``supervisord`` could crash with the message
+  ``Assertion failed for processname: RUNNING not in STARTING`` if a time
+  change caused the last start time of the process to be in the future.
+  Thanks to Róbert Nagy, Sergey Leschenko, and samhair for the patches.
+
 3.1.3 (2014-10-28)
 ------------------
 

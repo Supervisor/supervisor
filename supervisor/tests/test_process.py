@@ -944,7 +944,7 @@ class SubprocessTests(unittest.TestCase):
         event = L[0]
         self.assertEqual(event.__class__, events.ProcessStateUnknownEvent)
 
-    def test_finish(self):
+    def test_finish_stopping_state(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'notthere', '/notthere',
                               stdout_logfile='/tmp/foo')
@@ -975,7 +975,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(event.extra_values, [('pid', 123)])
         self.assertEqual(event.from_state, ProcessStates.STOPPING)
 
-    def test_finish_expected(self):
+    def test_finish_running_state_exit_expected(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'notthere', '/notthere',
                               stdout_logfile='/tmp/foo')
@@ -1007,7 +1007,44 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(event.extra_values, [('expected', True), ('pid', 123)])
         self.assertEqual(event.from_state, ProcessStates.RUNNING)
 
-    def test_finish_tooquickly(self):
+    def test_finish_starting_state_laststart_in_future(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'notthere', '/notthere',
+                              stdout_logfile='/tmp/foo')
+        instance = self._makeOne(config)
+        instance.config.options.pidhistory[123] = instance
+        pipes = {'stdout':'','stderr':''}
+        instance.pipes = pipes
+        instance.config.exitcodes =[-1]
+        instance.laststart = time.time() + 3600 # 1 hour into the future
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        instance.state = ProcessStates.STARTING
+        L = []
+        events.subscribe(events.ProcessStateExitedEvent, lambda x: L.append(x))
+        instance.pid = 123
+        instance.finish(123, 1)
+        self.assertEqual(instance.killing, 0)
+        self.assertEqual(instance.pid, 0)
+        self.assertEqual(options.parent_pipes_closed, pipes)
+        self.assertEqual(instance.pipes, {})
+        self.assertEqual(instance.dispatchers, {})
+        self.assertEqual(options.logger.data[0],
+                         "process 'notthere' (123) laststart time is in the "
+                         "future, don't know how long process was running so "
+                         "assuming it did not exit too quickly")
+        self.assertEqual(options.logger.data[1],
+                         'exited: notthere (terminated by SIGHUP; expected)')
+        self.assertEqual(instance.exitstatus, -1)
+        self.assertEqual(len(L), 1)
+        event = L[0]
+        self.assertEqual(event.__class__,
+                         events.ProcessStateExitedEvent)
+        self.assertEqual(event.expected, True)
+        self.assertEqual(event.extra_values, [('expected', True), ('pid', 123)])
+        self.assertEqual(event.from_state, ProcessStates.RUNNING)
+
+    def test_finish_starting_state_exited_too_quickly(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'notthere', '/notthere',
                               stdout_logfile='/tmp/foo', startsecs=10)
@@ -1036,6 +1073,43 @@ class SubprocessTests(unittest.TestCase):
         event = L[0]
         self.assertEqual(event.__class__, events.ProcessStateBackoffEvent)
         self.assertEqual(event.from_state, ProcessStates.STARTING)
+
+    def test_finish_running_state_laststart_in_future(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'notthere', '/notthere',
+                              stdout_logfile='/tmp/foo')
+        instance = self._makeOne(config)
+        instance.config.options.pidhistory[123] = instance
+        pipes = {'stdout':'','stderr':''}
+        instance.pipes = pipes
+        instance.config.exitcodes =[-1]
+        instance.laststart = time.time() + 3600 # 1 hour into the future
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        instance.state = ProcessStates.RUNNING
+        L = []
+        events.subscribe(events.ProcessStateExitedEvent, lambda x: L.append(x))
+        instance.pid = 123
+        instance.finish(123, 1)
+        self.assertEqual(instance.killing, 0)
+        self.assertEqual(instance.pid, 0)
+        self.assertEqual(options.parent_pipes_closed, pipes)
+        self.assertEqual(instance.pipes, {})
+        self.assertEqual(instance.dispatchers, {})
+        self.assertEqual(options.logger.data[0],
+                         "process 'notthere' (123) laststart time is in the "
+                         "future, don't know how long process was running so "
+                         "assuming it did not exit too quickly")
+        self.assertEqual(options.logger.data[1],
+                         'exited: notthere (terminated by SIGHUP; expected)')
+        self.assertEqual(instance.exitstatus, -1)
+        self.assertEqual(len(L), 1)
+        event = L[0]
+        self.assertEqual(event.__class__,
+                         events.ProcessStateExitedEvent)
+        self.assertEqual(event.expected, True)
+        self.assertEqual(event.extra_values, [('expected', True), ('pid', 123)])
+        self.assertEqual(event.from_state, ProcessStates.RUNNING)
 
     def test_finish_with_current_event_sends_rejected(self):
         from supervisor import events
