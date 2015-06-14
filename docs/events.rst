@@ -295,6 +295,7 @@ stderr, and responds with an ``OK`` result, and then subsequently a
    import sys
 
    def write_stdout(s):
+       # only eventlistener protocol messages may be sent to stdout
        sys.stdout.write(s)
        sys.stdout.flush()
 
