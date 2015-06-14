@@ -305,17 +305,23 @@ stderr, and responds with an ``OK`` result, and then subsequently a
 
    def main():
        while 1:
-           write_stdout('READY\n') # transition from ACKNOWLEDGED to READY
-           line = sys.stdin.readline()  # read header line from stdin
-           write_stderr(line) # print it out to stderr
+           # transition from ACKNOWLEDGED to READY
+           write_stdout('READY\n')
+
+           # read header line and print it to stderr
+           line = sys.stdin.readline()
+           write_stderr(line)
+
+           # read event payload and print it to stderr
            headers = dict([ x.split(':') for x in line.split() ])
-           data = sys.stdin.read(int(headers['len'])) # read the event payload
-           write_stderr(data) # print the event payload to stderr
-           write_stdout('RESULT 2\nOK') # transition from READY to ACKNOWLEDGED
+           data = sys.stdin.read(int(headers['len']))
+           write_stderr(data)
+
+           # transition from READY to ACKNOWLEDGED
+           write_stdout('RESULT 2\nOK')
 
    if __name__ == '__main__':
        main()
-       import sys
 
 Other sample event listeners are present within the :term:`superlance`
 package, including one which can monitor supervisor subprocesses and
