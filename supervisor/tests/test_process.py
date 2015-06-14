@@ -1034,10 +1034,14 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.logger.data[1],
                          'exited: notthere (terminated by SIGHUP; expected)')
         self.assertEqual(instance.exitstatus, -1)
-        self.assertEqual(len(L), 1)
+        self.assertEqual(len(L), 2)
         event = L[0]
-        self.assertEqual(event.__class__,
-                         events.ProcessStateExitedEvent)
+        self.assertEqual(event.__class__, events.ProcessStateRunningEvent)
+        self.assertEqual(event.expected, True)
+        self.assertEqual(event.extra_values, [('pid', 123)])
+        self.assertEqual(event.from_state, ProcessStates.STARTING)
+        event = L[1]
+        self.assertEqual(event.__class__, events.ProcessStateExitedEvent)
         self.assertEqual(event.expected, True)
         self.assertEqual(event.extra_values, [('expected', True), ('pid', 123)])
         self.assertEqual(event.from_state, ProcessStates.RUNNING)
