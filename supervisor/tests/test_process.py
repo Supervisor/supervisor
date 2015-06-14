@@ -745,8 +745,7 @@ class SubprocessTests(unittest.TestCase):
         L = []
         from supervisor.states import ProcessStates
         from supervisor import events
-        events.subscribe(events.ProcessStateEvent,
-                         lambda x: L.append(x))
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         instance.pid = 11
         instance.state = ProcessStates.RUNNING
         instance.kill(signal.SIGTERM)
@@ -769,7 +768,7 @@ class SubprocessTests(unittest.TestCase):
         L = []
         from supervisor.states import ProcessStates
         from supervisor import events
-        events.subscribe(events.ProcessStateEvent,lambda x: L.append(x))
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         instance.state = ProcessStates.STARTING
         instance.kill(signal.SIGTERM)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
@@ -807,7 +806,7 @@ class SubprocessTests(unittest.TestCase):
         L = []
         from supervisor.states import ProcessStates
         from supervisor import events
-        events.subscribe(events.Event,lambda x: L.append(x))
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         instance.state = ProcessStates.STOPPING
         instance.kill(signal.SIGKILL)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
@@ -823,7 +822,7 @@ class SubprocessTests(unittest.TestCase):
         L = []
         from supervisor.states import ProcessStates
         from supervisor import events
-        events.subscribe(events.Event, L.append)
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         instance.state = ProcessStates.BACKOFF
         instance.kill(signal.SIGKILL)
         self.assertEqual(options.logger.data[0],
@@ -840,7 +839,7 @@ class SubprocessTests(unittest.TestCase):
         L = []
         from supervisor.states import ProcessStates
         from supervisor import events
-        events.subscribe(events.Event,lambda x: L.append(x))
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         instance.state = ProcessStates.STOPPING
         instance.kill(signal.SIGKILL)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) '
@@ -857,7 +856,7 @@ class SubprocessTests(unittest.TestCase):
         L = []
         from supervisor.states import ProcessStates
         from supervisor import events
-        events.subscribe(events.Event,lambda x: L.append(x))
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         instance.state = ProcessStates.RUNNING
         instance.kill(signal.SIGTERM)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) '
@@ -930,8 +929,7 @@ class SubprocessTests(unittest.TestCase):
         L = []
         from supervisor.states import ProcessStates
         from supervisor import events
-        events.subscribe(events.ProcessStateEvent,
-                         lambda x: L.append(x))
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         instance.pid = 11
         instance.state = ProcessStates.RUNNING
         instance.signal(signal.SIGWINCH)
@@ -958,7 +956,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor import events
         instance.state = ProcessStates.STOPPING
         L = []
-        events.subscribe(events.ProcessStateStoppedEvent, lambda x: L.append(x))
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         instance.pid = 123
         instance.finish(123, 1)
         self.assertEqual(instance.killing, 0)
@@ -988,7 +986,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor import events
         instance.state = ProcessStates.RUNNING
         L = []
-        events.subscribe(events.ProcessStateExitedEvent, lambda x: L.append(x))
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         instance.pid = 123
         instance.finish(123, 1)
         self.assertEqual(instance.killing, 0)
@@ -1021,7 +1019,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor import events
         instance.state = ProcessStates.STARTING
         L = []
-        events.subscribe(events.ProcessStateExitedEvent, lambda x: L.append(x))
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         instance.pid = 123
         instance.finish(123, 1)
         self.assertEqual(instance.killing, 0)
@@ -1088,7 +1086,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor import events
         instance.state = ProcessStates.RUNNING
         L = []
-        events.subscribe(events.ProcessStateExitedEvent, lambda x: L.append(x))
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
         instance.pid = 123
         instance.finish(123, 1)
         self.assertEqual(instance.killing, 0)
