@@ -6,6 +6,7 @@ from supervisor.events import EventRejectedEvent
 from supervisor.events import ProcessLogStderrEvent
 from supervisor.events import ProcessLogStdoutEvent
 from supervisor.states import EventListenerStates
+from supervisor.states import getEventListenerStateDescription
 from supervisor import loggers
 
 def find_prefix_at_end(haystack, needle):
@@ -332,16 +333,12 @@ class PEventListenerDispatcher(PDispatcher):
                 # not enough info to make a decision
                 return
             elif data.startswith(self.READY_FOR_EVENTS_TOKEN):
-                msg = '%s: ACKNOWLEDGED -> READY' % procname
-                process.config.options.logger.debug(msg)
-                process.listener_state = EventListenerStates.READY
+                self._change_listener_state(EventListenerStates.READY)
                 tokenlen = self.READY_FOR_EVENTS_LEN
                 self.state_buffer = self.state_buffer[tokenlen:]
                 process.event = None
             else:
-                msg = '%s: ACKNOWLEDGED -> UNKNOWN' % procname
-                process.config.options.logger.debug(msg)
-                process.listener_state = EventListenerStates.UNKNOWN
+                self._change_listener_state(EventListenerStates.UNKNOWN)
                 self.state_buffer = ''
                 process.event = None
             if self.state_buffer:
@@ -351,10 +348,8 @@ class PEventListenerDispatcher(PDispatcher):
                 return
 
         elif state == EventListenerStates.READY:
-            # the process sent some spurious data, be a hardass about it
-            msg = '%s: READY -> UNKNOWN' % procname
-            process.config.options.logger.debug(msg)
-            process.listener_state = EventListenerStates.UNKNOWN
+            # the process sent some spurious data, be strict about it
+            self._change_listener_state(EventListenerStates.UNKNOWN)
             self.state_buffer = ''
             process.event = None
             return
@@ -374,10 +369,10 @@ class PEventListenerDispatcher(PDispatcher):
                 try:
                     self.resultlen = int(resultlen)
                 except ValueError:
-                    msg = ('%s: BUSY -> UNKNOWN (bad result line %r)'
-                           % (procname, result_line))
-                    process.config.options.logger.debug(msg)
-                    process.listener_state = EventListenerStates.UNKNOWN
+                    process.config.options.logger.warn(
+                        '%s: bad result line: %r' % (procname, result_line)
+                        )
+                    self._change_listener_state(EventListenerStates.UNKNOWN)
                     self.state_buffer = ''
                     notify(EventRejectedEvent(process, process.event))
                     process.event = None
@@ -406,21 +401,39 @@ class PEventListenerDispatcher(PDispatcher):
     def handle_result(self, result):
         process = self.process
         procname = process.config.name
+        logger = process.config.options.logger
 
         try:
             self.process.group.config.result_handler(process.event, result)
-            msg = '%s: BUSY -> ACKNOWLEDGED (processed)' % procname
-            process.listener_state = EventListenerStates.ACKNOWLEDGED
+            logger.debug('%s: event was processed' % procname)
+            self._change_listener_state(EventListenerStates.ACKNOWLEDGED)
         except RejectEvent:
-            msg = '%s: BUSY -> ACKNOWLEDGED (rejected)' % procname
-            process.listener_state = EventListenerStates.ACKNOWLEDGED
+            logger.warn('%s: event was rejected' % procname)
+            self._change_listener_state(EventListenerStates.ACKNOWLEDGED)
             notify(EventRejectedEvent(process, process.event))
         except:
-            msg = '%s: BUSY -> UNKNOWN' % procname
-            process.listener_state = EventListenerStates.UNKNOWN
+            logger.warn('%s: event caused an error' % procname)
+            self._change_listener_state(EventListenerStates.UNKNOWN)
             notify(EventRejectedEvent(process, process.event))
 
+    def _change_listener_state(self, new_state):
+        process = self.process
+        procname = process.config.name
+        old_state = process.listener_state
+
+        msg = '%s: %s -> %s' % (
+            procname,
+            getEventListenerStateDescription(old_state),
+            getEventListenerStateDescription(new_state)
+            )
         process.config.options.logger.debug(msg)
+
+        process.listener_state = new_state
+        if new_state == EventListenerStates.UNKNOWN:
+            msg = ('%s: has entered the UNKNOWN state and will no longer '
+                   'receive events, this usually indicates the process '
+                   'violated the eventlistener protocol' % procname)
+            process.config.options.logger.warn(msg)
 
 class PInputDispatcher(PDispatcher):
     """ Input (stdin) dispatcher """

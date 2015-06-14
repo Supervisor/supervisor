@@ -20,12 +20,9 @@ RUNNING_STATES = (ProcessStates.RUNNING,
                   ProcessStates.BACKOFF,
                   ProcessStates.STARTING)
 
-
-
 def getProcessStateDescription(code):
-    for statename in ProcessStates.__dict__:
-        if getattr(ProcessStates, statename) == code:
-            return statename
+    return _process_states_by_code.get(code)
+
 
 class SupervisorStates:
     FATAL = 2
@@ -34,9 +31,7 @@ class SupervisorStates:
     SHUTDOWN = -1
 
 def getSupervisorStateDescription(code):
-    for statename in SupervisorStates.__dict__:
-        if getattr(SupervisorStates, statename) == code:
-            return statename
+    return _supervisor_states_by_code.get(code)
 
 
 class EventListenerStates:
@@ -46,7 +41,17 @@ class EventListenerStates:
     UNKNOWN = 40 # the event listener is in an unknown state
 
 def getEventListenerStateDescription(code):
-    for statename in EventListenerStates.__dict__:
-        if getattr(EventListenerStates, statename) == code:
-            return statename
+    return _eventlistener_states_by_code.get(code)
 
+
+# below is an optimization for internal use in this module only
+def _names_by_code(states):
+    d = {}
+    for name in states.__dict__:
+        if not name.startswith('__'):
+            code = getattr(states, name)
+            d[code] = name
+    return d
+_process_states_by_code = _names_by_code(ProcessStates)
+_supervisor_states_by_code = _names_by_code(SupervisorStates)
+_eventlistener_states_by_code = _names_by_code(EventListenerStates)

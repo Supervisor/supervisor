@@ -28,6 +28,10 @@
   change caused the last start time of the process to be in the future.
   Thanks to Róbert Nagy, Sergey Leschenko, and samhair for the patches.
 
+- A warning is now logged if an eventlistener enters the UNKNOWN state,
+  which usually indicates a bug in the eventlistener.  Thanks to Steve
+  Winton and detailyang for reporting issues that led to this change.
+
 - Errors from the web interface are now logged at the ``ERROR`` level.
   Previously, they were logged at the ``TRACE`` level and easily
   missed.  Thanks to Thomas Güttler for reporting this issue.

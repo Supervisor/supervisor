@@ -36,7 +36,8 @@ class SubprocessTests(unittest.TestCase):
         from supervisor.states import ProcessStates
         from supervisor.process import getProcessStateDescription
         for statename, code in ProcessStates.__dict__.items():
-            self.assertEqual(getProcessStateDescription(code), statename)
+            if isinstance(code, int):
+                self.assertEqual(getProcessStateDescription(code), statename)
 
     def test_ctor(self):
         options = DummyOptions()
