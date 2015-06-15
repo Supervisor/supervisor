@@ -686,8 +686,10 @@ class SubprocessTests(unittest.TestCase):
         instance.dispatchers = {'foo':dispatcher}
         from supervisor.states import ProcessStates
         instance.state = ProcessStates.RUNNING
+        instance.laststopreport = time.time()
         instance.stop()
         self.assertEqual(instance.administrative_stop, 1)
+        self.assertEqual(instance.laststopreport, 0)
         self.assertTrue(instance.delay)
         self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
                          'signal SIGTERM')
@@ -709,6 +711,35 @@ class SubprocessTests(unittest.TestCase):
         except AssertionError as exc:
             self.assertEqual(exc.args[0], 'Assertion failed for test: '
                 'STOPPED not in RUNNING STARTING STOPPING')
+
+    def test_stop_report_logs_nothing_if_not_stopping_state(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        instance.pid = 11
+        dispatcher = DummyDispatcher(writable=True)
+        instance.dispatchers = {'foo':dispatcher}
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.STOPPED
+        instance.stop_report()
+        self.assertEqual(len(options.logger.data), 0)
+
+    def test_stop_report_logs_throttled_by_laststopreport(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        instance.pid = 11
+        dispatcher = DummyDispatcher(writable=True)
+        instance.dispatchers = {'foo':dispatcher}
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.STOPPING
+        self.assertEqual(instance.laststopreport, 0)
+        instance.stop_report()
+        self.assertEqual(len(options.logger.data), 1)
+        self.assertEqual(options.logger.data[0], 'waiting for test to stop')
+        self.assertNotEqual(instance.laststopreport, 0)
+        instance.stop_report()
+        self.assertEqual(len(options.logger.data), 1) # throttled
 
     def test_give_up(self):
         options = DummyOptions()

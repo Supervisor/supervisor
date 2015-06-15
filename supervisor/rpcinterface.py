@@ -411,9 +411,7 @@ class SupervisorNamespaceRPCInterface:
                 # process will eventually enter a stopped state by
                 # virtue of the supervisord.reap() method being called
                 # during normal operations
-                self.supervisord.options.logger.info(
-                    'waiting for %s to stop' % process.config.name
-                    )
+                process.stop_report()
                 if process.get_state() not in STOPPED_STATES:
                     return NOT_DONE_YET
                 return True
