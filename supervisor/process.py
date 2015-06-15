@@ -39,6 +39,7 @@ class Subprocess:
     event = None # event currently being processed (if we're an event listener)
     laststart = 0 # Last time the subprocess was started; 0 if never
     laststop = 0  # Last time the subprocess was stopped; 0 if never
+    laststopreport = 0 # Last time "waiting for x to stop" logged, to throttle
     delay = 0 # If nonzero, delay starting or killing until this time
     administrative_stop = 0 # true if the process has been stopped by an admin
     system_stop = 0 # true if the process has been stopped by the system
@@ -350,7 +351,17 @@ class Subprocess:
     def stop(self):
         """ Administrative stop """
         self.administrative_stop = 1
+        self.laststopreport = 0
         return self.kill(self.config.stopsignal)
+
+    def stop_report(self):
+        """ Log a 'waiting for x to stop' message with throttling. """
+        if self.state == ProcessStates.STOPPING:
+            now = time.time()
+            if now > (self.laststopreport + 2): # every 2 seconds
+                self.config.options.logger.info(
+                    'waiting for %s to stop' % self.config.name)
+                self.laststopreport = now
 
     def give_up(self):
         self.delay = 0
