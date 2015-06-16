@@ -205,7 +205,7 @@ class Supervisor:
 
                 if not self.shutdown_report():
                     # if there are no unstopped processes (we're done
-                    # killing everything), it's OK to swtop or reload
+                    # killing everything), it's OK to shutdown or reload
                     raise asyncore.ExitNow
 
             r, w, x = [], [], []
