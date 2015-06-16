@@ -1,9 +1,9 @@
 3.2.0 (Next 3.x Release)
 ------------------------
 
-- "supervisorctl start [spec naming lots of processes]" and "supervisorctl stop
-  [spec naming lots of processes]" both now complete much more quickly.  See
-  https://github.com/Supervisor/supervisor/issues/131 .
+- ``supervisorctl start`` and ``supervisorctl stop`` now complete more quickly
+  when handling many processes.  Thanks to Chris McDonough for this patch.
+  See: https://github.com/Supervisor/supervisor/issues/131
 
 - Environment variables are now expanded for all config file options.
   Patch by Dexter Tad-y.
