@@ -454,6 +454,7 @@ class ServerOptions(Options):
         self.pidhistory = {}
         self.process_group_configs = []
         self.parse_warnings = []
+        self.parse_infos = []
         self.signal_receiver = SignalReceiver()
         self.poller = poller.Poller(self)
 
@@ -534,9 +535,10 @@ class ServerOptions(Options):
         self.process_group_configs = new
 
     def read_config(self, fp):
-        # Clear parse warnings, since we may be re-reading the
+        # Clear parse messages, since we may be re-reading the
         # config a second time after a reload.
         self.parse_warnings = []
+        self.parse_infos = []
 
         section = self.configroot.supervisord
         need_close = False
@@ -586,7 +588,7 @@ class ServerOptions(Options):
                         'No file matches via include "%s"' % pattern)
                     continue
                 for filename in sorted(filenames):
-                    self.parse_warnings.append(
+                    self.parse_infos.append(
                         'Included extra file "%s" during parsing' % filename)
                     try:
                         parser.read(filename)
