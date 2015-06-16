@@ -565,11 +565,11 @@ class ServerOptions(Options):
                 pattern = os.path.join(base, pattern)
                 filenames = glob.glob(pattern)
                 if not filenames:
-                    self.parse_infos.append(
+                    self.parse_warnings.append(
                         'No file matches via include "%s"' % pattern)
                     continue
                 for filename in sorted(filenames):
-                    self.parse_warnings.append(
+                    self.parse_infos.append(
                         'Included extra file "%s" during parsing' % filename)
                     try:
                         parser.read(filename)

@@ -775,6 +775,22 @@ class ServerOptionsTests(unittest.TestCase):
         instance.realize(args=[])
         self.assertFalse(old_warning in instance.parse_warnings)
 
+    def test_reload_clears_parse_infos(self):
+        instance = self._makeOne()
+        old_info = "Info from a prior config read"
+        instance.infos = [old_info]
+
+        text = lstrip("""\
+        [supervisord]
+        user=root
+
+        [program:cat]
+        command = /bin/cat
+        """)
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        self.assertFalse(old_info in instance.parse_infos)
+
     def test_read_config_not_found(self):
         nonexistent = os.path.join(os.path.dirname(__file__), 'nonexistent')
         instance = self._makeOne()
@@ -853,7 +869,7 @@ class ServerOptionsTests(unittest.TestCase):
                 filename = os.path.join(conf_d, "%s.conf" % letter)
                 expected_msgs.append(
                     'Included extra file "%s" during parsing' % filename)
-            self.assertEqual(instance.parse_warnings, expected_msgs)
+            self.assertEqual(instance.parse_infos, expected_msgs)
         finally:
             shutil.rmtree(dirname)
 
@@ -889,9 +905,9 @@ class ServerOptionsTests(unittest.TestCase):
             options = instance.configroot.supervisord
             self.assertEqual(len(options.server_configs), 2)
             msg = 'Included extra file "%s" during parsing' % conf_file
-            self.assertTrue(msg in instance.parse_warnings)
+            self.assertTrue(msg in instance.parse_infos)
             msg = 'Included extra file "%s" during parsing' % ini_file
-            self.assertTrue(msg in instance.parse_warnings)
+            self.assertTrue(msg in instance.parse_infos)
         finally:
             shutil.rmtree(dirname)
 
@@ -903,7 +919,6 @@ class ServerOptionsTests(unittest.TestCase):
         supervisord_conf = os.path.join(dirname, "supervisord.conf")
         text = lstrip("""\
         [supervisord]
-
         [include]
         files=%s/conf.d/*.conf
         """ % dirname)
@@ -918,22 +933,20 @@ class ServerOptionsTests(unittest.TestCase):
 
         instance = self._makeOne()
         try:
-            try:
-                instance.read_config(supervisord_conf)
-                self.fail("nothing raised")
-            except ValueError, exc:
-                self.assertTrue('contains parsing errors:' in exc.args[0])
-                self.assertTrue(malformed_file in exc.args[0])
-                msg = 'Included extra file "%s" during parsing' % malformed_file
-                self.assertTrue(msg in instance.parse_warnings)
+            instance.read_config(supervisord_conf)
+            self.fail("nothing raised")
+        except ValueError, exc:
+            self.assertTrue('contains parsing errors:' in exc.args[0])
+            self.assertTrue(malformed_file in exc.args[0])
+            msg = 'Included extra file "%s" during parsing' % malformed_file
+            self.assertTrue(msg in instance.parse_infos)
         finally:
-            shutil.rmtree(dirname)
+            shutil.rmtree(dirname, ignore_errors=True)
 
     def test_read_config_include_with_no_files_raises_valueerror(self):
         instance = self._makeOne()
         text = lstrip("""\
         [supervisord]
-
         [include]
         ;no files=
         """)
@@ -948,7 +961,6 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         text = lstrip("""\
         [supervisord]
-
         [include]
         files=nonexistent/*
         """)
