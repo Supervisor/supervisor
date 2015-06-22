@@ -378,10 +378,8 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                 request.done()
 
         except:
-            io = StringIO()
-            traceback.print_exc(file=io)
-            val = io.getvalue()
-            logger.critical(val)
+            tb = traceback.format_exc()
+            logger.critical(tb)
             # internal error, report as HTTP server error
             request.error(500)
 

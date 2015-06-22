@@ -3,7 +3,6 @@ import sys
 import time
 import errno
 import shlex
-import StringIO
 import traceback
 import signal
 
@@ -428,9 +427,7 @@ class Subprocess:
         try:
             options.kill(pid, sig)
         except:
-            io = StringIO.StringIO()
-            traceback.print_exc(file=io)
-            tb = io.getvalue()
+            tb = traceback.format_exc()
             msg = 'unknown problem killing %s (%s):%s' % (self.config.name,
                                                           self.pid, tb)
             options.logger.critical(msg)

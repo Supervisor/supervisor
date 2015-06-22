@@ -5,7 +5,6 @@ import time
 import traceback
 import urllib
 import datetime
-import StringIO
 
 from supervisor.medusa import producers
 from supervisor.medusa.http_server import http_date
@@ -51,11 +50,9 @@ class DeferredWebProducer:
             return self.sendresponse(response)
 
         except:
-            io = StringIO.StringIO()
-            traceback.print_exc(file=io)
+            tb = traceback.format_exc()
             # this should go to the main supervisor log file
-            self.request.channel.server.logger.log('Web interface error',
-                                                  io.getvalue())
+            self.request.channel.server.logger.log('Web interface error', tb)
             self.finished = True
             self.request.error(500)
 
