@@ -626,7 +626,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         self.assertEqual(process.backoff, 0)
         self.assertEqual(process.delay, 0)
-        self.assertEqual(process.killing, 0)
+        self.assertFalse(process.killing)
         self.assertEqual(process.state, ProcessStates.STOPPED)
         self.assertTrue(process.stop_report_called)
         self.assertEqual(len(supervisord.process_groups['foo'].processes), 1)
@@ -1888,7 +1888,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         pconfig1 = DummyPConfig(options, 'process1', 'foo')
         supervisord = PopulatedDummySupervisor(options, 'process1', pconfig1)
         supervisord.set_procattr('process1', 'pid', 42)
-        supervisord.set_procattr('process1', 'killing',True)
+        supervisord.set_procattr('process1', 'killing', True)
         interface   = self._makeOne(supervisord)
         from supervisor import xmlrpc
         self._assertRPCError(xmlrpc.Faults.NOT_RUNNING,

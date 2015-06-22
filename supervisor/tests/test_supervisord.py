@@ -135,7 +135,7 @@ class SupervisordTests(unittest.TestCase):
         pconfig = DummyPConfig(options, 'process', 'process', '/bin/process1')
         process = DummyProcess(pconfig)
         process.drained = False
-        process.killing = 1
+        process.killing = True
         process.laststop = None
         process.waitstatus = None, None
         options.pidhistory = {1:process}
