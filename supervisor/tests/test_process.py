@@ -784,6 +784,7 @@ class SubprocessTests(unittest.TestCase):
                          'signal SIGTERM')
         self.assertTrue(options.logger.data[1].startswith(
             'unknown problem killing test'))
+        self.assertTrue('Traceback' in options.logger.data[1])
         self.assertFalse(instance.killing)
         self.assertEqual(len(L), 2)
         event1 = L[0]
@@ -968,6 +969,7 @@ class SubprocessTests(unittest.TestCase):
             'sending test (pid 11) sig SIGWINCH')
         self.assertTrue(options.logger.data[1].startswith(
             'unknown problem sending sig test (11)'))
+        self.assertTrue('Traceback' in options.logger.data[1])
         self.assertFalse(instance.killing)
         self.assertEqual(len(L), 1)
         event = L[0]

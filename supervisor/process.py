@@ -6,7 +6,6 @@ import traceback
 import signal
 
 from supervisor.compat import maxint
-from supervisor.compat import StringIO
 from supervisor.compat import total_ordering
 from supervisor.compat import as_bytes
 
@@ -432,9 +431,7 @@ class Subprocess(object):
         try:
             options.kill(pid, sig)
         except:
-            io = StringIO()
-            traceback.print_exc(file=io)
-            tb = io.getvalue()
+            tb = traceback.format_exc()
             msg = 'unknown problem killing %s (%s):%s' % (self.config.name,
                                                           self.pid, tb)
             options.logger.critical(msg)
@@ -471,9 +468,7 @@ class Subprocess(object):
         try:
             options.kill(self.pid, sig)
         except:
-            io = StringIO()
-            traceback.print_exc(file=io)
-            tb = io.getvalue()
+            tb = traceback.format_exc()
             msg = 'unknown problem sending sig %s (%s):%s' % (
                                 self.config.name, self.pid, tb)
             options.logger.critical(msg)

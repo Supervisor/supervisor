@@ -6,7 +6,6 @@ import datetime
 
 import meld3
 
-from supervisor.compat import StringIO
 from supervisor.compat import urllib
 from supervisor.compat import parse_qs
 from supervisor.compat import parse_qsl
@@ -55,11 +54,9 @@ class DeferredWebProducer:
             return self.sendresponse(response)
 
         except:
-            io = StringIO()
-            traceback.print_exc(file=io)
+            tb = traceback.format_exc()
             # this should go to the main supervisor log file
-            self.request.channel.server.logger.log('Web interface error',
-                                                  io.getvalue())
+            self.request.channel.server.logger.log('Web interface error', tb)
             self.finished = True
             self.request.error(500)
 
