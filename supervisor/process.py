@@ -45,9 +45,9 @@ class Subprocess(object):
     laststop = 0  # Last time the subprocess was stopped; 0 if never
     laststopreport = 0 # Last time "waiting for x to stop" logged, to throttle
     delay = 0 # If nonzero, delay starting or killing until this time
-    administrative_stop = 0 # true if the process has been stopped by an admin
-    system_stop = 0 # true if the process has been stopped by the system
-    killing = 0 # flag determining whether we are trying to kill this proc
+    administrative_stop = False # true if process has been stopped by an admin
+    system_stop = False # true if process has been stopped by the system
+    killing = False # true if are trying to kill this process
     backoff = 0 # backoff counter (to startretries)
     dispatchers = None # asyncore output dispatchers (keyed by fd)
     pipes = None # map of channel name to file descriptor #
@@ -199,11 +199,11 @@ class Subprocess(object):
             options.logger.warn(msg)
             return
 
-        self.killing = 0
+        self.killing = False
         self.spawnerr = None
         self.exitstatus = None
-        self.system_stop = 0
-        self.administrative_stop = 0
+        self.system_stop = False
+        self.administrative_stop = False
 
         self.laststart = time.time()
 
@@ -354,7 +354,7 @@ class Subprocess(object):
 
     def stop(self):
         """ Administrative stop """
-        self.administrative_stop = 1
+        self.administrative_stop = True
         self.laststopreport = 0
         return self.kill(self.config.stopsignal)
 
@@ -370,7 +370,7 @@ class Subprocess(object):
     def give_up(self):
         self.delay = 0
         self.backoff = 0
-        self.system_stop = 1
+        self.system_stop = True
         self._assertInState(ProcessStates.BACKOFF)
         self.change_state(ProcessStates.FATAL)
 
@@ -416,7 +416,7 @@ class Subprocess(object):
                              )
 
         # RUNNING/STARTING/STOPPING -> STOPPING
-        self.killing = 1
+        self.killing = True
         self.delay = now + self.config.stopwaitsecs
         # we will already be in the STOPPING state if we're doing a
         # SIGKILL as a result of overrunning stopwaitsecs
@@ -440,7 +440,7 @@ class Subprocess(object):
             options.logger.critical(msg)
             self.change_state(ProcessStates.UNKNOWN)
             self.pid = 0
-            self.killing = 0
+            self.killing = False
             self.delay = 0
             return msg
 
@@ -508,7 +508,7 @@ class Subprocess(object):
         if self.killing:
             # likely the result of a stop request
             # implies STOPPING -> STOPPED
-            self.killing = 0
+            self.killing = False
             self.delay = 0
             self.exitstatus = es
 

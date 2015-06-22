@@ -375,9 +375,9 @@ class DummyProcess(object):
     laststart = 0 # Last time the subprocess was started; 0 if never
     laststop = 0  # Last time the subprocess was stopped; 0 if never
     delay = 0 # If nonzero, delay starting or killing until this time
-    administrative_stop = 0 # true if the process has been stopped by an admin
-    system_stop = 0 # true if the process has been stopped by the system
-    killing = 0 # flag determining whether we are trying to kill this proc
+    administrative_stop = False # true if the process stopped by an admin
+    system_stop = False # true if the process has been stopped by the system
+    killing = False # flag determining whether we are trying to kill this proc
     backoff = 0 # backoff counter (to backofflimit)
     waitstatus = None
     exitstatus = None
