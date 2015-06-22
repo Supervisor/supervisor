@@ -47,7 +47,7 @@ class Subprocess(object):
     delay = 0 # If nonzero, delay starting or killing until this time
     administrative_stop = False # true if process has been stopped by an admin
     system_stop = False # true if process has been stopped by the system
-    killing = False # true if are trying to kill this process
+    killing = False # true if we are trying to kill this process
     backoff = 0 # backoff counter (to startretries)
     dispatchers = None # asyncore output dispatchers (keyed by fd)
     pipes = None # map of channel name to file descriptor #
