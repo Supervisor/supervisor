@@ -435,14 +435,15 @@ class TestDeferredXMLRPCResponse(unittest.TestCase):
             raise ValueError('foo')
         callback.delay = 1
         inst = self._makeOne(callback=callback)
-        inst.traceback = Dummy()
-        called = []
-        inst.traceback.print_exc = lambda: called.append(True)
         self.assertEqual(inst.more(), None)
         self.assertEqual(inst.request._error, 500)
         self.assertTrue(inst.finished)
-        self.assertTrue(called)
-        
+        logged = inst.request.channel.server.logger.logged
+        self.assertEqual(len(logged), 1)
+        src, msg = logged[0]
+        self.assertEqual(src, 'XML-RPC response callback error')
+        self.assertTrue("Traceback" in msg)
+
 class DummyResponse:
     def __init__(self, status=200, body='', reason='reason'):
         self.status = status
