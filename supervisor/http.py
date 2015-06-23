@@ -6,6 +6,7 @@ import socket
 import errno
 import pwd
 import weakref
+import traceback
 
 from supervisor.compat import urllib
 from supervisor.compat import sha1
@@ -819,7 +820,8 @@ def make_http_servers(options, supervisord):
             try:
                 inst = factory(supervisord, **d)
             except:
-                import traceback; traceback.print_exc()
+                tb = traceback.format_exc()
+                options.logger.warn(tb)
                 raise ValueError('Could not make %s rpc interface' % name)
             subinterfaces.append((name, inst))
             options.logger.info('RPC interface %r initialized' % name)
