@@ -639,10 +639,10 @@ class SubprocessTests(unittest.TestCase):
         # this is a functional test
         from supervisor.tests.base import makeSpew
         try:
-            called = 0
-            def foo(*args):
-                called = 1
-            signal.signal(signal.SIGCHLD, foo)
+            sigchlds = []
+            def sighandler(*args):
+                sigchlds.append(True)
+            signal.signal(signal.SIGCHLD, sighandler)
             executable = makeSpew()
             options = DummyOptions()
             config = DummyPConfig(options, 'spew', executable)
@@ -670,6 +670,7 @@ class SubprocessTests(unittest.TestCase):
             pid, sts = os.waitpid(-1, os.WNOHANG)
             data = os.popen('ps').read()
             self.assertEqual(data.find(as_bytes(repr(origpid))), -1) # dubious
+            self.assertNotEqual(sigchlds, [])
         finally:
             try:
                 os.remove(executable)
