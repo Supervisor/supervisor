@@ -21,6 +21,7 @@ class PidProxy:
         self.cmdargs = cmdargs
 
     def go(self):
+        print(self.cmdargs)
         self.pid = os.spawnv(os.P_NOWAIT, self.command, self.cmdargs)
         if self.wait_pidfile_time:
             self.wait_pidfile_showup()
@@ -87,7 +88,7 @@ class PidProxy:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("pidfile", help="pid file location")
-    parser.add_argument("command", help="command to run (with args)", nargs="+")
+    parser.add_argument("command", help="command to run (with args)", nargs=argparse.REMAINDER)
     parser.add_argument("--wait", help="wait pid file creation for WAIT seconds, "
                                        "then monitor the pid in order to track the process lifetime "
                                        "(useful for processes which fork to background)",
