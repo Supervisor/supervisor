@@ -23,6 +23,10 @@
 - Fixed a bug introduced in 3.1.0 where ``supervisord`` could crash when
   attempting to display a resource limit error.
 
+- Errors from the web interface are now logged at the ``ERROR`` level.
+  Previously, they were logged at the ``TRACE`` level and easily
+  missed.  Thanks to Thomas Güttler for reporting this issue.
+
 - Fixed ``DeprecationWarning: Parameters to load are deprecated. Call
   .resolve and .require separately.`` on setuptools >= 11.3.
 
@@ -109,7 +113,7 @@
   it caused installation issues on some systems.
 
 - Fixed a bug in Medusa where the HTTP Basic authorizer would cause an
-  exception if the password contained a colon.  Thanks to Thomas Guttler
+  exception if the password contained a colon.  Thanks to Thomas Güttler
   for reporting this issue.
 
 - Fixed an XML-RPC bug where calling supervisor.clearProcessLogs() with a

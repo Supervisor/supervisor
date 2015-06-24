@@ -796,12 +796,7 @@ class mainlogtail_handler:
 
 def make_http_servers(options, supervisord):
     servers = []
-    class LogWrapper:
-        def log(self, msg):
-            if msg.endswith('\n'):
-                msg = msg[:-1]
-            options.logger.trace(msg)
-    wrapper = LogWrapper()
+    wrapper = LogWrapper(options.logger)
 
     for config in options.server_configs:
         family = config['family']
@@ -870,6 +865,23 @@ def make_http_servers(options, supervisord):
         servers.append((config, hs))
 
     return servers
+
+class LogWrapper:
+    '''Receives log messages from the Medusa servers and forwards
+    them to the Supervisor logger'''
+    def __init__(self, logger):
+        self.logger = logger
+
+    def log(self, msg):
+        '''Medusa servers call this method.  There is no log level so
+        we have to sniff the message.  We want "Server Error" messages
+        from medusa.http_server logged as errors at least.'''
+        if msg.endswith('\n'):
+            msg = msg[:-1]
+        if 'error' in msg.lower():
+            self.logger.error(msg)
+        else:
+            self.logger.trace(msg)
 
 class encrypted_dictionary_authorizer:
     def __init__ (self, dict):

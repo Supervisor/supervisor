@@ -17,6 +17,7 @@ from supervisor.tests.base import DummyRPCInterfaceFactory
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyRequest
+from supervisor.tests.base import DummyLogger
 
 from supervisor.http import NOT_DONE_YET
 
@@ -340,6 +341,39 @@ class SupervisorAuthHandlerTests(unittest.TestCase):
         auth_handler.handle_request(request)
         self.assertFalse(handler.handled_request)
 
+class LogWrapperTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.http import LogWrapper
+        return LogWrapper
+
+    def _makeOne(self, logger):
+        return self._getTargetClass()(logger)
+
+    def test_strips_trailing_newlines_from_msgs(self):
+        logger = DummyLogger()
+        log_wrapper = self._makeOne(logger)
+        log_wrapper.log("foo\n")
+        logdata = logger.data
+        self.assertEqual(len(logdata), 1)
+        self.assertEqual(logdata[0], "foo")
+
+    def test_logs_msgs_with_error_at_error_level(self):
+        logger = DummyLogger()
+        log_wrapper = self._makeOne(logger)
+        errors = []
+        logger.error = errors.append
+        log_wrapper.log("Server Error")
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0], "Server Error")
+
+    def test_logs_other_messages_at_trace_level(self):
+        logger = DummyLogger()
+        log_wrapper = self._makeOne(logger)
+        traces = []
+        logger.trace = traces.append
+        log_wrapper.log("GET /")
+        self.assertEqual(len(traces), 1)
+        self.assertEqual(traces[0], "GET /")
 
 class TopLevelFunctionTests(unittest.TestCase):
     def _make_http_servers(self, sconfigs):
