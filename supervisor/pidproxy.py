@@ -21,7 +21,6 @@ class PidProxy:
         self.cmdargs = cmdargs
 
     def go(self):
-        print(self.cmdargs)
         self.pid = os.spawnv(os.P_NOWAIT, self.command, self.cmdargs)
         if self.wait_pidfile_time:
             self.wait_pidfile_showup()
@@ -40,6 +39,7 @@ class PidProxy:
     def wait_pidfile_showup(self):
         for i in range(self.wait_pidfile_time*10):
             time.sleep(0.1)
+            os.waitpid(-1, os.WNOHANG)
             if self.pid_exists():
                 return
         raise Exception("pid file %r failed to appear after %r seconds. Assuming the process died prematurely" % (
