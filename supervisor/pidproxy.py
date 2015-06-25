@@ -39,7 +39,10 @@ class PidProxy:
     def wait_pidfile_showup(self):
         for i in range(self.wait_pidfile_time*10):
             time.sleep(0.1)
-            os.waitpid(-1, os.WNOHANG)
+            try:
+                os.waitpid(-1, os.WNOHANG)
+            except OSError:
+                pass
             if self.pid_exists():
                 return
         raise Exception("pid file %r failed to appear after %r seconds. Assuming the process died prematurely" % (
@@ -89,12 +92,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("pidfile", help="pid file location")
     parser.add_argument("command", help="command to run (with args)", nargs=argparse.REMAINDER)
-    parser.add_argument("--wait", help="wait pid file creation for WAIT seconds, "
-                                       "then monitor the pid in order to track the process lifetime "
-                                       "(useful for processes which fork to background)",
+    parser.add_argument("--daemon", "-d", help="handle proxies processes which fork to background and terminate "
+                                               "by waiting for a valid pid file, then monitor the pid in order "
+                                               "to track the process lifetime", action="store_true")
+    parser.add_argument("--start-wait", "-s", help="amount of seconds to wait for a valid pid file to appear "
+                                                   "(default: 60, ignored if not using --daemon)",
                         default=60, type=int)
     params = parser.parse_args()
-    pp = PidProxy(pidfile=params.pidfile, cmdargs=params.command, wait_pidfile_time=params.wait)
+    wait_pidfile_time=None
+    if params.daemon:
+        wait_pidfile_time = params.start_wait
+    pp = PidProxy(pidfile=params.pidfile, cmdargs=params.command, wait_pidfile_time=wait_pidfile_time)
     pp.go()
 
 if __name__ == '__main__':
