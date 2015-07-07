@@ -318,7 +318,7 @@ follows.
 ``nocleanup``
 
   Prevent supervisord from clearing any existing ``AUTO``
-  chlild log files at startup time.  Useful for debugging.
+  child log files at startup time.  Useful for debugging.
 
   *Default*:  false
 
