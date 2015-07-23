@@ -688,7 +688,7 @@ where specified.
   process if it exits when it is in the ``RUNNING`` state.  May be
   one of ``false``, ``unexpected``, or ``true``.  If ``false``, the
   process will not be autorestarted.  If ``unexpected``, the process
-  will be restart when the program exits with an exit code that is
+  will be restarted when the program exits with an exit code that is
   not one of the exit codes associated with this process' configuration
   (see ``exitcodes``).  If ``true``, the process will be unconditionally
   restarted when it exits, without regard to its exit code.
