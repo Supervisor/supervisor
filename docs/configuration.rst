@@ -649,30 +649,19 @@ where specified.
 
   *Introduced*: 3.0
 
-``autorestart``
-
-  May be one of ``false``, ``unexpected``, or ``true``.  If ``false``,
-  the process will never be autorestarted.  If ``unexpected``, the
-  process will be restart when the program exits with an exit code
-  that is not one of the exit codes associated with this process'
-  configuration (see ``exitcodes``).  If ``true``, the process will be
-  unconditionally restarted when it exits, without regard to its exit
-  code.
-
-  *Default*: unexpected
-
-  *Required*:  No.
-
-  *Introduced*: 3.0
-
 ``startsecs``
 
   The total number of seconds which the program needs to stay running
-  after a startup to consider the start successful.  If the program
-  does not stay up for this many seconds after it has started, even if
-  it exits with an "expected" exit code (see ``exitcodes``), the
-  startup will be considered a failure.  Set to ``0`` to indicate that
-  the program needn't stay running for any particular amount of time.
+  after a startup to consider the start successful (moving the process
+  from the ``STARTING`` state to the ``RUNNING`` state).  Set to ``0``
+  to indicate that the program needn't stay running for any particular
+  amount of time.
+
+  .. note::
+
+      Even if a process exits with an "expected" exit code (see
+      ``exitcodes``), the start will still be considered a failure
+      if the process exits quicker than ``startsecs``.
 
   *Default*: 1
 
@@ -693,10 +682,38 @@ where specified.
 
   *Introduced*: 3.0
 
+``autorestart``
+
+  Specifies if :program:`supervisord` should automatically restart a
+  process if it exits when it is in the ``RUNNING`` state.  May be
+  one of ``false``, ``unexpected``, or ``true``.  If ``false``, the
+  process will not be autorestarted.  If ``unexpected``, the process
+  will be restart when the program exits with an exit code that is
+  not one of the exit codes associated with this process' configuration
+  (see ``exitcodes``).  If ``true``, the process will be unconditionally
+  restarted when it exits, without regard to its exit code.
+
+  .. note::
+
+      ``autorestart`` controls whether :program:`supervisord` will
+      autorestart a program if it exits after it has successfully started
+      up (the process is in the ``RUNNING`` state).
+
+      :program:`supervisord` has a different restart mechanism for when the
+      process is starting up (the process is in the ``STARTING`` state).
+      Retries during process startup are controlled by ``startsecs``
+      and ``startretries``.
+
+  *Default*: unexpected
+
+  *Required*:  No.
+
+  *Introduced*: 3.0
+
 ``exitcodes``
 
-  The list of "expected" exit codes for this program.  If the
-  ``autorestart`` parameter is set to ``unexpected``, and the process
+  The list of "expected" exit codes for this program used with ``autorestart``.
+  If the ``autorestart`` parameter is set to ``unexpected``, and the process
   exits in any other way than as a result of a supervisor stop
   request, :program:`supervisord` will restart the process if it exits
   with an exit code that is not defined in this list.
