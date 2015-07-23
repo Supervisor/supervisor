@@ -862,6 +862,17 @@ where specified.
 
   *Introduced*: 3.0, replaces 2.0's ``logfile_backups``
 
+``stdout_logfile_backups_compress``
+
+  If ``stdout_logfile_backups`` is greater than 0, the backup files
+  will be compressed as "tar.gz" archives to save disk space.
+
+  *Default*: false
+
+  *Required*:  No.
+
+  *Introduced*: 4.0
+
 ``stdout_capture_maxbytes``
 
   Max number of bytes written to capture FIFO when process is in
@@ -938,6 +949,17 @@ where specified.
   *Required*:  No.
 
   *Introduced*: 3.0
+
+``sterr_logfile_backups_compress``
+
+  If ``sterr_logfile_backups`` is greater than 0, the backup files
+  will be compressed as "tar.gz" archives to save disk space.
+
+  *Default*: false
+
+  *Required*:  No.
+
+  *Introduced*: 4.0
 
 ``stderr_capture_maxbytes``
 
@@ -1537,4 +1559,3 @@ The above sample config will require the following environment variables to be s
    - ``CAT_OPTZ``
    - ``CAT_NUMPROCS``
    - ``CAT_DIRECTORY``
-

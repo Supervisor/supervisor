@@ -322,10 +322,12 @@ class SupervisordTests(unittest.TestCase):
                 'uid': None, 'stdout_logfile': None, 'stdout_capture_maxbytes': 0,
                 'stdout_events_enabled': False,
                 'stdout_logfile_backups': 0, 'stdout_logfile_maxbytes': 0,
+                'stdout_logfile_backups_compress': False,
                 'stdout_syslog': False,
                 'stderr_logfile': None, 'stderr_capture_maxbytes': 0,
                 'stderr_events_enabled': False,
                 'stderr_logfile_backups': 0, 'stderr_logfile_maxbytes': 0,
+                'stderr_logfile_backups_compress': False,
                 'stderr_syslog': False,
                 'redirect_stderr': False,
                 'stopsignal': None, 'stopwaitsecs': 10,
@@ -656,4 +658,3 @@ def test_suite():
 
 if __name__ == '__main__':
     unittest.main(defaultTest='test_suite')
-

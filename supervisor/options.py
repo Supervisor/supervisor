@@ -941,6 +941,10 @@ class ServerOptions(Options):
                 maxbytes = byte_size(get(section, mb_key, '50MB'))
                 logfiles[mb_key] = maxbytes
 
+                cp_key = '%s_logfile_backups_compress' % k
+                compress = boolean(get(section, cp_key, False))
+                logfiles[cp_key] = compress
+
                 sy_key = '%s_syslog' % k
                 syslog = boolean(get(section, sy_key, False))
                 logfiles[sy_key] = syslog
@@ -973,12 +977,16 @@ class ServerOptions(Options):
                 stdout_events_enabled = stdout_events,
                 stdout_logfile_backups=logfiles['stdout_logfile_backups'],
                 stdout_logfile_maxbytes=logfiles['stdout_logfile_maxbytes'],
+                stdout_logfile_backups_compress=logfiles[
+                    'stdout_logfile_backups_compress'],
                 stdout_syslog=logfiles['stdout_syslog'],
                 stderr_logfile=logfiles['stderr_logfile'],
                 stderr_capture_maxbytes = stderr_cmaxbytes,
                 stderr_events_enabled = stderr_events,
                 stderr_logfile_backups=logfiles['stderr_logfile_backups'],
                 stderr_logfile_maxbytes=logfiles['stderr_logfile_maxbytes'],
+                stderr_logfile_backups_compress=logfiles[
+                    'stderr_logfile_backups_compress'],
                 stderr_syslog=logfiles['stderr_syslog'],
                 stopsignal=stopsignal,
                 stopwaitsecs=stopwaitsecs,
@@ -1770,11 +1778,11 @@ class ProcessConfig(Config):
         'name', 'uid', 'command', 'directory', 'umask', 'priority',
         'autostart', 'autorestart', 'startsecs', 'startretries',
         'stdout_logfile', 'stdout_capture_maxbytes',
-        'stdout_events_enabled', 'stdout_syslog',
-        'stdout_logfile_backups', 'stdout_logfile_maxbytes',
+        'stdout_events_enabled', 'stdout_syslog', 'stdout_logfile_maxbytes',
+        'stdout_logfile_backups', 'stdout_logfile_backups_compress',
         'stderr_logfile', 'stderr_capture_maxbytes',
-        'stderr_logfile_backups', 'stderr_logfile_maxbytes',
-        'stderr_events_enabled', 'stderr_syslog',
+        'stderr_logfile_backups', 'stderr_logfile_backups_compress',
+        'stderr_logfile_maxbytes', 'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
         'exitcodes', 'redirect_stderr' ]
     optional_param_names = [ 'environment', 'serverurl' ]
@@ -2154,4 +2162,3 @@ class NoPermission(ProcessException):
     """ Indicates that the file cannot be executed because the supervisor
     process does not possess the appropriate UNIX filesystem permission
     to execute the file. """
-
