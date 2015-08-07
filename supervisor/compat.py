@@ -1,7 +1,8 @@
 from __future__ import absolute_import
 
 import sys
-PY3 = sys.version>'3'
+
+PY3 = sys.version_info[0] == 3
 
 if PY3: # pragma: no cover
     long = int
