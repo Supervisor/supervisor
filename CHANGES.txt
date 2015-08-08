@@ -23,6 +23,9 @@
 - Fixed a bug introduced in 3.1.0 where ``supervisord`` could crash when
   attempting to display a resource limit error.
 
+- Fixed ``DeprecationWarning: Parameters to load are deprecated. Call
+  .resolve and .require separately.`` on setuptools >= 11.3.
+
 3.1.3 (2014-10-28)
 ------------------
 

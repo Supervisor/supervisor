@@ -385,7 +385,13 @@ class Options:
         return factories
 
     def import_spec(self, spec):
-        return pkg_resources.EntryPoint.parse("x="+spec).load(False)
+        ep = pkg_resources.EntryPoint.parse("x=" + spec)
+        if hasattr(ep, 'resolve'):
+            # this is available on setuptools >= 10.2
+            return ep.resolve()
+        else:
+            # this causes a DeprecationWarning on setuptools >= 11.3
+            return ep.load(False)
 
 
 class ServerOptions(Options):
