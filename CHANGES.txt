@@ -76,6 +76,9 @@
   Previously, they were logged at the ``TRACE`` level and easily
   missed.  Thanks to Thomas Güttler for reporting this issue.
 
+- Fixed ``DeprecationWarning: Parameters to load are deprecated. Call
+  .resolve and .require separately.`` on setuptools >= 11.3.
+
 3.1.3 (2014-10-28)
 ------------------
 
