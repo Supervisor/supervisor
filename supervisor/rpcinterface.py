@@ -849,16 +849,16 @@ def make_allfunc(processes, predicate, func, **extra_kwargs):
                      'group':group.config.name,
                      'status':e.code,
                      'description':e.text})
-                value = None
-
-            if value is not NOT_DONE_YET:
-                results.append(
-                    {'name':process.config.name,
-                     'group':group.config.name,
-                     'status':Faults.SUCCESS,
-                     'description':'OK'}
-                    )
                 callbacks.remove(struct)
+            else:
+                if value is not NOT_DONE_YET:
+                    results.append(
+                        {'name':process.config.name,
+                         'group':group.config.name,
+                         'status':Faults.SUCCESS,
+                         'description':'OK'}
+                        )
+                    callbacks.remove(struct)
 
         if callbacks:
             return NOT_DONE_YET
