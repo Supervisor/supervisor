@@ -62,7 +62,7 @@ class SupervisorNamespaceRPCInterface:
         return VERSION
 
     def getIdentification(self):
-        """ Return identifiying string of supervisord
+        """ Return identifying string of supervisord
 
         @return string identifier identifying string
         """
@@ -195,7 +195,7 @@ class SupervisorNamespaceRPCInterface:
         """ Remove a stopped process from the active configuration.
 
         @param string name         name of process group to remove
-        @return boolean result     Indicates wether the removal was successful
+        @return boolean result     Indicates whether the removal was successful
         """
         self._update('removeProcessGroup')
         if name not in self.supervisord.process_groups:
