@@ -5,6 +5,7 @@ import sys
 import socket
 import errno
 import urllib
+import traceback
 
 try:
     import pwd
