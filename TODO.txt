@@ -41,9 +41,6 @@
     and fall through.  In an asyncore dispatcher represented by the
     file descriptor, attempt to dispatch the event.
 
-- Revisit test_startProcessGroup and test_startAllProcesses (see XXX
-  comment about ordering).
-
 - Address outstanding collector issues.
 
 - We *might* be able to delay shutdown until all buffered events have
