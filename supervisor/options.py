@@ -1806,13 +1806,13 @@ class ProcessConfig(Config):
 
     def create_autochildlogs(self):
         # temporary logfiles which are erased at start time
-        get_autoname = self.options.get_autochildlog_name
+        create_childlog = self.options.get_autochildlog_name
         sid = self.options.identifier
         name = self.name
         if self.stdout_logfile is Automatic:
-            self.stdout_logfile = get_autoname(name, sid, 'stdout')
-        if self.stderr_logfile is Automatic:
-            self.stderr_logfile = get_autoname(name, sid, 'stderr')
+            self.stdout_logfile = create_childlog(name, sid, 'stdout')
+        if self.stderr_logfile is Automatic and not self.redirect_stderr:
+            self.stderr_logfile = create_childlog(name, sid, 'stderr')
 
     def make_process(self, group=None):
         from supervisor.process import Subprocess
