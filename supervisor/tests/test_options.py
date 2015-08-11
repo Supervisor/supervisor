@@ -1491,6 +1491,38 @@ class ServerOptionsTests(unittest.TestCase):
         expected = "/foo/bar:%s" % os.environ['PATH']
         self.assertEqual(pconfigs[0].environment['PATH'], expected)
 
+    def test_processes_from_section_redirect_stderr_with_filename(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo
+        redirect_stderr = true
+        stderr_logfile = /tmp/logfile
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(instance.parse_warnings[0],
+            'For [program:foo], redirect_stderr=true but stderr_logfile has '
+            'also been set to a filename, the filename has been ignored')
+        self.assertEqual(pconfigs[0].stderr_logfile, None)
+
+    def test_processes_from_section_redirect_stderr_with_auto(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo
+        redirect_stderr = true
+        stderr_logfile = auto
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(instance.parse_warnings, [])
+        self.assertEqual(pconfigs[0].stderr_logfile, None)
+
     def test_options_with_environment_expansions(self):
         text = lstrip("""\
         [inet_http_server]

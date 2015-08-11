@@ -79,6 +79,10 @@
 - Fixed ``DeprecationWarning: Parameters to load are deprecated. Call
   .resolve and .require separately.`` on setuptools >= 11.3.
 
+- If ``redirect_stderr=true`` and ``stderr_logfile=auto``, no stderr log
+  file will be created.  In previous versions, an empty stderr log file
+  would be created.  Thanks to Łukasz Kożuchowski for the initial patch.
+
 3.1.3 (2014-10-28)
 ------------------
 
