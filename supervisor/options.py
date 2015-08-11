@@ -923,6 +923,15 @@ class ServerOptions(Options):
                         'rollover, set maxbytes > 0 to avoid filling up '
                         'filesystem unintentionally' % (section, n))
 
+            if redirect_stderr:
+                if logfiles['stderr_logfile'] not in (Automatic, None):
+                    self.parse_warnings.append(
+                        'For [%s], redirect_stderr=true but stderr_logfile has '
+                        'also been set to a filename, the filename has been '
+                        'ignored' % section)
+                # never create an stderr logfile when redirected
+                logfiles['stderr_logfile'] = None
+
             command = get(section, 'command', None, expansions=expansions)
             if command is None:
                 raise ValueError(
