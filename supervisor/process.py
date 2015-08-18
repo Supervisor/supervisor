@@ -223,8 +223,8 @@ class Subprocess:
                 # too many file descriptors open
                 msg = 'too many open files to spawn %r' % self.config.name
             else:
-                msg = ('unknown error making dispatchers: %s' %
-                       errno.errorcode.get(code, code))
+                msg = 'unknown error making dispatchers for %r: %s' % (
+                      self.config.name, errno.errorcode.get(code, code))
             self.record_spawnerr(msg)
             self._assertInState(ProcessStates.STARTING)
             self.change_state(ProcessStates.BACKOFF)
@@ -239,8 +239,8 @@ class Subprocess:
                 msg  = ('Too many processes in process table to spawn %r' %
                         self.config.name)
             else:
-                msg = ('unknown error during fork: %s' %
-                       errno.errorcode.get(code, code))
+                msg = 'unknown error during fork for %r: %s' % (
+                      self.config.name, errno.errorcode.get(code, code))
             self.record_spawnerr(msg)
             self._assertInState(ProcessStates.STARTING)
             self.change_state(ProcessStates.BACKOFF)
