@@ -851,7 +851,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                         for result in results:
                             result = self._signalresult(result)
                             self.ctl.output(result)
-                    except xmlrpclib.Fault as e:
+                    except xmlrpclib.Fault, e:
                         if e.faultCode == xmlrpc.Faults.BAD_NAME:
                             error = "%s: ERROR (no such group)" % group_name
                             self.ctl.output(error)
@@ -860,7 +860,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 else:
                     try:
                         supervisor.signalProcess(name, sig)
-                    except xmlrpclib.Fault as e:
+                    except xmlrpclib.Fault, e:
                         error = self._signalresult({'status': e.faultCode,
                                                     'name': process_name,
                                                     'group': group_name,
