@@ -659,16 +659,18 @@ class ServerOptionsTests(unittest.TestCase):
         [include]
         files=%s/conf.d/*.conf
         """ % dirname)
-        with open(supervisord_conf, 'w') as f:
-            f.write(text)
+        f = open(supervisord_conf, 'w')
+        f.write(text)
+        f.close()
 
         from string import letters
         a_z = letters[:26]
         for letter in reversed(a_z):
             filename = os.path.join(conf_d, "%s.conf" % letter)
-            with open(filename, "w") as f:
-                f.write("[program:%s]\n"
-                        "command=/bin/%s\n" % (letter, letter))
+            f = open(filename, "w")
+            f.write("[program:%s]\n"
+                    "command=/bin/%s\n" % (letter, letter))
+            f.close()
 
         instance = self._makeOne()
         try:

@@ -170,16 +170,18 @@ class TailFProducerTests(unittest.TestCase):
     def test_handle_more_follow_file_gone(self):
         request = DummyRequest('/logtail/foo', None, None, None)
         filename = tempfile.mktemp()
-        with open(filename, 'wb') as f:
-            f.write('a' * 80)
+        f = open(filename, 'wb')
+        f.write('a' * 80)
+        f.close()
         try:
             producer = self._makeOne(request, f.name, 80)
         finally:
             os.unlink(f.name)
         result = producer.more()
         self.assertEqual(result, 'a' * 80)
-        with open(filename, 'wb') as f:
-            f.write('b' * 80)
+        f = open(filename, 'wb')
+        f.write('b' * 80)
+        f.close()
         try:
             result = producer.more() # should open in new file
             self.assertEqual(result, 'b' * 80)
