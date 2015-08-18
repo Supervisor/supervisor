@@ -1307,18 +1307,19 @@ class ServerOptionsTests(unittest.TestCase):
         """)
         f = tempfile.NamedTemporaryFile(mode="w+")
         try:
-            f.write(text)
-            f.flush()
-            from supervisor.options import UnhosedConfigParser
-            config = UnhosedConfigParser()
-            config.read(f.name)
-            instance.processes_from_section(config, 'program:foo', None)
-        except ValueError, e:
-            self.assertEqual(e.args[0],
-                "program section program:foo does not specify a command "
-                "in section 'program:foo' (file: %s)" % f.name)
-        else:
-            self.fail('nothing raised')
+            try:
+                f.write(text)
+                f.flush()
+                from supervisor.options import UnhosedConfigParser
+                config = UnhosedConfigParser()
+                config.read(f.name)
+                instance.processes_from_section(config, 'program:foo', None)
+            except ValueError, e:
+                self.assertEqual(e.args[0],
+                    "program section program:foo does not specify a command "
+                    "in section 'program:foo' (file: %s)" % f.name)
+            else:
+                self.fail('nothing raised')
         finally:
             f.close()
 
