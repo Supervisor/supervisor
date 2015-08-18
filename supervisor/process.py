@@ -1,3 +1,5 @@
+import platform
+import sys
 import os
 import time
 import errno
@@ -297,14 +299,15 @@ class Subprocess(object):
             # Send this process a kill signal if supervisor crashes.
             # Uses system call prctl(PR_SET_PDEATHSIG, <signal>).
             # This will only work on Linux.
-            try:
-                import ctypes
-                import ctypes.util
-                libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library('c'))
-                libc.prctl(1, signal.SIGKILL)
-            except Exception, e:
-                options.logger.debug("Could not set parent death signal. "
-                                     "This is expected if not running on Linux.")
+            if sys.platform.startswith("linux"):
+                try:
+                    import ctypes
+                    import ctypes.util
+                    libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library('c'))
+                    PR_SET_PDEATHSIG = 1
+                    libc.prctl(PR_SET_PDEATHSIG, signal.SIGKILL)
+                except Exception:
+                    options.logger.debug("Could not set parent death signal.")
 
             self._prepare_child_fds()
             # sending to fd 2 will put this output in the stderr log
