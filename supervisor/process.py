@@ -26,9 +26,11 @@ from supervisor.dispatchers import EventListenerStates
 from supervisor import events
 
 from supervisor.datatypes import RestartUnconditionally
-from supervisor.datatypes import signal_number
 
 from supervisor.socket_manager import SocketManager
+
+# Constant from http://linux.die.net/include/linux/prctl.h
+PR_SET_PDEATHSIG = 1
 
 @total_ordering
 class Subprocess(object):
@@ -303,7 +305,6 @@ class Subprocess(object):
                     import ctypes
                     import ctypes.util
                     libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library('c'))
-                    PR_SET_PDEATHSIG = 1
                     libc.prctl(PR_SET_PDEATHSIG, signal.SIGKILL)
                 except Exception:
                     options.logger.debug("Could not set parent death signal.")
