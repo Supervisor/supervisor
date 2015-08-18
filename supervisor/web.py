@@ -187,7 +187,11 @@ class TailView(MeldView):
             processname = form['processname']
             offset = 0
             limit = form.get('limit', '1024')
-            limit = min(-1024, int(limit)*-1 if limit.isdigit() else -1024)
+            if limit.isdigit():
+                limit = min(-1024, int(limit) * -1)
+            else:
+                limit = -1024
+
             if not processname:
                 tail = 'No process name found'
             else:
