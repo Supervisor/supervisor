@@ -115,19 +115,18 @@ class Subprocess(object):
         else:
             raise BadCommand("command is empty")
 
-        if "/" in program:
-            if program.startswith('/'):
-                filename = program
-            else:
-                filename = os.path.join(self.config.directory, program)
-
+        if os.path.isabs(program):
+            filename = program
             try:
                 st = self.config.options.stat(filename)
             except OSError:
                 st = None
-
         else:
             path = self.config.options.get_path()
+            # Search the root config directory of this program if it's set and is absolute.
+            if self.config.directory is not None and os.path.isabs(self.config.directory):
+                path.insert(0, self.config.directory)
+
             found = None
             st = None
             for dir in path:
