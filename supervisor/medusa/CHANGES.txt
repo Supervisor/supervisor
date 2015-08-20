@@ -4,6 +4,7 @@ PATCHES MADE ONLY TO THIS MEDUSA PACKAGE BUNDLED WITH SUPERVISOR
   of these modules introduced backward-incompatible changes.
 * Changed imports throughout from "medusa" to "supervisor.medusa".
 * Removed medusa files not used by Supervisor.
+* Time out connections based on inactivity instead of age
 
 Version 0.5.5:
 
