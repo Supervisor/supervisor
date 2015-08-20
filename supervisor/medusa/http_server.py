@@ -471,6 +471,7 @@ class http_channel (asynchat.async_chat):
         self.set_terminator ('\r\n\r\n')
         self.in_buffer = ''
         self.creation_time = int (time.time())
+        self.last_used = self.creation_time
         self.check_maintenance()
 
     def __repr__ (self):
@@ -498,7 +499,7 @@ class http_channel (asynchat.async_chat):
         now = int (time.time())
         for channel in asyncore.socket_map.values():
             if channel.__class__ == self.__class__:
-                if (now - channel.creation_time) > channel.zombie_timeout:
+                if (now - channel.last_used) > channel.zombie_timeout:
                     channel.close()
 
     # --------------------------------------------------
@@ -510,12 +511,14 @@ class http_channel (asynchat.async_chat):
     def send (self, data):
         result = asynchat.async_chat.send (self, data)
         self.server.bytes_out.increment (len(data))
+        self.last_used = int (time.time())
         return result
 
     def recv (self, buffer_size):
         try:
             result = asynchat.async_chat.recv (self, buffer_size)
             self.server.bytes_in.increment (len(result))
+            self.last_used = int (time.time())
             return result
         except MemoryError:
             # --- Save a Trip to Your Service Provider ---
