@@ -4,6 +4,8 @@ PATCHES MADE ONLY TO THIS MEDUSA PACKAGE BUNDLED WITH SUPERVISOR
   of these modules introduced backward-incompatible changes.
 * Changed imports throughout from "medusa" to "supervisor.medusa".
 * Removed medusa files not used by Supervisor.
+* Fixed a bug in auth_handler.py where colons could not be used in passwords
+  for HTTP Basic authentication (Supervisor issue #309).
 
 Version 0.5.5:
 
