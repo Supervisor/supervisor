@@ -29,9 +29,6 @@ from supervisor.datatypes import RestartUnconditionally
 
 from supervisor.socket_manager import SocketManager
 
-# Constant from http://linux.die.net/include/linux/prctl.h
-PR_SET_PDEATHSIG = 1
-
 @total_ordering
 class Subprocess(object):
 
@@ -300,12 +297,15 @@ class Subprocess(object):
             # Send this process a kill signal if supervisor crashes.
             # Uses system call prctl(PR_SET_PDEATHSIG, <signal>).
             # This will only work on Linux.
-            if sys.platform.startswith("linux"):
+            if self.config.prsetpdeathsig is not None \
+                    and sys.platform.startswith("linux"):
+                # Constant from http://linux.die.net/include/linux/prctl.h
+                PR_SET_PDEATHSIG = 1
                 try:
                     import ctypes
                     import ctypes.util
                     libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library('c'))
-                    libc.prctl(PR_SET_PDEATHSIG, signal.SIGKILL)
+                    libc.prctl(PR_SET_PDEATHSIG, self.config.prsetpdeathsig)
                 except Exception:
                     options.logger.debug("Could not set parent death signal.")
 

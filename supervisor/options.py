@@ -900,6 +900,15 @@ class ServerOptions(Options):
         process_name = process_or_group_name(
             get(section, 'process_name', '%(program_name)s', do_expand=False))
 
+        prsetpdeathsig = get(section, 'prsetpdeathsig', None)
+        if prsetpdeathsig is not None:
+            if sys.platform.startswith("linux"):
+                prsetpdeathsig = signal_number(prsetpdeathsig)
+            else:
+                raise ValueError(
+                    "Cannot set prsetpdeathsig on non-linux os"
+                    )
+
         if numprocs > 1:
             if not '%(process_num)' in process_name:
                 # process_name needs to include process_num when we
@@ -987,7 +996,8 @@ class ServerOptions(Options):
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
                 environment=environment,
-                serverurl=serverurl)
+                serverurl=serverurl,
+                prsetpdeathsig=prsetpdeathsig)
 
             programs.append(pconfig)
 
@@ -1776,7 +1786,7 @@ class ProcessConfig(Config):
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
-        'exitcodes', 'redirect_stderr' ]
+        'exitcodes', 'redirect_stderr', 'prsetpdeathsig' ]
     optional_param_names = [ 'environment', 'serverurl' ]
 
     def __init__(self, options, **params):
