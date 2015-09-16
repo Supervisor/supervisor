@@ -318,7 +318,7 @@ class SupervisordTests(unittest.TestCase):
             result = {
                 'name': name, 'command': command,
                 'directory': None, 'umask': None, 'priority': 999, 'autostart': True,
-                'autorestart': True, 'startsecs': 10, 'startretries': 999,
+                'autorestart': True, 'startsecs': 10, 'startretries': 999, 'restartpause': 2,
                 'uid': None, 'stdout_logfile': None, 'stdout_capture_maxbytes': 0,
                 'stdout_events_enabled': False,
                 'stdout_logfile_backups': 0, 'stdout_logfile_maxbytes': 0,
