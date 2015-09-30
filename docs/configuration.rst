@@ -562,7 +562,7 @@ where specified.
   The command that will be run when this program is started.  The
   command can be either absolute (e.g. ``/path/to/programname``) or
   relative (e.g. ``programname``).  If it is relative, the program's
-  directory and supervisord’s environment $PATH will be searched for
+  directory and supervisord's environment ``$PATH`` will be searched for
   the executable.  Programs can accept arguments, e.g. ``/path/to/program
   foo bar``.  The command line can use double quotes to group
   arguments with spaces in them to pass to the program,
