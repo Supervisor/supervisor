@@ -1579,6 +1579,7 @@ class ClientOptions(Options):
     username = None
     password = None
     history_file = None
+    exit_on_error = None
 
     def __init__(self):
         Options.__init__(self, require_configfile=False)
@@ -1590,6 +1591,9 @@ class ClientOptions(Options):
         self.configroot.supervisorctl.username = None
         self.configroot.supervisorctl.password = None
         self.configroot.supervisorctl.history_file = None
+
+        # Set to 0 because it's only activated in realize() if not in interactive mode.
+        self.configroot.supervisorctl.exit_on_error = 0
 
         from supervisor.supervisorctl import DefaultControllerPlugin
         default_factory = ('default', DefaultControllerPlugin, {})
@@ -1610,6 +1614,8 @@ class ClientOptions(Options):
         Options.realize(self, *arg, **kw)
         if not self.args:
             self.interactive = 1
+
+        self.exit_on_error = 0 if self.interactive else 1
 
     def read_config(self, fp):
         section = self.configroot.supervisorctl
