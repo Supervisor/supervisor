@@ -981,7 +981,7 @@
 - A new module "supervisor.childutils" was added.  This module
   provides utilities for Python scripts which act as children of
   supervisord.  Most notably, it contains an API method
-  "getRPCInterface" allows you to obtain an xmlrpxlib ServerProxy
+  "getRPCInterface" allows you to obtain an xmlrpclib ServerProxy
   that is willing to communicate with the parent supervisor.  It
   also contains utility functions that allow for parsing of
   supervisor event listener protocol headers.  A pair of scripts
