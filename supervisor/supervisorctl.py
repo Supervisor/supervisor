@@ -25,6 +25,8 @@ actions.
 import cmd
 import sys
 import getpass
+import json
+import shlex
 
 import socket
 import errno
@@ -1004,6 +1006,20 @@ class DefaultControllerPlugin(ControllerPluginBase):
         else:
             for pinfo in configinfo:
                 self.ctl.output(self._formatConfigInfo(pinfo))
+
+    def do_xmlrpc(self, arg):
+        server_proxy = self.ctl.get_server_proxy()
+        if arg:
+            args = shlex.split(arg)
+            method = getattr(server_proxy, args[0])
+            data = method(*args[1:])
+
+            try:
+                self.ctl.output(data)
+            except TypeError:
+                self.ctl.output(json.dumps(data, indent=4))
+        else:
+            self.ctl.output('\n'.join(server_proxy.system.listMethods()))
 
     def help_avail(self):
         self.ctl.output("avail\t\t\tDisplay all configured processes")
