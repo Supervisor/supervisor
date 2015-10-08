@@ -1108,18 +1108,58 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
         interface = self._makeOne(supervisord)
         configs = interface.getAllConfigInfo()
-        self.assertEqual(configs, [{ 'group': 'group1',
-                                     'name': 'process1',
-                                     'inuse': True,
-                                     'autostart': True,
-                                     'process_prio': 999,
-                                     'group_prio': 999 },
-                                   { 'group': 'group1',
-                                     'name': 'process2',
-                                     'inuse': True,
-                                     'autostart': True,
-                                     'process_prio': 999,
-                                     'group_prio': 999 }])
+        self.assertEqual(configs[0]['autostart'], True)
+        self.assertEqual(configs[0]['stopwaitsecs'], 10)
+        self.assertEqual(configs[0]['stdout_events_enabled'], False)
+        self.assertEqual(configs[0]['stderr_events_enabled'], False)
+        self.assertEqual(configs[0]['group'], 'group1')
+        self.assertEqual(configs[0]['stdout_capture_maxbytes'], 0)
+        self.assertEqual(configs[0]['name'], 'process1')
+        self.assertEqual(configs[0]['stopsignal'], 15)
+        self.assertEqual(configs[0]['stderr_syslog'], False)
+        self.assertEqual(configs[0]['stdout_logfile_maxbytes'], 0)
+        self.assertEqual(configs[0]['group_prio'], 999)
+        self.assertEqual(configs[0]['killasgroup'], False)
+        self.assertEqual(configs[0]['process_prio'], 999)
+        self.assertEqual(configs[0]['stdout_syslog'], False)
+        self.assertEqual(configs[0]['stderr_logfile_maxbytes'], 0)
+        self.assertEqual(configs[0]['startsecs'], 10)
+        self.assertEqual(configs[0]['redirect_stderr'], False)
+        self.assertEqual(configs[0]['stdout_logfile'], None)
+        self.assertEqual(configs[0]['exitcodes'], (0, 2))
+        self.assertEqual(configs[0]['stderr_capture_maxbytes'], 0)
+        self.assertEqual(configs[0]['startretries'], 999)
+        self.assertEqual(configs[0]['stderr_logfile_maxbytes'], 0)
+        self.assertEqual(configs[0]['inuse'], True)
+        self.assertEqual(configs[0]['stderr_logfile'], None)
+        self.assertEqual(configs[0]['stdout_logfile_backups'], 0)
+        assert 'test_rpcinterfaces.py' in configs[0]['command']
+        self.assertEqual(configs[1]['autostart'], True)
+        self.assertEqual(configs[1]['stopwaitsecs'], 10)
+        self.assertEqual(configs[1]['stdout_events_enabled'], False)
+        self.assertEqual(configs[1]['stderr_events_enabled'], False)
+        self.assertEqual(configs[1]['group'], 'group1')
+        self.assertEqual(configs[1]['stdout_capture_maxbytes'], 0)
+        self.assertEqual(configs[1]['name'], 'process2')
+        self.assertEqual(configs[1]['stopsignal'], 15)
+        self.assertEqual(configs[1]['stderr_syslog'], False)
+        self.assertEqual(configs[1]['stdout_logfile_maxbytes'], 0)
+        self.assertEqual(configs[1]['group_prio'], 999)
+        self.assertEqual(configs[1]['killasgroup'], False)
+        self.assertEqual(configs[1]['process_prio'], 999)
+        self.assertEqual(configs[1]['stdout_syslog'], False)
+        self.assertEqual(configs[1]['stderr_logfile_maxbytes'], 0)
+        self.assertEqual(configs[1]['startsecs'], 10)
+        self.assertEqual(configs[1]['redirect_stderr'], False)
+        self.assertEqual(configs[1]['stdout_logfile'], None)
+        self.assertEqual(configs[1]['exitcodes'], (0, 2))
+        self.assertEqual(configs[1]['stderr_capture_maxbytes'], 0)
+        self.assertEqual(configs[1]['startretries'], 999)
+        self.assertEqual(configs[1]['stderr_logfile_maxbytes'], 0)
+        self.assertEqual(configs[1]['inuse'], True)
+        self.assertEqual(configs[1]['stderr_logfile'], None)
+        self.assertEqual(configs[1]['stdout_logfile_backups'], 0)
+        assert 'test_rpcinterfaces.py' in configs[0]['command']
 
     def test__interpretProcessInfo(self):
         supervisord = DummySupervisor()
