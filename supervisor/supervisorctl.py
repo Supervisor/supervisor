@@ -25,6 +25,7 @@ actions.
 import cmd
 import sys
 import getpass
+import json
 
 import socket
 import errno
@@ -1004,6 +1005,21 @@ class DefaultControllerPlugin(ControllerPluginBase):
         else:
             for pinfo in configinfo:
                 self.ctl.output(self._formatConfigInfo(pinfo))
+
+    def do_settings(self, arg):
+        supervisor = self.ctl.get_supervisor()
+        try:
+            configinfo = supervisor.getAllConfigInfo()
+        except xmlrpclib.Fault as e:
+            if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
+                self.ctl.output('ERROR: supervisor shutting down')
+            else:
+                raise
+        else:
+            for pinfo in configinfo:
+                if not arg or arg == pinfo['group']:
+                    self.ctl.output(
+                        json.dumps(pinfo, indent=4, sort_keys=True))
 
     def help_avail(self):
         self.ctl.output("avail\t\t\tDisplay all configured processes")
