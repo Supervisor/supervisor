@@ -144,12 +144,6 @@ class SupervisordTests(unittest.TestCase):
         supervisord.reap(once=True)
         self.assertEqual(process.finished, (1,1))
 
-    def test_reap_recursionguard(self):
-        options = DummyOptions()
-        supervisord = self._makeOne(options)
-        result = supervisord.reap(once=True, recursionguard=100)
-        self.assertEqual(result, None)
-
     def test_reap_more_than_once(self):
         options = DummyOptions()
         options.waitpid_returns = [(1, 1), (None, None)]
