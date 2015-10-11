@@ -1579,6 +1579,7 @@ class ClientOptions(Options):
     username = None
     password = None
     history_file = None
+    colorize_status = False
 
     def __init__(self):
         Options.__init__(self, require_configfile=False)
@@ -1590,6 +1591,7 @@ class ClientOptions(Options):
         self.configroot.supervisorctl.username = None
         self.configroot.supervisorctl.password = None
         self.configroot.supervisorctl.history_file = None
+        self.configroot.supervisorctl.colorize_status = False
 
         from supervisor.supervisorctl import DefaultControllerPlugin
         default_factory = ('default', DefaultControllerPlugin, {})
@@ -1600,6 +1602,8 @@ class ClientOptions(Options):
         self.add("interactive", "supervisorctl.interactive", "i",
                  "interactive", flag=1, default=0)
         self.add("prompt", "supervisorctl.prompt", default="supervisor")
+        self.add("colorize_status", "supervisorctl.colorize_status",
+                 default=False)
         self.add("serverurl", "supervisorctl.serverurl", "s:", "serverurl=",
                  url, default="http://localhost:9001")
         self.add("username", "supervisorctl.username", "u:", "username=")
@@ -1649,6 +1653,7 @@ class ClientOptions(Options):
         # The defaults used below are really set in __init__ (since
         # section==self.configroot.supervisorctl)
         section.prompt = config.getdefault('prompt', section.prompt)
+        section.colorize_status = config.getdefault('colorize_status', section.colorize_status)
         section.username = config.getdefault('username', section.username)
         section.password = config.getdefault('password', section.password)
         history_file = config.getdefault('history_file', section.history_file)
