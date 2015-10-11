@@ -546,12 +546,35 @@ class SupervisorNamespaceRPCInterface:
             inuse = gconfig.name in self.supervisord.process_groups
             for pconfig in gconfig.process_configs:
                 configinfo.append(
-                    { 'name': pconfig.name,
-                      'group': gconfig.name,
-                      'inuse': inuse,
-                      'autostart': pconfig.autostart,
-                      'group_prio': gconfig.priority,
-                      'process_prio': pconfig.priority })
+                    {
+                        'autostart': pconfig.autostart,
+                        'command': pconfig.command,
+                        'exitcodes': pconfig.exitcodes,
+                        'group': gconfig.name,
+                        'group_prio': gconfig.priority,
+                        'inuse': inuse,
+                        'killasgroup': pconfig.killasgroup,
+                        'name': pconfig.name,
+                        'process_prio': pconfig.priority,
+                        'redirect_stderr': pconfig.redirect_stderr,
+                        'startretries': pconfig.startretries,
+                        'startsecs': pconfig.startsecs,
+                        'stdout_capture_maxbytes': pconfig.stdout_capture_maxbytes,
+                        'stdout_events_enabled': pconfig.stdout_events_enabled,
+                        'stdout_logfile': pconfig.stdout_logfile,
+                        'stdout_logfile_backups': pconfig.stdout_logfile_backups,
+                        'stdout_logfile_maxbytes': pconfig.stdout_logfile_maxbytes,
+                        'stdout_syslog': pconfig.stdout_syslog,
+                        'stopsignal': pconfig.stopsignal,
+                        'stopwaitsecs': pconfig.stopwaitsecs,
+                        'stderr_capture_maxbytes': pconfig.stderr_capture_maxbytes,
+                        'stderr_events_enabled': pconfig.stderr_events_enabled,
+                        'stderr_logfile': pconfig.stderr_logfile,
+                        'stderr_logfile_backups': pconfig.stderr_logfile_backups,
+                        'stderr_logfile_maxbytes': pconfig.stderr_logfile_maxbytes,
+                        'stderr_syslog': pconfig.stderr_syslog,
+                    }
+                )
 
         configinfo.sort(key=lambda r: r['name'])
         return configinfo
