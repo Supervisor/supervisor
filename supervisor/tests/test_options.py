@@ -204,7 +204,7 @@ class OptionTests(unittest.TestCase):
         options.stderr = options.stdout = StringIO()
         options.configroot.anoption = 1
         options.configroot.other = 1
-        options.process_config(True)
+        options.process_config(do_usage=True)
         self.assertEqual(exitcodes, [2])
 
     def test__set(self):
@@ -339,6 +339,32 @@ class ClientOptionsTests(unittest.TestCase):
         self.assertEqual(options.username, 'someuser')
         self.assertEqual(options.password, 'passwordhere')
         self.assertEqual(options.history_file, '/path/to/histdir/.supervisorctl.hist')
+
+    def test_options_supervisorctl_section_expands_here(self):
+        instance = self._makeOne()
+        text = lstrip('''
+        [supervisorctl]
+        history_file=%(here)s/sc_history
+        serverurl=unix://%(here)s/supervisord.sock
+        ''')
+        here = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.configfile = supervisord_conf
+            instance.process_config(do_usage=False)
+            instance.realize(args=[])
+        finally:
+            try:
+                shutil.rmtree(here)
+            except OSError:
+                pass
+        options = instance.configroot.supervisorctl
+        self.assertEqual(options.history_file,
+           os.path.join(here, 'sc_history'))
+        self.assertEqual(options.serverurl,
+            os.path.join(here, 'serverurl'))
 
     def test_read_config_not_found(self):
         nonexistent = os.path.join(os.path.dirname(__file__), 'nonexistent')
@@ -711,7 +737,7 @@ class ServerOptionsTests(unittest.TestCase):
         programs = three
         """)
         instance.configfile = StringIO(text)
-        instance.process_config()
+        instance.process_config(do_usage=False)
 
         section = instance.configroot.supervisord
 
@@ -1120,6 +1146,34 @@ class ServerOptionsTests(unittest.TestCase):
             self.assertEqual(exc.args[0],
                 "Must specify username if password is specified "
                 "in [unix_http_server]")
+
+    def test_options_afunix_file_expands_here(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [unix_http_server]
+        file=%(here)s/supervisord.sock
+        """)
+        here = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.configfile = supervisord_conf
+            instance.process_config(do_usage=False)
+            instance.realize(args=[])
+            options = instance.configroot.supervisord
+            # unix_http_server
+            serverconf = options.server_configs[0]
+            self.assertEqual(serverconf['family'], socket.AF_UNIX)
+            self.assertEqual(serverconf['file'],
+                os.path.join(here, 'supervisord.sock'))
+        finally:
+            try:
+                shutil.rmtree(here)
+            except OSError:
+                pass
 
     def test_options_afinet_password_without_username(self):
         instance = self._makeOne()
@@ -1647,6 +1701,124 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.directory, '/tmp')
         self.assertEqual(proc1.umask, 2)
         self.assertEqual(proc1.environment, dict(FAKE_ENV_VAR='/some/path'))
+
+    def test_options_supervisord_section_expands_here(self):
+        instance = self._makeOne()
+        text = lstrip('''\
+        [supervisord]
+        childlogdir=%(here)s
+        directory=%(here)s
+        logfile=%(here)s/supervisord.log
+        pidfile=%(here)s/supervisord.pid
+        ''')
+        here = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.configfile = supervisord_conf
+            instance.process_config(do_usage=False)
+            instance.realize(args=[])
+        finally:
+            try:
+                shutil.rmtree(here)
+            except OSError:
+                pass
+        self.assertEqual(instance.childlogdir,
+            os.path.join(here))
+        self.assertEqual(instance.directory,
+            os.path.join(here))
+        self.assertEqual(instance.logfile,
+            os.path.join(here, 'supervisord.log'))
+        self.assertEqual(instance.pidfile,
+            os.path.join(here, 'supervisord.pid'))
+
+    def test_options_program_section_expands_here(self):
+        instance = self._makeOne()
+        text = lstrip('''
+        [supervisord]
+
+        [program:cat]
+        command=%(here)s/bin/cat
+        directory=%(here)s/thedirectory
+        environment=FOO=%(here)s/foo
+        serverurl=unix://%(here)s/supervisord.sock
+        stdout_logfile=%(here)s/stdout.log
+        stderr_logfile=%(here)s/stderr.log
+        ''')
+        here = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.configfile = supervisord_conf
+            instance.process_config(do_usage=False)
+            instance.realize(args=[])
+        finally:
+            try:
+                shutil.rmtree(here)
+            except OSError:
+                pass
+        options = instance.configroot.supervisord
+        group = options.process_group_configs[0]
+        self.assertEqual(group.name, 'cat')
+        proc = group.process_configs[0]
+        self.assertEqual(proc.directory,
+            os.path.join(here, 'thedirectory'))
+        self.assertEqual(proc.command,
+            os.path.join(here, 'bin/cat'))
+        self.assertEqual(proc.environment,
+            {'FOO': os.path.join(here, 'foo')})
+        self.assertEqual(proc.serverurl,
+            'unix://' + os.path.join(here, 'supervisord.sock'))
+        self.assertEqual(proc.stdout_logfile,
+            os.path.join(here, 'stdout.log'))
+        self.assertEqual(proc.stderr_logfile,
+            os.path.join(here, 'stderr.log'))
+
+    def test_options_eventlistener_section_expands_here(self):
+        instance = self._makeOne()
+        text = lstrip('''
+        [supervisord]
+
+        [eventlistener:memmon]
+        events=TICK_60
+        command=%(here)s/bin/memmon
+        directory=%(here)s/thedirectory
+        environment=FOO=%(here)s/foo
+        serverurl=unix://%(here)s/supervisord.sock
+        stdout_logfile=%(here)s/stdout.log
+        stderr_logfile=%(here)s/stderr.log
+        ''')
+        here = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.configfile = supervisord_conf
+            instance.process_config(do_usage=False)
+            instance.realize(args=[])
+        finally:
+            try:
+                shutil.rmtree(here)
+            except OSError:
+                pass
+        options = instance.configroot.supervisord
+        group = options.process_group_configs[0]
+        self.assertEqual(group.name, 'memmon')
+        proc = group.process_configs[0]
+        self.assertEqual(proc.directory,
+            os.path.join(here, 'thedirectory'))
+        self.assertEqual(proc.command,
+            os.path.join(here, 'bin/memmon'))
+        self.assertEqual(proc.environment,
+            {'FOO': os.path.join(here, 'foo')})
+        self.assertEqual(proc.serverurl,
+            'unix://' + os.path.join(here, 'supervisord.sock'))
+        self.assertEqual(proc.stdout_logfile,
+            os.path.join(here, 'stdout.log'))
+        self.assertEqual(proc.stderr_logfile,
+            os.path.join(here, 'stderr.log'))
 
     def test_processes_from_section_bad_program_name_spaces(self):
         instance = self._makeOne()
