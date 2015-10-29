@@ -1747,12 +1747,11 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
                             expansions=expansions, **kwargs)
 
     def expand_here(self, here):
-        if here is None:
-            return
         HERE_FORMAT = '%(here)s'
         for section in self.sections():
             for key, value in self.items(section):
                 if HERE_FORMAT in value:
+                    assert here is not None, "here has not been set to a path"
                     value = value.replace(HERE_FORMAT, here)
                     self.set(section, key, value)
 
