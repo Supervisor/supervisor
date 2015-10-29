@@ -1051,13 +1051,12 @@ class ServerOptions(Options):
         for name, section in unix_serverdefs:
             config = {}
             get = parser.saneget
-            sfile = get(section, 'file', None)
+            sfile = get(section, 'file', None, expansions={'here': self.here})
             if sfile is None:
                 raise ValueError('section [%s] has no file value' % section)
             sfile = sfile.strip()
             config['name'] = name
             config['family'] = socket.AF_UNIX
-            sfile = expand(sfile, {'here':self.here}, 'socket file')
             config['file'] = normalize_path(sfile)
             config.update(self._parse_username_and_password(parser, section))
             chown = get(section, 'chown', None)
@@ -1634,11 +1633,10 @@ class ClientOptions(Options):
         sections = parser.sections()
         if not 'supervisorctl' in sections:
             raise ValueError('.ini file does not include supervisorctl section')
-        serverurl = parser.getdefault('serverurl', 'http://localhost:9001')
+        serverurl = parser.getdefault('serverurl', 'http://localhost:9001',
+            expansions={'here': self.here})
         if serverurl.startswith('unix://'):
-            sf = serverurl[7:]
-            path = expand(sf, {'here':self.here}, 'serverurl')
-            path = normalize_path(path)
+            path = normalize_path(serverurl[7:])
             serverurl = 'unix://%s' % path
         section.serverurl = serverurl
 
@@ -1647,7 +1645,8 @@ class ClientOptions(Options):
         section.prompt = parser.getdefault('prompt', section.prompt)
         section.username = parser.getdefault('username', section.username)
         section.password = parser.getdefault('password', section.password)
-        history_file = parser.getdefault('history_file', section.history_file)
+        history_file = parser.getdefault('history_file', section.history_file,
+            expansions={'here': self.here})
 
         if history_file:
             history_file = normalize_path(history_file)
