@@ -220,10 +220,7 @@ class ClientOptionsTests(unittest.TestCase):
             instance.process_config(do_usage=False)
             instance.realize(args=[])
         finally:
-            try:
-                shutil.rmtree(here)
-            except OSError:
-                pass
+            shutil.rmtree(here, ignore_errors=True)
         options = instance.configroot.supervisorctl
         self.assertEqual(options.history_file,
            os.path.join(here, 'sc_history'))
@@ -939,10 +936,7 @@ class ServerOptionsTests(unittest.TestCase):
             self.assertEqual(serverconf['file'],
                 os.path.join(here, 'supervisord.sock'))
         finally:
-            try:
-                shutil.rmtree(here)
-            except OSError:
-                pass
+            shutil.rmtree(here, ignore_errors=True)
 
     def test_options_afinet_password_without_username(self):
         instance = self._makeOne()
@@ -1471,10 +1465,7 @@ class ServerOptionsTests(unittest.TestCase):
             instance.process_config(do_usage=False)
             instance.realize(args=[])
         finally:
-            try:
-                shutil.rmtree(here)
-            except OSError:
-                pass
+            shutil.rmtree(here, ignore_errors=True)
         self.assertEqual(instance.childlogdir,
             os.path.join(here))
         self.assertEqual(instance.directory,
@@ -1507,10 +1498,7 @@ class ServerOptionsTests(unittest.TestCase):
             instance.process_config(do_usage=False)
             instance.realize(args=[])
         finally:
-            try:
-                shutil.rmtree(here)
-            except OSError:
-                pass
+            shutil.rmtree(here, ignore_errors=True)
         options = instance.configroot.supervisord
         group = options.process_group_configs[0]
         self.assertEqual(group.name, 'cat')
@@ -1552,10 +1540,7 @@ class ServerOptionsTests(unittest.TestCase):
             instance.process_config(do_usage=False)
             instance.realize(args=[])
         finally:
-            try:
-                shutil.rmtree(here)
-            except OSError:
-                pass
+            shutil.rmtree(here, ignore_errors=True)
         options = instance.configroot.supervisord
         group = options.process_group_configs[0]
         self.assertEqual(group.name, 'memmon')
