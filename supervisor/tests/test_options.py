@@ -217,7 +217,6 @@ class ClientOptionsTests(unittest.TestCase):
         f.close()
         try:
             instance.configfile = supervisord_conf
-            instance.process_config(do_usage=False)
             instance.realize(args=[])
         finally:
             shutil.rmtree(here, ignore_errors=True)
@@ -927,7 +926,6 @@ class ServerOptionsTests(unittest.TestCase):
         f.close()
         try:
             instance.configfile = supervisord_conf
-            instance.process_config(do_usage=False)
             instance.realize(args=[])
             options = instance.configroot.supervisord
             # unix_http_server
@@ -1462,7 +1460,6 @@ class ServerOptionsTests(unittest.TestCase):
         f.close()
         try:
             instance.configfile = supervisord_conf
-            instance.process_config(do_usage=False)
             instance.realize(args=[])
         finally:
             shutil.rmtree(here, ignore_errors=True)
@@ -1495,7 +1492,6 @@ class ServerOptionsTests(unittest.TestCase):
         f.close()
         try:
             instance.configfile = supervisord_conf
-            instance.process_config(do_usage=False)
             instance.realize(args=[])
         finally:
             shutil.rmtree(here, ignore_errors=True)
@@ -1537,7 +1533,6 @@ class ServerOptionsTests(unittest.TestCase):
         f.close()
         try:
             instance.configfile = supervisord_conf
-            instance.process_config(do_usage=False)
             instance.realize(args=[])
         finally:
             shutil.rmtree(here, ignore_errors=True)
