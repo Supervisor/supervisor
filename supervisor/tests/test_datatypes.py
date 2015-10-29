@@ -338,13 +338,6 @@ class ExistingDirectoryTests(unittest.TestCase):
             path = self._callFUT('~')
             self.assertEqual(home, path)
 
-    def test_expands_here(self):
-        datatypes.here = os.path.dirname(__file__)
-        try:
-            self.assertEqual(self._callFUT('%(here)s'), datatypes.here)
-        finally:
-            datatypes.here = None
-
 class ExistingDirpathTests(unittest.TestCase):
     def _callFUT(self, arg):
         return datatypes.existing_dirpath(arg)
@@ -381,14 +374,6 @@ class ExistingDirpathTests(unittest.TestCase):
         if os.path.exists(home):
             path = self._callFUT('~/foo')
             self.assertEqual(os.path.join(home, 'foo'), path)
-
-    def test_expands_here(self):
-        datatypes.here = os.path.dirname(__file__)
-        try:
-            expected = os.path.join(datatypes.here, 'foo')
-            self.assertEqual(self._callFUT('%(here)s/foo'), expected)
-        finally:
-            datatypes.here = None
 
 class LoggingLevelTests(unittest.TestCase):
     def _callFUT(self, arg):

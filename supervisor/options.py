@@ -44,7 +44,6 @@ from supervisor.datatypes import url
 from supervisor.datatypes import Automatic
 from supervisor.datatypes import auto_restart
 from supervisor.datatypes import profile_options
-from supervisor.datatypes import set_here
 
 from supervisor import loggers
 from supervisor import states
@@ -338,7 +337,6 @@ class Options:
         # Process config file
         if not hasattr(self.configfile, 'read'):
             self.here = os.path.abspath(os.path.dirname(self.configfile))
-            set_here(self.here)
         try:
             self.read_config(self.configfile)
         except ValueError, msg:
