@@ -224,7 +224,7 @@ class ClientOptionsTests(unittest.TestCase):
         self.assertEqual(options.history_file,
            os.path.join(here, 'sc_history'))
         self.assertEqual(options.serverurl,
-            os.path.join(here, 'serverurl'))
+           'unix://' + os.path.join(here, 'supervisord.sock'))
 
     def test_read_config_not_found(self):
         nonexistent = os.path.join(os.path.dirname(__file__), 'nonexistent')
