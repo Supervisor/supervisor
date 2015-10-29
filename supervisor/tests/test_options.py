@@ -890,7 +890,7 @@ class ServerOptionsTests(unittest.TestCase):
         msg = 'Included extra file "%s" during parsing' % ini_file
         self.assertTrue(msg in instance.parse_infos)
 
-    def test_include_reads_files_in_sorted_order(self):
+    def test_read_config_include_reads_files_in_sorted_order(self):
         dirname = tempfile.mkdtemp()
         conf_d = os.path.join(dirname, "conf.d")
         os.mkdir(conf_d)
@@ -955,6 +955,19 @@ class ServerOptionsTests(unittest.TestCase):
             self.assertTrue(msg in instance.parse_infos)
         finally:
             shutil.rmtree(dirname, ignore_errors=True)
+
+    def test_read_config_include_expands_here(self):
+        conf = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), 'fixtures',
+            'include.conf')
+        root_here = os.path.dirname(conf)
+        include_here = os.path.join(root_here, 'example')
+        parser = self._makeOne()
+        parser.configfile = conf
+        parser.process_config_file(True)
+        section = parser.configroot.supervisord
+        self.assertEqual(section.logfile, root_here)
+        self.assertEqual(section.childlogdir, include_here)
 
     def test_readFile_failed(self):
         from supervisor.options import readFile
@@ -2799,19 +2812,6 @@ class ServerOptionsTests(unittest.TestCase):
         instance.daemonize()
         instance.poller.before_daemonize.assert_called_once_with()
         instance.poller.after_daemonize.assert_called_once_with()
-
-    def test_include_here(self):
-        conf = os.path.join(
-            os.path.abspath(os.path.dirname(__file__)), 'fixtures',
-            'include.conf')
-        root_here = os.path.dirname(conf)
-        include_here = os.path.join(root_here, 'example')
-        parser = self._makeOne()
-        parser.configfile = conf
-        parser.process_config_file(True)
-        section = parser.configroot.supervisord
-        self.assertEqual(section.logfile, root_here)
-        self.assertEqual(section.childlogdir, include_here)
 
 class TestProcessConfig(unittest.TestCase):
     def _getTargetClass(self):
