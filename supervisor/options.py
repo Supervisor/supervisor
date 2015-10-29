@@ -1688,12 +1688,14 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
         self.section_to_file = {}
         self.expansions = {}
 
-    def read_string(self, s):
-        s = StringIO(s)
+    def read_string(self, string, source='<string>'):
+        '''Parse configuration data from a string.  This is intended
+        to be used in tests only.  We add this method for Py 2/3 compat.'''
         try:
-            return self.read_file(s) # Python 3.2 or later
+            return ConfigParser.RawConfigParser.read_string(
+                self, string, source) # Python 3.2 or later
         except AttributeError:
-            return self.readfp(s)
+            return self.readfp(StringIO(string))
 
     def saneget(self, section, option, default=_marker, do_expand=True,
                 expansions={}):
