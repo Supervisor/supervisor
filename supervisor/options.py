@@ -1579,14 +1579,14 @@ class ClientOptions(Options):
                 fp = self.open(fp, 'r')
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)
-        config = UnhosedConfigParser()
-        config.expansions = self.environ_expansions
-        config.mysection = 'supervisorctl'
-        config.readfp(fp)
-        sections = config.sections()
+        parser = UnhosedConfigParser()
+        parser.expansions = self.environ_expansions
+        parser.mysection = 'supervisorctl'
+        parser.readfp(fp)
+        sections = parser.sections()
         if not 'supervisorctl' in sections:
             raise ValueError('.ini file does not include supervisorctl section')
-        serverurl = config.getdefault('serverurl', 'http://localhost:9001',
+        serverurl = parser.getdefault('serverurl', 'http://localhost:9001',
             expansions={'here': self.here})
         if serverurl.startswith('unix://'):
             path = normalize_path(serverurl[7:])
@@ -1595,10 +1595,10 @@ class ClientOptions(Options):
 
         # The defaults used below are really set in __init__ (since
         # section==self.configroot.supervisorctl)
-        section.prompt = config.getdefault('prompt', section.prompt)
-        section.username = config.getdefault('username', section.username)
-        section.password = config.getdefault('password', section.password)
-        history_file = config.getdefault('history_file', section.history_file,
+        section.prompt = parser.getdefault('prompt', section.prompt)
+        section.username = parser.getdefault('username', section.username)
+        section.password = parser.getdefault('password', section.password)
+        history_file = parser.getdefault('history_file', section.history_file,
             expansions={'here': self.here})
 
         if history_file:
@@ -1610,7 +1610,7 @@ class ClientOptions(Options):
             self.history_file = None
 
         self.plugin_factories += self.get_plugins(
-            config,
+            parser,
             'supervisor.ctl_factory',
             'ctlplugin:'
             )
