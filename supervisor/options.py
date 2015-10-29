@@ -1682,9 +1682,14 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
     mysection = 'supervisord'
 
     def __init__(self, *args, **kwargs):
+        # inline_comment_prefixes was added in Python 3 but its default makes
+        # RawConfigParser behave differently than it did on Python 2.  This
+        # makes it behave the same by default on Python 2 and 3.
         if PY3 and ('inline_comment_prefixes' not in kwargs):
             kwargs['inline_comment_prefixes'] = (';', '#')
+
         ConfigParser.RawConfigParser.__init__(self, *args, **kwargs)
+
         self.section_to_file = {}
         self.expansions = {}
 
@@ -1696,6 +1701,27 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
                 self, string, source) # Python 3.2 or later
         except AttributeError:
             return self.readfp(StringIO(string))
+
+    def read(self, filenames, **kwargs):
+        '''Attempt to read and parse a list of filenames, returning a list
+        of filenames which were successfully parsed.  This is a method of
+        RawConfigParser that is overridden to build self.section_to_file,
+        which is a mapping of section names to the files they came from.
+        '''
+        if isinstance(filenames, basestring):  # RawConfigParser compat
+            filenames = [filenames]
+
+        ok_filenames = []
+        for filename in filenames:
+            sections_orig = self._sections.copy()
+
+            ok_filenames.extend(
+                ConfigParser.RawConfigParser.read(self, [filename], **kwargs))
+
+            diff = frozenset(self._sections) - frozenset(sections_orig)
+            for section in diff:
+                self.section_to_file[section] = filename
+        return ok_filenames
 
     def saneget(self, section, option, default=_marker, do_expand=True,
                 expansions={}):
@@ -1719,22 +1745,6 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
     def getdefault(self, option, default=_marker, expansions={}, **kwargs):
         return self.saneget(self.mysection, option, default=default,
                             expansions=expansions, **kwargs)
-
-    def read(self, filenames, **kwargs):
-        if isinstance(filenames, basestring):  # RawConfigParser compat
-            filenames = [filenames]
-
-        ok_filenames = []
-        for filename in filenames:
-            sections_orig = self._sections.copy()
-
-            ok_filenames.extend(
-                ConfigParser.RawConfigParser.read(self, [filename], **kwargs))
-
-            diff = frozenset(self._sections) - frozenset(sections_orig)
-            for section in diff:
-                self.section_to_file[section] = filename
-        return ok_filenames
 
     def expand_here(self, here):
         if here is None:
