@@ -556,10 +556,8 @@ class ServerOptions(Options):
                 need_close = True
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)
-        kwargs = {}
-        if PY3:
-            kwargs['inline_comment_prefixes'] = (';','#')
-        parser = UnhosedConfigParser(**kwargs)
+
+        parser = UnhosedConfigParser()
         parser.expansions = self.environ_expansions
         try:
             try:
@@ -1623,10 +1621,8 @@ class ClientOptions(Options):
                 need_close = True
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)
-        kwargs = {}
-        if PY3:
-            kwargs['inline_comment_prefixes'] = (';','#')
-        parser = UnhosedConfigParser(**kwargs)
+
+        parser = UnhosedConfigParser()
         parser.expansions = self.environ_expansions
         parser.mysection = 'supervisorctl'
         try:
@@ -1687,6 +1683,8 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
     mysection = 'supervisord'
 
     def __init__(self, *args, **kwargs):
+        if PY3 and ('inline_comment_prefixes' not in kwargs):
+            kwargs['inline_comment_prefixes'] = (';', '#')
         ConfigParser.RawConfigParser.__init__(self, *args, **kwargs)
         self.section_to_file = {}
         self.expansions = {}
