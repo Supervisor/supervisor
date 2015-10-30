@@ -8,6 +8,7 @@ import unittest
 import signal
 import shutil
 import errno
+import platform
 
 from supervisor.compat import StringIO
 from supervisor.compat import as_bytes
@@ -1478,7 +1479,6 @@ class ServerOptionsTests(unittest.TestCase):
         config = UnhosedConfigParser()
         config.read_string(text)
         pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
-        import platform
         expected = "/bin/foo --host=" + platform.node()
         self.assertEqual(pconfigs[0].command, expected)
 
@@ -1812,6 +1812,43 @@ class ServerOptionsTests(unittest.TestCase):
             os.path.join(here, 'stdout.log'))
         self.assertEqual(proc.stderr_logfile,
             os.path.join(here, 'stderr.log'))
+
+    def test_options_expands_combined_expansions(self):
+        instance = self._makeOne()
+        text = lstrip('''
+        [supervisord]
+        logfile = %(here)s/%(ENV_LOGNAME)s.log
+
+        [program:cat]
+        ''')
+        text += ('command = %(here)s/bin/cat --foo=%(ENV_FOO)s '
+                 '--num=%(process_num)d --node=%(host_node_name)s')
+
+        here = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.environ_expansions = {
+                'ENV_LOGNAME': 'mainlog',
+                'ENV_FOO': 'bar'
+                }
+            instance.configfile = supervisord_conf
+            instance.realize(args=[])
+        finally:
+            shutil.rmtree(here, ignore_errors=True)
+
+        section = instance.configroot.supervisord
+        self.assertEqual(section.logfile,
+            os.path.join(here, 'mainlog.log'))
+
+        cat_group = section.process_group_configs[0]
+        cat_0 = cat_group.process_configs[0]
+        expected = '%s --foo=bar --num=0 --node=%s' % (
+            os.path.join(here, 'bin/cat'),
+            platform.node()
+            )
+        self.assertEqual(cat_0.command, expected)
 
     def test_processes_from_section_bad_program_name_spaces(self):
         instance = self._makeOne()
