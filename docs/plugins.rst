@@ -83,7 +83,7 @@ These also includes various event listeners.
     Syslog instance (e.g. Logstash).
 `supervisor_cgroups <https://github.com/htch/supervisor_cgroups>`_
     An event listener that enables tying Supervisor processes to a cgroup
-    hierarchy.  It is intended to be used as a replacement for 
+    hierarchy.  It is intended to be used as a replacement for
     `cgrules.conf <http://linux.die.net/man/5/cgrules.conf>`_.
 
 Libraries that integrate Third Party Applications with Supervisor
@@ -131,6 +131,8 @@ with third party applications:
     `TextMate <http://macromates.com/>`_ bundle for supervisord.conf.
 `capistrano-supervisord <https://github.com/yyuu/capistrano-supervisord>`_
     `Capistrano <https://github.com/capistrano/capistrano>`_ recipe to deploy supervisord based services.
+`capistrano-supervisor <https://github.com/glooby/capistrano-supervisor>`_
+    Another package to control supervisord from `Capistrano <https://github.com/capistrano/capistrano>`_.
 `chef-supervisor <https://github.com/opscode-cookbooks/supervisor>`_
     `Chef <http://www.opscode.com/chef/>`_ cookbook install and configure supervisord.
 `SupervisorPHP <http://supervisorphp.com>`_
