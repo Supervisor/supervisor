@@ -305,7 +305,7 @@ Process Control
     .. automethod:: getAllProcessInfo
 
         Each element contains a struct, and this struct contains the exact
-        same elements as the struct returned by ``getProcess``. If the process
+        same elements as the struct returned by ``getProcessInfo``. If the process
         table is empty, an empty array is returned.
 
     .. automethod:: startProcess
