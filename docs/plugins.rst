@@ -155,3 +155,5 @@ with third party applications:
     `Dokku <https://github.com/progrium/dokku>`_ plugin that injects ``supervisord`` to run
     applications.  It also redirects ``stdout`` and ``stderr`` from processes to log files
     (rather than the Docker default per-container JSON files).
+`superslacker <https://github.com/MTSolutions/superslacker>`_
+    Send Supervisor event notifications to `Slack <https://slack.com>`_.
