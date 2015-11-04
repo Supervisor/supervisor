@@ -588,6 +588,8 @@ class SupervisorNamespaceRPCInterface:
             start_dt = datetime.datetime(*time.gmtime(start)[:6])
             now_dt = datetime.datetime(*time.gmtime(now)[:6])
             uptime = now_dt - start_dt
+            if uptime.total_seconds() < 0: # system time set back
+                uptime = datetime.timedelta(0)
             desc = 'pid %s, uptime %s' % (info['pid'], uptime)
 
         elif state in (ProcessStates.FATAL, ProcessStates.BACKOFF):

@@ -1224,6 +1224,18 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         description = interface._interpretProcessInfo(stopped2)
         self.assertEqual(description, 'Not started')
 
+    def test__interpretProcessInfo_doesnt_report_negative_uptime(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        from supervisor.process import ProcessStates
+        running = {'name': 'running',
+                   'pid': 42,
+                   'state': ProcessStates.RUNNING,
+                   'start': _NOW + 10, # started in the future
+                   'stop': None,
+                   'now': _NOW}
+        description = interface._interpretProcessInfo(running)
+        self.assertEqual(description, 'pid 42, uptime 0:00:00')
 
     def test_getProcessInfo(self):
         from supervisor.process import ProcessStates
