@@ -183,16 +183,13 @@ class Controller(cmd.Cmd):
                     return do_func(arg)
                 except xmlrpclib.ProtocolError as e:
                     if e.errcode == 401:
-                        if self.options.interactive:
-                            self.output('Server requires authentication')
-                            username = raw_input('Username:')
-                            password = getpass.getpass(prompt='Password:')
-                            self.output('')
-                            self.options.username = username
-                            self.options.password = password
-                            return self.onecmd(origline)
-                        else:
-                            self.options.usage('Server requires authentication')
+                        self.output('Server requires authentication')
+                        username = raw_input('Username:')
+                        password = getpass.getpass(prompt='Password:')
+                        self.output('')
+                        self.options.username = username
+                        self.options.password = password
+                        return self.onecmd(origline)
                     else:
                         raise
                 do_func(arg)
