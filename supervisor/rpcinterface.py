@@ -560,7 +560,7 @@ class SupervisorNamespaceRPCInterface:
             start_dt = datetime.datetime(*time.gmtime(start)[:6])
             now_dt = datetime.datetime(*time.gmtime(now)[:6])
             uptime = now_dt - start_dt
-            if uptime.total_seconds() < 0: # system time set back
+            if _total_seconds(uptime) < 0: # system time set back
                 uptime = datetime.timedelta(0)
             desc = 'pid %s, uptime %s' % (info['pid'], uptime)
 
@@ -866,6 +866,10 @@ class SupervisorNamespaceRPCInterface:
         )
 
         return True
+
+def _total_seconds(timedelta):
+    return ((timedelta.days * 86400 + timedelta.seconds) * 10**6 +
+                timedelta.microseconds) / 10**6
 
 def make_allfunc(processes, predicate, func, **extra_kwargs):
     """ Return a closure representing a function that calls a
