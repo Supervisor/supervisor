@@ -53,6 +53,10 @@
   file will be created.  In previous versions, an empty stderr log file
   would be created.  Thanks to Łukasz Kożuchowski for the initial patch.
 
+- Fixed an issue in Medusa that would cause ``supervisorctl tail -f`` to
+  disconnect if many other ``supervisorctl`` commands were run in parallel.
+  Patch by Stefan Friesel.
+
 3.1.3 (2014-10-28)
 ------------------
 
@@ -148,10 +152,6 @@
 
 - A warning is now logged if a glob pattern in an ``[include]`` section does
   not match any files.  Patch by Daniel Hahler.
-
-- Fixed an issue in Medusa that would cause ``supervisorctl tail -f`` to
-  disconnect if many other ``supervisorctl`` commands were run in parallel.
-  Patch by Stefan Friesel.
 
 3.0 (2013-07-30)
 ----------------
