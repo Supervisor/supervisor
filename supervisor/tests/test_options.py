@@ -2409,7 +2409,7 @@ class UnhosedConfigParserTests(unittest.TestCase):
     def test_saneget_no_default(self):
         parser = self._makeOne()
         parser.read_string("[supervisord]\n")
-        from supervisor.compat import ConfigParser
+        import ConfigParser
         self.assertRaises(ConfigParser.NoOptionError,
             parser.saneget, "supervisord", "missing")
 
