@@ -198,7 +198,6 @@ class OptionTests(unittest.TestCase):
 
     def test_config_reload_do_usage_true(self):
         options = self._makeOptions(read_error='error')
-        from StringIO import StringIO
         L = []
         def exit(num):
             L.append(num)
@@ -264,7 +263,6 @@ class ClientOptionsTests(unittest.TestCase):
         history_file=%s/sc_history
         """ % tempdir)
 
-        from StringIO import StringIO
         fp = StringIO(s)
         instance = self._makeOne()
         instance.configfile = fp
@@ -357,7 +355,6 @@ class ClientOptionsTests(unittest.TestCase):
             self.fail("expected exception")
 
     def test_options_unixsocket_cli(self):
-        from StringIO import StringIO
         fp = StringIO('[supervisorctl]')
         instance = self._makeOne()
         instance.configfile = fp
@@ -385,7 +382,6 @@ class ServerOptionsTests(unittest.TestCase):
     def test_version(self):
         from supervisor.options import VERSION
         options = self._makeOne()
-        from StringIO import StringIO
         options.stdout = StringIO()
         self.assertRaises(SystemExit, options.version, None)
         self.assertEqual(options.stdout.getvalue(), VERSION + '\n')
@@ -463,7 +459,6 @@ class ServerOptionsTests(unittest.TestCase):
 
         from supervisor import datatypes
 
-        from StringIO import StringIO
         fp = StringIO(s)
         instance = self._makeOne()
         instance.configfile = fp
@@ -670,7 +665,6 @@ class ServerOptionsTests(unittest.TestCase):
             self.fail("Did not get a DummyException.")
 
     def test_reload(self):
-        from cStringIO import StringIO
         text = lstrip("""\
         [supervisord]
         user=root
@@ -743,7 +737,6 @@ class ServerOptionsTests(unittest.TestCase):
         old_warning = "Warning from a prior config read"
         instance.parse_warnings = [old_warning]
 
-        from cStringIO import StringIO
         text = lstrip("""\
         [supervisord]
         user=root
