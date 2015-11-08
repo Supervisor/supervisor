@@ -19,6 +19,7 @@ class Event:
 
 class ProcessLogEvent(Event):
     """ Abstract """
+    channel = None
     def __init__(self, process, pid, data):
         self.process = process
         self.pid = pid
