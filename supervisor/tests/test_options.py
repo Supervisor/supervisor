@@ -929,8 +929,9 @@ class ServerOptionsTests(unittest.TestCase):
         notfound = os.path.join(os.path.dirname(__file__), 'notfound')
         socketname = tempfile.mktemp()
         try:
-            with open(socketname, 'w') as f:
-                f.write('foo')
+            f = open(socketname, 'w')
+            f.write('foo')
+            f.close()
             instance = self._makeOne()
             class Server:
                 pass
@@ -950,8 +951,9 @@ class ServerOptionsTests(unittest.TestCase):
     def test_cleanup_removes_pidfile(self):
         pidfile = tempfile.mktemp()
         try:
-            with open(pidfile, 'w') as f:
-                f.write('2')
+            f = open(pidfile, 'w')
+            f.write('2')
+            f.close()
             instance = self._makeOne()
             instance.pidfile = pidfile
             instance.cleanup()
@@ -1669,7 +1671,7 @@ class ServerOptionsTests(unittest.TestCase):
         try:
             instance.process_groups_from_parser(config)
             self.fail('nothing raised')
-        except ValueError as exc:
+        except ValueError, exc:
             self.assertEqual(exc.args[0],
                 'supervisor.tests.base:nonexistant cannot be '
                 'resolved within [eventlistener:cat]')
@@ -2153,8 +2155,9 @@ class ServerOptionsTests(unittest.TestCase):
         instance.childlogdir = dirname
         ident = instance.identifier
         filename = os.path.join(dirname, 'cat-stdout---%s-ayWAp9.log' % ident)
-        with open(filename, 'w') as f:
-            f.write("log")
+        f = open(filename, 'w')
+        f.write("log")
+        f.close()
         def raise_oserror(*args):
             raise OSError(errno.ENOENT)
         instance.remove = raise_oserror
