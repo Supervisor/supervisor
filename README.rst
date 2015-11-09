@@ -20,7 +20,7 @@ when run on Python 3.  See
 `issues running Supervisor on Python 3 <https://github.com/Supervisor/supervisor/labels/python%203>`_.
 It may also have regressions on Python 2 as a result of attempts to
 add Python 3 support.  Help from developers with Python 3 porting
-experience is is needed.  **Do not use this branch on any production system.**
+experience is needed.  **Do not use this branch on any production system.**
 
 Supervisor 4.0 (unreleased) is planned to work under Python 2 version 2.6
 or greater and Python 3 version 3.2 or greater.  See note above about the
