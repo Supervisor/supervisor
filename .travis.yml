@@ -1,15 +1,15 @@
 language: python
 
 sudo: false
+
 env:
+    - TOXENV=cover
     - TOXENV=py26
     - TOXENV=py27
-    - TOXENV=cover
+    - TOXENV=pypy
 
 install:
-    - travis_retry pip install tox==1.6.1
+    - travis_retry pip install tox
 
 script:
     - travis_retry tox
-notifications:
-    email: false
