@@ -843,8 +843,8 @@ class ServerOptions(Options):
             return self._processes_from_section(
                 parser, section, group_name, klass)
         except ValueError as e:
-            filename = parser.section_to_file.get(section, '???')
-            raise ValueError('%s in section %r (file: %s)'
+            filename = parser.section_to_file.get(section, self.configfile)
+            raise ValueError('%s in section %r (file: %r)'
                              % (e, section, filename))
 
     def _processes_from_section(self, parser, section, group_name,

@@ -1849,6 +1849,68 @@ class ServerOptionsTests(unittest.TestCase):
             )
         self.assertEqual(cat_0.command, expected)
 
+    def test_options_error_handler_shows_main_filename(self):
+        dirname = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(dirname, 'supervisord.conf')
+        text = lstrip('''
+        [supervisord]
+
+        [program:cat]
+        command = /bin/cat
+        stopsignal = NOTASIGNAL
+        ''')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+
+        instance = self._makeOne()
+        try:
+            instance.configfile = supervisord_conf
+            try:
+                instance.process_config(do_usage=False)
+                self.fail('nothing raised')
+            except ValueError as e:
+                self.assertEqual(str(e.args[0]),
+                    "value 'NOTASIGNAL' is not a valid signal name "
+                    "in section 'program:cat' (file: %r)" % supervisord_conf)
+        finally:
+            shutil.rmtree(dirname, ignore_errors=True)
+
+    def test_options_error_handler_shows_included_filename(self):
+        dirname = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(dirname, "supervisord.conf")
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        files=%s/conf.d/*.conf
+        """ % dirname)
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+
+        conf_d = os.path.join(dirname, "conf.d")
+        os.mkdir(conf_d)
+        included_conf = os.path.join(conf_d, "included.conf")
+        text = lstrip('''\
+        [program:cat]
+        command = /bin/cat
+        stopsignal = NOTASIGNAL
+        ''')
+        with open(included_conf, 'w') as f:
+            f.write(text)
+
+        instance = self._makeOne()
+        try:
+            instance.configfile = supervisord_conf
+            try:
+                instance.process_config(do_usage=False)
+                self.fail('nothing raised')
+            except ValueError as e:
+                self.assertEqual(str(e.args[0]),
+                    "value 'NOTASIGNAL' is not a valid signal name "
+                    "in section 'program:cat' (file: %r)" % included_conf)
+        finally:
+            shutil.rmtree(dirname, ignore_errors=True)
+
     def test_processes_from_section_bad_program_name_spaces(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -2008,7 +2070,7 @@ class ServerOptionsTests(unittest.TestCase):
             except ValueError as e:
                 self.assertEqual(e.args[0],
                     "program section program:foo does not specify a command "
-                    "in section 'program:foo' (file: %s)" % f.name)
+                    "in section 'program:foo' (file: %r)" % f.name)
             else:
                 self.fail('nothing raised')
 
