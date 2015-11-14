@@ -702,7 +702,7 @@ class SignalNumberTests(unittest.TestCase):
             self._callFUT('12345678')
             self.fail()
         except ValueError as e:
-            expected = "value 12345678 is not a valid signal number"
+            expected = "value '12345678' is not a valid signal number"
             self.assertEqual(e.args[0], expected)
 
     def test_raises_for_bad_name(self):
@@ -710,7 +710,7 @@ class SignalNumberTests(unittest.TestCase):
             self._callFUT('BADSIG')
             self.fail()
         except ValueError as e:
-            expected = "value BADSIG is not a valid signal name"
+            expected = "value 'BADSIG' is not a valid signal name"
             self.assertEqual(e.args[0], expected)
 
 class AutoRestartTests(unittest.TestCase):
