@@ -382,7 +382,7 @@ def url(value):
     scheme, netloc, path, params, query, fragment = urlparse.urlparse(uri)
     if scheme and (netloc or path):
         return value
-    raise ValueError("value %s is not a URL" % value)
+    raise ValueError("value %r is not a URL" % value)
 
 # all valid signal numbers
 SIGNUMS = [ getattr(signal, k) for k in dir(signal) if k.startswith('SIG') ]
@@ -396,9 +396,9 @@ def signal_number(value):
             name = 'SIG' + name
         num = getattr(signal, name, None)
         if num is None:
-            raise ValueError('value %s is not a valid signal name' % value)
+            raise ValueError('value %r is not a valid signal name' % value)
     if num not in SIGNUMS:
-        raise ValueError('value %s is not a valid signal number' % value)
+        raise ValueError('value %r is not a valid signal number' % value)
     return num
 
 class RestartWhenExitUnexpected:
