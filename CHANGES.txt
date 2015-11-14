@@ -92,8 +92,8 @@
   are spewing to their stdout or stderr.  See comments attached to
   https://github.com/Supervisor/supervisor/pull/263 .
 
-- Added docs/conf.py, docs/Makefile, and supervisor/scripts/*.py to
-  the release package.
+- Added ``docs/conf.py``, ``docs/Makefile``, and ``supervisor/scripts/*.py``
+  to the release package.
 
 3.1.0 (2014-07-29)
 ------------------
