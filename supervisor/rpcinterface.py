@@ -205,7 +205,7 @@ class SupervisorNamespaceRPCInterface:
 
         result = self.supervisord.remove_process_group(name)
         if not result:
-            raise RPCError(Faults.STILL_RUNNING)
+            raise RPCError(Faults.STILL_RUNNING, name)
         return True
 
     def _getAllProcesses(self, lexical=False):
@@ -383,7 +383,7 @@ class SupervisorNamespaceRPCInterface:
             return self.stopProcessGroup(group_name, wait)
 
         if process.get_state() not in RUNNING_STATES:
-            raise RPCError(Faults.NOT_RUNNING)
+            raise RPCError(Faults.NOT_RUNNING, name)
 
         msg = process.stop()
         if msg is not None:
@@ -482,7 +482,7 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.BAD_SIGNAL, signal)
 
         if process.get_state() not in RUNNING_STATES:
-            raise RPCError(Faults.NOT_RUNNING)
+            raise RPCError(Faults.NOT_RUNNING, name)
 
         msg = process.signal(sig)
 
