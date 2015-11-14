@@ -255,7 +255,7 @@ class Options:
         try:
             self.options, self.args = getopt.getopt(
                 args, "".join(self.short_options), self.long_options)
-        except getopt.error as exc:
+        except getopt.error, exc:
             self.usage(repr(exc))
 
         # Check for positional args
