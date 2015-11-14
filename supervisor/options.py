@@ -267,7 +267,7 @@ class Options:
             self.options, self.args = getopt.getopt(
                 args, "".join(self.short_options), self.long_options)
         except getopt.error as exc:
-            self.usage(repr(exc))
+            self.usage(str(exc))
 
         # Check for positional args
         if self.args and not self.positional_args_allowed:
