@@ -800,13 +800,14 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         f = tempfile.NamedTemporaryFile(mode="w+")
         try:
-            f.write("[supervisord]\njunk")
-            f.flush()
-            instance.read_config(f.name)
-            self.fail("nothing raised")
-        except ValueError, exc:
-            self.assertTrue(exc.args[0].startswith(
-                'File contains parsing errors: %s' % f.name))
+            try:
+                f.write("[supervisord]\njunk")
+                f.flush()
+                instance.read_config(f.name)
+                self.fail("nothing raised")
+            except ValueError, exc:
+                self.assertTrue(exc.args[0].startswith(
+                    'File contains parsing errors: %s' % f.name))
         finally:
             f.close()
 
@@ -917,13 +918,14 @@ class ServerOptionsTests(unittest.TestCase):
 
         instance = self._makeOne()
         try:
-            instance.read_config(supervisord_conf)
-            self.fail("nothing raised")
-        except ValueError, exc:
-            self.assertTrue('contains parsing errors:' in exc.args[0])
-            self.assertTrue(malformed_file in exc.args[0])
-            msg = 'Included extra file "%s" during parsing' % malformed_file
-            self.assertTrue(msg in instance.parse_warnings)
+            try:
+                instance.read_config(supervisord_conf)
+                self.fail("nothing raised")
+            except ValueError, exc:
+                self.assertTrue('contains parsing errors:' in exc.args[0])
+                self.assertTrue(malformed_file in exc.args[0])
+                msg = 'Included extra file "%s" during parsing' % malformed_file
+                self.assertTrue(msg in instance.parse_warnings)
         finally:
             shutil.rmtree(dirname)
 
