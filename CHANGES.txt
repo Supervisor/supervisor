@@ -11,15 +11,15 @@
 - Environment variables are now expanded for all config file options.
   Patch by Dexter Tad-y.
 
-- Errors caused by bad values in a config file now show the config section
-  to make debugging easier.  Patch by Marc Abramowitz.
-
 - Added ``signalProcess``, ``signalProcessGroup``, and ``signalAllProcesses``
   XML-RPC methods to supervisor RPC interface.  Thanks to Casey Callendrello,
   Marc Abramowitz, and Moriyoshi Koizumi for the patches.
 
 - Added ``signal`` command to supervisorctl.  Thanks to Moriyoshi Koizumi and
   Marc Abramowitz for the patches.
+
+- Errors caused by bad values in a config file now show the config section
+  to make debugging easier.  Patch by Marc Abramowitz.
 
 - Setting ``redirect_stderr=true`` in an `[eventlistener:x]`` section is now
   disallowed because any messages written to ``stderr`` would interfere
