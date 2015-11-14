@@ -1853,8 +1853,9 @@ class ServerOptionsTests(unittest.TestCase):
         command = /bin/cat
         stopsignal = NOTASIGNAL
         ''')
-        with open(supervisord_conf, 'w') as f:
-            f.write(text)
+        f = open(supervisord_conf, 'w')
+        f.write(text)
+        f.close()
 
         instance = self._makeOne()
         try:
@@ -1862,7 +1863,7 @@ class ServerOptionsTests(unittest.TestCase):
             try:
                 instance.process_config(do_usage=False)
                 self.fail('nothing raised')
-            except ValueError as e:
+            except ValueError, e:
                 self.assertEqual(str(e.args[0]),
                     "value 'NOTASIGNAL' is not a valid signal name "
                     "in section 'program:cat' (file: %r)" % supervisord_conf)
@@ -1878,8 +1879,9 @@ class ServerOptionsTests(unittest.TestCase):
         [include]
         files=%s/conf.d/*.conf
         """ % dirname)
-        with open(supervisord_conf, 'w') as f:
-            f.write(text)
+        f = open(supervisord_conf, 'w')
+        f.write(text)
+        f.close()
 
         conf_d = os.path.join(dirname, "conf.d")
         os.mkdir(conf_d)
@@ -1889,8 +1891,9 @@ class ServerOptionsTests(unittest.TestCase):
         command = /bin/cat
         stopsignal = NOTASIGNAL
         ''')
-        with open(included_conf, 'w') as f:
-            f.write(text)
+        f = open(included_conf, 'w')
+        f.write(text)
+        f.close()
 
         instance = self._makeOne()
         try:
@@ -1898,7 +1901,7 @@ class ServerOptionsTests(unittest.TestCase):
             try:
                 instance.process_config(do_usage=False)
                 self.fail('nothing raised')
-            except ValueError as e:
+            except ValueError, e:
                 self.assertEqual(str(e.args[0]),
                     "value 'NOTASIGNAL' is not a valid signal name "
                     "in section 'program:cat' (file: %r)" % included_conf)
