@@ -486,7 +486,7 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.BAD_SIGNAL, signal)
 
         if process.get_state() not in RUNNING_STATES:
-           raise RPCError(Faults.NOT_RUNNING)
+            raise RPCError(Faults.NOT_RUNNING)
 
         msg = process.signal(sig)
 
