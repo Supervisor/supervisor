@@ -5,6 +5,42 @@ from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import DummyRequest
 from supervisor.tests.base import DummySupervisorRPCNamespace
 
+class GetFaultDescriptionTests(unittest.TestCase):
+    def test_returns_description_for_known_fault(self):
+        from supervisor import xmlrpc
+        desc = xmlrpc.getFaultDescription(xmlrpc.Faults.SHUTDOWN_STATE)
+        self.assertEqual(desc, 'SHUTDOWN_STATE')
+
+    def test_returns_unknown_for_unknown_fault(self):
+        from supervisor import xmlrpc
+        desc = xmlrpc.getFaultDescription(999999)
+        self.assertEqual(desc, 'UNKNOWN')
+
+class RPCErrorTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.xmlrpc import RPCError
+        return RPCError
+
+    def _makeOne(self, code, extra=None):
+        return self._getTargetClass()(code, extra)
+
+    def test_sets_text_with_fault_name_only(self):
+        from supervisor import xmlrpc
+        e = self._makeOne(xmlrpc.Faults.FAILED)
+        self.assertEqual(e.text, 'FAILED')
+
+    def test_sets_text_with_fault_name_and_extra(self):
+        from supervisor import xmlrpc
+        e = self._makeOne(xmlrpc.Faults.FAILED, 'oops')
+        self.assertEqual(e.text, 'FAILED: oops')
+
+    def test___str___shows_code_and_text(self):
+        from supervisor import xmlrpc
+        e = self._makeOne(xmlrpc.Faults.NO_FILE, '/nonexistent')
+        self.assertEqual(str(e),
+            "code=%r, text='NO_FILE: /nonexistent'" % xmlrpc.Faults.NO_FILE
+            )
+
 class XMLRPCMarshallingTests(unittest.TestCase):
     def test_xmlrpc_marshal(self):
         import xmlrpclib
