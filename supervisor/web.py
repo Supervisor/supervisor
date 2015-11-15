@@ -376,7 +376,8 @@ class StatusView(MeldView):
                         elif e.code == Faults.ABNORMAL_TERMINATION:
                             msg = 'abnormal termination'
                         else:
-                            msg = 'unexpected rpc fault code %d' % e.code
+                            msg = 'unexpected rpc fault [%d] %s' % (
+                                e.code, e.text)
                         def starterr():
                             return 'ERROR: Process %s: %s' % (namespec, msg)
                         starterr.delay = 0.05
@@ -391,7 +392,8 @@ class StatusView(MeldView):
                             elif e.code == Faults.ABNORMAL_TERMINATION:
                                 msg = 'abnormal termination'
                             else:
-                                msg = 'unexpected rpc fault code %d' % e.code
+                                msg = 'unexpected rpc fault [%d] %s' % (
+                                    e.code, e.text)
                             return 'ERROR: Process %s: %s' % (namespec, msg)
 
                         if result is NOT_DONE_YET:
