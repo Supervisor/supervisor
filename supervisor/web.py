@@ -334,46 +334,7 @@ class StatusView(MeldView):
                 if process is None:
                     return wrong
 
-                elif action == 'stop':
-                    try:
-                        callback = rpcinterface.supervisor.stopProcess(
-                            namespec)
-                    except RPCError as e:
-                        def stoperr():
-                            return 'unexpected rpc fault [%d] %s' % (
-                                e.code, e.text)
-                        stoperr.delay = 0.05
-                        return stoperr
-
-                    def stopprocess():
-                        try:
-                            result = callback()
-                        except RPCError as e:
-                            return 'unexpected rpc fault [%d] %s' % (
-                                e.code, e.text)
-                        if result is NOT_DONE_YET:
-                            return NOT_DONE_YET
-                        return 'Process %s stopped' % namespec
-                    stopprocess.delay = 0.05
-                    return stopprocess
-
-                elif action == 'restart':
-                    callback = rpcinterface.system.multicall(
-                        [ {'methodName':'supervisor.stopProcess',
-                           'params': [namespec]},
-                          {'methodName':'supervisor.startProcess',
-                           'params': [namespec]},
-                          ]
-                        )
-                    def restartprocess():
-                        result = callback()
-                        if result is NOT_DONE_YET:
-                            return NOT_DONE_YET
-                        return 'Process %s restarted' % namespec
-                    restartprocess.delay = 0.05
-                    return restartprocess
-
-                elif action == 'start':
+                if action == 'start':
                     try:
                         callback = rpcinterface.supervisor.startProcess(
                             namespec)
@@ -414,6 +375,45 @@ class StatusView(MeldView):
                         return 'Process %s started' % namespec
                     startprocess.delay = 0.05
                     return startprocess
+
+                elif action == 'stop':
+                    try:
+                        callback = rpcinterface.supervisor.stopProcess(
+                            namespec)
+                    except RPCError as e:
+                        def stoperr():
+                            return 'unexpected rpc fault [%d] %s' % (
+                                e.code, e.text)
+                        stoperr.delay = 0.05
+                        return stoperr
+
+                    def stopprocess():
+                        try:
+                            result = callback()
+                        except RPCError as e:
+                            return 'unexpected rpc fault [%d] %s' % (
+                                e.code, e.text)
+                        if result is NOT_DONE_YET:
+                            return NOT_DONE_YET
+                        return 'Process %s stopped' % namespec
+                    stopprocess.delay = 0.05
+                    return stopprocess
+
+                elif action == 'restart':
+                    callback = rpcinterface.system.multicall(
+                        [ {'methodName':'supervisor.stopProcess',
+                           'params': [namespec]},
+                          {'methodName':'supervisor.startProcess',
+                           'params': [namespec]},
+                          ]
+                        )
+                    def restartprocess():
+                        result = callback()
+                        if result is NOT_DONE_YET:
+                            return NOT_DONE_YET
+                        return 'Process %s restarted' % namespec
+                    restartprocess.delay = 0.05
+                    return restartprocess
 
                 elif action == 'clearlog':
                     callback = rpcinterface.supervisor.clearProcessLogs(
