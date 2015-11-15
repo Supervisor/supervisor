@@ -212,7 +212,8 @@ class TailView(MeldView):
                     if e.code == Faults.NO_FILE:
                         tail = 'No file for %s' % processname
                     else:
-                        raise
+                        tail = 'ERROR: unexpected rpc fault [%d] %s' % (
+                            e.code, e.text)
 
         root = self.clone()
 
