@@ -57,6 +57,9 @@ class RPCError(Exception):
         if extra is not None:
             self.text = '%s: %s' % (self.text, extra)
 
+    def __str__(self):
+        return 'code=%r, text=%r' % (self.code, self.text)
+
 class DeferredXMLRPCResponse:
     """ A medusa producer that implements a deferred callback; requires
     a subclass of asynchat.async_chat that handles NOT_DONE_YET sentinel """
