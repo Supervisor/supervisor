@@ -407,8 +407,16 @@ class StatusView(MeldView):
                     return restartprocess
 
                 elif action == 'clearlog':
-                    callback = rpcinterface.supervisor.clearProcessLogs(
-                        namespec)
+                    try:
+                        callback = rpcinterface.supervisor.clearProcessLogs(
+                            namespec)
+                    except RPCError, e:
+                        def clearerr():
+                            return 'unexpected rpc fault [%d] %s' % (
+                                e.code, e.text)
+                        clearerr.delay = 0.05
+                        return clearerr
+
                     def clearlog():
                         return 'Log for %s cleared' % namespec
                     clearlog.delay = 0.05
