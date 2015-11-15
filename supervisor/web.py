@@ -335,9 +335,22 @@ class StatusView(MeldView):
                     return wrong
 
                 elif action == 'stop':
-                    callback = rpcinterface.supervisor.stopProcess(namespec)
+                    try:
+                        callback = rpcinterface.supervisor.stopProcess(
+                            namespec)
+                    except RPCError as e:
+                        def stoperr():
+                            return 'unexpected rpc fault [%d] %s' % (
+                                e.code, e.text)
+                        stoperr.delay = 0.05
+                        return stoperr
+
                     def stopprocess():
-                        result = callback()
+                        try:
+                            result = callback()
+                        except RPCError as e:
+                            return 'unexpected rpc fault [%d] %s' % (
+                                e.code, e.text)
                         if result is NOT_DONE_YET:
                             return NOT_DONE_YET
                         return 'Process %s stopped' % namespec
