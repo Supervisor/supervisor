@@ -365,9 +365,12 @@ follows.
 
 ``user``
 
-  If :program:`supervisord` is run as the root user, switch users to
-  this UNIX user account before doing any meaningful processing.  This
-  value has no effect if :program:`supervisord` is not run as root.
+  Instruct :program:`supervisord` to switch users to this UNIX user
+  account before doing any meaningful processing.  The user can only
+  be switched if :program:`supervisord` is started as the root user.
+  If :program:`supervisord` can't switch users, it will still continue
+  but will write log message at the ``critical`` level saying that it
+  can't drop privileges.
 
   *Default*: do not switch users
 
@@ -802,8 +805,9 @@ where specified.
 
 ``user``
 
-  If :program:`supervisord` runs as root, this UNIX user account will
-  be used as the account which runs the program.  If :program:`supervisord`
+  Instruct :program:`supervisord` to use this UNIX user account as the
+  account which runs the program.  The user can only be switched if
+  :program:`supervisord` is run as the root user.  If :program:`supervisord`
   can't switch to the specified user, the program will not be started.
 
   .. note::
