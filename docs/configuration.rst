@@ -369,7 +369,7 @@ follows.
   account before doing any meaningful processing.  The user can only
   be switched if :program:`supervisord` is started as the root user.
   If :program:`supervisord` can't switch users, it will still continue
-  but will write log message at the ``critical`` level saying that it
+  but will write a log message at the ``critical`` level saying that it
   can't drop privileges.
 
   *Default*: do not switch users
