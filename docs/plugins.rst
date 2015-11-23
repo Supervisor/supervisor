@@ -85,6 +85,11 @@ These also includes various event listeners.
     An event listener that enables tying Supervisor processes to a cgroup
     hierarchy.  It is intended to be used as a replacement for
     `cgrules.conf <http://linux.die.net/man/5/cgrules.conf>`_.
+`supervisor_checks <https://github.com/vovanec/supervisor_checks>`_
+    Framework to build health checks for Supervisor-based services. Health
+    check applications are supposed to run as event listeners in Supervisor
+    environment. On check failure Supervisor will attempt to restart
+    monitored process.
 
 Libraries that integrate Third Party Applications with Supervisor
 -----------------------------------------------------------------
