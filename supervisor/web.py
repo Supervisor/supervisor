@@ -414,20 +414,27 @@ class StatusView(MeldView):
                         return stopdone
 
                 elif action == 'restart':
-                    callback = rpcinterface.system.multicall(
+                    results_or_callback = rpcinterface.system.multicall(
                         [ {'methodName':'supervisor.stopProcess',
                            'params': [namespec]},
                           {'methodName':'supervisor.startProcess',
                            'params': [namespec]},
                           ]
                         )
-                    def restartprocess():
-                        result = callback()
-                        if result is NOT_DONE_YET:
-                            return NOT_DONE_YET
-                        return 'Process %s restarted' % namespec
-                    restartprocess.delay = 0.05
-                    return restartprocess
+                    if callable(results_or_callback):
+                        callback = results_or_callback
+                        def restartprocess():
+                            results = callback()
+                            if results is NOT_DONE_YET:
+                                return NOT_DONE_YET
+                            return 'Process %s restarted' % namespec
+                        restartprocess.delay = 0.05
+                        return restartprocess
+                    else:
+                        def restartdone():
+                            return 'Process %s restarted' % namespec
+                        restartdone.delay = 0.05
+                        return restartdone
 
                 elif action == 'clearlog':
                     try:
