@@ -31,6 +31,9 @@
 - Files included via the ``[include]`` section are now logged at the ``INFO``
   level instead of ``WARN``.  Patch by Daniel Hahler.
 
+3.2.0 (2015-11-30)
+------------------
+
 - Files included via the ``[include]`` section are read in sorted order.  In
   past versions, the order was undefined.  Patch by Ionel Cristian Mărieș.
 
