@@ -24,6 +24,8 @@ matrix:
           env: TOXENV=py35
         - python: pypy
           env: TOXENV=pypy
+        - python: pypy3
+          env: TOXENV=pypy3
 
 install:
     - travis_retry pip install tox
