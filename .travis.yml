@@ -8,6 +8,8 @@ matrix:
           env: TOXENV=cover
         - python: 3.5
           env: TOXENV=cover3
+        - python: 3.5
+          env: TOXENV=docs
         - python: 2.6
           env: TOXENV=py26
         - python: 2.7
