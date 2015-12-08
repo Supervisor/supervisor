@@ -256,7 +256,7 @@ Signal Handlers
 ``SIGHUP``
 
   :program:`supervisord` will stop all processes, reload the
-  configuration from the first config file it finds, and restart all
+  configuration from the first config file it finds, and start all
   processes.
 
 ``SIGUSR2``
