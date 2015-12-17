@@ -53,7 +53,7 @@ These also includes various event listeners.
     An event listener that makes it possible to scale the number of
     processes to the number of cores on the supervisor host.
 `supervisor-wildcards <https://github.com/aleszoulek/supervisor-wildcards>`_
-    Implemenents start/stop/restart commands with wildcard support for
+    Implements start/stop/restart commands with wildcard support for
     Supervisor.  These commands run in parallel and can be much faster
     than the built-in start/stop/restart commands.
 `mr.laforge <https://github.com/fschulze/mr.laforge>`_
