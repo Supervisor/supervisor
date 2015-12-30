@@ -759,7 +759,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
 
         if not names:
-            self.handle_error("Error: start requires a process name")
+            self.handle_error("Error: start requires a process name", code=LSBInitErrorCode.INVALID_ARGS)
             self.help_start()
             return
 
@@ -778,9 +778,9 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     except xmlrpclib.Fault as e:
                         if e.faultCode == xmlrpc.Faults.BAD_NAME:
                             error = "%s: ERROR (no such group)" % group_name
-                            self.ctl.handle_error(error)
+                            self.handle_error(error, code=LSBInitErrorCode.INVALID_ARGS)
                         else:
-                            self.ctl.handle_error(fatal=True)
+                            self.handle_error(fatal=True)
                 else:
                     try:
                         result = supervisor.startProcess(name)

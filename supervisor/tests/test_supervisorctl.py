@@ -781,7 +781,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         expected = "Error: start requires a process name"
         self.assertEqual(plugin.ctl.stdout.getvalue().split('\n')[0], expected)
-        self.assertEqual(plugin.ctl.exit_status, LSBInitErrorCode.GENERIC)
+        self.assertEqual(plugin.ctl.exit_status, LSBInitErrorCode.INVALID_ARGS)
 
     def test_start_badname(self):
         plugin = self._makeOne()
@@ -870,7 +870,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'BAD_NAME: ERROR (no such group)\n')
-        self.assertEqual(plugin.ctl.exit_status, LSBInitErrorCode.GENERIC)
+        self.assertEqual(plugin.ctl.exit_status, LSBInitErrorCode.INVALID_ARGS)
 
     def test_start_all(self):
         plugin = self._makeOne()
