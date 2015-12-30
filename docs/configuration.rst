@@ -710,6 +710,18 @@ where specified.
 
   *Introduced*: 3.0
 
+``restartpause``
+
+  Adds a pause (in seconds) between successive failed start attempts - thus
+  throttles failed-start attemps and prevents massive load increase during
+  this.
+
+  *Default*: 0
+
+  *Required*:  No.
+
+  *Introduced*: 4.0 (?)
+
 ``autorestart``
 
   Specifies if :program:`supervisord` should automatically restart a
