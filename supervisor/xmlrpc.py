@@ -57,6 +57,9 @@ class RPCError(Exception):
         if extra is not None:
             self.text = '%s: %s' % (self.text, extra)
 
+    def __str__(self):
+        return 'code=%r, text=%r' % (self.code, self.text)
+
 class DeferredXMLRPCResponse:
     """ A medusa producer that implements a deferred callback; requires
     a subclass of asynchat.async_chat that handles NOT_DONE_YET sentinel """
@@ -230,63 +233,81 @@ class SystemNamespaceRPCInterface:
         @param array calls  An array of call requests
         @return array result  An array of results
         """
-        producers = []
+        remaining_calls = calls[:] # [{'methodName':x, 'params':x}, ...]
+        callbacks = [] # always empty or 1 callback function only
+        results = [] # results of completed calls
 
-        for call in calls:
-            try:
-                name = call['methodName']
-                params = call.get('params', [])
-                if name == 'system.multicall':
-                    # Recursive system.multicall forbidden
-                    raise RPCError(Faults.INCORRECT_PARAMETERS)
-                root = AttrDict(self.namespaces)
-                value = traverse(root, name, params)
-            except RPCError as inst:
-                value = {'faultCode': inst.code,
-                         'faultString': inst.text}
-            except:
-                errmsg = "%s:%s" % (sys.exc_info()[0], sys.exc_info()[1])
-                value = {'faultCode': 1, 'faultString': errmsg}
-            producers.append(value)
+        # args are only to fool scoping and are never passed by caller
+        def multi(remaining_calls=remaining_calls,
+                  callbacks=callbacks,
+                  results=results):
 
-        results = []
-
-        def multiproduce():
-            """ Run through all the producers in order """
-            if not producers:
-                return []
-
-            callback = producers.pop(0)
-
-            if isinstance(callback, types.FunctionType):
+            # if waiting on a callback, call it, then remove it if it's done
+            if callbacks:
                 try:
-                    value = callback()
-                except RPCError as inst:
-                    value = {'faultCode':inst.code, 'faultString':inst.text}
+                    value = callbacks[0]()
+                except RPCError as exc:
+                    value = {'faultCode': exc.code,
+                             'faultString': exc.text}
+                except:
+                    info = sys.exc_info()
+                    errmsg = "%s:%s" % (info[0], info[1])
+                    value = {'faultCode': Faults.FAILED,
+                             'faultString': 'FAILED: ' + errmsg}
+                if value is not NOT_DONE_YET:
+                    callbacks.pop(0)
+                    results.append(value)
 
-                if value is NOT_DONE_YET:
-                    # push it back in the front of the queue because we
-                    # need to finish the calls in requested order
-                    producers.insert(0, callback)
-                    return NOT_DONE_YET
-            else:
-                value = callback
+            # if we don't have a callback now, pop calls and call them in
+            # order until one returns a callback.
+            while (not callbacks) and remaining_calls:
+                call = remaining_calls.pop(0)
+                name = call.get('methodName', None)
+                params = call.get('params', [])
 
-            results.append(value)
+                try:
+                    if name is None:
+                        raise RPCError(Faults.INCORRECT_PARAMETERS,
+                            'No methodName')
+                    if name == 'system.multicall':
+                        raise RPCError(Faults.INCORRECT_PARAMETERS,
+                            'Recursive system.multicall forbidden')
+                    # make the call, may return a callback or not
+                    root = AttrDict(self.namespaces)
+                    value = traverse(root, name, params)
+                except RPCError as exc:
+                    value = {'faultCode': exc.code,
+                             'faultString': exc.text}
+                except:
+                    info = sys.exc_info()
+                    errmsg = "%s:%s" % (info[0], info[1])
+                    value = {'faultCode': Faults.FAILED,
+                             'faultString': 'FAILED: ' + errmsg}
 
-            if producers:
-                # only finish when all producers are finished
+                if isinstance(value, types.FunctionType):
+                    callbacks.append(value)
+                else:
+                    results.append(value)
+
+            # we are done when there's no callback and no more calls queued
+            if callbacks or remaining_calls:
                 return NOT_DONE_YET
+            else:
+                return results
+        multi.delay = 0.05
 
-            return results
-
-        multiproduce.delay = .05
-        return multiproduce
+        # optimization: multi() is called here instead of just returning
+        # multi in case all calls complete and we can return with no delay.
+        value = multi()
+        if value is NOT_DONE_YET:
+            return multi
+        else:
+            return value
 
 class AttrDict(dict):
     # hack to make a dict's getattr equivalent to its getitem
     def __getattr__(self, name):
-        return self[name]
+        return self.get(name)
 
 class RootRPCInterface:
     def __init__(self, subinterfaces):

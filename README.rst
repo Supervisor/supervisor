@@ -13,15 +13,18 @@ likely work fine on most UNIX systems.
 
 Supervisor will not run at all under any version of Windows.
 
-*This is the master branch, which will become Supervisor 4.0.  The main
-change from Supervisor 3.x is added support for Python 3, which is still a
-work-in-progress, and has not been released yet.  If Python 3 support is
-important to you, we would appreciate if you would test this branch and
-report any issues you encounter.  If you depend on Supervisor in production,
-you should probably be running a release version of Supervisor 3.x.*
+**Supervisor does not work on Python 3.**  This is the master branch,
+which has work-in-progress support for Python 3.  Supervisor is very likely
+to crash, cause subprocesses to hang, or otherwise behave unexpectedly
+when run on Python 3.  See
+`issues running Supervisor on Python 3 <https://github.com/Supervisor/supervisor/labels/python%203>`_.
+It may also have regressions on Python 2 as a result of attempts to
+add Python 3 support.  Help from developers with Python 3 porting
+experience is needed.  **Do not use this branch on any production system.**
 
-Supervisor 4.0 will work under Python 2 version 2.6 or greater and Python 3
-version 3.2 or greater.
+Supervisor 4.0 (unreleased) is planned to work under Python 2 version 2.6
+or greater and Python 3 version 3.2 or greater.  See note above about the
+current state of Python 3 support.
 
 Documentation
 -------------
@@ -37,7 +40,7 @@ You may subscribe to the `Supervisor-users mailing list
 <http://lists.supervisord.org/mailman/listinfo/supervisor-users>`_.
 
 Please report bugs in the `Github issue tracker
-<https://github.com/Supervisor/supervisor/issues>`_.  .
+<https://github.com/Supervisor/supervisor/issues>`_.
 
 You can view the source repository for supervisor via
 `https://github.com/Supervisor/supervisor

@@ -8,6 +8,7 @@ import unittest
 import signal
 import shutil
 import errno
+import platform
 
 from supervisor.compat import StringIO
 from supervisor.compat import as_bytes
@@ -204,7 +205,7 @@ class OptionTests(unittest.TestCase):
         options.stderr = options.stdout = StringIO()
         options.configroot.anoption = 1
         options.configroot.other = 1
-        options.process_config(True)
+        options.process_config(do_usage=True)
         self.assertEqual(exitcodes, [2])
 
     def test__set(self):
@@ -339,6 +340,28 @@ class ClientOptionsTests(unittest.TestCase):
         self.assertEqual(options.username, 'someuser')
         self.assertEqual(options.password, 'passwordhere')
         self.assertEqual(options.history_file, '/path/to/histdir/.supervisorctl.hist')
+
+    def test_options_supervisorctl_section_expands_here(self):
+        instance = self._makeOne()
+        text = lstrip('''
+        [supervisorctl]
+        history_file=%(here)s/sc_history
+        serverurl=unix://%(here)s/supervisord.sock
+        ''')
+        here = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.configfile = supervisord_conf
+            instance.realize(args=[])
+        finally:
+            shutil.rmtree(here, ignore_errors=True)
+        options = instance.configroot.supervisorctl
+        self.assertEqual(options.history_file,
+           os.path.join(here, 'sc_history'))
+        self.assertEqual(options.serverurl,
+           'unix://' + os.path.join(here, 'supervisord.sock'))
 
     def test_read_config_not_found(self):
         nonexistent = os.path.join(os.path.dirname(__file__), 'nonexistent')
@@ -713,7 +736,7 @@ class ServerOptionsTests(unittest.TestCase):
         programs = three
         """)
         instance.configfile = StringIO(text)
-        instance.process_config()
+        instance.process_config(do_usage=False)
 
         section = instance.configroot.supervisord
 
@@ -861,16 +884,16 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         try:
             instance.read_config(supervisord_conf)
-            options = instance.configroot.supervisord
-            self.assertEqual(len(options.server_configs), 2)
-            msg = 'Included extra file "%s" during parsing' % conf_file
-            self.assertTrue(msg in instance.parse_infos)
-            msg = 'Included extra file "%s" during parsing' % ini_file
-            self.assertTrue(msg in instance.parse_infos)
         finally:
-            shutil.rmtree(dirname)
+            shutil.rmtree(dirname, ignore_errors=True)
+        options = instance.configroot.supervisord
+        self.assertEqual(len(options.server_configs), 2)
+        msg = 'Included extra file "%s" during parsing' % conf_file
+        self.assertTrue(msg in instance.parse_infos)
+        msg = 'Included extra file "%s" during parsing' % ini_file
+        self.assertTrue(msg in instance.parse_infos)
 
-    def test_include_reads_files_in_sorted_order(self):
+    def test_read_config_include_reads_files_in_sorted_order(self):
         dirname = tempfile.mkdtemp()
         conf_d = os.path.join(dirname, "conf.d")
         os.mkdir(conf_d)
@@ -896,14 +919,14 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         try:
             instance.read_config(supervisord_conf)
-            expected_msgs = []
-            for letter in sorted(a_z):
-                filename = os.path.join(conf_d, "%s.conf" % letter)
-                expected_msgs.append(
-                    'Included extra file "%s" during parsing' % filename)
-            self.assertEqual(instance.parse_infos, expected_msgs)
         finally:
-            shutil.rmtree(dirname)
+            shutil.rmtree(dirname, ignore_errors=True)
+        expected_msgs = []
+        for letter in sorted(a_z):
+            filename = os.path.join(conf_d, "%s.conf" % letter)
+            expected_msgs.append(
+                'Included extra file "%s" during parsing' % filename)
+        self.assertEqual(instance.parse_infos, expected_msgs)
 
     def test_read_config_include_extra_file_malformed(self):
         dirname = tempfile.mkdtemp()
@@ -934,7 +957,20 @@ class ServerOptionsTests(unittest.TestCase):
             msg = 'Included extra file "%s" during parsing' % malformed_file
             self.assertTrue(msg in instance.parse_infos)
         finally:
-            shutil.rmtree(dirname)
+            shutil.rmtree(dirname, ignore_errors=True)
+
+    def test_read_config_include_expands_here(self):
+        conf = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), 'fixtures',
+            'include.conf')
+        root_here = os.path.dirname(conf)
+        include_here = os.path.join(root_here, 'example')
+        parser = self._makeOne()
+        parser.configfile = conf
+        parser.process_config_file(True)
+        section = parser.configroot.supervisord
+        self.assertEqual(section.logfile, root_here)
+        self.assertEqual(section.childlogdir, include_here)
 
     def test_readFile_failed(self):
         from supervisor.options import readFile
@@ -1003,8 +1039,7 @@ class ServerOptionsTests(unittest.TestCase):
         instance.configfile=StringIO('[supervisord]')
         instance.realize(args=["--bad=1"])
         self.assertEqual(len(recorder), 1)
-        self.assertEqual(recorder[0],
-            "GetoptError('option --bad not recognized', 'bad')")
+        self.assertEqual(recorder[0], "option --bad not recognized")
 
     def test_options_afunix(self):
         instance = self._makeOne()
@@ -1122,6 +1157,30 @@ class ServerOptionsTests(unittest.TestCase):
             self.assertEqual(exc.args[0],
                 "Must specify username if password is specified "
                 "in [unix_http_server]")
+
+    def test_options_afunix_file_expands_here(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [unix_http_server]
+        file=%(here)s/supervisord.sock
+        """)
+        here = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.configfile = supervisord_conf
+            instance.realize(args=[])
+        finally:
+            shutil.rmtree(here, ignore_errors=True)
+        options = instance.configroot.supervisord
+        # unix_http_server
+        serverconf = options.server_configs[0]
+        self.assertEqual(serverconf['family'], socket.AF_UNIX)
+        self.assertEqual(serverconf['file'],
+            os.path.join(here, 'supervisord.sock'))
 
     def test_options_afinet_password_without_username(self):
         instance = self._makeOne()
@@ -1423,7 +1482,6 @@ class ServerOptionsTests(unittest.TestCase):
         config = UnhosedConfigParser()
         config.read_string(text)
         pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
-        import platform
         expected = "/bin/foo --host=" + platform.node()
         self.assertEqual(pconfigs[0].command, expected)
 
@@ -1655,6 +1713,211 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.umask, 2)
         self.assertEqual(proc1.environment, dict(FAKE_ENV_VAR='/some/path'))
 
+    def test_options_supervisord_section_expands_here(self):
+        instance = self._makeOne()
+        text = lstrip('''\
+        [supervisord]
+        childlogdir=%(here)s
+        directory=%(here)s
+        logfile=%(here)s/supervisord.log
+        pidfile=%(here)s/supervisord.pid
+        ''')
+        here = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.configfile = supervisord_conf
+            instance.realize(args=[])
+        finally:
+            shutil.rmtree(here, ignore_errors=True)
+        self.assertEqual(instance.childlogdir,
+            os.path.join(here))
+        self.assertEqual(instance.directory,
+            os.path.join(here))
+        self.assertEqual(instance.logfile,
+            os.path.join(here, 'supervisord.log'))
+        self.assertEqual(instance.pidfile,
+            os.path.join(here, 'supervisord.pid'))
+
+    def test_options_program_section_expands_here(self):
+        instance = self._makeOne()
+        text = lstrip('''
+        [supervisord]
+
+        [program:cat]
+        command=%(here)s/bin/cat
+        directory=%(here)s/thedirectory
+        environment=FOO=%(here)s/foo
+        serverurl=unix://%(here)s/supervisord.sock
+        stdout_logfile=%(here)s/stdout.log
+        stderr_logfile=%(here)s/stderr.log
+        ''')
+        here = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.configfile = supervisord_conf
+            instance.realize(args=[])
+        finally:
+            shutil.rmtree(here, ignore_errors=True)
+        options = instance.configroot.supervisord
+        group = options.process_group_configs[0]
+        self.assertEqual(group.name, 'cat')
+        proc = group.process_configs[0]
+        self.assertEqual(proc.directory,
+            os.path.join(here, 'thedirectory'))
+        self.assertEqual(proc.command,
+            os.path.join(here, 'bin/cat'))
+        self.assertEqual(proc.environment,
+            {'FOO': os.path.join(here, 'foo')})
+        self.assertEqual(proc.serverurl,
+            'unix://' + os.path.join(here, 'supervisord.sock'))
+        self.assertEqual(proc.stdout_logfile,
+            os.path.join(here, 'stdout.log'))
+        self.assertEqual(proc.stderr_logfile,
+            os.path.join(here, 'stderr.log'))
+
+    def test_options_eventlistener_section_expands_here(self):
+        instance = self._makeOne()
+        text = lstrip('''
+        [supervisord]
+
+        [eventlistener:memmon]
+        events=TICK_60
+        command=%(here)s/bin/memmon
+        directory=%(here)s/thedirectory
+        environment=FOO=%(here)s/foo
+        serverurl=unix://%(here)s/supervisord.sock
+        stdout_logfile=%(here)s/stdout.log
+        stderr_logfile=%(here)s/stderr.log
+        ''')
+        here = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.configfile = supervisord_conf
+            instance.realize(args=[])
+        finally:
+            shutil.rmtree(here, ignore_errors=True)
+        options = instance.configroot.supervisord
+        group = options.process_group_configs[0]
+        self.assertEqual(group.name, 'memmon')
+        proc = group.process_configs[0]
+        self.assertEqual(proc.directory,
+            os.path.join(here, 'thedirectory'))
+        self.assertEqual(proc.command,
+            os.path.join(here, 'bin/memmon'))
+        self.assertEqual(proc.environment,
+            {'FOO': os.path.join(here, 'foo')})
+        self.assertEqual(proc.serverurl,
+            'unix://' + os.path.join(here, 'supervisord.sock'))
+        self.assertEqual(proc.stdout_logfile,
+            os.path.join(here, 'stdout.log'))
+        self.assertEqual(proc.stderr_logfile,
+            os.path.join(here, 'stderr.log'))
+
+    def test_options_expands_combined_expansions(self):
+        instance = self._makeOne()
+        text = lstrip('''
+        [supervisord]
+        logfile = %(here)s/%(ENV_LOGNAME)s.log
+
+        [program:cat]
+        ''')
+        text += ('command = %(here)s/bin/cat --foo=%(ENV_FOO)s '
+                 '--num=%(process_num)d --node=%(host_node_name)s')
+
+        here = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.environ_expansions = {
+                'ENV_LOGNAME': 'mainlog',
+                'ENV_FOO': 'bar'
+                }
+            instance.configfile = supervisord_conf
+            instance.realize(args=[])
+        finally:
+            shutil.rmtree(here, ignore_errors=True)
+
+        section = instance.configroot.supervisord
+        self.assertEqual(section.logfile,
+            os.path.join(here, 'mainlog.log'))
+
+        cat_group = section.process_group_configs[0]
+        cat_0 = cat_group.process_configs[0]
+        expected = '%s --foo=bar --num=0 --node=%s' % (
+            os.path.join(here, 'bin/cat'),
+            platform.node()
+            )
+        self.assertEqual(cat_0.command, expected)
+
+    def test_options_error_handler_shows_main_filename(self):
+        dirname = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(dirname, 'supervisord.conf')
+        text = lstrip('''
+        [supervisord]
+
+        [program:cat]
+        command = /bin/cat
+        stopsignal = NOTASIGNAL
+        ''')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+
+        instance = self._makeOne()
+        try:
+            instance.configfile = supervisord_conf
+            try:
+                instance.process_config(do_usage=False)
+                self.fail('nothing raised')
+            except ValueError as e:
+                self.assertEqual(str(e.args[0]),
+                    "value 'NOTASIGNAL' is not a valid signal name "
+                    "in section 'program:cat' (file: %r)" % supervisord_conf)
+        finally:
+            shutil.rmtree(dirname, ignore_errors=True)
+
+    def test_options_error_handler_shows_included_filename(self):
+        dirname = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(dirname, "supervisord.conf")
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        files=%s/conf.d/*.conf
+        """ % dirname)
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+
+        conf_d = os.path.join(dirname, "conf.d")
+        os.mkdir(conf_d)
+        included_conf = os.path.join(conf_d, "included.conf")
+        text = lstrip('''\
+        [program:cat]
+        command = /bin/cat
+        stopsignal = NOTASIGNAL
+        ''')
+        with open(included_conf, 'w') as f:
+            f.write(text)
+
+        instance = self._makeOne()
+        try:
+            instance.configfile = supervisord_conf
+            try:
+                instance.process_config(do_usage=False)
+                self.fail('nothing raised')
+            except ValueError as e:
+                self.assertEqual(str(e.args[0]),
+                    "value 'NOTASIGNAL' is not a valid signal name "
+                    "in section 'program:cat' (file: %r)" % included_conf)
+        finally:
+            shutil.rmtree(dirname, ignore_errors=True)
+
     def test_processes_from_section_bad_program_name_spaces(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -1814,7 +2077,7 @@ class ServerOptionsTests(unittest.TestCase):
             except ValueError as e:
                 self.assertEqual(e.args[0],
                     "program section program:foo does not specify a command "
-                    "in section 'program:foo' (file: %s)" % f.name)
+                    "in section 'program:foo' (file: %r)" % f.name)
             else:
                 self.fail('nothing raised')
 
@@ -2516,7 +2779,7 @@ class ServerOptionsTests(unittest.TestCase):
             f1.close()
             f2.close()
         finally:
-            shutil.rmtree(dn)
+            shutil.rmtree(dn, ignore_errors=True)
 
     def test_clear_autochildlogdir_listdir_oserror(self):
         instance = self._makeOne()
@@ -2654,19 +2917,6 @@ class ServerOptionsTests(unittest.TestCase):
         instance.daemonize()
         instance.poller.before_daemonize.assert_called_once_with()
         instance.poller.after_daemonize.assert_called_once_with()
-
-    def test_include_here(self):
-        conf = os.path.join(
-            os.path.abspath(os.path.dirname(__file__)), 'fixtures',
-            'include.conf')
-        root_here = os.path.dirname(conf)
-        include_here = os.path.join(root_here, 'example')
-        parser = self._makeOne()
-        parser.configfile = conf
-        parser.process_config_file(True)
-        section = parser.configroot.supervisord
-        self.assertEqual(section.logfile, root_here)
-        self.assertEqual(section.childlogdir, include_here)
 
 class TestProcessConfig(unittest.TestCase):
     def _getTargetClass(self):

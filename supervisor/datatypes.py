@@ -10,12 +10,6 @@ from supervisor.compat import long
 from supervisor.loggers import getLevelNumByDescription
 from supervisor.medusa import text_socket
 
-here = None
-
-def set_here(v):
-    global here
-    here = v
-
 def process_or_group_name(name):
     """Ensures that a process or group name is not created with
        characters that break the eventlistener protocol"""
@@ -334,15 +328,13 @@ def octal_type(arg):
         raise ValueError('%s can not be converted to an octal type' % arg)
 
 def existing_directory(v):
-    nv = v % {'here':here}
-    nv = os.path.expanduser(nv)
+    nv = os.path.expanduser(v)
     if os.path.isdir(nv):
         return nv
     raise ValueError('%s is not an existing directory' % v)
 
 def existing_dirpath(v):
-    nv = v % {'here':here}
-    nv = os.path.expanduser(nv)
+    nv = os.path.expanduser(v)
     dir = os.path.dirname(nv)
     if not dir:
         # relative pathname with no directory component
@@ -392,7 +384,7 @@ def url(value):
     scheme, netloc, path, params, query, fragment = urlparse.urlparse(uri)
     if scheme and (netloc or path):
         return value
-    raise ValueError("value %s is not a URL" % value)
+    raise ValueError("value %r is not a URL" % value)
 
 # all valid signal numbers
 SIGNUMS = [ getattr(signal, k) for k in dir(signal) if k.startswith('SIG') ]
@@ -406,9 +398,9 @@ def signal_number(value):
             name = 'SIG' + name
         num = getattr(signal, name, None)
         if num is None:
-            raise ValueError('value %s is not a valid signal name' % value)
+            raise ValueError('value %r is not a valid signal name' % value)
     if num not in SIGNUMS:
-        raise ValueError('value %s is not a valid signal number' % value)
+        raise ValueError('value %r is not a valid signal number' % value)
     return num
 
 class RestartWhenExitUnexpected:

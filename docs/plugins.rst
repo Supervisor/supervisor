@@ -50,7 +50,7 @@ These also includes various event listeners.
     An event listener that makes it possible to scale the number of
     processes to the number of cores on the supervisor host.
 `supervisor-wildcards <https://github.com/aleszoulek/supervisor-wildcards>`_
-    Implemenents start/stop/restart commands with wildcard support for
+    Implements start/stop/restart commands with wildcard support for
     Supervisor.  These commands run in parallel and can be much faster
     than the built-in start/stop/restart commands.
 `mr.laforge <https://github.com/fschulze/mr.laforge>`_
@@ -81,6 +81,15 @@ These also includes various event listeners.
 `supervisor-logging <https://github.com/infoxchange/supervisor-logging>`_
     An event listener that sends process log events to an external
     Syslog instance (e.g. Logstash).
+`supervisor_cgroups <https://github.com/htch/supervisor_cgroups>`_
+    An event listener that enables tying Supervisor processes to a cgroup
+    hierarchy.  It is intended to be used as a replacement for
+    `cgrules.conf <http://linux.die.net/man/5/cgrules.conf>`_.
+`supervisor_checks <https://github.com/vovanec/supervisor_checks>`_
+    Framework to build health checks for Supervisor-based services. Health
+    check applications are supposed to run as event listeners in Supervisor
+    environment. On check failure Supervisor will attempt to restart
+    monitored process.
 
 Libraries that integrate Third Party Applications with Supervisor
 -----------------------------------------------------------------
@@ -127,6 +136,8 @@ with third party applications:
     `TextMate <http://macromates.com/>`_ bundle for supervisord.conf.
 `capistrano-supervisord <https://github.com/yyuu/capistrano-supervisord>`_
     `Capistrano <https://github.com/capistrano/capistrano>`_ recipe to deploy supervisord based services.
+`capistrano-supervisor <https://github.com/glooby/capistrano-supervisor>`_
+    Another package to control supervisord from `Capistrano <https://github.com/capistrano/capistrano>`_.
 `chef-supervisor <https://github.com/opscode-cookbooks/supervisor>`_
     `Chef <http://www.opscode.com/chef/>`_ cookbook install and configure supervisord.
 `SupervisorPHP <http://supervisorphp.com>`_
@@ -147,3 +158,5 @@ with third party applications:
     `Dokku <https://github.com/progrium/dokku>`_ plugin that injects ``supervisord`` to run
     applications.  It also redirects ``stdout`` and ``stderr`` from processes to log files
     (rather than the Docker default per-container JSON files).
+`superslacker <https://github.com/MTSolutions/superslacker>`_
+    Send Supervisor event notifications to `Slack <https://slack.com>`_.

@@ -511,9 +511,11 @@ class DummyPConfig:
                  uid=None, stdout_logfile=None, stdout_capture_maxbytes=0,
                  stdout_events_enabled=False,
                  stdout_logfile_backups=0, stdout_logfile_maxbytes=0,
+                 stdout_syslog=False,
                  stderr_logfile=None, stderr_capture_maxbytes=0,
                  stderr_events_enabled=False,
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
+                 stderr_syslog=False,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
                  exitcodes=(0,2), environment=None, serverurl=None):
@@ -532,11 +534,13 @@ class DummyPConfig:
         self.stdout_events_enabled = stdout_events_enabled
         self.stdout_logfile_backups = stdout_logfile_backups
         self.stdout_logfile_maxbytes = stdout_logfile_maxbytes
+        self.stdout_syslog = stdout_syslog
         self.stderr_logfile = stderr_logfile
         self.stderr_capture_maxbytes = stderr_capture_maxbytes
         self.stderr_events_enabled = stderr_events_enabled
         self.stderr_logfile_backups = stderr_logfile_backups
         self.stderr_logfile_maxbytes = stderr_logfile_maxbytes
+        self.stderr_syslog = stderr_syslog
         self.redirect_stderr = redirect_stderr
         if stopsignal is None:
             import signal
