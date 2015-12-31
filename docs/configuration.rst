@@ -713,7 +713,7 @@ where specified.
 ``restartpause``
 
   Adds a pause (in seconds) between successive failed start attempts - thus
-  throttles failed-start attemps and prevents massive load increase during
+  throttles failed-start attempts and prevents massive load increase during
   this.
 
   *Default*: 0
