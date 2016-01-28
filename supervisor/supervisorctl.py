@@ -1023,7 +1023,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
             self._formatChanges(result[0])
 
     def help_reread(self):
-        self.ctl.output("reread \t\t\tReload the daemon's configuration files")
+        self.ctl.output("reread \t\t\tRereads the configuration files and "
+                        "displays the changes.")
+        self.ctl.output("Note: reread does not apply the changes. For that, see"
+                        " update.")
 
     def do_add(self, arg):
         names = arg.split()
