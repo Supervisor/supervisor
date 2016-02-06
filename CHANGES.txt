@@ -1,5 +1,5 @@
-3.2.1 (Next 3.x Release)
-------------------------
+3.2.1 (2016-02-06)
+------------------
 
 - Fixed a server exception ``OverflowError: int exceeds XML-RPC limits`` that
   made ``supervisorctl status`` unusable if the system time was far into the
