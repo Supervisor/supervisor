@@ -19,8 +19,11 @@ from supervisor.events import notify
 from supervisor.events import RemoteCommunicationEvent
 
 from supervisor.http import NOT_DONE_YET
-from supervisor.xmlrpc import Faults
-from supervisor.xmlrpc import RPCError
+from supervisor.xmlrpc import (
+    capped_int,
+    Faults,
+    RPCError,
+    )
 
 from supervisor.states import SupervisorStates
 from supervisor.states import getSupervisorStateDescription
@@ -595,9 +598,12 @@ class SupervisorNamespaceRPCInterface:
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
 
-        start = int(process.laststart)
-        stop = int(process.laststop)
-        now = int(time.time())
+        # TODO timestamps are returned as xml-rpc integers for b/c but will
+        # saturate the xml-rpc integer type in jan 2038 ("year 2038 problem").
+        # future api versions should return timestamps as a different type.
+        start = capped_int(process.laststart)
+        stop = capped_int(process.laststop)
+        now = capped_int(self._now())
 
         state = process.get_state()
         spawnerr = process.spawnerr or ''
@@ -624,6 +630,10 @@ class SupervisorNamespaceRPCInterface:
         description = self._interpretProcessInfo(info)
         info['description'] = description
         return info
+
+    def _now(self): # pragma: no cover
+        # this is here to service stubbing in unit tests
+        return time.time()
 
     def getAllProcessInfo(self):
         """ Get info about all processes

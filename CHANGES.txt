@@ -1,3 +1,15 @@
+3.2.1 (Next 3.x Release)
+------------------------
+
+- Fixed a server exception ``OverflowError: int exceeds XML-RPC limits`` that
+  made ``supervisorctl status`` unusable if the system time was far into the
+  future.  The XML-RPC API returns timestamps as XML-RPC integers, but
+  timestamps will exceed the maximum value of an XML-RPC integer in January
+  2038 ("Year 2038 Problem").  For now, timestamps exceeding the maximum
+  integer will be capped at the maximum to avoid the exception and retain
+  compatibility with existing API clients.  In a future version of the API,
+  the return type for timestamps will be changed.
+
 3.2.0 (2015-11-30)
 ------------------
 
