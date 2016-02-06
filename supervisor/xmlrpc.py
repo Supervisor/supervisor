@@ -314,6 +314,14 @@ class RootRPCInterface:
         for name, rpcinterface in subinterfaces:
             setattr(self, name, rpcinterface)
 
+def capped_int(value):
+    i = int(value)
+    if i < xmlrpclib.MININT:
+        i = xmlrpclib.MININT
+    elif i > xmlrpclib.MAXINT:
+        i = xmlrpclib.MAXINT
+    return i
+
 def make_datetime(text):
     return datetime.datetime(
         *time.strptime(text, "%Y%m%dT%H:%M:%S")[:6]

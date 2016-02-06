@@ -1312,6 +1312,25 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
                              interface.getProcessInfo, 'foo:')
 
+    def test_getProcessInfo_caps_timestamps_exceeding_xmlrpc_maxint(self):
+        from supervisor.compat import xmlrpclib
+        options = DummyOptions()
+        config = DummyPConfig(options, 'foo', '/bin/foo',
+                              stdout_logfile=None)
+        process = DummyProcess(config)
+        process.laststart = float(xmlrpclib.MAXINT + 1)
+        process.laststop = float(xmlrpclib.MAXINT + 1)
+        pgroup_config = DummyPGroupConfig(options, name='foo')
+        pgroup = DummyProcessGroup(pgroup_config)
+        pgroup.processes = {'foo':process}
+        supervisord = DummySupervisor(process_groups={'foo':pgroup})
+        interface = self._makeOne(supervisord)
+        interface._now = lambda: float(xmlrpclib.MAXINT + 1)
+        data = interface.getProcessInfo('foo')
+        self.assertEqual(data['start'], xmlrpclib.MAXINT)
+        self.assertEqual(data['stop'], xmlrpclib.MAXINT)
+        self.assertEqual(data['now'], xmlrpclib.MAXINT)
+
     def test_getAllProcessInfo(self):
         from supervisor.process import ProcessStates
         options = DummyOptions()
