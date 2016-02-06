@@ -728,9 +728,9 @@ class Test_gettags(unittest.TestCase):
             )
 
 class Test_capped_int(unittest.TestCase):
-    def _callFUT(self, comment):
+    def _callFUT(self, value):
         from supervisor.xmlrpc import capped_int
-        return capped_int(comment)
+        return capped_int(value)
 
     def test_converts_value_to_integer(self):
         self.assertEqual(self._callFUT('42'), 42)
