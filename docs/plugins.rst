@@ -81,6 +81,8 @@ These also includes various event listeners.
 `supervisor-logging <https://github.com/infoxchange/supervisor-logging>`_
     An event listener that sends process log events to an external
     Syslog instance (e.g. Logstash).
+`supervisor-logstash-notifier <https://github.com/dohop/supervisor-logstash-notifier>`_
+    An event listener plugin to stream state events to a Logstash instance.
 `supervisor_cgroups <https://github.com/htch/supervisor_cgroups>`_
     An event listener that enables tying Supervisor processes to a cgroup
     hierarchy.  It is intended to be used as a replacement for
