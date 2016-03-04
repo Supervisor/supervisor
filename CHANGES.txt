@@ -31,6 +31,9 @@
 - Files included via the ``[include]`` section are now logged at the ``INFO``
   level instead of ``WARN``.  Patch by Daniel Hahler.
 
+3.2.2 (2016-03-04)
+------------------
+
 - Parsing the config file will now fail with an error message if an
   ``inet_http_server`` or ``unix_http_server`` section contains a ``username=``
   but no ``password=``.  In previous versions, ``supervisord`` would start with
