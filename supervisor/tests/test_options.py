@@ -1137,6 +1137,28 @@ class ServerOptionsTests(unittest.TestCase):
             self.assertEqual(exc.args[0],
                 "section [unix_http_server] has no file value")
 
+    def test_options_afunix_username_without_password(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [unix_http_server]
+        file=/tmp/supvtest.sock
+        username=usernamehere
+        ;no password=
+        chmod=0755
+        """)
+        instance.configfile = StringIO(text)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                'Section [unix_http_server] contains incomplete '
+                'authentication: If a username or a password is '
+                'specified, both the username and password must '
+                'be specified')
+
     def test_options_afunix_password_without_username(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -1144,6 +1166,7 @@ class ServerOptionsTests(unittest.TestCase):
 
         [unix_http_server]
         file=/tmp/supvtest.sock
+        ;no username=
         password=passwordhere
         chmod=0755
         """)
@@ -1153,8 +1176,10 @@ class ServerOptionsTests(unittest.TestCase):
             self.fail("nothing raised")
         except ValueError as exc:
             self.assertEqual(exc.args[0],
-                "Must specify username if password is specified "
-                "in [unix_http_server]")
+                'Section [unix_http_server] contains incomplete '
+                'authentication: If a username or a password is '
+                'specified, both the username and password must '
+                'be specified')
 
     def test_options_afunix_file_expands_here(self):
         instance = self._makeOne()
@@ -1180,6 +1205,28 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(serverconf['file'],
             os.path.join(here, 'supervisord.sock'))
 
+    def test_options_afinet_username_without_password(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [inet_http_server]
+        file=/tmp/supvtest.sock
+        username=usernamehere
+        ;no password=
+        chmod=0755
+        """)
+        instance.configfile = StringIO(text)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                'Section [inet_http_server] contains incomplete '
+                'authentication: If a username or a password is '
+                'specified, both the username and password must '
+                'be specified')
+
     def test_options_afinet_password_without_username(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -1195,8 +1242,10 @@ class ServerOptionsTests(unittest.TestCase):
             self.fail("nothing raised")
         except ValueError as exc:
             self.assertEqual(exc.args[0],
-                "Must specify username if password is specified "
-                "in [inet_http_server]")
+                'Section [inet_http_server] contains incomplete '
+                'authentication: If a username or a password is '
+                'specified, both the username and password must '
+                'be specified')
 
     def test_options_afinet_no_port(self):
         instance = self._makeOne()
