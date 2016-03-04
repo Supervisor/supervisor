@@ -1,5 +1,5 @@
-Next 3.x Release
-----------------
+3.2.2 (2016-03-04)
+------------------
 
 - Parsing the config file will now fail with an error message if an
   ``inet_http_server`` or ``unix_http_server`` section contains a ``username=``
