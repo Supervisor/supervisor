@@ -1138,7 +1138,7 @@ class ServerOptionsTests(unittest.TestCase):
         try:
             instance.read_config(StringIO(text))
             self.fail("nothing raised")
-        except ValueError as exc:
+        except ValueError, exc:
             self.assertEqual(exc.args[0],
                 'Section [unix_http_server] contains incomplete '
                 'authentication: If a username or a password is '
@@ -1207,7 +1207,7 @@ class ServerOptionsTests(unittest.TestCase):
         try:
             instance.read_config(StringIO(text))
             self.fail("nothing raised")
-        except ValueError as exc:
+        except ValueError, exc:
             self.assertEqual(exc.args[0],
                 'Section [inet_http_server] contains incomplete '
                 'authentication: If a username or a password is '
