@@ -988,10 +988,12 @@ class ServerOptions(Options):
         get = parser.saneget
         username = get(section, 'username', None)
         password = get(section, 'password', None)
-        if username is None and password is not None:
-            raise ValueError(
-                'Must specify username if password is specified in [%s]'
-                % section)
+        if username is not None or password is not None:
+            if username is None or password is None:
+                raise ValueError(
+                    'Section [%s] contains incomplete authentication: '
+                    'If a username or a password is specified, both the '
+                    'username and password must be specified' % section)
         return {'username':username, 'password':password}
 
     def server_configs_from_parser(self, parser):

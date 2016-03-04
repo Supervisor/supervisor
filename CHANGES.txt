@@ -1,3 +1,12 @@
+Next 3.x Release
+----------------
+
+- Parsing the config file will now fail with an error message if an
+  ``inet_http_server`` or ``unix_http_server`` section contains a ``username=``
+  but no ``password=``.  In previous versions, ``supervisord`` would start with
+  this invalid configuration but the HTTP server would always return a 500
+  Internal Server Error.  Thanks to Chris Ergatides for reporting this issue.
+
 3.2.1 (2016-02-06)
 ------------------
 
