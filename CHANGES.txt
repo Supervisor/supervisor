@@ -1,3 +1,10 @@
+Next 3.x Release
+----------------
+
+- 400 Bad Request is now returned if an XML-RPC request is received with
+  invalid body data.  In previous versions, 500 Internal Server Error
+  was returned.
+
 3.2.2 (2016-03-04)
 ------------------
 
