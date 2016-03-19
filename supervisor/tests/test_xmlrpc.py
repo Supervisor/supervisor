@@ -153,12 +153,12 @@ class XMLRPCHandlerTests(unittest.TestCase):
         handler.continue_request(data, request)
         logdata = supervisor.options.logger.data
         self.assertEqual(len(logdata), 1)
-        self.assertEqual(logdata[-1],
+        self.assertEqual(logdata[0],
                'XML-RPC request received with no method name')
         self.assertEqual(len(request.producers), 0)
         self.assertEqual(request._error, 400)
 
-    def test_continue_request_500(self):
+    def test_continue_request_500_if_rpcinterface_method_call_raises(self):
         supervisor = DummySupervisor()
         subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
         handler = self._makeOne(supervisor, subinterfaces)
@@ -167,12 +167,32 @@ class XMLRPCHandlerTests(unittest.TestCase):
         handler.continue_request(data, request)
         logdata = supervisor.options.logger.data
         self.assertEqual(len(logdata), 2)
-        self.assertEqual(logdata[-2],
+        self.assertEqual(logdata[0],
                'XML-RPC method called: supervisor.raiseError()')
-        self.assertTrue(logdata[-1].startswith('Traceback'))
-        self.assertTrue(logdata[-1].endswith('ValueError: error\n'))
-        self.assertEqual(len(request.producers), 0)
-        self.assertEqual(request._error, 500)
+        self.assertTrue("unexpected exception" in logdata[1])
+        self.assertTrue(repr(data) in logdata[1])
+        self.assertTrue("Traceback" in logdata[1])
+        self.assertTrue("ValueError: error" in logdata[1])
+
+    def test_continue_request_500_if_xmlrpc_dumps_raises(self):
+        supervisor = DummySupervisor()
+        subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
+        handler = self._makeOne(supervisor, subinterfaces)
+        data = xmlrpclib.dumps((), 'supervisor.getXmlRpcUnmarshallable')
+        request = DummyRequest('/what/ever', None, None, None)
+        handler.continue_request(data, request)
+        logdata = supervisor.options.logger.data
+        self.assertEqual(len(logdata), 3)
+        self.assertEqual(logdata[0],
+               'XML-RPC method called: supervisor.getXmlRpcUnmarshallable()')
+        self.assertEqual(logdata[1],
+               'XML-RPC method supervisor.getXmlRpcUnmarshallable() '
+               'returned successfully')
+        self.assertTrue("unexpected exception" in logdata[2])
+        self.assertTrue(repr(data) in logdata[2])
+        self.assertTrue("Traceback" in logdata[2])
+        self.assertTrue("TypeError: cannot marshal" in logdata[2])
+
 
     def test_continue_request_value_is_function(self):
         class DummyRPCNamespace(object):

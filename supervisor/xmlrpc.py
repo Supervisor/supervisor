@@ -381,7 +381,6 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
         logger = self.supervisord.options.logger
 
         try:
-
             params, method = self.loads(data)
 
             # no <methodName> in the request or name is an empty string
@@ -398,14 +397,6 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
             try:
                 logger.trace('XML-RPC method called: %s()' % method)
                 value = self.call(method, params)
-                # application-specific: we never want to marshal None (even
-                # though we could by saying allow_none=True in dumps within
-                # xmlrpc_marshall), this is meant as a debugging fixture, see:
-                # http://www.plope.com/software/collector/223
-                assert value is not None, (
-                    'return value from method %r with params %r is None' %
-                    (method, params)
-                    )
                 logger.trace('XML-RPC method %s() returned successfully' %
                              method)
             except RPCError as err:
@@ -433,7 +424,10 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
 
         except:
             tb = traceback.format_exc()
-            logger.critical(tb)
+            logger.critical(
+                "Handling XML-RPC request with data %r raised an unexpected "
+                "exception: %s" % (data, tb)
+                )
             # internal error, report as HTTP server error
             request.error(500)
 
