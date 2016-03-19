@@ -180,7 +180,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
         self.assertEqual(len(request.producers), 0)
         self.assertEqual(request._error, 400)
 
-    def test_continue_request_500(self):
+    def test_continue_request_500_if_rpcinterface_method_call_raises(self):
         supervisor = DummySupervisor()
         subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
         handler = self._makeOne(supervisor, subinterfaces)
@@ -197,10 +197,37 @@ class XMLRPCHandlerTests(unittest.TestCase):
         self.assertEqual(len(logdata), expected)
         self.assertEqual(logdata[-2],
                u'XML-RPC method called: supervisor.raiseError()')
-        self.assertTrue(logdata[-1].startswith('Traceback'))
-        self.assertTrue(logdata[-1].endswith('ValueError: error\n'))
+        self.assertTrue("unexpected exception" in logdata[1])
+        self.assertTrue(repr(data) in logdata[-1])
+        self.assertTrue("Traceback" in logdata[-1])
+        self.assertTrue("ValueError: error" in logdata[-1])
         self.assertEqual(len(request.producers), 0)
         self.assertEqual(request._error, 500)
+
+    def test_continue_request_500_if_xmlrpc_dumps_raises(self):
+        supervisor = DummySupervisor()
+        subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
+        handler = self._makeOne(supervisor, subinterfaces)
+        import xmlrpclib
+        data = xmlrpclib.dumps((), 'supervisor.getXmlRpcUnmarshallable')
+        request = DummyRequest('/what/ever', None, None, None)
+        handler.continue_request(data, request)
+        logdata = supervisor.options.logger.data
+        from supervisor.xmlrpc import loads
+        if loads:
+            expected = 3
+        else:
+            expected = 4
+        self.assertEqual(len(logdata), expected)
+        self.assertEqual(logdata[-3],
+               'XML-RPC method called: supervisor.getXmlRpcUnmarshallable()')
+        self.assertEqual(logdata[-2],
+               'XML-RPC method supervisor.getXmlRpcUnmarshallable() '
+               'returned successfully')
+        self.assertTrue("unexpected exception" in logdata[-1])
+        self.assertTrue(repr(data) in logdata[-1])
+        self.assertTrue("Traceback" in logdata[-1])
+        self.assertTrue("TypeError: cannot marshal" in logdata[-1])
 
 class TraverseTests(unittest.TestCase):
     def test_underscore(self):
