@@ -153,9 +153,37 @@ class XMLRPCHandlerTests(unittest.TestCase):
         handler.continue_request(data, request)
         logdata = supervisor.options.logger.data
         self.assertEqual(len(logdata), 1)
-        self.assertEqual(logdata[0],
-               'XML-RPC request received with no method name')
-        self.assertEqual(len(request.producers), 0)
+        self.assertTrue(logdata[0].startswith('XML-RPC request data'))
+        self.assertTrue(repr(data) in logdata[0])
+        self.assertTrue(logdata[0].endswith('is invalid: no method name'))
+        self.assertEqual(request._error, 400)
+
+    def test_continue_request_400_if_loads_raises_not_xml(self):
+        supervisor = DummySupervisor()
+        subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
+        handler = self._makeOne(supervisor, subinterfaces)
+        data = 'this is not an xml-rpc request body'
+        request = DummyRequest('/what/ever', None, None, None)
+        handler.continue_request(data, request)
+        logdata = supervisor.options.logger.data
+        self.assertEqual(len(logdata), 1)
+        self.assertTrue(logdata[0].startswith('XML-RPC request data'))
+        self.assertTrue(repr(data) in logdata[0])
+        self.assertTrue(logdata[0].endswith('is invalid: unmarshallable'))
+        self.assertEqual(request._error, 400)
+
+    def test_continue_request_400_if_loads_raises_weird_xml(self):
+        supervisor = DummySupervisor()
+        subinterfaces = [('supervisor', DummySupervisorRPCNamespace())]
+        handler = self._makeOne(supervisor, subinterfaces)
+        data = '<methodName></methodName><junk></junk>'
+        request = DummyRequest('/what/ever', None, None, None)
+        handler.continue_request(data, request)
+        logdata = supervisor.options.logger.data
+        self.assertEqual(len(logdata), 1)
+        self.assertTrue(logdata[0].startswith('XML-RPC request data'))
+        self.assertTrue(repr(data) in logdata[0])
+        self.assertTrue(logdata[0].endswith('is invalid: unmarshallable'))
         self.assertEqual(request._error, 400)
 
     def test_continue_request_500_if_rpcinterface_method_call_raises(self):
@@ -173,6 +201,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
         self.assertTrue(repr(data) in logdata[1])
         self.assertTrue("Traceback" in logdata[1])
         self.assertTrue("ValueError: error" in logdata[1])
+        self.assertEqual(request._error, 500)
 
     def test_continue_request_500_if_xmlrpc_dumps_raises(self):
         supervisor = DummySupervisor()
@@ -192,7 +221,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
         self.assertTrue(repr(data) in logdata[2])
         self.assertTrue("Traceback" in logdata[2])
         self.assertTrue("TypeError: cannot marshal" in logdata[2])
-
+        self.assertEqual(request._error, 500)
 
     def test_continue_request_value_is_function(self):
         class DummyRPCNamespace(object):

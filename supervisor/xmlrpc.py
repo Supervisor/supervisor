@@ -377,15 +377,26 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
     def match(self, request):
         return request.uri.startswith(self.path)
 
-    def continue_request (self, data, request):
+    def continue_request(self, data, request):
         logger = self.supervisord.options.logger
 
         try:
-            params, method = self.loads(data)
+            try:
+                params, method = self.loads(data)
+            except:
+                logger.error(
+                    'XML-RPC request data %r is invalid: unmarshallable' %
+                    (data,)
+                )
+                request.error(400)
+                return
 
             # no <methodName> in the request or name is an empty string
             if not method:
-                logger.trace('XML-RPC request received with no method name')
+                logger.error(
+                    'XML-RPC request data %r is invalid: no method name' %
+                    (data,)
+                    )
                 request.error(400)
                 return
 
