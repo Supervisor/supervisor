@@ -217,8 +217,10 @@ The :command:`supervisorctl` executable may be invoked with "one time"
 commands when invoked with arguments from a command line.  An example:
 ``supervisorctl stop all``.  If arguments are present on the
 command-line, it will prevent the interactive shell from being
-invoked.  Instead, the command will be executed and
-``supervisorctl`` will exit.
+invoked.  Instead, the command will be executed and ``supervisorctl``
+will exit with a code of 0 for success or running and non-zero for
+error. An example: ``supervisorctl status all`` would return non-zero
+if any single process was not running.
 
 If :command:`supervisorctl` is invoked in interactive mode against a
 :program:`supervisord` that requires authentication, you will be asked
