@@ -235,7 +235,7 @@ class XMLRPCHandlerTests(unittest.TestCase):
         self.assertEqual(len(logdata), expected)
         self.assertEqual(logdata[-2],
                u'XML-RPC method called: supervisor.raiseError()')
-        self.assertTrue("unexpected exception" in logdata[1])
+        self.assertTrue("unexpected exception" in logdata[-1])
         self.assertTrue(repr(data) in logdata[-1])
         self.assertTrue("Traceback" in logdata[-1])
         self.assertTrue("ValueError: error" in logdata[-1])
