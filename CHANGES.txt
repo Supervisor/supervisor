@@ -31,8 +31,11 @@
 - Files included via the ``[include]`` section are now logged at the ``INFO``
   level instead of ``WARN``.  Patch by Daniel Hahler.
 
-- ``400 Bad Request`` is now returned if an XML-RPC request is received with
-  invalid body data.  In previous versions, ``500 Internal Server Error``
+3.2.3 (2016-03-19)
+------------------
+
+- 400 Bad Request is now returned if an XML-RPC request is received with
+  invalid body data.  In previous versions, 500 Internal Server Error
   was returned.
 
 3.2.2 (2016-03-04)
