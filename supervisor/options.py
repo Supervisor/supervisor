@@ -109,6 +109,11 @@ class Options:
                        'supervisord.conf',
                        'etc/supervisord.conf',
                        '/etc/supervisord.conf']
+        if self.progname.endswith('supervisorctl'):
+            dot_supervisorctl_conf = os.path.join(
+                os.path.expanduser('~'),
+                '.supervisorctl.conf')
+            searchpaths.insert(0, dot_supervisorctl_conf)
         self.searchpaths = searchpaths
 
         self.environ_expansions = {}
