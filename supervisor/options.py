@@ -1328,10 +1328,10 @@ class ServerOptions(Options):
         os.setuid(uid)
 
     def waitpid(self):
-        # Need pthread_sigmask here to avoid concurrent sigchild, but Python
+        # Need pthread_sigmask here to avoid concurrent sigchld, but Python
         # doesn't offer in Python < 3.4.  There is still a race condition here;
-        # we can get a sigchild while we're sitting in the waitpid call.
-        # However, AFAICT, if waitpid is interrupted bu SIGCHILD, as long as we
+        # we can get a sigchld while we're sitting in the waitpid call.
+        # However, AFAICT, if waitpid is interrupted by SIGCHLD, as long as we
         # call waitpid again (which happens every so often during the normal
         # course in the mainloop), we'll eventually reap the child that we
         # tried to reap during the interrupted call. At least on Linux, this
