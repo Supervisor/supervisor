@@ -765,10 +765,10 @@ where specified.
 
 ``stopwaitsecs``
 
-  The number of seconds to wait for the OS to return a SIGCHILD to
+  The number of seconds to wait for the OS to return a SIGCHLD to
   :program:`supervisord` after the program has been sent a stopsignal.
   If this number of seconds elapses before :program:`supervisord`
-  receives a SIGCHILD from the process, :program:`supervisord` will
+  receives a SIGCHLD from the process, :program:`supervisord` will
   attempt to kill it with a final SIGKILL.
 
   *Default*: 10
