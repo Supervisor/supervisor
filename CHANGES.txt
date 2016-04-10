@@ -18,24 +18,28 @@
   same time.  Specifying a log filename of ``syslog`` is still supported
   but deprecated.  Patch by Jason R. Coombs.
 
-- Allow > 1023 file descriptors by using poll/kqueue on platforms which
-  support it.  See https://github.com/Supervisor/supervisor/pull/129.
-  Patch by Igor Sobreira.
-
 - The behavior of the config file expansion ``%(here)s`` has changed.  In
   previous versions, a bug caused ``%(here)s`` to always expand to the
   directory of the root config file.  Now, when ``%(here)s`` is used inside
   a file included via ``[include]``, it will expand to the directory of
   that file.  Thanks to Alex Eftimie and Zoltan Toth-Czifra for the patches.
 
-- Files included via the ``[include]`` section are now logged at the ``INFO``
-  level instead of ``WARN``.  Patch by Daniel Hahler.
+- ``supervisord`` will now use ``kqueue``, ``poll``, or ``select`` to monitor
+  its file descriptors, in that order, depending on what is available on the
+  system.  Previous versions used ``select`` only and would crash with the error
+  ``ValueError: filedescriptor out of range in select()`` when running a large
+  number of subprocesses (whatever number resulted in enough file descriptors
+  to exceed the fixed-size file descriptor table used by ``select``, which is
+  typically 1024).  Patch by Igor Sobreira.
 
 - ``/etc/supervisor/supervisord.conf`` has been added to the config file search
   paths.  Many versions of Supervisor packaged for Debian and Ubuntu have
   included a patch that added this path.  This difference was reported in a
   number of tickets as a source of confusion and upgrade difficulties, so the
   path has been added.  Patch by Kelvin Wong.
+
+- Files included via the ``[include]`` section are now logged at the ``INFO``
+  level instead of ``WARN``.  Patch by Daniel Hahler.
 
 3.2.3 (2016-03-19)
 ------------------
