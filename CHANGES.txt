@@ -31,6 +31,12 @@
 - Files included via the ``[include]`` section are now logged at the ``INFO``
   level instead of ``WARN``.  Patch by Daniel Hahler.
 
+- ``/etc/supervisor/supervisord.conf`` has been added to the config file search
+  paths.  Many versions of Supervisor packaged for Debian and Ubuntu have
+  included a patch that added this path.  This difference was reported in a
+  number of tickets as a source of confusion and upgrade difficulties, so the
+  path has been added.  Patch by Kelvin Wong.
+
 3.2.3 (2016-03-19)
 ------------------
 

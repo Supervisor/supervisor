@@ -108,7 +108,9 @@ class Options:
                        os.path.join(here, 'supervisord.conf'),
                        'supervisord.conf',
                        'etc/supervisord.conf',
-                       '/etc/supervisord.conf']
+                       '/etc/supervisord.conf',
+                       '/etc/supervisor/supervisord.conf',
+                       ]
         self.searchpaths = searchpaths
 
         self.environ_expansions = {}

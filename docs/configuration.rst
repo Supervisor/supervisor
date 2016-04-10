@@ -16,17 +16,17 @@ file it finds.
 
 #. :file:`/etc/supervisord.conf`
 
+#. :file:`/etc/supervisor/supervisord.conf` (since Supervisor 3.3.0)
+
 #. :file:`../etc/supervisord.conf` (Relative to the executable)
 
 #. :file:`../supervisord.conf` (Relative to the executable)
 
 .. note::
 
-  Some distributions have packaged Supervisor with their own
-  customizations.  These modified versions of Supervisor may load the
-  configuration file from locations other than those described here.
-  Notably, Ubuntu packages have been found that use
-  ``/etc/supervisor/supervisord.conf``.
+  Many versions of Supervisor packaged for Debian and Ubuntu included a patch
+  that added ``/etc/supervisor/supervisord.conf`` to the search paths.  The
+  first PyPI package of Supervisor to include it was Supervisor 3.3.0.
 
 File Format
 -----------

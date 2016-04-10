@@ -161,10 +161,13 @@ class OptionTests(unittest.TestCase):
 
     def test_searchpaths(self):
         options = self._makeOptions()
-        self.assertEqual(len(options.searchpaths), 5)
-        self.assertTrue('supervisord.conf' in options.searchpaths)
-        self.assertTrue('etc/supervisord.conf' in options.searchpaths)
-        self.assertTrue('/etc/supervisord.conf' in options.searchpaths)
+        self.assertEqual(len(options.searchpaths), 6)
+        self.assertEqual(options.searchpaths[-4:], [
+            'supervisord.conf',
+            'etc/supervisord.conf',
+            '/etc/supervisord.conf',
+            '/etc/supervisor/supervisord.conf',
+            ])
 
     def test_options_and_args_order(self):
         # Only config file exists
