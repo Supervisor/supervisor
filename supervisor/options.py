@@ -570,7 +570,9 @@ class ServerOptions(Options):
             if need_close:
                 fp.close()
 
-        expansions = {'here':self.here}
+        host_node_name = platform.node()
+        expansions = {'here':self.here,
+                      'host_node_name':host_node_name}
         expansions.update(self.environ_expansions)
         if parser.has_section('include'):
             parser.expand_here(self.here)
