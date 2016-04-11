@@ -548,7 +548,9 @@ class ServerOptions(Options):
         except ConfigParser.ParsingError, why:
             raise ValueError(str(why))
 
-        expansions = {'here':self.here}
+        host_node_name = platform.node()
+        expansions = {'here':self.here,
+                      'host_node_name':host_node_name}
         expansions.update(self.environ_expansions)
         if parser.has_section('include'):
             if not parser.has_option('include', 'files'):
