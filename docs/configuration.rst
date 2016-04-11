@@ -1119,14 +1119,18 @@ configuration.
   includes it.  A "glob" is a file pattern which matches a specified
   pattern according to the rules used by the Unix shell. No tilde
   expansion is done, but ``*``, ``?``, and character ranges expressed
-  with ``[]`` will be correctly matched.  Recursive includes from
-  included files are not supported.
+  with ``[]`` will be correctly matched.  The string expression is
+  evaluated against a dictionary that includes ``host_node_name``
+  and ``here`` (the directory of the supervisord config file).  Recursive
+  includes from included files are not supported.
 
   *Default*: No default (required)
 
   *Required*:  Yes.
 
   *Introduced*: 3.0
+
+  *Changed*: 3.3.0.  Added support for the ``host_node_name`` expansion.
 
 ``[include]`` Section Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
