@@ -960,6 +960,35 @@ class ServerOptionsTests(unittest.TestCase):
         finally:
             shutil.rmtree(dirname, ignore_errors=True)
 
+    def test_read_config_include_expands_host_node_name(self):
+        dirname = tempfile.mkdtemp()
+        conf_d = os.path.join(dirname, "conf.d")
+        os.mkdir(conf_d)
+
+        supervisord_conf = os.path.join(dirname, "supervisord.conf")
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        files=%s/conf.d/%s.conf
+        """ % (dirname, "%(host_node_name)s"))
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+
+        conf_file = os.path.join(conf_d, "%s.conf" % platform.node())
+        with open(conf_file, 'w') as f:
+            f.write("[inet_http_server]\nport=8000\n")
+
+        instance = self._makeOne()
+        try:
+            instance.read_config(supervisord_conf)
+        finally:
+            shutil.rmtree(dirname, ignore_errors=True)
+        options = instance.configroot.supervisord
+        self.assertEqual(len(options.server_configs), 1)
+        msg = 'Included extra file "%s" during parsing' % conf_file
+        self.assertTrue(msg in instance.parse_infos)
+
     def test_read_config_include_expands_here(self):
         conf = os.path.join(
             os.path.abspath(os.path.dirname(__file__)), 'fixtures',
