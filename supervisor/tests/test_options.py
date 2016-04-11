@@ -1632,6 +1632,37 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.parse_warnings, [])
         self.assertEqual(pconfigs[0].stderr_logfile, None)
 
+    def test_read_config_include_expands_host_node_name(self):
+        dirname = tempfile.mkdtemp()
+        conf_d = os.path.join(dirname, "conf.d")
+        os.mkdir(conf_d)
+
+        supervisord_conf = os.path.join(dirname, "supervisord.conf")
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        files=%s/conf.d/%s.conf
+        """ % (dirname, "%(host_node_name)s"))
+        f = open(supervisord_conf, 'w')
+        f.write(text)
+        f.close()
+
+        conf_file = os.path.join(conf_d, "%s.conf" % platform.node())
+        f = open(conf_file, 'w')
+        f.write("[inet_http_server]\nport=8000\n")
+        f.close()
+
+        instance = self._makeOne()
+        try:
+            instance.read_config(supervisord_conf)
+        finally:
+            shutil.rmtree(dirname, ignore_errors=True)
+        options = instance.configroot.supervisord
+        self.assertEqual(len(options.server_configs), 1)
+        msg = 'Included extra file "%s" during parsing' % conf_file
+        self.assertTrue(msg in instance.parse_infos)
+
     def test_options_with_environment_expansions(self):
         text = lstrip("""\
         [inet_http_server]
