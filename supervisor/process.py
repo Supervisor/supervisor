@@ -382,10 +382,13 @@ class Subprocess(object):
         now = time.time()
         options = self.config.options
 
-        # Properly stop processes in BACKOFF state.
+        # If the process is in BACKOFF and we want to stop or kill it, then
+        # BACKOFF -> STOPPED.  This is needed because if startretries is a
+        # large number and the process isn't starting successfully, the stop
+        # request would be blocked for a long time waiting for the retries.
         if self.state == ProcessStates.BACKOFF:
             msg = ("Attempted to kill %s, which is in BACKOFF state." %
-                   (self.config.name))
+                   (self.config.name,))
             options.logger.debug(msg)
             self.change_state(ProcessStates.STOPPED)
             return None
@@ -396,8 +399,8 @@ class Subprocess(object):
             options.logger.debug(msg)
             return msg
 
-        #If we're in the stopping state, then we've already sent the stop
-        #signal and this is the kill signal
+        # If we're in the stopping state, then we've already sent the stop
+        # signal and this is the kill signal
         if self.state == ProcessStates.STOPPING:
             killasgroup = self.config.killasgroup
         else:
@@ -419,7 +422,8 @@ class Subprocess(object):
         self.delay = now + self.config.stopwaitsecs
         # we will already be in the STOPPING state if we're doing a
         # SIGKILL as a result of overrunning stopwaitsecs
-        self._assertInState(ProcessStates.RUNNING,ProcessStates.STARTING,
+        self._assertInState(ProcessStates.RUNNING,
+                            ProcessStates.STARTING,
                             ProcessStates.STOPPING)
         self.change_state(ProcessStates.STOPPING)
 
@@ -462,7 +466,8 @@ class Subprocess(object):
                                 signame(sig))
                              )
 
-        self._assertInState(ProcessStates.RUNNING,ProcessStates.STARTING,
+        self._assertInState(ProcessStates.RUNNING,
+                            ProcessStates.STARTING,
                             ProcessStates.STOPPING)
 
         try:
