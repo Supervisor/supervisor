@@ -514,6 +514,7 @@ class DummyPConfig:
                  stdout_syslog=False,
                  stderr_logfile=None, stderr_capture_maxbytes=0,
                  stderr_events_enabled=False,
+                 honor_log_linebreaks=False,
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  stderr_syslog=False,
                  redirect_stderr=False,
@@ -531,6 +532,7 @@ class DummyPConfig:
         self.stdout_logfile = stdout_logfile
         self.stdout_capture_maxbytes = stdout_capture_maxbytes
         self.stdout_events_enabled = stdout_events_enabled
+        self.honor_log_linebreaks = honor_log_linebreaks
         self.stdout_logfile_backups = stdout_logfile_backups
         self.stdout_logfile_maxbytes = stdout_logfile_maxbytes
         self.stdout_syslog = stdout_syslog

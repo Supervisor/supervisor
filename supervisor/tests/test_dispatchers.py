@@ -182,6 +182,28 @@ class POutputDispatcherTests(unittest.TestCase):
              "'process1' stdout output:\na")
         self.assertEqual(dispatcher.output_buffer, '')
 
+    def test_record_output_log_linebreakmode(self):
+        # stdout/stderr goes to the process log and the main log,
+        # in non-capturemode, the data length doesn't matter
+        options = DummyOptions()
+        from supervisor import loggers
+        options.loglevel = loggers.LevelsByName.TRAC
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile='/tmp/foo', honor_log_linebreaks=True)
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        dispatcher.output_buffer = 'a\nb'
+        dispatcher.record_output()
+        self.assertEqual(dispatcher.childlog.data, ['a\n'])
+        self.assertEqual(options.logger.data[0],
+             "'process1' stdout output:\na\n")
+        self.assertEqual(dispatcher.output_buffer, 'b')
+        dispatcher.record_output()
+        self.assertEqual(dispatcher.childlog.data, ['a\n', 'b'])
+        self.assertEqual(dispatcher.output_buffer, '')
+        self.assertEqual(options.logger.data[1],
+             "'process1' stdout output:\nb")
+
     def test_record_output_emits_stdout_event_when_enabled(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'process1', '/bin/process1',

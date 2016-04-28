@@ -763,6 +763,7 @@ class ServerOptions(Options):
                 continue
             program_name = process_or_group_name(section.split(':', 1)[1])
             priority = integer(get(section, 'priority', 999))
+
             fcgi_expansions = {'program_name': program_name}
 
             # find proc_uid from "user" option
@@ -888,6 +889,7 @@ class ServerOptions(Options):
         stdout_events = boolean(get(section, 'stdout_events_enabled','false'))
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
         stderr_events = boolean(get(section, 'stderr_events_enabled','false'))
+        honor_log_linebreaks = boolean(get(section, 'honor_log_linebreaks', 'false'))
         serverurl = get(section, 'serverurl', None)
         if serverurl and serverurl.strip().upper() == 'AUTO':
             serverurl = None
@@ -992,6 +994,7 @@ class ServerOptions(Options):
                 stderr_logfile=logfiles['stderr_logfile'],
                 stderr_capture_maxbytes = stderr_cmaxbytes,
                 stderr_events_enabled = stderr_events,
+                honor_log_linebreaks=honor_log_linebreaks,
                 stderr_logfile_backups=logfiles['stderr_logfile_backups'],
                 stderr_logfile_maxbytes=logfiles['stderr_logfile_maxbytes'],
                 stderr_syslog=logfiles['stderr_syslog'],
@@ -1809,7 +1812,7 @@ class ProcessConfig(Config):
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
-        'exitcodes', 'redirect_stderr' ]
+        'exitcodes', 'redirect_stderr', 'honor_log_linebreaks' ]
     optional_param_names = [ 'environment', 'serverurl' ]
 
     def __init__(self, options, **params):

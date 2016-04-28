@@ -3005,10 +3005,10 @@ class TestProcessConfig(unittest.TestCase):
                      'stdout_logfile', 'stdout_capture_maxbytes',
                      'stdout_events_enabled', 'stdout_syslog',
                      'stderr_logfile', 'stderr_capture_maxbytes',
-                     'stderr_events_enabled', 'stderr_syslog',
-                     'stopsignal', 'stopwaitsecs', 'stopasgroup',
-                     'killasgroup', 'exitcodes', 'redirect_stderr',
-                     'environment'):
+                     'stderr_events_enabled', 'honor_log_linebreaks',
+                     'stderr_syslog', 'stopsignal', 'stopwaitsecs',
+                     'stopasgroup', 'killasgroup', 'exitcodes',
+                     'redirect_stderr', 'environment'):
             defaults[name] = name
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes'):
@@ -3085,12 +3085,12 @@ class EventListenerConfigTests(unittest.TestCase):
                      'priority', 'autostart', 'autorestart',
                      'startsecs', 'startretries', 'uid',
                      'stdout_logfile', 'stdout_capture_maxbytes',
-                     'stdout_events_enabled', 'stdout_syslog',
-                     'stderr_logfile', 'stderr_capture_maxbytes',
-                     'stderr_events_enabled', 'stderr_syslog',
-                     'stopsignal', 'stopwaitsecs', 'stopasgroup',
-                     'killasgroup', 'exitcodes', 'redirect_stderr',
-                     'environment'):
+                     'stdout_events_enabled', 'honor_log_linebreaks',
+                     'stdout_syslog', 'stderr_logfile',
+                     'stderr_capture_maxbytes', 'stderr_events_enabled',
+                     'stderr_syslog', 'stopsignal', 'stopwaitsecs',
+                     'stopasgroup', 'killasgroup', 'exitcodes',
+                     'redirect_stderr', 'environment'):
             defaults[name] = name
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes'):
@@ -3133,12 +3133,12 @@ class FastCGIProcessConfigTest(unittest.TestCase):
                      'priority', 'autostart', 'autorestart',
                      'startsecs', 'startretries', 'uid',
                      'stdout_logfile', 'stdout_capture_maxbytes',
-                     'stdout_events_enabled', 'stdout_syslog',
-                     'stderr_logfile', 'stderr_capture_maxbytes',
-                     'stderr_events_enabled', 'stderr_syslog',
-                     'stopsignal', 'stopwaitsecs', 'stopasgroup',
-                     'killasgroup', 'exitcodes', 'redirect_stderr',
-                     'environment'):
+                     'stdout_events_enabled', 'honor_log_linebreaks',
+                     'stdout_syslog', 'stderr_logfile',
+                     'stderr_capture_maxbytes', 'stderr_events_enabled',
+                     'stderr_syslog', 'stopsignal', 'stopwaitsecs',
+                     'stopasgroup', 'killasgroup', 'exitcodes',
+                     'redirect_stderr', 'environment'):
             defaults[name] = name
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes'):
