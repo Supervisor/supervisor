@@ -936,13 +936,14 @@ class ServerOptionsTests(unittest.TestCase):
 
         instance = self._makeOne()
         try:
-            instance.read_config(supervisord_conf)
-            self.fail("nothing raised")
-        except ValueError, exc:
-            self.assertTrue('contains parsing errors:' in exc.args[0])
-            self.assertTrue(malformed_file in exc.args[0])
-            msg = 'Included extra file "%s" during parsing' % malformed_file
-            self.assertTrue(msg in instance.parse_infos)
+            try:
+                instance.read_config(supervisord_conf)
+                self.fail("nothing raised")
+            except ValueError, exc:
+                self.assertTrue('contains parsing errors:' in exc.args[0])
+                self.assertTrue(malformed_file in exc.args[0])
+                msg = 'Included extra file "%s" during parsing' % malformed_file
+                self.assertTrue(msg in instance.parse_infos)
         finally:
             shutil.rmtree(dirname, ignore_errors=True)
 
