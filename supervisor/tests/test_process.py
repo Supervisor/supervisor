@@ -420,6 +420,24 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.written,
              {2: "supervisor: child process was not spawned\n"})
 
+    def test_spawn_as_child_sets_oom_score_adj(self):
+        options = DummyOptions()
+        options.forkpid = 0
+        config = DummyPConfig(options, 'good', '/good/filename',
+                              oom_score_adj=100)
+        instance = self._makeOne(config)
+        result = instance.spawn()
+        self.assertEqual(result, None)
+        self.assertEqual(options.execv_args,
+                         ('/good/filename', ['/good/filename']) )
+        self.assertEqual(options.oom_score_adj_set, 100)
+        self.assertEqual(options.execve_called, True)
+        # if the real execve() succeeds, the code that writes the
+        # "was not spawned" message won't be reached.  this assertion
+        # is to test that no other errors were written.
+        self.assertEqual(options.written,
+             {2: "supervisor: child process was not spawned\n"})
+
     def test_spawn_as_child_cwd_fail(self):
         options = DummyOptions()
         options.forkpid = 0

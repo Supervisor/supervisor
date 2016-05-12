@@ -891,6 +891,7 @@ class ServerOptions(Options):
         serverurl = get(section, 'serverurl', None)
         if serverurl and serverurl.strip().upper() == 'AUTO':
             serverurl = None
+        oom_score_adj = get(section, 'oom_score_adj', None)
 
         # find uid from "user" option
         user = get(section, 'user', None)
@@ -902,7 +903,6 @@ class ServerOptions(Options):
         umask = get(section, 'umask', None)
         if umask is not None:
             umask = octal_type(umask)
-
         process_name = process_or_group_name(
             get(section, 'process_name', '%(program_name)s', do_expand=False))
 
@@ -1001,6 +1001,7 @@ class ServerOptions(Options):
                 killasgroup=killasgroup,
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
+                oom_score_adj=oom_score_adj,
                 environment=environment,
                 serverurl=serverurl)
 
@@ -1571,6 +1572,14 @@ class ServerOptions(Options):
             if fd is not None:
                 self.close_fd(fd)
 
+    def set_oom_score_adj(self, oom_score_adj):
+        try:
+            procfile = open('/proc/%s/oom_score_adj' % os.getpid(), 'w')
+            procfile.write(str(oom_score_adj) + '\n')
+            procfile.close()
+        except IOError:
+            return "Can't set oom_score_adj to %s" % oom_score_adj
+
 class ClientOptions(Options):
     positional_args_allowed = 1
 
@@ -1809,7 +1818,7 @@ class ProcessConfig(Config):
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
-        'exitcodes', 'redirect_stderr' ]
+        'exitcodes', 'redirect_stderr', 'oom_score_adj' ]
     optional_param_names = [ 'environment', 'serverurl' ]
 
     def __init__(self, options, **params):

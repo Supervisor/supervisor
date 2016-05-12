@@ -87,6 +87,7 @@ class DummyOptions:
         self.changed_directory = False
         self.chdir_error = None
         self.umaskset = None
+        self.oom_score_adj_set = None
         self.poller = DummyPoller(self)
 
     def getLogger(self, *args, **kw):
@@ -260,6 +261,9 @@ class DummyOptions:
 
     def setumask(self, mask):
         self.umaskset = mask
+
+    def set_oom_score_adj(self, oom_score_adj):
+        self.oom_score_adj_set = oom_score_adj
 
 class DummyLogger:
     level = None
@@ -518,7 +522,8 @@ class DummyPConfig:
                  stderr_syslog=False,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
-                 exitcodes=(0,2), environment=None, serverurl=None):
+                 exitcodes=(0,2), environment=None, serverurl=None,
+                 oom_score_adj=None):
         self.options = options
         self.name = name
         self.command = command
@@ -554,6 +559,7 @@ class DummyPConfig:
         self.umask = umask
         self.autochildlogs_created = False
         self.serverurl = serverurl
+        self.oom_score_adj = oom_score_adj
 
     def create_autochildlogs(self):
         self.autochildlogs_created = True
