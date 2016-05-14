@@ -1,5 +1,5 @@
-3.3.0 (Next 3.x Release)
-------------------------
+3.3.0 (2016-05-14)
+------------------
 
 - ``supervisord`` will now use ``kqueue``, ``poll``, or ``select`` to monitor
   its file descriptors, in that order, depending on what is available on the
