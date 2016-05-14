@@ -33,25 +33,24 @@ contributions from the community in both
 `pull requests <https://help.github.com/articles/using-pull-requests>`_
 on GitHub (preferred) and patches sent to the list.
 
-Sponsoring
-----------
-
-If you'd like to sponsor further Supervisor development (for custom
-projects), please let one of the authors know.
-
 Author Information
 ------------------
 
 The following people are responsible for creating Supervisor.
 
-Primary Authors and Maintainers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Original Author
+~~~~~~~~~~~~~~~
 
-- `Chris McDonough <http://plope.com>`_ is the original author of Supervisor
-  and the primary maintainer.
+- `Chris McDonough <http://plope.com>`_ is the original author of Supervisor.
 
 Contributors
 ~~~~~~~~~~~~
+
+Contributors are tracked on the `GitHub contributions page
+<https://github.com/Supervisor/supervisor/graphs/contributors>`_.
+
+The list below recognizes significant contributions that were made before
+the repository moved to GitHub.
 
 - Anders Quist: Anders contributed the patch that was the basis for
   Supervisor’s ability to reload parts of its configuration without
