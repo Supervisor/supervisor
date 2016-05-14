@@ -134,13 +134,13 @@
 - Fixed a bug where ``supervisorctl tail -f name`` output would stop if log
   rotation occurred while tailing.
 
-- Prevent a crash when a greater number file descriptors were attempted to be
-  opened than permitted by the environment when starting a bunch of programs.
-  Now, instead a spawn error is logged.
+- Prevent a crash when a greater number of file descriptors were attempted to
+  be opened than permitted by the environment when starting a bunch of
+  programs.  Now, instead a spawn error is logged.
 
-- Compute "channel delay" properly, fixing symptoms where a supervisorctl start
-  command would hang for a very long time when a process (or many processes)
-  are spewing to their stdout or stderr.  See comments attached to
+- Compute "channel delay" properly, fixing symptoms where a supervisorctl
+  start command would hang for a very long time when a process (or many
+  processes) are spewing to their stdout or stderr.  See comments attached to
   https://github.com/Supervisor/supervisor/pull/263 .
 
 - Added ``docs/conf.py``, ``docs/Makefile``, and ``supervisor/scripts/*.py``
@@ -1002,7 +1002,7 @@
 - A new module "supervisor.childutils" was added.  This module
   provides utilities for Python scripts which act as children of
   supervisord.  Most notably, it contains an API method
-  "getRPCInterface" allows you to obtain an xmlrpxlib ServerProxy
+  "getRPCInterface" allows you to obtain an xmlrpclib ServerProxy
   that is willing to communicate with the parent supervisor.  It
   also contains utility functions that allow for parsing of
   supervisor event listener protocol headers.  A pair of scripts
