@@ -24,6 +24,9 @@
   a file included via ``[include]``, it will expand to the directory of
   that file.  Thanks to Alex Eftimie and Zoltan Toth-Czifra for the patches.
 
+3.3.0 (2016-05-14)
+------------------
+
 - ``supervisord`` will now use ``kqueue``, ``poll``, or ``select`` to monitor
   its file descriptors, in that order, depending on what is available on the
   system.  Previous versions used ``select`` only and would crash with the error
