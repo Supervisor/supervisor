@@ -70,8 +70,6 @@ dist = setup(
     classifiers=CLASSIFIERS,
     author="Chris McDonough",
     author_email="chrism@plope.com",
-    maintainer="Chris McDonough",
-    maintainer_email="chrism@plope.com",
     packages=find_packages(),
     install_requires=requires,
     extras_require={'iterparse': ['cElementTree >= 1.0.2']},
