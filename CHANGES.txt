@@ -24,6 +24,10 @@
   a file included via ``[include]``, it will expand to the directory of
   that file.  Thanks to Alex Eftimie and Zoltan Toth-Czifra for the patches.
 
+- ``supervisorctl`` will now set its exit status to a non-zero value when an
+  error condition occurs.  Previous versions did not set the exit status so
+  it was always zero.  Patch by Luke Weber.
+
 3.3.0 (2016-05-14)
 ------------------
 
