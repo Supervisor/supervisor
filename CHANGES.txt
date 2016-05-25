@@ -28,6 +28,9 @@
   error condition occurs.  Previous versions did not set the exit status so
   it was always zero.  Patch by Luke Weber.
 
+- Zope ``trackrefs``, a debugging tool that was included in the ``tests``
+  directory but hadn't been used for years, has been removed.
+
 3.3.0 (2016-05-14)
 ------------------
 
