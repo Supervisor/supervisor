@@ -5,6 +5,9 @@
   requests (including `supervisorctl` commands) if the system time was set
   back after `supervisord` was started.
 
+- Zope ``trackrefs``, a debugging tool that was included in the ``tests``
+  directory but hadn't been used for years, has been removed.
+
 3.3.0 (2016-05-14)
 ------------------
 
