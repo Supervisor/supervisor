@@ -162,3 +162,6 @@ with third party applications:
     (rather than the Docker default per-container JSON files).
 `superslacker <https://github.com/MTSolutions/superslacker>`_
     Send Supervisor event notifications to `Slack <https://slack.com>`_.
+`supervisor-alert <https://github.com/rahiel/supervisor-alert>`_
+    Send event notifications over `Telegram <https://telegram.org>`_ or to an
+    arbitrary command.
