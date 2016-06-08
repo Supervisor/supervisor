@@ -144,6 +144,8 @@ with third party applications:
     Complete Supervisor suite in PHP: Client using XML-RPC interface, event listener and configuration builder implementation, console application and monitor UI.
 `Supervisord-Client <http://search.cpan.org/~skaufman/Supervisord-Client>`_
     Perl client for the supervisord XML-RPC interface.
+`supervisord4j <https://github.com/satifanie/supervisord4j>`_
+    Java client for Supervisor's XML-RPC interface.
 `Supermann <https://github.com/borntyping/supermann>`_
     Supermann monitors processes running under Supervisor and sends metrics
     to `Riemann <http://riemann.io/>`_.
