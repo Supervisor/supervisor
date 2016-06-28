@@ -73,7 +73,7 @@ depending on the listener implementation, it may be important to
 specify in the configuration that it may receive only certain types of
 events.  The implementor of the event listener is the only person who
 can tell you what these are (and therefore what value to put in the
-<code>events</code> configuration).  Examples of eventlistener
+``events`` configuration).  Examples of eventlistener
 configurations that can be placed in ``supervisord.conf`` are as
 follows.
 
@@ -465,7 +465,7 @@ Body Description
 ++++++++++++++++
 
 This body is a token set.  It has the default set of key/value pairs
-plus an additional ``pid`` key.  <code>pid</code> represents the UNIX
+plus an additional ``pid`` key.  ``pid`` represents the UNIX
 process id of the process that was started.  For example:
 
 .. code-block:: text
