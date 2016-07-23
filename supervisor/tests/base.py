@@ -155,7 +155,7 @@ class DummyOptions:
         import os
         return os.stat(filename)
 
-    def get_path(self):
+    def get_path(self, env=None):
         return ["/bin", "/usr/bin", "/usr/local/bin"]
 
     def get_pid(self):
