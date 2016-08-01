@@ -31,6 +31,10 @@
 - Zope ``trackrefs``, a debugging tool that was included in the ``tests``
   directory but hadn't been used for years, has been removed.
 
+- Fixed an issue where `supervisord` could hang when responding to HTTP
+  requests (including `supervisorctl` commands) if the system time was set
+  back after `supervisord` was started.
+
 3.3.0 (2016-05-14)
 ------------------
 

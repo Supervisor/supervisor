@@ -334,17 +334,16 @@ class deferring_http_channel(http_server.http_channel):
     # order to spew tail -f output faster (speculative)
     ac_out_buffer_size = 4096
 
-    delay = False
-    writable_check = time.time()
+    delay = 0 # seconds
+    last_writable_check = time.time()
 
     def writable(self, t=time.time):
         now = t()
         if self.delay:
             # we called a deferred producer via this channel (see refill_buffer)
-            last_writable_check = self.writable_check
-            elapsed = now - last_writable_check
-            if elapsed > self.delay:
-                self.writable_check = now
+            elapsed = now - self.last_writable_check
+            if (elapsed > self.delay) or (elapsed < 0):
+                self.last_writable_check = now
                 return True
             else:
                 return False
@@ -901,4 +900,3 @@ class supervisor_auth_handler(auth_handler):
         auth_handler.__init__(self, dict, handler, realm)
         # override the authorizer with one that knows about SHA hashes too
         self.authorizer = encrypted_dictionary_authorizer(dict)
-
