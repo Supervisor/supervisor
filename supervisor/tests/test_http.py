@@ -224,7 +224,7 @@ class DeferringChunkedProducerTests(unittest.TestCase):
     def test_more_noproducer(self):
         producer = self._makeOne(None)
         self.assertEqual(producer.more(), '')
-        
+
 class DeferringCompositeProducerTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.http import deferring_composite_producer
@@ -315,7 +315,7 @@ class DeferringHookedProducerTests(unittest.TestCase):
         producer = self._makeOne(None, None)
         self.assertEqual(producer.more(), '')
 
-class Test_deferring_http_request(unittest.TestCase):
+class DeferringHttpRequestTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.http import deferring_http_request
         return deferring_http_request
@@ -341,7 +341,7 @@ class Test_deferring_http_request(unittest.TestCase):
             def push_with_producer(self, producer):
                 self.producer = producer
         return Channel()
-    
+
     def test_done_http_10_nokeepalive(self):
         channel = self._makeChannel()
         inst = self._makeOne(channel=channel, version='1.0')
@@ -355,10 +355,10 @@ class Test_deferring_http_request(unittest.TestCase):
             version='1.0',
             header=['Connection: Keep-Alive'],
             )
-        
+
         inst.done()
         self.assertTrue(channel.closed)
-        
+
     def test_done_http_10_keepalive_and_content_length(self):
         channel = self._makeChannel()
         inst = self._makeOne(
@@ -430,7 +430,58 @@ class Test_deferring_http_request(unittest.TestCase):
             )
         inst.done()
         self.assertTrue(channel.closed)
-        
+
+class DeferringHttpChannelTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.http import deferring_http_channel
+        return deferring_http_channel
+
+    def _makeOne(self):
+        return self._getTargetClass()(
+            server=None,
+            conn=None,
+            addr=None
+            )
+
+    def test_defaults_delay_and_last_writable_check_time(self):
+        channel = self._makeOne()
+        self.assertEqual(channel.delay, 0)
+        self.assertTrue(channel.last_writable_check > 0)
+
+    def test_writable_with_delay_is_False_if_elapsed_lt_delay(self):
+        channel = self._makeOne()
+        channel.delay = 2
+        channel.last_writable_check = _NOW
+        later = _NOW + 1
+        self.assertFalse(channel.writable(t=lambda: later))
+        self.assertEqual(channel.last_writable_check, _NOW)
+
+    def test_writable_with_delay_is_False_if_elapsed_eq_delay(self):
+        channel = self._makeOne()
+        channel.delay = 2
+        channel.last_writable_check = _NOW
+        later = _NOW + channel.delay
+        self.assertFalse(channel.writable(t=lambda: later))
+        self.assertEqual(channel.last_writable_check, _NOW)
+
+    def test_writable_with_delay_is_True_if_elapsed_gt_delay(self):
+        channel = self._makeOne()
+        channel.delay = 2
+        channel.last_writable_check = _NOW
+        later = _NOW + channel.delay + 0.1
+        self.assertTrue(channel.writable(t=lambda: later))
+        self.assertEqual(channel.last_writable_check, later)
+
+    def test_writable_with_delay_is_True_if_system_time_goes_backwards(self):
+        channel = self._makeOne()
+        channel.delay = 2
+        channel.last_writable_check = _NOW + 3600 # last check was in the future
+        later = _NOW
+        self.assertTrue(channel.writable(t=lambda: later))
+        self.assertEqual(channel.last_writable_check, later)
+
+_NOW = 1470085990
+
 class EncryptedDictionaryAuthorizedTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.http import encrypted_dictionary_authorizer
