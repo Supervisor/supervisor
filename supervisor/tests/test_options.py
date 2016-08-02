@@ -1630,6 +1630,29 @@ class ServerOptionsTests(unittest.TestCase):
         expected = "/foo/bar:%s" % os.environ['PATH']
         self.assertEqual(pconfigs[0].environment['PATH'], expected)
 
+    def test_processes_from_section_execute_env_in_environment(self):
+        here = tempfile.mkdtemp()
+
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+        environment = PATH='{0}:%(ENV_PATH)s'
+        [program:foo]
+        command = /bin/foo
+        """.format(here))
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.configfile = supervisord_conf
+            instance.realize(args=[])
+        finally:
+            shutil.rmtree(here, ignore_errors=True)
+        options = instance.configroot.supervisord
+        group = options.process_group_configs[0]
+        proc = group.process_configs[0]
+        self.assertTrue(proc.environment['PATH'].startswith(here))
+
     def test_processes_from_section_redirect_stderr_with_filename(self):
         instance = self._makeOne()
         text = lstrip("""\

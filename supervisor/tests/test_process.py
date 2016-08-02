@@ -187,8 +187,9 @@ class SubprocessTests(unittest.TestCase):
         args = instance.get_execv_args()
         self.assertEqual(args, ('foo', ['foo']))
 
-        config = DummyPConfig(options, 'foo', 'foo',
-                              environment={'PATH': '{}:%(ENV_PATH)s'.format(here)})
+        config = DummyPConfig(
+            options, 'foo', 'foo',
+            environment={'PATH': '{0}:%(ENV_PATH)s'.format(here)})
         instance = self._makeOne(config)
         args = instance.get_execv_args()
         self.assertEqual(args, (executable, ['foo']))
