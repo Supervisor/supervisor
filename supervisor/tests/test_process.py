@@ -179,7 +179,7 @@ class SubprocessTests(unittest.TestCase):
         """)
         with open(executable, 'w') as f:
             f.write(executable_text)
-        os.chmod(executable, 0644)
+        os.chmod(executable, 0o755)
 
         options = DummyOptions()
         config = DummyPConfig(options, 'foo', 'foo')
