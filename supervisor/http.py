@@ -335,8 +335,10 @@ class deferring_http_channel(http_server.http_channel):
     delay = 0 # seconds
     last_writable_check = time.time()
 
-    def writable(self, t=time.time):
-        now = t()
+    def writable(self, now=None):
+        if now is None:  # for unit tests
+            now = time.time()
+
         if self.delay:
             # we called a deferred producer via this channel (see refill_buffer)
             elapsed = now - self.last_writable_check
