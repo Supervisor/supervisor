@@ -450,7 +450,7 @@ class DeferringHttpChannelTests(unittest.TestCase):
         channel.delay = 2
         channel.last_writable_check = _NOW
         later = _NOW + 1
-        self.assertFalse(channel.writable(t=lambda: later))
+        self.assertFalse(channel.writable(now=later))
         self.assertEqual(channel.last_writable_check, _NOW)
 
     def test_writable_with_delay_is_False_if_elapsed_eq_delay(self):
@@ -458,7 +458,7 @@ class DeferringHttpChannelTests(unittest.TestCase):
         channel.delay = 2
         channel.last_writable_check = _NOW
         later = _NOW + channel.delay
-        self.assertFalse(channel.writable(t=lambda: later))
+        self.assertFalse(channel.writable(now=later))
         self.assertEqual(channel.last_writable_check, _NOW)
 
     def test_writable_with_delay_is_True_if_elapsed_gt_delay(self):
@@ -466,15 +466,15 @@ class DeferringHttpChannelTests(unittest.TestCase):
         channel.delay = 2
         channel.last_writable_check = _NOW
         later = _NOW + channel.delay + 0.1
-        self.assertTrue(channel.writable(t=lambda: later))
+        self.assertTrue(channel.writable(now=later))
         self.assertEqual(channel.last_writable_check, later)
 
     def test_writable_with_delay_is_True_if_system_time_goes_backwards(self):
         channel = self._makeOne()
         channel.delay = 2
-        channel.last_writable_check = _NOW + 3600 # last check was in the future
-        later = _NOW
-        self.assertTrue(channel.writable(t=lambda: later))
+        channel.last_writable_check = _NOW
+        later = _NOW - 3600 # last check was in the future
+        self.assertTrue(channel.writable(now=later))
         self.assertEqual(channel.last_writable_check, later)
 
 _NOW = 1470085990
