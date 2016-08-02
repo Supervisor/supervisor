@@ -3,6 +3,8 @@ import os
 import signal
 import time
 import unittest
+import tempfile
+import shutil
 
 from supervisor.compat import as_bytes
 from supervisor.compat import maxint
@@ -18,6 +20,7 @@ from supervisor.tests.base import DummyFCGIGroupConfig
 from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import DummyProcessGroup
 from supervisor.tests.base import DummyFCGIProcessGroup
+from supervisor.tests.base import lstrip
 
 from supervisor.process import Subprocess
 from supervisor.options import BadCommand
@@ -166,6 +169,31 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(args), 2)
         self.assertEqual(args[0], '/bin/sh')
         self.assertEqual(args[1], ['sh', 'foo'])
+
+    def test_get_execv_args_with_environment(self):
+        here = tempfile.mkdtemp()
+        executable = os.path.join(here, 'foo')
+        executable_text = lstrip("""\
+        !#/bin/bash
+        echo 'bar'
+        """)
+        with open(executable, 'w') as f:
+            f.write(executable_text)
+        os.chmod(executable, 0644)
+
+        options = DummyOptions()
+        config = DummyPConfig(options, 'foo', 'foo')
+        instance = self._makeOne(config)
+        args = instance.get_execv_args()
+        self.assertEqual(args, ('foo', ['foo']))
+
+        config = DummyPConfig(options, 'foo', 'foo',
+                              environment={'PATH': '{}:%(ENV_PATH)s'.format(here)})
+        instance = self._makeOne(config)
+        args = instance.get_execv_args()
+        self.assertEqual(args, (executable, ['foo']))
+
+        shutil.rmtree(here, ignore_errors=True)
 
     def test_record_spawnerr(self):
         options = DummyOptions()
