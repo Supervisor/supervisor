@@ -1,5 +1,5 @@
-3.3.1 (Next 3.x Release)
-------------------------
+3.3.1 (2016-08-02)
+------------------
 
 - Fixed an issue where `supervisord` could hang when responding to HTTP
   requests (including `supervisorctl` commands) if the system time was set
