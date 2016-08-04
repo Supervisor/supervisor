@@ -443,7 +443,7 @@ class DeferringHttpChannelTests(unittest.TestCase):
     def test_defaults_delay_and_last_writable_check_time(self):
         channel = self._makeOne()
         self.assertEqual(channel.delay, 0)
-        self.assertTrue(channel.last_writable_check > 0)
+        self.assertEqual(channel.last_writable_check, 0)
 
     def test_writable_with_delay_is_False_if_elapsed_lt_delay(self):
         channel = self._makeOne()

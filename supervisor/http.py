@@ -335,7 +335,7 @@ class deferring_http_channel(http_server.http_channel):
     ac_out_buffer_size = 4096
 
     delay = 0 # seconds
-    last_writable_check = time.time()
+    last_writable_check = 0 # timestamp of last writable check; 0 if never
 
     def writable(self, now=None):
         if now is None:  # for unit tests
