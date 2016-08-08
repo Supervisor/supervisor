@@ -195,8 +195,8 @@ class Subprocess(object):
         options = self.config.options
 
         if not self.group.can_spawn():
-            msg = 'process %r cannot start - group %r depends on processes which are not started yet'\
-                  % (self.config.name, self.group.config.name)
+            msg = 'process %r cannot start - group %r depends on processes which are not started yet: %r'\
+                  % (self.config.name, self.group.config.name, self.config.dependson)
             options.logger.warn(msg)
             return
 
