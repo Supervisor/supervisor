@@ -666,6 +666,20 @@ where specified.
 
   *Introduced*: 3.0
 
+``dependson``
+
+  A comma-separated list of dependencies for the program. These are names of other
+  programs and/or groups in the configuration. A program which ``dependson`` another
+  program or group starts only if all of its dependencies are in the ``RUNNING`` state.
+  Once started, the program runs independently (i.e. won't stop when one of it's dependencies
+  terminates)
+
+  *Default*: Empty
+
+  *Required*:  No.
+
+  *Introduced*: 3.3
+
 ``autostart``
 
   If true, this program will start automatically when supervisord is
@@ -1204,6 +1218,17 @@ been under them will now be moved into the ``foo`` group.
   *Required*:  No.
 
   *Introduced*: 3.0
+
+``dependson``
+
+  A comma-separated list of dependencies for all programs in this group.
+  This value will be appended to the ``dependson`` of each program belonging to this group.
+
+  *Default*: Empty
+
+  *Required*:  No.
+
+  *Introduced*: 3.3
 
 ``[group:x]`` Section Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
