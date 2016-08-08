@@ -1113,6 +1113,46 @@ where specified.
    environment=A="1",B="2"
    serverurl=AUTO
 
+``[program:x]`` Dependencies Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   In this example, `cats` will run only after `mouse` and `night` are in ``RUNNING`` state.
+
+   `tom` and `tori` will start at the same time, because a group will start its programs
+   after all group and program deps have been met.
+
+.. code-block:: ini
+
+   [program:mouse]
+   command=/bin/mouse
+   dependson=cheese
+
+   [program:cheese]
+   command=/bin/cheese
+
+
+   ;; groups
+   [group:cats]
+   dependson=night
+   programs=tom,tori
+
+   [program:tom]
+   command=/bin/cat -tom
+   dependson=mouse
+
+   [program:tori]
+   command=/bin/cat -tori
+
+
+   [group:night]
+   programs=sunset,lights
+
+   [program:sunset]
+   command=/bin/sun -down
+
+   [program:lights]
+   command=/bin/lights -on
+
 ``[include]`` Section Settings
 ------------------------------
 
