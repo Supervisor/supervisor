@@ -680,7 +680,7 @@ class ServerOptions(Options):
             group_name = process_or_group_name(section.split(':', 1)[1])
             programs = list_of_strings(get(section, 'programs', None))
             priority = integer(get(section, 'priority', 999))
-            dependson = list_of_strings(get(section, 'dependson', None))
+            group_dependson = list_of_strings(get(section, 'dependson', None))
             group_processes = []
             for program in programs:
                 program_section = "program:%s" % program
@@ -691,9 +691,11 @@ class ServerOptions(Options):
                 processes = self.processes_from_section(parser, program_section,
                                                         group_name,
                                                         ProcessConfig)
-                # override dependson from the group setting
-                for p in processes:
-                    p.dependson = dependson
+
+                # add dependson from the group setting
+                if (group_dependson):
+                    for p in processes:
+                        p.dependson.extend(group_dependson)
 
                 group_processes.extend(processes)
             groups.append(
