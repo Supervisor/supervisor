@@ -717,12 +717,27 @@ class ServerOptions(Options):
                 )
             program_and_group_names.append(program_name)
 
-        # check that programs from dependson exist in the config file
+        # build dep graph; check that programs from dependson exist in the config file
+        name_to_deps = {}
         for group in groups:
-            for dependency_name in group.get_dependencies():
+            group_deps = group.get_dependencies()
+            name_to_deps.update({group.name: group_deps})
+
+            for dependency_name in group_deps:
                 if dependency_name not in program_and_group_names:
                     raise ValueError('[%s] depends on [%s], but [%s] is not a runnable program or group name' % (
                         group.name, dependency_name, dependency_name))
+
+        # iterate through graph and remove programs that have no deps
+        while name_to_deps:
+            nodeps = {name for name, deps in name_to_deps.iteritems() if not deps}
+
+            if not nodeps:
+                dep_names = ', '.join("%s->%r" % (key, val) for (key, val) in name_to_deps.iteritems())
+                raise ValueError('Detected circular dependency %s ' % dep_names)
+
+            # clean up names w/o deps, and remove deps that we processed this step
+            name_to_deps = {name:(deps - nodeps) for name, deps in name_to_deps.iteritems() if deps}
 
         # process "event listener" homogeneous groups
         for section in all_sections:
