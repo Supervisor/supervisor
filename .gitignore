@@ -6,6 +6,7 @@
 *.swp
 .DS_Store
 .coverage
+.eggs/
 .tox/
 build/
 docs/.build/

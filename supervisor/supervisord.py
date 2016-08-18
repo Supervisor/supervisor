@@ -6,7 +6,7 @@ Usage: %s [options]
 
 Options:
 -c/--configuration FILENAME -- configuration file
--n/--nodaemon -- run in the foreground (same as 'nodaemon true' in config file)
+-n/--nodaemon -- run in the foreground (same as 'nodaemon=true' in config file)
 -h/--help -- print this usage message and exit
 -v/--version -- print supervisord version number and exit
 -u/--user USER -- run supervisord as this user (or numeric uid)
@@ -67,6 +67,7 @@ class Supervisor:
         if self.options.first:
             rlimit_messages = self.options.set_rlimits()
             info_messages.extend(rlimit_messages)
+        info_messages.extend(self.options.parse_infos)
         warn_messages.extend(self.options.parse_warnings)
 
         # this sets the options.logger object
@@ -201,7 +202,7 @@ class Supervisor:
 
                 if not self.shutdown_report():
                     # if there are no unstopped processes (we're done
-                    # killing everything), it's OK to swtop or reload
+                    # killing everything), it's OK to shutdown or reload
                     raise asyncore.ExitNow
 
             for fd, dispatcher in combined_map.items():
@@ -220,6 +221,9 @@ class Supervisor:
                             'read event caused by %(dispatcher)r',
                             dispatcher=dispatcher)
                         dispatcher.handle_read_event()
+                        if (not dispatcher.readable()
+                                and not dispatcher.writable()):
+                            self.options.poller.unregister(fd)
                     except asyncore.ExitNow:
                         raise
                     except:
@@ -233,12 +237,16 @@ class Supervisor:
                             'write event caused by %(dispatcher)r',
                             dispatcher=dispatcher)
                         dispatcher.handle_write_event()
+                        if (not dispatcher.readable()
+                                and not dispatcher.writable()):
+                            self.options.poller.unregister(fd)
                     except asyncore.ExitNow:
                         raise
                     except:
                         combined_map[fd].handle_error()
 
-            [ group.transition() for group  in pgroups ]
+            for group in pgroups:
+                group.transition()
 
             self.reap()
             self.handle_signal()

@@ -23,8 +23,11 @@ from supervisor.events import notify
 from supervisor.events import RemoteCommunicationEvent
 
 from supervisor.http import NOT_DONE_YET
-from supervisor.xmlrpc import Faults
-from supervisor.xmlrpc import RPCError
+from supervisor.xmlrpc import (
+    capped_int,
+    Faults,
+    RPCError,
+    )
 
 from supervisor.states import SupervisorStates
 from supervisor.states import getSupervisorStateDescription
@@ -209,7 +212,7 @@ class SupervisorNamespaceRPCInterface:
 
         result = self.supervisord.remove_process_group(name)
         if not result:
-            raise RPCError(Faults.STILL_RUNNING)
+            raise RPCError(Faults.STILL_RUNNING, name)
         return True
 
     def _getAllProcesses(self, lexical=False):
@@ -387,7 +390,7 @@ class SupervisorNamespaceRPCInterface:
             return self.stopProcessGroup(group_name, wait)
 
         if process.get_state() not in RUNNING_STATES:
-            raise RPCError(Faults.NOT_RUNNING)
+            raise RPCError(Faults.NOT_RUNNING, name)
 
         msg = process.stop()
         if msg is not None:
@@ -411,9 +414,7 @@ class SupervisorNamespaceRPCInterface:
                 # process will eventually enter a stopped state by
                 # virtue of the supervisord.reap() method being called
                 # during normal operations
-                self.supervisord.options.logger.info(
-                    'waiting for %s to stop' % process.config.name
-                    )
+                process.stop_report()
                 if process.get_state() not in STOPPED_STATES:
                     return NOT_DONE_YET
                 return True
@@ -488,7 +489,7 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.BAD_SIGNAL, signal)
 
         if process.get_state() not in RUNNING_STATES:
-           raise RPCError(Faults.NOT_RUNNING)
+            raise RPCError(Faults.NOT_RUNNING, name)
 
         msg = process.signal(sig)
 
@@ -548,12 +549,35 @@ class SupervisorNamespaceRPCInterface:
             inuse = gconfig.name in self.supervisord.process_groups
             for pconfig in gconfig.process_configs:
                 configinfo.append(
-                    { 'name': pconfig.name,
-                      'group': gconfig.name,
-                      'inuse': inuse,
-                      'autostart': pconfig.autostart,
-                      'group_prio': gconfig.priority,
-                      'process_prio': pconfig.priority })
+                    {
+                        'autostart': pconfig.autostart,
+                        'command': pconfig.command,
+                        'exitcodes': pconfig.exitcodes,
+                        'group': gconfig.name,
+                        'group_prio': gconfig.priority,
+                        'inuse': inuse,
+                        'killasgroup': pconfig.killasgroup,
+                        'name': pconfig.name,
+                        'process_prio': pconfig.priority,
+                        'redirect_stderr': pconfig.redirect_stderr,
+                        'startretries': pconfig.startretries,
+                        'startsecs': pconfig.startsecs,
+                        'stdout_capture_maxbytes': pconfig.stdout_capture_maxbytes,
+                        'stdout_events_enabled': pconfig.stdout_events_enabled,
+                        'stdout_logfile': pconfig.stdout_logfile,
+                        'stdout_logfile_backups': pconfig.stdout_logfile_backups,
+                        'stdout_logfile_maxbytes': pconfig.stdout_logfile_maxbytes,
+                        'stdout_syslog': pconfig.stdout_syslog,
+                        'stopsignal': pconfig.stopsignal,
+                        'stopwaitsecs': pconfig.stopwaitsecs,
+                        'stderr_capture_maxbytes': pconfig.stderr_capture_maxbytes,
+                        'stderr_events_enabled': pconfig.stderr_events_enabled,
+                        'stderr_logfile': pconfig.stderr_logfile,
+                        'stderr_logfile_backups': pconfig.stderr_logfile_backups,
+                        'stderr_logfile_maxbytes': pconfig.stderr_logfile_maxbytes,
+                        'stderr_syslog': pconfig.stderr_syslog,
+                    }
+                )
 
         configinfo.sort(key=lambda r: r['name'])
         return configinfo
@@ -567,6 +591,8 @@ class SupervisorNamespaceRPCInterface:
             start_dt = datetime.datetime(*time.gmtime(start)[:6])
             now_dt = datetime.datetime(*time.gmtime(now)[:6])
             uptime = now_dt - start_dt
+            if _total_seconds(uptime) < 0: # system time set back
+                uptime = datetime.timedelta(0)
             desc = 'pid %s, uptime %s' % (info['pid'], uptime)
 
         elif state in (ProcessStates.FATAL, ProcessStates.BACKOFF):
@@ -600,9 +626,12 @@ class SupervisorNamespaceRPCInterface:
         if process is None:
             raise RPCError(Faults.BAD_NAME, name)
 
-        start = int(process.laststart)
-        stop = int(process.laststop)
-        now = int(time.time())
+        # TODO timestamps are returned as xml-rpc integers for b/c but will
+        # saturate the xml-rpc integer type in jan 2038 ("year 2038 problem").
+        # future api versions should return timestamps as a different type.
+        start = capped_int(process.laststart)
+        stop = capped_int(process.laststop)
+        now = capped_int(self._now())
 
         state = process.get_state()
         spawnerr = process.spawnerr or ''
@@ -629,6 +658,10 @@ class SupervisorNamespaceRPCInterface:
         description = self._interpretProcessInfo(info)
         info['description'] = description
         return info
+
+    def _now(self): # pragma: no cover
+        # this is here to service stubbing in unit tests
+        return time.time()
 
     def getAllProcessInfo(self):
         """ Get info about all processes
@@ -870,6 +903,10 @@ class SupervisorNamespaceRPCInterface:
         )
 
         return True
+
+def _total_seconds(timedelta):
+    return ((timedelta.days * 86400 + timedelta.seconds) * 10**6 +
+                timedelta.microseconds) / 10**6
 
 def make_allfunc(processes, predicate, func, **extra_kwargs):
     """ Return a closure representing a function that calls a

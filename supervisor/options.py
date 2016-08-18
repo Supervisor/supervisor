@@ -48,7 +48,6 @@ from supervisor.datatypes import url
 from supervisor.datatypes import Automatic
 from supervisor.datatypes import auto_restart
 from supervisor.datatypes import profile_options
-from supervisor.datatypes import set_here
 
 from supervisor import loggers
 from supervisor import states
@@ -109,7 +108,9 @@ class Options:
                        os.path.join(here, 'supervisord.conf'),
                        'supervisord.conf',
                        'etc/supervisord.conf',
-                       '/etc/supervisord.conf']
+                       '/etc/supervisord.conf',
+                       '/etc/supervisor/supervisord.conf',
+                       ]
         self.searchpaths = searchpaths
 
         self.environ_expansions = {}
@@ -268,7 +269,7 @@ class Options:
             self.options, self.args = getopt.getopt(
                 args, "".join(self.short_options), self.long_options)
         except getopt.error as exc:
-            self.usage(repr(exc))
+            self.usage(str(exc))
 
         # Check for positional args
         if self.args and not self.positional_args_allowed:
@@ -352,7 +353,6 @@ class Options:
         # Process config file
         if not hasattr(self.configfile, 'read'):
             self.here = os.path.abspath(os.path.dirname(self.configfile))
-            set_here(self.here)
         try:
             self.read_config(self.configfile)
         except ValueError as msg:
@@ -396,7 +396,13 @@ class Options:
         return factories
 
     def import_spec(self, spec):
-        return pkg_resources.EntryPoint.parse("x="+spec).load(False)
+        ep = pkg_resources.EntryPoint.parse("x=" + spec)
+        if hasattr(ep, 'resolve'):
+            # this is available on setuptools >= 10.2
+            return ep.resolve()
+        else:
+            # this causes a DeprecationWarning on setuptools >= 11.3
+            return ep.load(False)
 
 
 class ServerOptions(Options):
@@ -454,6 +460,7 @@ class ServerOptions(Options):
         self.pidhistory = {}
         self.process_group_configs = []
         self.parse_warnings = []
+        self.parse_infos = []
         self.signal_receiver = SignalReceiver()
         self.poller = poller.Poller(self)
 
@@ -534,9 +541,10 @@ class ServerOptions(Options):
         self.process_group_configs = new
 
     def read_config(self, fp):
-        # Clear parse warnings, since we may be re-reading the
+        # Clear parse messages, since we may be re-reading the
         # config a second time after a reload.
         self.parse_warnings = []
+        self.parse_infos = []
 
         section = self.configroot.supervisord
         need_close = False
@@ -548,10 +556,8 @@ class ServerOptions(Options):
                 need_close = True
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)
-        kwargs = {}
-        if PY3:
-            kwargs['inline_comment_prefixes'] = (';','#')
-        parser = UnhosedConfigParser(**kwargs)
+
+        parser = UnhosedConfigParser()
         parser.expansions = self.environ_expansions
         try:
             try:
@@ -564,9 +570,12 @@ class ServerOptions(Options):
             if need_close:
                 fp.close()
 
-        expansions = {'here':self.here}
+        host_node_name = platform.node()
+        expansions = {'here':self.here,
+                      'host_node_name':host_node_name}
         expansions.update(self.environ_expansions)
         if parser.has_section('include'):
+            parser.expand_here(self.here)
             if not parser.has_option('include', 'files'):
                 raise ValueError(".ini file has [include] section, but no "
                 "files setting")
@@ -585,12 +594,16 @@ class ServerOptions(Options):
                         'No file matches via include "%s"' % pattern)
                     continue
                 for filename in sorted(filenames):
-                    self.parse_warnings.append(
+                    self.parse_infos.append(
                         'Included extra file "%s" during parsing' % filename)
                     try:
                         parser.read(filename)
                     except ConfigParser.ParsingError as why:
                         raise ValueError(str(why))
+                    else:
+                        parser.expand_here(
+                            os.path.abspath(os.path.dirname(filename))
+                        )
 
         sections = parser.sections()
         if not 'supervisord' in sections:
@@ -834,8 +847,8 @@ class ServerOptions(Options):
             return self._processes_from_section(
                 parser, section, group_name, klass)
         except ValueError as e:
-            filename = parser.section_to_file.get(section, '???')
-            raise ValueError('%s in section %r (file: %s)'
+            filename = parser.section_to_file.get(section, self.configfile)
+            raise ValueError('%s in section %r (file: %r)'
                              % (e, section, filename))
 
     def _processes_from_section(self, parser, section, group_name,
@@ -944,6 +957,15 @@ class ServerOptions(Options):
                         'rollover, set maxbytes > 0 to avoid filling up '
                         'filesystem unintentionally' % (section, n))
 
+            if redirect_stderr:
+                if logfiles['stderr_logfile'] not in (Automatic, None):
+                    self.parse_warnings.append(
+                        'For [%s], redirect_stderr=true but stderr_logfile has '
+                        'also been set to a filename, the filename has been '
+                        'ignored' % section)
+                # never create an stderr logfile when redirected
+                logfiles['stderr_logfile'] = None
+
             command = get(section, 'command', None, expansions=expansions)
             if command is None:
                 raise ValueError(
@@ -1003,10 +1025,12 @@ class ServerOptions(Options):
         get = parser.saneget
         username = get(section, 'username', None)
         password = get(section, 'password', None)
-        if username is None and password is not None:
-            raise ValueError(
-                'Must specify username if password is specified in [%s]'
-                % section)
+        if username is not None or password is not None:
+            if username is None or password is None:
+                raise ValueError(
+                    'Section [%s] contains incomplete authentication: '
+                    'If a username or a password is specified, both the '
+                    'username and password must be specified' % section)
         return {'username':username, 'password':password}
 
     def server_configs_from_parser(self, parser):
@@ -1031,13 +1055,12 @@ class ServerOptions(Options):
         for name, section in unix_serverdefs:
             config = {}
             get = parser.saneget
-            sfile = get(section, 'file', None)
+            sfile = get(section, 'file', None, expansions={'here': self.here})
             if sfile is None:
                 raise ValueError('section [%s] has no file value' % section)
             sfile = sfile.strip()
             config['name'] = name
             config['family'] = socket.AF_UNIX
-            sfile = expand(sfile, {'here':self.here}, 'socket file')
             config['file'] = normalize_path(sfile)
             config.update(self._parse_username_and_password(parser, section))
             chown = get(section, 'chown', None)
@@ -1309,10 +1332,10 @@ class ServerOptions(Options):
         os.setuid(uid)
 
     def waitpid(self):
-        # Need pthread_sigmask here to avoid concurrent sigchild, but Python
+        # Need pthread_sigmask here to avoid concurrent sigchld, but Python
         # doesn't offer in Python < 3.4.  There is still a race condition here;
-        # we can get a sigchild while we're sitting in the waitpid call.
-        # However, AFAICT, if waitpid is interrupted bu SIGCHILD, as long as we
+        # we can get a sigchld while we're sitting in the waitpid call.
+        # However, AFAICT, if waitpid is interrupted by SIGCHLD, as long as we
         # call waitpid again (which happens every so often during the normal
         # course in the mainloop), we'll eventually reap the child that we
         # tried to reap during the interrupted call. At least on Linux, this
@@ -1369,7 +1392,7 @@ class ServerOptions(Options):
 
         for limit in limits:
 
-            lmin = limit['min']
+            min = limit['min']
             res = limit['resource']
             msg = limit['msg']
             name = limit['name']
@@ -1377,15 +1400,15 @@ class ServerOptions(Options):
 
             soft, hard = resource.getrlimit(res)
 
-            if (soft < lmin) and (soft != -1): # -1 means unlimited
-                if (hard < lmin) and (hard != -1):
+            if (soft < min) and (soft != -1): # -1 means unlimited
+                if (hard < min) and (hard != -1):
                     # setrlimit should increase the hard limit if we are
                     # root, if not then setrlimit raises and we print usage
-                    hard = lmin
+                    hard = min
 
                 try:
-                    resource.setrlimit(res, (lmin, hard))
-                    msgs.append('Increased %(name)s limit to %(lmin)s' %
+                    resource.setrlimit(res, (min, hard))
+                    msgs.append('Increased %(name)s limit to %(min)s' %
                                 locals())
                 except (resource.error, ValueError):
                     self.usage(msg % locals())
@@ -1557,6 +1580,7 @@ class ClientOptions(Options):
     username = None
     password = None
     history_file = None
+    exit_on_error = None
 
     def __init__(self):
         Options.__init__(self, require_configfile=False)
@@ -1568,6 +1592,9 @@ class ClientOptions(Options):
         self.configroot.supervisorctl.username = None
         self.configroot.supervisorctl.password = None
         self.configroot.supervisorctl.history_file = None
+
+        # Set to 0 because it's only activated in realize() if not in interactive mode.
+        self.configroot.supervisorctl.exit_on_error = 0
 
         from supervisor.supervisorctl import DefaultControllerPlugin
         default_factory = ('default', DefaultControllerPlugin, {})
@@ -1589,6 +1616,8 @@ class ClientOptions(Options):
         if not self.args:
             self.interactive = 1
 
+        self.exit_on_error = 0 if self.interactive else 1
+
     def read_config(self, fp):
         section = self.configroot.supervisorctl
         need_close = False
@@ -1601,35 +1630,33 @@ class ClientOptions(Options):
                 need_close = True
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)
-        kwargs = {}
-        if PY3:
-            kwargs['inline_comment_prefixes'] = (';','#')
-        config = UnhosedConfigParser(**kwargs)
-        config.expansions = self.environ_expansions
-        config.mysection = 'supervisorctl'
+
+        parser = UnhosedConfigParser()
+        parser.expansions = self.environ_expansions
+        parser.mysection = 'supervisorctl'
         try:
-            config.read_file(fp)
+            parser.read_file(fp)
         except AttributeError:
-            config.readfp(fp)
+            parser.readfp(fp)
         if need_close:
             fp.close()
-        sections = config.sections()
+        sections = parser.sections()
         if not 'supervisorctl' in sections:
             raise ValueError('.ini file does not include supervisorctl section')
-        serverurl = config.getdefault('serverurl', 'http://localhost:9001')
+        serverurl = parser.getdefault('serverurl', 'http://localhost:9001',
+            expansions={'here': self.here})
         if serverurl.startswith('unix://'):
-            sf = serverurl[7:]
-            path = expand(sf, {'here':self.here}, 'serverurl')
-            path = normalize_path(path)
+            path = normalize_path(serverurl[7:])
             serverurl = 'unix://%s' % path
         section.serverurl = serverurl
 
         # The defaults used below are really set in __init__ (since
         # section==self.configroot.supervisorctl)
-        section.prompt = config.getdefault('prompt', section.prompt)
-        section.username = config.getdefault('username', section.username)
-        section.password = config.getdefault('password', section.password)
-        history_file = config.getdefault('history_file', section.history_file)
+        section.prompt = parser.getdefault('prompt', section.prompt)
+        section.username = parser.getdefault('username', section.username)
+        section.password = parser.getdefault('password', section.password)
+        history_file = parser.getdefault('history_file', section.history_file,
+            expansions={'here': self.here})
 
         if history_file:
             history_file = normalize_path(history_file)
@@ -1640,7 +1667,7 @@ class ClientOptions(Options):
             self.history_file = None
 
         self.plugin_factories += self.get_plugins(
-            config,
+            parser,
             'supervisor.ctl_factory',
             'ctlplugin:'
             )
@@ -1665,16 +1692,46 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
     mysection = 'supervisord'
 
     def __init__(self, *args, **kwargs):
+        # inline_comment_prefixes was added in Python 3 but its default makes
+        # RawConfigParser behave differently than it did on Python 2.  This
+        # makes it behave the same by default on Python 2 and 3.
+        if PY3 and ('inline_comment_prefixes' not in kwargs):
+            kwargs['inline_comment_prefixes'] = (';', '#')
+
         ConfigParser.RawConfigParser.__init__(self, *args, **kwargs)
+
         self.section_to_file = {}
         self.expansions = {}
 
-    def read_string(self, s):
-        s = StringIO(s)
+    def read_string(self, string, source='<string>'):
+        '''Parse configuration data from a string.  This is intended
+        to be used in tests only.  We add this method for Py 2/3 compat.'''
         try:
-            return self.read_file(s) # Python 3.2 or later
+            return ConfigParser.RawConfigParser.read_string(
+                self, string, source) # Python 3.2 or later
         except AttributeError:
-            return self.readfp(s)
+            return self.readfp(StringIO(string))
+
+    def read(self, filenames, **kwargs):
+        '''Attempt to read and parse a list of filenames, returning a list
+        of filenames which were successfully parsed.  This is a method of
+        RawConfigParser that is overridden to build self.section_to_file,
+        which is a mapping of section names to the files they came from.
+        '''
+        if isinstance(filenames, basestring):  # RawConfigParser compat
+            filenames = [filenames]
+
+        ok_filenames = []
+        for filename in filenames:
+            sections_orig = self._sections.copy()
+
+            ok_filenames.extend(
+                ConfigParser.RawConfigParser.read(self, [filename], **kwargs))
+
+            diff = frozenset(self._sections) - frozenset(sections_orig)
+            for section in diff:
+                self.section_to_file[section] = filename
+        return ok_filenames
 
     def saneget(self, section, option, default=_marker, do_expand=True,
                 expansions={}):
@@ -1699,21 +1756,14 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
         return self.saneget(self.mysection, option, default=default,
                             expansions=expansions, **kwargs)
 
-    def read(self, filenames, **kwargs):
-        if isinstance(filenames, basestring):  # RawConfigParser compat
-            filenames = [filenames]
-
-        ok_filenames = []
-        for filename in filenames:
-            sections_orig = self._sections.copy()
-
-            ok_filenames.extend(
-                ConfigParser.RawConfigParser.read(self, [filename], **kwargs))
-
-            diff = frozenset(self._sections) - frozenset(sections_orig)
-            for section in diff:
-                self.section_to_file[section] = filename
-        return ok_filenames
+    def expand_here(self, here):
+        HERE_FORMAT = '%(here)s'
+        for section in self.sections():
+            for key, value in self.items(section):
+                if HERE_FORMAT in value:
+                    assert here is not None, "here has not been set to a path"
+                    value = value.replace(HERE_FORMAT, here)
+                    self.set(section, key, value)
 
 
 class Config(object):

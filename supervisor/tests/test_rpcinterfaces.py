@@ -614,7 +614,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
              ]
             )
 
-
     def test_stopProcess(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', '/bin/foo')
@@ -628,8 +627,9 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         process = supervisord.process_groups['foo'].processes['foo']
         self.assertEqual(process.backoff, 0)
         self.assertEqual(process.delay, 0)
-        self.assertEqual(process.killing, 0)
+        self.assertFalse(process.killing)
         self.assertEqual(process.state, ProcessStates.STOPPED)
+        self.assertTrue(process.stop_report_called)
         self.assertEqual(len(supervisord.process_groups['foo'].processes), 1)
         self.assertEqual(interface.update_text, 'stopProcess')
 
@@ -644,6 +644,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(result, True)
         process = supervisord.process_groups['foo'].processes['foo']
         self.assertEqual(process.stop_called, True)
+        self.assertTrue(process.stop_report_called)
         self.assertEqual(interface.update_text, 'stopProcess')
 
     def test_stopProcess_success_in_onwait(self):
@@ -1108,18 +1109,58 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
 
         interface = self._makeOne(supervisord)
         configs = interface.getAllConfigInfo()
-        self.assertEqual(configs, [{ 'group': 'group1',
-                                     'name': 'process1',
-                                     'inuse': True,
-                                     'autostart': True,
-                                     'process_prio': 999,
-                                     'group_prio': 999 },
-                                   { 'group': 'group1',
-                                     'name': 'process2',
-                                     'inuse': True,
-                                     'autostart': True,
-                                     'process_prio': 999,
-                                     'group_prio': 999 }])
+        self.assertEqual(configs[0]['autostart'], True)
+        self.assertEqual(configs[0]['stopwaitsecs'], 10)
+        self.assertEqual(configs[0]['stdout_events_enabled'], False)
+        self.assertEqual(configs[0]['stderr_events_enabled'], False)
+        self.assertEqual(configs[0]['group'], 'group1')
+        self.assertEqual(configs[0]['stdout_capture_maxbytes'], 0)
+        self.assertEqual(configs[0]['name'], 'process1')
+        self.assertEqual(configs[0]['stopsignal'], 15)
+        self.assertEqual(configs[0]['stderr_syslog'], False)
+        self.assertEqual(configs[0]['stdout_logfile_maxbytes'], 0)
+        self.assertEqual(configs[0]['group_prio'], 999)
+        self.assertEqual(configs[0]['killasgroup'], False)
+        self.assertEqual(configs[0]['process_prio'], 999)
+        self.assertEqual(configs[0]['stdout_syslog'], False)
+        self.assertEqual(configs[0]['stderr_logfile_maxbytes'], 0)
+        self.assertEqual(configs[0]['startsecs'], 10)
+        self.assertEqual(configs[0]['redirect_stderr'], False)
+        self.assertEqual(configs[0]['stdout_logfile'], None)
+        self.assertEqual(configs[0]['exitcodes'], (0, 2))
+        self.assertEqual(configs[0]['stderr_capture_maxbytes'], 0)
+        self.assertEqual(configs[0]['startretries'], 999)
+        self.assertEqual(configs[0]['stderr_logfile_maxbytes'], 0)
+        self.assertEqual(configs[0]['inuse'], True)
+        self.assertEqual(configs[0]['stderr_logfile'], None)
+        self.assertEqual(configs[0]['stdout_logfile_backups'], 0)
+        assert 'test_rpcinterfaces.py' in configs[0]['command']
+        self.assertEqual(configs[1]['autostart'], True)
+        self.assertEqual(configs[1]['stopwaitsecs'], 10)
+        self.assertEqual(configs[1]['stdout_events_enabled'], False)
+        self.assertEqual(configs[1]['stderr_events_enabled'], False)
+        self.assertEqual(configs[1]['group'], 'group1')
+        self.assertEqual(configs[1]['stdout_capture_maxbytes'], 0)
+        self.assertEqual(configs[1]['name'], 'process2')
+        self.assertEqual(configs[1]['stopsignal'], 15)
+        self.assertEqual(configs[1]['stderr_syslog'], False)
+        self.assertEqual(configs[1]['stdout_logfile_maxbytes'], 0)
+        self.assertEqual(configs[1]['group_prio'], 999)
+        self.assertEqual(configs[1]['killasgroup'], False)
+        self.assertEqual(configs[1]['process_prio'], 999)
+        self.assertEqual(configs[1]['stdout_syslog'], False)
+        self.assertEqual(configs[1]['stderr_logfile_maxbytes'], 0)
+        self.assertEqual(configs[1]['startsecs'], 10)
+        self.assertEqual(configs[1]['redirect_stderr'], False)
+        self.assertEqual(configs[1]['stdout_logfile'], None)
+        self.assertEqual(configs[1]['exitcodes'], (0, 2))
+        self.assertEqual(configs[1]['stderr_capture_maxbytes'], 0)
+        self.assertEqual(configs[1]['startretries'], 999)
+        self.assertEqual(configs[1]['stderr_logfile_maxbytes'], 0)
+        self.assertEqual(configs[1]['inuse'], True)
+        self.assertEqual(configs[1]['stderr_logfile'], None)
+        self.assertEqual(configs[1]['stdout_logfile_backups'], 0)
+        assert 'test_rpcinterfaces.py' in configs[0]['command']
 
     def test__interpretProcessInfo(self):
         supervisord = DummySupervisor()
@@ -1183,6 +1224,18 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         description = interface._interpretProcessInfo(stopped2)
         self.assertEqual(description, 'Not started')
 
+    def test__interpretProcessInfo_doesnt_report_negative_uptime(self):
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        from supervisor.process import ProcessStates
+        running = {'name': 'running',
+                   'pid': 42,
+                   'state': ProcessStates.RUNNING,
+                   'start': _NOW + 10, # started in the future
+                   'stop': None,
+                   'now': _NOW}
+        description = interface._interpretProcessInfo(running)
+        self.assertEqual(description, 'pid 42, uptime 0:00:00')
 
     def test_getProcessInfo(self):
         from supervisor.process import ProcessStates
@@ -1258,6 +1311,25 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         self._assertRPCError(xmlrpc.Faults.BAD_NAME,
                              interface.getProcessInfo, 'foo:')
+
+    def test_getProcessInfo_caps_timestamps_exceeding_xmlrpc_maxint(self):
+        from supervisor.compat import xmlrpclib
+        options = DummyOptions()
+        config = DummyPConfig(options, 'foo', '/bin/foo',
+                              stdout_logfile=None)
+        process = DummyProcess(config)
+        process.laststart = float(xmlrpclib.MAXINT + 1)
+        process.laststop = float(xmlrpclib.MAXINT + 1)
+        pgroup_config = DummyPGroupConfig(options, name='foo')
+        pgroup = DummyProcessGroup(pgroup_config)
+        pgroup.processes = {'foo':process}
+        supervisord = DummySupervisor(process_groups={'foo':pgroup})
+        interface = self._makeOne(supervisord)
+        interface._now = lambda: float(xmlrpclib.MAXINT + 1)
+        data = interface.getProcessInfo('foo')
+        self.assertEqual(data['start'], xmlrpclib.MAXINT)
+        self.assertEqual(data['stop'], xmlrpclib.MAXINT)
+        self.assertEqual(data['now'], xmlrpclib.MAXINT)
 
     def test_getAllProcessInfo(self):
         from supervisor.process import ProcessStates
@@ -1866,7 +1938,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         pconfig1 = DummyPConfig(options, 'process1', 'foo')
         supervisord = PopulatedDummySupervisor(options, 'process1', pconfig1)
         supervisord.set_procattr('process1', 'pid', 42)
-        supervisord.set_procattr('process1', 'killing',True)
+        supervisord.set_procattr('process1', 'killing', True)
         interface   = self._makeOne(supervisord)
         from supervisor import xmlrpc
         self._assertRPCError(xmlrpc.Faults.NOT_RUNNING,
@@ -2110,44 +2182,34 @@ class SystemNamespaceXMLRPCInterfaceTests(TestBase):
 
     def test_multicall_simplevals(self):
         interface = self._makeOne()
-        callback = interface.multicall([
+        results = interface.multicall([
             {'methodName':'system.methodHelp', 'params':['system.methodHelp']},
             {'methodName':'system.listMethods', 'params':[]},
             ])
-        from supervisor import http
-        result = http.NOT_DONE_YET
-        while result is http.NOT_DONE_YET:
-            result = callback()
-        self.assertEqual(result[0], interface.methodHelp('system.methodHelp'))
-        self.assertEqual(result[1], interface.listMethods())
+        self.assertEqual(results[0], interface.methodHelp('system.methodHelp'))
+        self.assertEqual(results[1], interface.listMethods())
 
     def test_multicall_recursion_guard(self):
         from supervisor import xmlrpc
         interface = self._makeOne()
-        callback = interface.multicall([
+        results = interface.multicall([
             {'methodName': 'system.multicall', 'params': []},
         ])
 
-        from supervisor import http
-        result = http.NOT_DONE_YET
-        while result is http.NOT_DONE_YET:
-            result = callback()
-
-        code = xmlrpc.Faults.INCORRECT_PARAMETERS
-        desc = xmlrpc.getFaultDescription(code)
-        recursion_fault = {'faultCode': code, 'faultString': desc}
-
-        self.assertEqual(result, [recursion_fault])
+        e = xmlrpc.RPCError(xmlrpc.Faults.INCORRECT_PARAMETERS,
+                'Recursive system.multicall forbidden')
+        recursion_fault = {'faultCode': e.code, 'faultString': e.text}
+        self.assertEqual(results, [recursion_fault])
 
     def test_multicall_nested_callback(self):
+        from supervisor import http
         interface = self._makeOne()
         callback = interface.multicall([
             {'methodName':'supervisor.stopAllProcesses'}])
-        from supervisor import http
-        result = http.NOT_DONE_YET
-        while result is http.NOT_DONE_YET:
-            result = callback()
-        self.assertEqual(result[0], [])
+        results = http.NOT_DONE_YET
+        while results is http.NOT_DONE_YET:
+            results = callback()
+        self.assertEqual(results[0], [])
 
     def test_methodHelp(self):
         from supervisor import xmlrpc

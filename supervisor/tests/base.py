@@ -82,6 +82,7 @@ class DummyOptions:
         self.openreturn = None
         self.readfd_result = ''
         self.parse_warnings = []
+        self.parse_infos = []
         self.serverurl = 'http://localhost:9001'
         self.changed_directory = False
         self.chdir_error = None
@@ -374,9 +375,9 @@ class DummyProcess(object):
     laststart = 0 # Last time the subprocess was started; 0 if never
     laststop = 0  # Last time the subprocess was stopped; 0 if never
     delay = 0 # If nonzero, delay starting or killing until this time
-    administrative_stop = 0 # true if the process has been stopped by an admin
-    system_stop = 0 # true if the process has been stopped by the system
-    killing = 0 # flag determining whether we are trying to kill this proc
+    administrative_stop = False # true if the process stopped by an admin
+    system_stop = False # true if the process has been stopped by the system
+    killing = False # flag determining whether we are trying to kill this proc
     backoff = 0 # backoff counter (to backofflimit)
     waitstatus = None
     exitstatus = None
@@ -397,6 +398,7 @@ class DummyProcess(object):
         self.config = config
         self.logsremoved = False
         self.stop_called = False
+        self.stop_report_called = True
         self.backoff_secs = None
         self.spawned = False
         if state is None:
@@ -438,6 +440,9 @@ class DummyProcess(object):
         self.killing = False
         from supervisor.process import ProcessStates
         self.state = ProcessStates.STOPPED
+
+    def stop_report(self):
+        self.stop_report_called = True
 
     def kill(self, signal):
         self.killed_with = signal
@@ -506,9 +511,11 @@ class DummyPConfig:
                  uid=None, stdout_logfile=None, stdout_capture_maxbytes=0,
                  stdout_events_enabled=False,
                  stdout_logfile_backups=0, stdout_logfile_maxbytes=0,
+                 stdout_syslog=False,
                  stderr_logfile=None, stderr_capture_maxbytes=0,
                  stderr_events_enabled=False,
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
+                 stderr_syslog=False,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
                  exitcodes=(0,2), environment=None, serverurl=None):
@@ -526,11 +533,13 @@ class DummyPConfig:
         self.stdout_events_enabled = stdout_events_enabled
         self.stdout_logfile_backups = stdout_logfile_backups
         self.stdout_logfile_maxbytes = stdout_logfile_maxbytes
+        self.stdout_syslog = stdout_syslog
         self.stderr_logfile = stderr_logfile
         self.stderr_capture_maxbytes = stderr_capture_maxbytes
         self.stderr_events_enabled = stderr_events_enabled
         self.stderr_logfile_backups = stderr_logfile_backups
         self.stderr_logfile_maxbytes = stderr_logfile_maxbytes
+        self.stderr_syslog = stderr_syslog
         self.redirect_stderr = redirect_stderr
         if stopsignal is None:
             import signal
@@ -932,6 +941,9 @@ class DummySupervisorRPCNamespace:
 
     def raiseError(self):
         raise ValueError('error')
+
+    def getXmlRpcUnmarshallable(self):
+        return {'stdout_logfile': None}  # None is unmarshallable
 
     def getSupervisorVersion(self):
         return '3000'

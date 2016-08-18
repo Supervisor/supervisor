@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (c) 2006-2013 Agendaless Consulting and Contributors.
+# Copyright (c) 2006-2015 Agendaless Consulting and Contributors.
 # All Rights Reserved.
 #
 # This software is subject to the provisions of the BSD-like license at
@@ -60,6 +60,7 @@ CLASSIFIERS = [
     "Programming Language :: Python :: 3.2",
     "Programming Language :: Python :: 3.3",
     "Programming Language :: Python :: 3.4",
+    "Programming Language :: Python :: 3.5",
 ]
 
 version_txt = os.path.join(here, 'supervisor/version.txt')
@@ -75,8 +76,6 @@ dist = setup(
     classifiers=CLASSIFIERS,
     author="Chris McDonough",
     author_email="chrism@plope.com",
-    maintainer="Chris McDonough",
-    maintainer_email="chrism@plope.com",
     packages=find_packages(),
     install_requires=requires,
     extras_require={

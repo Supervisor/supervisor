@@ -4,8 +4,13 @@ import time
 import sys
 import socket
 import errno
-import pwd
 import weakref
+import traceback
+
+try:
+    import pwd
+except ImportError:  # Windows
+    import getpass as pwd
 
 from supervisor.compat import urllib
 from supervisor.compat import sha1
@@ -330,17 +335,18 @@ class deferring_http_channel(http_server.http_channel):
     # order to spew tail -f output faster (speculative)
     ac_out_buffer_size = 4096
 
-    delay = False
-    writable_check = time.time()
+    delay = 0 # seconds
+    last_writable_check = time.time()
 
-    def writable(self, t=time.time):
-        now = t()
+    def writable(self, now=None):
+        if now is None:  # for unit tests
+            now = time.time()
+
         if self.delay:
             # we called a deferred producer via this channel (see refill_buffer)
-            last_writable_check = self.writable_check
-            elapsed = now - last_writable_check
-            if elapsed > self.delay:
-                self.writable_check = now
+            elapsed = now - self.last_writable_check
+            if (elapsed > self.delay) or (elapsed < 0):
+                self.last_writable_check = now
                 return True
             else:
                 return False
@@ -783,12 +789,7 @@ class mainlogtail_handler:
 
 def make_http_servers(options, supervisord):
     servers = []
-    class LogWrapper:
-        def log(self, msg):
-            if msg.endswith('\n'):
-                msg = msg[:-1]
-            options.logger.trace(msg)
-    wrapper = LogWrapper()
+    wrapper = LogWrapper(options.logger)
 
     for config in options.server_configs:
         family = config['family']
@@ -815,7 +816,8 @@ def make_http_servers(options, supervisord):
             try:
                 inst = factory(supervisord, **d)
             except:
-                import traceback; traceback.print_exc()
+                tb = traceback.format_exc()
+                options.logger.warn(tb)
                 raise ValueError('Could not make %s rpc interface' % name)
             subinterfaces.append((name, inst))
             options.logger.info('RPC interface %r initialized' % name)
@@ -858,6 +860,23 @@ def make_http_servers(options, supervisord):
 
     return servers
 
+class LogWrapper:
+    '''Receives log messages from the Medusa servers and forwards
+    them to the Supervisor logger'''
+    def __init__(self, logger):
+        self.logger = logger
+
+    def log(self, msg):
+        '''Medusa servers call this method.  There is no log level so
+        we have to sniff the message.  We want "Server Error" messages
+        from medusa.http_server logged as errors at least.'''
+        if msg.endswith('\n'):
+            msg = msg[:-1]
+        if 'error' in msg.lower():
+            self.logger.error(msg)
+        else:
+            self.logger.trace(msg)
+
 class encrypted_dictionary_authorizer:
     def __init__ (self, dict):
         self.dict = dict
@@ -879,4 +898,3 @@ class supervisor_auth_handler(auth_handler):
         auth_handler.__init__(self, dict, handler, realm)
         # override the authorizer with one that knows about SHA hashes too
         self.authorizer = encrypted_dictionary_authorizer(dict)
-

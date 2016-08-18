@@ -2,7 +2,7 @@ import sys
 import unittest
 import errno
 import select
-from mock import Mock
+from supervisor.tests.base import Mock
 
 from supervisor.poller import SelectPoller, PollPoller, KQueuePoller
 from supervisor.poller import implements_poll, implements_kqueue

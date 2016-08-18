@@ -1,5 +1,5 @@
-4.0.0-dev (Next 4.x Release)
-----------------------------
+4.0.0.dev0 (Next 4.x Release)
+-----------------------------
 
 - Support for Python 3 has been added.  On Python 3, Supervisor requires
   Python 3.2 or later.
@@ -18,16 +18,89 @@
   same time.  Specifying a log filename of ``syslog`` is still supported
   but deprecated.  Patch by Jason R. Coombs.
 
+- The behavior of the config file expansion ``%(here)s`` has changed.  In
+  previous versions, a bug caused ``%(here)s`` to always expand to the
+  directory of the root config file.  Now, when ``%(here)s`` is used inside
+  a file included via ``[include]``, it will expand to the directory of
+  that file.  Thanks to Alex Eftimie and Zoltan Toth-Czifra for the patches.
+
+- ``supervisorctl`` will now set its exit status to a non-zero value when an
+  error condition occurs.  Previous versions did not set the exit status so
+  it was always zero.  Patch by Luke Weber.
+
+3.3.1 (2016-08-02)
+------------------
+
+- Fixed an issue where `supervisord` could hang when responding to HTTP
+  requests (including `supervisorctl` commands) if the system time was set
+  back after `supervisord` was started.
+
+- Zope ``trackrefs``, a debugging tool that was included in the ``tests``
+  directory but hadn't been used for years, has been removed.
+
+3.3.0 (2016-05-14)
+------------------
+
+- ``supervisord`` will now use ``kqueue``, ``poll``, or ``select`` to monitor
+  its file descriptors, in that order, depending on what is available on the
+  system.  Previous versions used ``select`` only and would crash with the error
+  ``ValueError: filedescriptor out of range in select()`` when running a large
+  number of subprocesses (whatever number resulted in enough file descriptors
+  to exceed the fixed-size file descriptor table used by ``select``, which is
+  typically 1024).  Patch by Igor Sobreira.
+
+- ``/etc/supervisor/supervisord.conf`` has been added to the config file search
+  paths.  Many versions of Supervisor packaged for Debian and Ubuntu have
+  included a patch that added this path.  This difference was reported in a
+  number of tickets as a source of confusion and upgrade difficulties, so the
+  path has been added.  Patch by Kelvin Wong.
+
+- Glob patterns in the ``[include]`` section now support the
+  ``host_node_name`` expansion.  Patch by Paul Lockaby.
+
+- Files included via the ``[include]`` section are now logged at the ``INFO``
+  level instead of ``WARN``.  Patch by Daniel Hahler.
+
+3.2.3 (2016-03-19)
+------------------
+
+- 400 Bad Request is now returned if an XML-RPC request is received with
+  invalid body data.  In previous versions, 500 Internal Server Error
+  was returned.
+
+3.2.2 (2016-03-04)
+------------------
+
+- Parsing the config file will now fail with an error message if an
+  ``inet_http_server`` or ``unix_http_server`` section contains a ``username=``
+  but no ``password=``.  In previous versions, ``supervisord`` would start with
+  this invalid configuration but the HTTP server would always return a 500
+  Internal Server Error.  Thanks to Chris Ergatides for reporting this issue.
+
+3.2.1 (2016-02-06)
+------------------
+
+- Fixed a server exception ``OverflowError: int exceeds XML-RPC limits`` that
+  made ``supervisorctl status`` unusable if the system time was far into the
+  future.  The XML-RPC API returns timestamps as XML-RPC integers, but
+  timestamps will exceed the maximum value of an XML-RPC integer in January
+  2038 ("Year 2038 Problem").  For now, timestamps exceeding the maximum
+  integer will be capped at the maximum to avoid the exception and retain
+  compatibility with existing API clients.  In a future version of the API,
+  the return type for timestamps will be changed.
+
+3.2.0 (2015-11-30)
+------------------
+
+- Files included via the ``[include]`` section are read in sorted order.  In
+  past versions, the order was undefined.  Patch by Ionel Cristian Mărieș.
+
+- ``supervisorctl start`` and ``supervisorctl stop`` now complete more quickly
+  when handling many processes.  Thanks to Chris McDonough for this patch.
+  See: https://github.com/Supervisor/supervisor/issues/131
+
 - Environment variables are now expanded for all config file options.
   Patch by Dexter Tad-y.
-
-- "supervisorctl start [spec naming lots of processes]" and "supervisorctl
-  stop [spec naming lots of processes]" both now complete much more quickly.
-  See https://github.com/Supervisor/supervisor/issues/131 .
-
-- Allow > 1023 file descriptors by using poll/kqueue on platforms which
-  support it.  See https://github.com/Supervisor/supervisor/pull/129.
-  Patch by Igor Sobreira.
 
 - Added ``signalProcess``, ``signalProcessGroup``, and ``signalAllProcesses``
   XML-RPC methods to supervisor RPC interface.  Thanks to Casey Callendrello,
@@ -39,7 +112,7 @@
 - Errors caused by bad values in a config file now show the config section
   to make debugging easier.  Patch by Marc Abramowitz.
 
-- Setting ``redirect_stderr=true`` in an `[eventlistener:x]`` section is now
+- Setting ``redirect_stderr=true`` in an ``[eventlistener:x]`` section is now
   disallowed because any messages written to ``stderr`` would interfere
   with the eventlistener protocol on ``stdout``.
 
@@ -48,8 +121,32 @@
   happen is if a log filename was accidentally set to a directory instead
   of a file.  Thanks to Grzegorz Nosek for reporting this issue.
 
-- Files included via the `[include]` section are read in sorted order.  In
-  past versions, the order was undefined.  Patch by Ionel Cristian Mărieș.
+- Fixed a bug introduced in 3.1.0 where ``supervisord`` could crash when
+  attempting to display a resource limit error.
+
+- Fixed a bug where ``supervisord`` could crash with the message
+  ``Assertion failed for processname: RUNNING not in STARTING`` if a time
+  change caused the last start time of the process to be in the future.
+  Thanks to Róbert Nagy, Sergey Leschenko, and samhair for the patches.
+
+- A warning is now logged if an eventlistener enters the UNKNOWN state,
+  which usually indicates a bug in the eventlistener.  Thanks to Steve
+  Winton and detailyang for reporting issues that led to this change.
+
+- Errors from the web interface are now logged at the ``ERROR`` level.
+  Previously, they were logged at the ``TRACE`` level and easily
+  missed.  Thanks to Thomas Güttler for reporting this issue.
+
+- Fixed ``DeprecationWarning: Parameters to load are deprecated. Call
+  .resolve and .require separately.`` on setuptools >= 11.3.
+
+- If ``redirect_stderr=true`` and ``stderr_logfile=auto``, no stderr log
+  file will be created.  In previous versions, an empty stderr log file
+  would be created.  Thanks to Łukasz Kożuchowski for the initial patch.
+
+- Fixed an issue in Medusa that would cause ``supervisorctl tail -f`` to
+  disconnect if many other ``supervisorctl`` commands were run in parallel.
+  Patch by Stefan Friesel.
 
 3.1.3 (2014-10-28)
 ------------------
@@ -86,8 +183,8 @@
   processes) are spewing to their stdout or stderr.  See comments attached to
   https://github.com/Supervisor/supervisor/pull/263 .
 
-- Added docs/conf.py, docs/Makefile, and supervisor/scripts/*.py to
-  the release package.
+- Added ``docs/conf.py``, ``docs/Makefile``, and ``supervisor/scripts/*.py``
+  to the release package.
 
 3.1.0 (2014-07-29)
 ------------------
@@ -134,7 +231,7 @@
   it caused installation issues on some systems.
 
 - Fixed a bug in Medusa where the HTTP Basic authorizer would cause an
-  exception if the password contained a colon.  Thanks to Thomas Guttler
+  exception if the password contained a colon.  Thanks to Thomas Güttler
   for reporting this issue.
 
 - Fixed an XML-RPC bug where calling supervisor.clearProcessLogs() with a
@@ -945,7 +1042,7 @@
 - A new module "supervisor.childutils" was added.  This module
   provides utilities for Python scripts which act as children of
   supervisord.  Most notably, it contains an API method
-  "getRPCInterface" allows you to obtain an xmlrpxlib ServerProxy
+  "getRPCInterface" allows you to obtain an xmlrpclib ServerProxy
   that is willing to communicate with the parent supervisor.  It
   also contains utility functions that allow for parsing of
   supervisor event listener protocol headers.  A pair of scripts

@@ -16,6 +16,7 @@ from supervisor.tests.base import DummyRPCInterfaceFactory
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyRequest
+from supervisor.tests.base import DummyLogger
 
 from supervisor.http import NOT_DONE_YET
 
@@ -311,7 +312,7 @@ class DeferringHookedProducerTests(unittest.TestCase):
         producer = self._makeOne(None, None)
         self.assertEqual(producer.more(), '')
 
-class Test_deferring_http_request(unittest.TestCase):
+class DeferringHttpRequestTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.http import deferring_http_request
         return deferring_http_request
@@ -427,6 +428,57 @@ class Test_deferring_http_request(unittest.TestCase):
         inst.done()
         self.assertTrue(channel.closed)
 
+class DeferringHttpChannelTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.http import deferring_http_channel
+        return deferring_http_channel
+
+    def _makeOne(self):
+        return self._getTargetClass()(
+            server=None,
+            conn=None,
+            addr=None
+            )
+
+    def test_defaults_delay_and_last_writable_check_time(self):
+        channel = self._makeOne()
+        self.assertEqual(channel.delay, 0)
+        self.assertTrue(channel.last_writable_check > 0)
+
+    def test_writable_with_delay_is_False_if_elapsed_lt_delay(self):
+        channel = self._makeOne()
+        channel.delay = 2
+        channel.last_writable_check = _NOW
+        later = _NOW + 1
+        self.assertFalse(channel.writable(now=later))
+        self.assertEqual(channel.last_writable_check, _NOW)
+
+    def test_writable_with_delay_is_False_if_elapsed_eq_delay(self):
+        channel = self._makeOne()
+        channel.delay = 2
+        channel.last_writable_check = _NOW
+        later = _NOW + channel.delay
+        self.assertFalse(channel.writable(now=later))
+        self.assertEqual(channel.last_writable_check, _NOW)
+
+    def test_writable_with_delay_is_True_if_elapsed_gt_delay(self):
+        channel = self._makeOne()
+        channel.delay = 2
+        channel.last_writable_check = _NOW
+        later = _NOW + channel.delay + 0.1
+        self.assertTrue(channel.writable(now=later))
+        self.assertEqual(channel.last_writable_check, later)
+
+    def test_writable_with_delay_is_True_if_system_time_goes_backwards(self):
+        channel = self._makeOne()
+        channel.delay = 2
+        channel.last_writable_check = _NOW
+        later = _NOW - 3600 # last check was in the future
+        self.assertTrue(channel.writable(now=later))
+        self.assertEqual(channel.last_writable_check, later)
+
+_NOW = 1470085990
+
 class EncryptedDictionaryAuthorizedTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.http import encrypted_dictionary_authorizer
@@ -503,6 +555,39 @@ class SupervisorAuthHandlerTests(unittest.TestCase):
         auth_handler.handle_request(request)
         self.assertFalse(handler.handled_request)
 
+class LogWrapperTests(unittest.TestCase):
+    def _getTargetClass(self):
+        from supervisor.http import LogWrapper
+        return LogWrapper
+
+    def _makeOne(self, logger):
+        return self._getTargetClass()(logger)
+
+    def test_strips_trailing_newlines_from_msgs(self):
+        logger = DummyLogger()
+        log_wrapper = self._makeOne(logger)
+        log_wrapper.log("foo\n")
+        logdata = logger.data
+        self.assertEqual(len(logdata), 1)
+        self.assertEqual(logdata[0], "foo")
+
+    def test_logs_msgs_with_error_at_error_level(self):
+        logger = DummyLogger()
+        log_wrapper = self._makeOne(logger)
+        errors = []
+        logger.error = errors.append
+        log_wrapper.log("Server Error")
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0], "Server Error")
+
+    def test_logs_other_messages_at_trace_level(self):
+        logger = DummyLogger()
+        log_wrapper = self._makeOne(logger)
+        traces = []
+        logger.trace = traces.append
+        log_wrapper.log("GET /")
+        self.assertEqual(len(traces), 1)
+        self.assertEqual(traces[0], "GET /")
 
 class TopLevelFunctionTests(unittest.TestCase):
     def _make_http_servers(self, sconfigs):

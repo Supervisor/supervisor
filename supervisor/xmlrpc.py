@@ -44,6 +44,10 @@ class Faults:
     STILL_RUNNING = 91
     CANT_REREAD = 92
 
+DEAD_PROGRAM_FAULTS = (Faults.SPAWN_ERROR,
+                       Faults.ABNORMAL_TERMINATION,
+                       Faults.NOT_RUNNING)
+
 def getFaultDescription(code):
     for faultname in Faults.__dict__:
         if getattr(Faults, faultname) == code:
@@ -57,11 +61,13 @@ class RPCError(Exception):
         if extra is not None:
             self.text = '%s: %s' % (self.text, extra)
 
+    def __str__(self):
+        return 'code=%r, text=%r' % (self.code, self.text)
+
 class DeferredXMLRPCResponse:
     """ A medusa producer that implements a deferred callback; requires
     a subclass of asynchat.async_chat that handles NOT_DONE_YET sentinel """
     CONNECTION = re.compile ('Connection: (.*)', re.IGNORECASE)
-    traceback = traceback # for testing override
 
     def __init__(self, request, callback):
         self.callback = callback
@@ -87,8 +93,10 @@ class DeferredXMLRPCResponse:
             return self.getresponse(body)
 
         except:
-            # report unexpected exception back to server
-            self.traceback.print_exc()
+            tb = traceback.format_exc()
+            self.request.channel.server.logger.log(
+                "XML-RPC response callback error", tb
+                )
             self.finished = True
             self.request.error(500)
 
@@ -229,68 +237,94 @@ class SystemNamespaceRPCInterface:
         @param array calls  An array of call requests
         @return array result  An array of results
         """
-        producers = []
+        remaining_calls = calls[:] # [{'methodName':x, 'params':x}, ...]
+        callbacks = [] # always empty or 1 callback function only
+        results = [] # results of completed calls
 
-        for call in calls:
-            try:
-                name = call['methodName']
-                params = call.get('params', [])
-                if name == 'system.multicall':
-                    # Recursive system.multicall forbidden
-                    raise RPCError(Faults.INCORRECT_PARAMETERS)
-                root = AttrDict(self.namespaces)
-                value = traverse(root, name, params)
-            except RPCError as inst:
-                value = {'faultCode': inst.code,
-                         'faultString': inst.text}
-            except:
-                errmsg = "%s:%s" % (sys.exc_info()[0], sys.exc_info()[1])
-                value = {'faultCode': 1, 'faultString': errmsg}
-            producers.append(value)
+        # args are only to fool scoping and are never passed by caller
+        def multi(remaining_calls=remaining_calls,
+                  callbacks=callbacks,
+                  results=results):
 
-        results = []
-
-        def multiproduce():
-            """ Run through all the producers in order """
-            if not producers:
-                return []
-
-            callback = producers.pop(0)
-
-            if isinstance(callback, types.FunctionType):
+            # if waiting on a callback, call it, then remove it if it's done
+            if callbacks:
                 try:
-                    value = callback()
-                except RPCError as inst:
-                    value = {'faultCode':inst.code, 'faultString':inst.text}
+                    value = callbacks[0]()
+                except RPCError as exc:
+                    value = {'faultCode': exc.code,
+                             'faultString': exc.text}
+                except:
+                    info = sys.exc_info()
+                    errmsg = "%s:%s" % (info[0], info[1])
+                    value = {'faultCode': Faults.FAILED,
+                             'faultString': 'FAILED: ' + errmsg}
+                if value is not NOT_DONE_YET:
+                    callbacks.pop(0)
+                    results.append(value)
 
-                if value is NOT_DONE_YET:
-                    # push it back in the front of the queue because we
-                    # need to finish the calls in requested order
-                    producers.insert(0, callback)
-                    return NOT_DONE_YET
-            else:
-                value = callback
+            # if we don't have a callback now, pop calls and call them in
+            # order until one returns a callback.
+            while (not callbacks) and remaining_calls:
+                call = remaining_calls.pop(0)
+                name = call.get('methodName', None)
+                params = call.get('params', [])
 
-            results.append(value)
+                try:
+                    if name is None:
+                        raise RPCError(Faults.INCORRECT_PARAMETERS,
+                            'No methodName')
+                    if name == 'system.multicall':
+                        raise RPCError(Faults.INCORRECT_PARAMETERS,
+                            'Recursive system.multicall forbidden')
+                    # make the call, may return a callback or not
+                    root = AttrDict(self.namespaces)
+                    value = traverse(root, name, params)
+                except RPCError as exc:
+                    value = {'faultCode': exc.code,
+                             'faultString': exc.text}
+                except:
+                    info = sys.exc_info()
+                    errmsg = "%s:%s" % (info[0], info[1])
+                    value = {'faultCode': Faults.FAILED,
+                             'faultString': 'FAILED: ' + errmsg}
 
-            if producers:
-                # only finish when all producers are finished
+                if isinstance(value, types.FunctionType):
+                    callbacks.append(value)
+                else:
+                    results.append(value)
+
+            # we are done when there's no callback and no more calls queued
+            if callbacks or remaining_calls:
                 return NOT_DONE_YET
+            else:
+                return results
+        multi.delay = 0.05
 
-            return results
-
-        multiproduce.delay = .05
-        return multiproduce
+        # optimization: multi() is called here instead of just returning
+        # multi in case all calls complete and we can return with no delay.
+        value = multi()
+        if value is NOT_DONE_YET:
+            return multi
+        else:
+            return value
 
 class AttrDict(dict):
     # hack to make a dict's getattr equivalent to its getitem
     def __getattr__(self, name):
-        return self[name]
+        return self.get(name)
 
 class RootRPCInterface:
     def __init__(self, subinterfaces):
         for name, rpcinterface in subinterfaces:
             setattr(self, name, rpcinterface)
+
+def capped_int(value):
+    i = int(value)
+    if i < xmlrpclib.MININT:
+        i = xmlrpclib.MININT
+    elif i > xmlrpclib.MAXINT:
+        i = xmlrpclib.MAXINT
+    return i
 
 def make_datetime(text):
     return datetime.datetime(
@@ -343,16 +377,26 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
     def match(self, request):
         return request.uri.startswith(self.path)
 
-    def continue_request (self, data, request):
+    def continue_request(self, data, request):
         logger = self.supervisord.options.logger
 
         try:
-
-            params, method = self.loads(data)
+            try:
+                params, method = self.loads(data)
+            except:
+                logger.error(
+                    'XML-RPC request data %r is invalid: unmarshallable' %
+                    (data,)
+                )
+                request.error(400)
+                return
 
             # no <methodName> in the request or name is an empty string
             if not method:
-                logger.trace('XML-RPC request received with no method name')
+                logger.error(
+                    'XML-RPC request data %r is invalid: no method name' %
+                    (data,)
+                    )
                 request.error(400)
                 return
 
@@ -364,14 +408,6 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
             try:
                 logger.trace('XML-RPC method called: %s()' % method)
                 value = self.call(method, params)
-                # application-specific: instead of we never want to
-                # marshal None (even though we could by saying allow_none=True
-                # in dumps within xmlrpc_marshall), this is meant as
-                # a debugging fixture, see issue 223.
-                assert value is not None, (
-                    'return value from method %r with params %r is None' %
-                    (method, params)
-                    )
                 logger.trace('XML-RPC method %s() returned successfully' %
                              method)
             except RPCError as err:
@@ -398,10 +434,11 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                 request.done()
 
         except:
-            io = StringIO()
-            traceback.print_exc(file=io)
-            val = io.getvalue()
-            logger.critical(val)
+            tb = traceback.format_exc()
+            logger.critical(
+                "Handling XML-RPC request with data %r raised an unexpected "
+                "exception: %s" % (data, tb)
+                )
             # internal error, report as HTTP server error
             request.error(500)
 

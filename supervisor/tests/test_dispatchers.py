@@ -815,6 +815,10 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.state_buffer, '')
         self.assertEqual(options.logger.data[0],
                          'process1: ACKNOWLEDGED -> UNKNOWN')
+        self.assertEqual(options.logger.data[1],
+                         'process1: has entered the UNKNOWN state and will '
+                         'no longer receive events, this usually indicates '
+                         'the process violated the eventlistener protocol')
         self.assertEqual(process.listener_state, EventListenerStates.UNKNOWN)
 
     def test_handle_listener_state_change_ready_to_unknown(self):
@@ -829,6 +833,10 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.state_buffer, '')
         self.assertEqual(options.logger.data[0],
                          'process1: READY -> UNKNOWN')
+        self.assertEqual(options.logger.data[1],
+                         'process1: has entered the UNKNOWN state and will '
+                         'no longer receive events, this usually indicates '
+                         'the process violated the eventlistener protocol')
         self.assertEqual(process.listener_state, EventListenerStates.UNKNOWN)
 
     def test_handle_listener_state_change_busy_to_insufficient(self):
@@ -860,7 +868,9 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, 'abc')
         self.assertEqual(options.logger.data[0],
-                         'process1: BUSY -> ACKNOWLEDGED (processed)')
+                         'process1: event was processed')
+        self.assertEqual(options.logger.data[1],
+                         'process1: BUSY -> ACKNOWLEDGED')
         self.assertEqual(process.listener_state,
                          EventListenerStates.ACKNOWLEDGED)
 
@@ -881,7 +891,9 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, 'abc')
         self.assertEqual(options.logger.data[0],
-                         'process1: BUSY -> ACKNOWLEDGED (rejected)')
+                         'process1: event was rejected')
+        self.assertEqual(options.logger.data[1],
+                         'process1: BUSY -> ACKNOWLEDGED')
         self.assertEqual(process.listener_state,
                          EventListenerStates.ACKNOWLEDGED)
 
@@ -904,7 +916,13 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, '')
         self.assertEqual(options.logger.data[0],
-                'process1: BUSY -> UNKNOWN (bad result line \'bogus data\')')
+                "process1: bad result line: 'bogus data'")
+        self.assertEqual(options.logger.data[1],
+                'process1: BUSY -> UNKNOWN')
+        self.assertEqual(options.logger.data[2],
+                         'process1: has entered the UNKNOWN state and will '
+                         'no longer receive events, this usually indicates '
+                         'the process violated the eventlistener protocol')
         self.assertEqual(process.listener_state,
                          EventListenerStates.UNKNOWN)
         self.assertEqual(events[0].process, process)
@@ -927,9 +945,15 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.handle_listener_state_change(), None)
         self.assertEqual(dispatcher.state_buffer, '')
         self.assertEqual(options.logger.data[0],
-                         'process1: BUSY -> ACKNOWLEDGED (processed)')
+                         'process1: event was processed')
         self.assertEqual(options.logger.data[1],
+                         'process1: BUSY -> ACKNOWLEDGED')
+        self.assertEqual(options.logger.data[2],
                          'process1: ACKNOWLEDGED -> UNKNOWN')
+        self.assertEqual(options.logger.data[3],
+                         'process1: has entered the UNKNOWN state and will '
+                         'no longer receive events, this usually indicates '
+                         'the process violated the eventlistener protocol')
         self.assertEqual(process.listener_state,
                          EventListenerStates.UNKNOWN)
 
@@ -957,8 +981,10 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         self.assertEqual(len(L), 0)
         self.assertEqual(process.listener_state,
                          EventListenerStates.ACKNOWLEDGED)
-        result = options.logger.data[0]
-        self.assertTrue(result.endswith('BUSY -> ACKNOWLEDGED (processed)'))
+        self.assertEqual(options.logger.data[0],
+                         'process1: event was processed')
+        self.assertEqual(options.logger.data[1],
+                         'process1: BUSY -> ACKNOWLEDGED')
 
     def test_handle_result_rejectevent(self):
         from supervisor.events import subscribe
@@ -986,8 +1012,10 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         self.assertEqual(L[0].__class__, events.EventRejectedEvent)
         self.assertEqual(process.listener_state,
                          EventListenerStates.ACKNOWLEDGED)
-        result = options.logger.data[0]
-        self.assertTrue(result.endswith('BUSY -> ACKNOWLEDGED (rejected)'))
+        self.assertEqual(options.logger.data[0],
+                         'process1: event was rejected')
+        self.assertEqual(options.logger.data[1],
+                         'process1: BUSY -> ACKNOWLEDGED')
 
     def test_handle_result_exception(self):
         from supervisor.events import subscribe
@@ -1015,8 +1043,14 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         self.assertEqual(L[0].__class__, events.EventRejectedEvent)
         self.assertEqual(process.listener_state,
                          EventListenerStates.UNKNOWN)
-        result = options.logger.data[0]
-        self.assertTrue(result.endswith('BUSY -> UNKNOWN'))
+        self.assertEqual(options.logger.data[0],
+                         'process1: event caused an error')
+        self.assertEqual(options.logger.data[1],
+                         'process1: BUSY -> UNKNOWN')
+        self.assertEqual(options.logger.data[2],
+                         'process1: has entered the UNKNOWN state and will '
+                         'no longer receive events, this usually indicates '
+                         'the process violated the eventlistener protocol')
 
     def test_handle_error(self):
         options = DummyOptions()
