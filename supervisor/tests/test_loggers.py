@@ -220,6 +220,22 @@ class FileHandlerTests(HandlerTests, unittest.TestCase):
         self.assertTrue(dummy_stderr.written.endswith('OSError\n'),
                         dummy_stderr.written)
 
+if os.path.exists('/dev/stdout'):
+    StdoutTestsBase = FileHandlerTests
+else:
+    # Skip the stdout tests on platforms that don't have /dev/stdout.
+    StdoutTestsBase = object
+
+class StdoutTests(StdoutTestsBase):
+    def test_ctor_with_dev_stdout(self):
+        handler = self._makeOne('/dev/stdout')
+        # Modes 'w' and 'a' have the same semantics when applied to
+        # character device files and fifos.
+        self.assertIn(handler.mode, ['w', 'a'])
+        self.assertEqual(handler.baseFilename, '/dev/stdout')
+        self.assertEqual(handler.stream.name, '/dev/stdout')
+        handler.close()
+
 class RotatingFileHandlerTests(FileHandlerTests):
 
     def _getTargetClass(self):
