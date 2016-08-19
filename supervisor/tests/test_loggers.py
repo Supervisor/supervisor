@@ -231,7 +231,7 @@ class StdoutTests(StdoutTestsBase):
         handler = self._makeOne('/dev/stdout')
         # Modes 'w' and 'a' have the same semantics when applied to
         # character device files and fifos.
-        self.assertIn(handler.mode, ['w', 'a'])
+        self.assertTrue(handler.mode in ['w', 'a'], handler.mode)
         self.assertEqual(handler.baseFilename, '/dev/stdout')
         self.assertEqual(handler.stream.name, '/dev/stdout')
         handler.close()
