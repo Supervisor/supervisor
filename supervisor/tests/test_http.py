@@ -176,12 +176,12 @@ class TailFProducerTests(unittest.TestCase):
         finally:
             os.unlink(f.name)
         result = producer.more()
-        self.assertEqual(result, as_bytes('a' * 80))
+        self.assertEqual(result, as_string('a' * 80))
         with open(filename, 'wb') as f:
             f.write(as_bytes('b' * 80))
         try:
             result = producer.more() # should open in new file
-            self.assertEqual(result, as_bytes('b' * 80))
+            self.assertEqual(result, as_string('b' * 80))
         finally:
              os.unlink(f.name)
 
