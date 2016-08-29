@@ -28,7 +28,7 @@ if py_version < (3, 3):
     tests_require.append('mock')
 
 testing_extras = tests_require + [
-    'pytest',
+    'pytest < 3.0.0', # >= 2.5.2 but < 3.0.0.  pytest 3.0.0 breaks python 3.2
     'pytest-cov',
     ]
 
