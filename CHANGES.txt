@@ -1256,7 +1256,7 @@
   "stdout_logfile_backups", and "stdout_logfile_maxbytes".  Added
   keys include "stderr_logfile", "stderr_logfile_backups", and
   "stderr_logfile_maxbytes".  An additional "redirect_stderr" key is
-  used to cause program stderr output to be sent to its stdin
+  used to cause program stderr output to be sent to its stdout
   channel.  The keys "log_stderr" and "log_stdout" have been
   removed.
 
