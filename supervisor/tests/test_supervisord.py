@@ -325,6 +325,7 @@ class SupervisordTests(unittest.TestCase):
                 'stdout_syslog': False,
                 'stderr_logfile': None, 'stderr_capture_maxbytes': 0,
                 'stderr_events_enabled': False,
+                'honor_log_linebreaks': False,
                 'stderr_logfile_backups': 0, 'stderr_logfile_maxbytes': 0,
                 'stderr_syslog': False,
                 'redirect_stderr': False,

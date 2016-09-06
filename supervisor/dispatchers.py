@@ -84,6 +84,7 @@ class POutputDispatcher(PDispatcher):
     capturelog = None # the logger while we're in capturemode
     childlog = None # the current logger (event or main)
     output_buffer = '' # data waiting to be logged
+    linebreakmode = False
 
     def __init__(self, process, event_type, fd):
         """
@@ -120,6 +121,7 @@ class POutputDispatcher(PDispatcher):
         self.log_to_mainlog = config.options.loglevel <= self.mainlog_level
         self.stdout_events_enabled = config.stdout_events_enabled
         self.stderr_events_enabled = config.stderr_events_enabled
+        self.linebreakmode = config.honor_log_linebreaks
 
     def _setup_logging(self, config, channel):
         """
@@ -189,6 +191,18 @@ class POutputDispatcher(PDispatcher):
                     )
 
     def record_output(self):
+        if self.linebreakmode:
+            if "\n" in self.output_buffer:
+                split = self.output_buffer.rsplit("\n", 1)
+                data  = split[0] + "\n"
+                self.output_buffer = split[1]
+            else:
+                data = self.output_buffer
+                self.output_buffer = ''
+
+            self._log(data)
+            return
+
         if self.capturelog is None:
             # shortcut trying to find capture data
             data = self.output_buffer
