@@ -9,7 +9,6 @@ idiosyncratic and a bit slow for our purposes (we don't use threads).
 
 import os
 import errno
-import stat
 import sys
 import time
 import traceback
@@ -139,29 +138,24 @@ class FileHandler(Handler):
     """File handler which supports reopening of logs.
     """
 
-    def __init__(self, filename, mode=None):
+    def __init__(self, filename, mode='a'):
         Handler.__init__(self)
-        open_mode = mode or 'a'
 
         try:
-            self.stream = open(filename, open_mode)
+            self.stream = open(filename, mode)
         except OSError as e:
-            retried = False
-            if not mode:
-                if e.errno == errno.ESPIPE:
-                    st_mode = os.stat(filename).st_mode
-                    if stat.S_ISCHR(st_mode) or stat.S_ISFIFO(st_mode):
-                        # Python 3 can't open special files like
-                        # /dev/stdout in 'a' mode due to an implicit seek call
-                        # that fails with ESPIPE. Retry in 'w' mode.
-                        self.stream = open(filename, 'w')
-                        open_mode = 'w'
-                        retried = True
-            if not retried:
+            if mode == 'a' and e.errno == errno.ESPIPE:
+                # Python 3 can't open special files like
+                # /dev/stdout in 'a' mode due to an implicit seek call
+                # that fails with ESPIPE. Retry in 'w' mode.
+                # See: http://bugs.python.org/issue27805
+                mode = 'w'
+                self.stream = open(filename, mode)
+            else:
                 raise
 
         self.baseFilename = filename
-        self.mode = open_mode
+        self.mode = mode
 
     def reopen(self):
         self.close()
