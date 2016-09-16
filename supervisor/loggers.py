@@ -138,9 +138,22 @@ class FileHandler(Handler):
     """File handler which supports reopening of logs.
     """
 
-    def __init__(self, filename, mode="a"):
+    def __init__(self, filename, mode='a'):
         Handler.__init__(self)
-        self.stream = open(filename, mode)
+
+        try:
+            self.stream = open(filename, mode)
+        except OSError as e:
+            if mode == 'a' and e.errno == errno.ESPIPE:
+                # Python 3 can't open special files like
+                # /dev/stdout in 'a' mode due to an implicit seek call
+                # that fails with ESPIPE. Retry in 'w' mode.
+                # See: http://bugs.python.org/issue27805
+                mode = 'w'
+                self.stream = open(filename, mode)
+            else:
+                raise
+
         self.baseFilename = filename
         self.mode = mode
 
