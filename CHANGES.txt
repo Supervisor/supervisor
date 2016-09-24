@@ -28,6 +28,9 @@
   error condition occurs.  Previous versions did not set the exit status so
   it was always zero.  Patch by Luke Weber.
 
+- ``supervisorctl reload`` now gives an error message if an argument is
+  given.  Patch by Joel Krauska.
+
 3.3.1 (2016-08-02)
 ------------------
 
