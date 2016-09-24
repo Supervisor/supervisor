@@ -1043,6 +1043,11 @@ class DefaultControllerPlugin(ControllerPluginBase):
         return template % formatted
 
     def do_avail(self, arg):
+        if arg:
+            self.handle_error('Error: avail accepts no arguments')
+            self.help_avail()
+            return
+
         supervisor = self.ctl.get_supervisor()
         try:
             configinfo = supervisor.getAllConfigInfo()
@@ -1059,6 +1064,11 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output("avail\t\t\tDisplay all configured processes")
 
     def do_reread(self, arg):
+        if arg:
+            self.handle_error('Error: reread accepts no arguments')
+            self.help_reread()
+            return
+
         supervisor = self.ctl.get_supervisor()
         try:
             result = supervisor.reloadConfig()
@@ -1257,6 +1267,11 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self.ctl.output("\t\t(for UNIX domain socket, use unix:///socket/path)")
 
     def do_version(self, arg):
+        if arg:
+            self.handle_error('Error: version accepts no arguments')
+            self.help_version()
+            return
+
         if not self.ctl.upcheck():
             return
         supervisor = self.ctl.get_supervisor()

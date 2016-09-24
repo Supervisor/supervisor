@@ -1256,6 +1256,14 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin.do_version(None)
         self.assertEqual(plugin.ctl.stdout.getvalue(), '3000\n')
 
+    def test_version_arg(self):
+        plugin = self._makeOne()
+        result = plugin.do_version('bad')
+        self.assertEqual(result, None)
+        val = plugin.ctl.stdout.getvalue()
+        self.assertTrue(val.startswith('Error: version accepts no arguments'), val)
+        self.assertEqual(plugin.ctl.exit_status, LSBInitErrorCode.GENERIC)
+
     def test_version_upcheck_failed(self):
         plugin = self._makeOne()
         plugin.ctl.upcheck = lambda: False
@@ -1401,6 +1409,14 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(calls[0], [['added'], ['changed'], ['removed']])
         self.assertEqual(plugin.ctl.exit_status, None)
 
+    def test_reread_arg(self):
+        plugin = self._makeOne()
+        result = plugin.do_reread('bad')
+        self.assertEqual(result, None)
+        val = plugin.ctl.stdout.getvalue()
+        self.assertTrue(val.startswith('Error: reread accepts no arguments'), val)
+        self.assertEqual(plugin.ctl.exit_status, LSBInitErrorCode.GENERIC)
+
     def test_reread_cant_reread(self):
         plugin = self._makeOne()
         from supervisor import xmlrpc
@@ -1471,6 +1487,14 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin.ctl.output = calls.append
         result = plugin.do_avail('')
         self.assertEqual(result, None)
+
+    def test_avail_arg(self):
+        plugin = self._makeOne()
+        result = plugin.do_avail('bad')
+        self.assertEqual(result, None)
+        val = plugin.ctl.stdout.getvalue()
+        self.assertTrue(val.startswith('Error: avail accepts no arguments'), val)
+        self.assertEqual(plugin.ctl.exit_status, LSBInitErrorCode.GENERIC)
 
     def test_avail_shutdown_state(self):
         plugin = self._makeOne()
