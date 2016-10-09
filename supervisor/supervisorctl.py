@@ -1275,9 +1275,11 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 except xmlrpclib.Fault, e:
                     if e.faultCode == xmlrpc.Faults.NOT_RUNNING:
                         self.ctl.output('Process got killed')
-                        self.ctl.output('Exiting foreground')
-                        a.kill()
-                        return
+                    else:
+                        self.ctl.output('ERROR: ' + str(e))
+                    self.ctl.output('Exiting foreground')
+                    a.kill()
+                    return
 
                 info = supervisor.getProcessInfo(name)
                 if info['state'] != states.ProcessStates.RUNNING:
@@ -1285,11 +1287,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     self.ctl.output('Exiting foreground')
                     a.kill()
                     return
-                continue
         except (KeyboardInterrupt, EOFError):
-            a.kill()
             self.ctl.output('Exiting foreground')
-        return
+            if a:
+                a.kill()
 
     def help_fg(self,args=None):
         self.ctl.output('fg <process>\tConnect to a process in foreground mode')
