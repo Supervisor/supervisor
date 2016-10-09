@@ -1259,6 +1259,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
             self.ctl.output('ERROR: process not running')
             return
 
+        self.ctl.output('==> Press Ctrl-C to exit <==')
+
         a = None
         try:
             # this thread takes care of the output/error messages
@@ -1291,7 +1293,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
     def help_fg(self,args=None):
         self.ctl.output('fg <process>\tConnect to a process in foreground mode')
-        self.ctl.output('Press Ctrl+C to exit foreground')
+        self.ctl.output("\t\tCtrl-C to exit")
 
 
 def main(args=None, options=None):
