@@ -1230,56 +1230,55 @@ class DefaultControllerPlugin(ControllerPluginBase):
             "version\t\t\tShow the version of the remote supervisord "
             "process")
 
-    def do_fg(self, args=None):
+    def do_fg(self, arg):
         if not self.ctl.upcheck():
             return
 
-        if not args:
-            self.ctl.output('Error: no process name supplied')
+        names = arg.split()
+        if not names:
+            self.ctl.output('ERROR: no process name supplied')
             self.help_fg()
             return
-
-        args = args.split()
-        if len(args) > 1:
-            self.ctl.output('Error: too many process names supplied')
+        if len(names) > 1:
+            self.ctl.output('ERROR: too many process names supplied')
             return
 
-        program = args[0]
+        name = names[0]
         supervisor = self.ctl.get_supervisor()
+
         try:
-            info = supervisor.getProcessInfo(program)
-        except xmlrpclib.Fault, msg:
-            if msg.faultCode == xmlrpc.Faults.BAD_NAME:
-                self.ctl.output('Error: bad process name supplied')
-                return
-            # for any other fault
-            self.ctl.output(str(msg))
+            info = supervisor.getProcessInfo(name)
+        except xmlrpclib.Fault as e:
+            if e.faultCode == xmlrpc.Faults.BAD_NAME:
+                self.ctl.output('ERROR: bad process name supplied')
+            else:
+                self.ctl.output('ERROR: ' + str(e))
             return
 
-        if not info['state'] == states.ProcessStates.RUNNING:
-            self.ctl.output('Error: process not running')
+        if info['state'] != states.ProcessStates.RUNNING:
+            self.ctl.output('ERROR: process not running')
             return
 
         a = None
         try:
             # this thread takes care of the output/error messages
-            a = fgthread(program, self.ctl)
+            a = fgthread(name, self.ctl)
             a.start()
 
             # this takes care of the user input
             while True:
                 inp = raw_input() + '\n'
                 try:
-                    supervisor.sendProcessStdin(program, inp)
-                except xmlrpclib.Fault, msg:
-                    if msg.faultCode == xmlrpc.Faults.NOT_RUNNING:
+                    supervisor.sendProcessStdin(name, inp)
+                except xmlrpclib.Fault, e:
+                    if e.faultCode == xmlrpc.Faults.NOT_RUNNING:
                         self.ctl.output('Process got killed')
                         self.ctl.output('Exiting foreground')
                         a.kill()
                         return
 
-                info = supervisor.getProcessInfo(program)
-                if not info['state'] == states.ProcessStates.RUNNING:
+                info = supervisor.getProcessInfo(name)
+                if info['state'] != states.ProcessStates.RUNNING:
                     self.ctl.output('Process got killed')
                     self.ctl.output('Exiting foreground')
                     a.kill()
