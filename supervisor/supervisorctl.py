@@ -67,9 +67,9 @@ class fgthread(threading.Thread):
 
     def run(self):
         self.output_handler.get(self.ctl.options.serverurl,
-                                '/logtail/%s/stdout'%self.program)
+                                '/logtail/%s/stdout' % self.program)
         self.error_handler.get(self.ctl.options.serverurl,
-                               '/logtail/%s/stderr'%self.program)
+                               '/logtail/%s/stderr' % self.program)
         asyncore.loop()
 
     def __run(self):
@@ -1230,17 +1230,20 @@ class DefaultControllerPlugin(ControllerPluginBase):
             "version\t\t\tShow the version of the remote supervisord "
             "process")
 
-    def do_fg(self,args=None):
+    def do_fg(self, args=None):
         if not self.ctl.upcheck():
             return
+
         if not args:
             self.ctl.output('Error: no process name supplied')
             self.help_fg()
             return
+
         args = args.split()
         if len(args) > 1:
             self.ctl.output('Error: too many process names supplied')
             return
+
         program = args[0]
         supervisor = self.ctl.get_supervisor()
         try:
@@ -1252,17 +1255,19 @@ class DefaultControllerPlugin(ControllerPluginBase):
             # for any other fault
             self.ctl.output(str(msg))
             return
+
         if not info['state'] == states.ProcessStates.RUNNING:
             self.ctl.output('Error: process not running')
             return
-        # everything good; continue
+
+        a = None
         try:
-            a = fgthread(program,self.ctl)
-            # this thread takes care of
-            # the output/error messages
+            # this thread takes care of the output/error messages
+            a = fgthread(program, self.ctl)
             a.start()
+
+            # this takes care of the user input
             while True:
-                # this takes care of the user input
                 inp = raw_input() + '\n'
                 try:
                     supervisor.sendProcessStdin(program, inp)
@@ -1272,6 +1277,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                         self.ctl.output('Exiting foreground')
                         a.kill()
                         return
+
                 info = supervisor.getProcessInfo(program)
                 if not info['state'] == states.ProcessStates.RUNNING:
                     self.ctl.output('Process got killed')
