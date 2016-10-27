@@ -1314,12 +1314,14 @@ class ServerOptions(Options):
         # left zombies laying around.
         try:
             pid, sts = os.waitpid(-1, os.WNOHANG)
-        except OSError, why:
-            err = why.args[0]
-            if err not in (errno.ECHILD, errno.EINTR):
+        except OSError, exc:
+            code = exc.args[0]
+            if code not in (errno.ECHILD, errno.EINTR):
                 self.logger.critical(
-                    'waitpid error; a process may not be cleaned up properly')
-            if err == errno.EINTR:
+                    'waitpid error %r; '
+                    'a process may not be cleaned up properly' % code
+                    )
+            if code == errno.EINTR:
                 self.logger.blather('EINTR during reap')
             pid, sts = None, None
         return pid, sts
