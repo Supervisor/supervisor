@@ -67,9 +67,6 @@ which is internet-connected:
 - meld3 (latest) from `http://www.plope.com/software/meld3/
   <http://www.plope.com/software/meld3/>`_.
 
-- elementtree (latest) from `http://effbot.org/downloads#elementtree
-  <http://effbot.org/downloads#elementtree>`_.
-
 Copy these files to removable media and put them on the target
 machine.  Install each onto the target machine as per its
 instructions.  This typically just means unpacking each file and
