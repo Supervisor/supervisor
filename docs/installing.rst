@@ -123,7 +123,7 @@ Once you see the file echoed to your terminal, reinvoke the command as
 you do not have root access.
 
 If you don't have root access, or you'd rather not put the
-:file:`supervisord.conf` file in :file:`/etc/supervisord.conf``, you
+:file:`supervisord.conf` file in :file:`/etc/supervisord.conf`, you
 can place it in the current directory (``echo_supervisord_conf >
 supervisord.conf``) and start :program:`supervisord` with the
 ``-c`` flag in order to specify the configuration file
