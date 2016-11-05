@@ -83,21 +83,34 @@ Installing a Distribution Package
 ---------------------------------
 
 Some Linux distributions offer a version of Supervisor that is installable
-through the system package manager.  These packages may include
-distribution-specific changes to Supervisor.
-
-.. note::
-
-    Some of these packages can lag considerably behind the official
-    release version.  For example, Ubuntu 12.04 (released April 2012)
-    offers a package based on Supervisor 3.0a8 (released January 2010).
+through the system package manager.  These packages are made by third parties,
+not the Supervisor developers, and often include distribution-specific changes
+to Supervisor.
 
 Use the package management tools of your distribution to check availability;
 e.g. on Ubuntu you can run ``apt-cache show supervisor``, and on CentOS
 you can run ``yum info supervisor``.
 
-Packaged Supervisor will normally already be integrated into the service
-management infrastructure of your distribution.
+A feature of distribution packages of Supervisor is that they will usually
+include integration into the service management infrastructure of the
+distribution, e.g. allowing ``supervisord`` to automatically start when
+the system boots.
+
+.. note::
+
+    Distribution packages of Supervisor can lag considerably behind the
+    official Supervisor packages released to PyPI.  For example, Ubuntu
+    12.04 (released April 2012) offers a package based on Supervisor 3.0a8
+    (released January 2010).
+
+.. note::
+
+    Users have reported that the distribution package of Supervisor for
+    Ubuntu 16.04 has different behavior than previous versions.  On Ubuntu
+    10.04, 12.04, and 14.04, installing the package will configure the system
+    to start ``supervisord`` when the system boots.  On Ubuntu 16.04, this is
+    not done.  See `Ubuntu Bug #1594740 <https://bugs.launchpad.net/ubuntu/+source/supervisor/+bug/1594740>`_
+    for more information.
 
 Installing via pip
 ------------------
