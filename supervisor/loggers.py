@@ -395,7 +395,10 @@ def handle_syslog(logger, fmt):
 def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
     if filename == 'syslog':
         handler = SyslogHandler()
-
+    elif filename == 'stdout':
+        handler = StreamHandler(sys.stdout)
+    elif filename == 'stderr':
+        handler = StreamHandler(sys.stderr)
     else:
         if rotating is False:
             handler = FileHandler(filename)
