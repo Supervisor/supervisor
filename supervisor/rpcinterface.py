@@ -36,7 +36,7 @@ from supervisor.states import getProcessStateDescription
 from supervisor.states import (
     RUNNING_STATES,
     STOPPED_STATES,
-    SIGNALABLE_STATES
+    SIGNALLABLE_STATES
     )
 
 API_VERSION  = '3.0'
@@ -489,7 +489,7 @@ class SupervisorNamespaceRPCInterface:
         except ValueError:
             raise RPCError(Faults.BAD_SIGNAL, signal)
 
-        if process.get_state() not in SIGNALABLE_STATES:
+        if process.get_state() not in SIGNALLABLE_STATES:
             raise RPCError(Faults.NOT_RUNNING, name)
 
         msg = process.signal(sig)
@@ -1007,7 +1007,7 @@ def isNotRunning(process):
     return not isRunning(process)
 
 def isSignallable(process):
-    if process.get_state() in SIGNALABLE_STATES:
+    if process.get_state() in SIGNALLABLE_STATES:
         return True
 
 # this is not used in code but referenced via an entry point in the conf file

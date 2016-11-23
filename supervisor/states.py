@@ -20,8 +20,7 @@ RUNNING_STATES = (ProcessStates.RUNNING,
                   ProcessStates.BACKOFF,
                   ProcessStates.STARTING)
 
-SIGNALABLE_STATES = (ProcessStates.RUNNING,
-                     ProcessStates.BACKOFF,
+SIGNALLABLE_STATES = (ProcessStates.RUNNING,
                      ProcessStates.STARTING,
                      ProcessStates.STOPPING)
 
