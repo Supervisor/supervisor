@@ -163,9 +163,19 @@ class SupervisorNamespaceRPCInterface:
 
     def reloadConfig(self):
         """
-        Reload configuration
+        Reload the configuration.
 
-        @return boolean result  always return True unless error
+        The result contains three arrays containing names of process
+        groups:
+
+        * `added` gives the process groups that have been added
+        * `changed` gives the process groups whose contents have
+          changed
+        * `removed` gives the process groups that are no longer
+          in the configuration
+
+        @return array result  [[added, changed, removed]]
+
         """
         self._update('reloadConfig')
         try:
