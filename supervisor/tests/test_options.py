@@ -387,15 +387,6 @@ class ClientOptionsTests(unittest.TestCase):
         except ValueError as exc:
             self.assertTrue("could not read config file" in exc.args[0])
 
-    def test_read_config_no_supervisord_section_raises_valueerror(self):
-        instance = self._makeOne()
-        try:
-            instance.read_config(StringIO())
-            self.fail("nothing raised")
-        except ValueError as exc:
-            self.assertEqual(exc.args[0],
-                ".ini file does not include supervisorctl section")
-
     def test_options_unixsocket_cli(self):
         fp = StringIO('[supervisorctl]')
         instance = self._makeOne()
@@ -822,15 +813,6 @@ class ServerOptionsTests(unittest.TestCase):
             except ValueError as exc:
                 self.assertTrue('contains parsing errors:' in exc.args[0])
                 self.assertTrue(f.name in exc.args[0])
-
-    def test_read_config_no_supervisord_section_raises_valueerror(self):
-        instance = self._makeOne()
-        try:
-            instance.read_config(StringIO())
-            self.fail("nothing raised")
-        except ValueError as exc:
-            self.assertEqual(exc.args[0],
-                ".ini file does not include supervisord section")
 
     def test_read_config_include_with_no_files_raises_valueerror(self):
         instance = self._makeOne()
