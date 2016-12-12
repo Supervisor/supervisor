@@ -606,6 +606,14 @@ where specified.
   responsible for daemonizing its subprocesses (see
   :ref:`nondaemonizing_of_subprocesses`).
 
+  .. note::
+
+    The command will be truncated if it looks like a config file comment,
+    e.g. ``command=bash -c 'foo ; bar'`` will be truncated to
+    ``command=bash -c 'foo ``.  Quoting will not prevent this behavior,
+    since the configuration file reader does not parse the command like
+    a shell would.
+
   *Default*: No default.
 
   *Required*:  Yes.
