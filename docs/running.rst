@@ -166,6 +166,28 @@ value in the configuration file.
    the supervisord process before it will start successfully.
 
 
+Running :program:`supervisorctl`
+--------------------------------
+
+To start :program:`supervisorctl`, run ``$BINDIR/supervisorctl``.  A
+shell will be presented that will allow you to control the processes
+that are currently managed by :program:`supervisord`.  Type "help" at
+the prompt to get information about the supported commands.
+
+The :command:`supervisorctl` executable may be invoked with "one time"
+commands when invoked with arguments from a command line.  An example:
+``supervisorctl stop all``.  If arguments are present on the
+command-line, it will prevent the interactive shell from being
+invoked.  Instead, the command will be executed and ``supervisorctl``
+will exit with a code of 0 for success or running and non-zero for
+error. An example: ``supervisorctl status all`` would return non-zero
+if any single process was not running.
+
+If :command:`supervisorctl` is invoked in interactive mode against a
+:program:`supervisord` that requires authentication, you will be asked
+for authentication credentials.
+
+
 :command:`supervisorctl` Command-Line Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -204,25 +226,6 @@ specified on the command line, a "shell" interpreting actions typed
 interactively is started.  Use the action "help" to find out about available
 actions.
 
-
-Running :program:`supervisorctl`
---------------------------------
-
-To start :program:`supervisorctl`, run ``$BINDIR/supervisorctl``.  A
-shell will be presented that will allow you to control the processes
-that are currently managed by :program:`supervisord`.  Type "help" at
-the prompt to get information about the supported commands.
-
-The :command:`supervisorctl` executable may be invoked with "one time"
-commands when invoked with arguments from a command line.  An example:
-``supervisorctl stop all``.  If arguments are present on the
-command-line, it will prevent the interactive shell from being
-invoked.  Instead, the command will be executed and
-``supervisorctl`` will exit.
-
-If :command:`supervisorctl` is invoked in interactive mode against a
-:program:`supervisord` that requires authentication, you will be asked
-for authentication credentials.
 
 Signals
 -------
