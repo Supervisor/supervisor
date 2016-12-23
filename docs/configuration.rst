@@ -610,7 +610,7 @@ where specified.
 
     The command will be truncated if it looks like a config file comment,
     e.g. ``command=bash -c 'foo ; bar'`` will be truncated to
-    ``command=bash -c 'foo ``.  Quoting will not prevent this behavior,
+    ``command=bash -c 'foo``.  Quoting will not prevent this behavior,
     since the configuration file reader does not parse the command like
     a shell would.
 
