@@ -568,9 +568,9 @@ class PInputDispatcherTests(unittest.TestCase):
         config = DummyPConfig(options, 'test', '/test')
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
-        self.assertEqual(dispatcher.input_buffer, '')
+        self.assertEqual(dispatcher.input_buffer, b'')
         dispatcher.handle_write_event()
-        self.assertEqual(dispatcher.input_buffer, '')
+        self.assertEqual(dispatcher.input_buffer, b'')
         self.assertEqual(options.written, {})
 
     def test_handle_write_event_epipe_raised(self):
@@ -582,7 +582,7 @@ class PInputDispatcherTests(unittest.TestCase):
         import errno
         options.write_error = errno.EPIPE
         dispatcher.handle_write_event()
-        self.assertEqual(dispatcher.input_buffer, '')
+        self.assertEqual(dispatcher.input_buffer, b'')
         self.assertTrue(options.logger.data[0].startswith(
             'fd 0 closed, stopped monitoring'))
         self.assertTrue(options.logger.data[0].endswith('(stdin)>'))
