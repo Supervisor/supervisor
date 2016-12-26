@@ -33,8 +33,7 @@ Options:
 import os
 import time
 import signal
-
-from supervisor.medusa import asyncore_25 as asyncore
+import asyncore
 
 from supervisor.options import ServerOptions
 from supervisor.options import signame

@@ -1,6 +1,6 @@
 import warnings
 import errno
-from supervisor.medusa.asyncore_25 import compact_traceback
+from asyncore import compact_traceback
 
 from supervisor.events import notify
 from supervisor.events import EventRejectedEvent

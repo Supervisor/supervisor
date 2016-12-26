@@ -6,6 +6,7 @@ import socket
 import errno
 import weakref
 import traceback
+import asyncore
 
 try:
     import pwd
@@ -15,7 +16,6 @@ except ImportError:  # Windows
 from supervisor.compat import urllib
 from supervisor.compat import sha1
 from supervisor.compat import as_bytes
-from supervisor.medusa import asyncore_25 as asyncore
 from supervisor.medusa import http_date
 from supervisor.medusa import http_server
 from supervisor.medusa import producers

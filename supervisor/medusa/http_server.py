@@ -11,10 +11,8 @@ import re
 import socket
 import sys
 import time
-
-# async modules
-import supervisor.medusa.asyncore_25 as asyncore
-import supervisor.medusa.asynchat_25 as asynchat
+import asynchat
+import asyncore
 
 # medusa modules
 import supervisor.medusa.http_date as http_date

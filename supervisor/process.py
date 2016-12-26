@@ -4,12 +4,11 @@ import errno
 import shlex
 import traceback
 import signal
+import asyncore
 
 from supervisor.compat import maxint
 from supervisor.compat import total_ordering
 from supervisor.compat import as_bytes
-
-from supervisor.medusa import asyncore_25 as asyncore
 
 from supervisor.states import ProcessStates
 from supervisor.states import SupervisorStates
