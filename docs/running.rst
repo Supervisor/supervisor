@@ -166,6 +166,27 @@ value in the configuration file.
    the supervisord process before it will start successfully.
 
 
+Running :program:`supervisorctl`
+--------------------------------
+
+To start :program:`supervisorctl`, run ``$BINDIR/supervisorctl``.  A
+shell will be presented that will allow you to control the processes
+that are currently managed by :program:`supervisord`.  Type "help" at
+the prompt to get information about the supported commands.
+
+The :command:`supervisorctl` executable may be invoked with "one time"
+commands when invoked with arguments from a command line.  An example:
+``supervisorctl stop all``.  If arguments are present on the
+command-line, it will prevent the interactive shell from being
+invoked.  Instead, the command will be executed and ``supervisorctl``
+will exit with a code of 0 for success or running and non-zero for
+error. An example: ``supervisorctl status all`` would return non-zero
+if any single process was not running.
+
+If :command:`supervisorctl` is invoked in interactive mode against a
+:program:`supervisord` that requires authentication, you will be asked
+for authentication credentials.
+
 :command:`supervisorctl` Command-Line Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -205,26 +226,134 @@ interactively is started.  Use the action "help" to find out about available
 actions.
 
 
-Running :program:`supervisorctl`
---------------------------------
+:command:`supervisorctl` Actions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To start :program:`supervisorctl`, run ``$BINDIR/supervisorctl``.  A
-shell will be presented that will allow you to control the processes
-that are currently managed by :program:`supervisord`.  Type "help" at
-the prompt to get information about the supported commands.
+help
 
-The :command:`supervisorctl` executable may be invoked with "one time"
-commands when invoked with arguments from a command line.  An example:
-``supervisorctl stop all``.  If arguments are present on the
-command-line, it will prevent the interactive shell from being
-invoked.  Instead, the command will be executed and ``supervisorctl``
-will exit with a code of 0 for success or running and non-zero for
-error. An example: ``supervisorctl status all`` would return non-zero
-if any single process was not running.
+   Print a list of available actions
 
-If :command:`supervisorctl` is invoked in interactive mode against a
-:program:`supervisord` that requires authentication, you will be asked
-for authentication credentials.
+help <action>
+
+   Print help for <action>
+
+add <name> [...]
+
+   Activates any updates in config for process/group
+
+remove <name> [...]
+
+   Removes process/group from active confi
+
+update
+
+   Reload config and add/remove as necessary
+
+clear <name>
+
+   Clear a process' log files.
+
+clear <name> <name>
+
+   Clear multiple process' log files
+
+clear all
+
+   Clear all process' log files
+
+fg <process>
+
+   Connect to a process in foreground mode
+   Press Ctrl+C to exit foreground
+
+pid
+
+   Get the PID of supervisord.
+
+pid <name>
+
+   Get the PID of a single child process by name.
+
+pid all
+
+   Get the PID of every child process, one per line.
+
+restart <name>
+
+   Restart a process
+   Note: restart does not reread config files. For that, see reread and update.
+
+restart <gname>:*
+
+   Restart all processes in a group
+   Note: restart does not reread config files. For that, see reread and update.
+
+restart <name> <name>
+
+   Restart multiple processes or groups
+   Note: restart does not reread config files. For that, see reread and update.
+
+restart all
+
+   Restart all processes
+   Note: restart does not reread config files. For that, see reread and update.
+
+signal
+
+   No help on signal
+
+start <name>
+
+   Start a process
+
+start <gname>:*
+
+   Start all processes in a group
+
+start <name> <name>
+
+   Start multiple processes or groups
+
+start all
+
+   Start all processes
+
+status
+
+   Get all process status info.
+
+status <name>
+
+   Get status on a single process by name.
+
+status <name> <name>
+
+   Get status on multiple named processes.
+
+stop <name>
+
+   Stop a process
+
+stop <gname>:*
+
+   Stop all processes in a group
+
+stop <name> <name>
+
+   Stop multiple processes or groups
+
+stop all
+
+   Stop all processes
+
+tail [-f] <name> [stdout|stderr] (default stdout)
+
+   Output the last part of process logs
+   Ex:
+   tail -f <name>		Continuous tail of named process stdout Ctrl-C to exit.
+   tail -100 <name>	last 100 *bytes* of process stdout
+   tail <name> stderr	last 1600 *bytes* of process stderr
+
 
 Signals
 -------
