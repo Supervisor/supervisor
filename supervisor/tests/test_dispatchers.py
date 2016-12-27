@@ -524,7 +524,7 @@ class PInputDispatcherTests(unittest.TestCase):
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         self.assertEqual(dispatcher.input_buffer, '')
-        dispatcher.handle_write_event
+        dispatcher.handle_write_event()
         self.assertEqual(dispatcher.input_buffer, '')
         self.assertEqual(options.written, {})
 
