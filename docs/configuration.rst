@@ -1366,10 +1366,9 @@ an explanation of how events work and how to implement programs that
 can be declared as event listeners.
 
 Note that all the options available to ``[program:x]`` sections are
-respected by eventlistener sections *except* for
-``stdout_capture_maxbytes`` and ``stderr_capture_maxbytes`` (event
-listeners cannot emit process communication events, see
-:ref:`capture_mode`).
+respected by eventlistener sections *except* for ``stdout_capture_maxbytes``.
+Eventlisteners cannot emit process communication events on ``stdout``,
+but can emit on ``stderr`` (see :ref:`capture_mode`).
 
 ``[eventlistener:x]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
