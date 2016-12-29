@@ -12,9 +12,9 @@ from supervisor.medusa import text_socket
 
 def process_or_group_name(name):
     """Ensures that a process or group name is not created with
-       characters that break the eventlistener protocol"""
+       characters that break the eventlistener protocol or web UI URLs"""
     s = str(name).strip()
-    if ' ' in s or ':' in s:
+    if ' ' in s or ':' in s or '/' in s:
         raise ValueError("Invalid name: " + repr(name))
     return s
 

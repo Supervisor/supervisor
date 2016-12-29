@@ -37,6 +37,10 @@
 - Fixed a bug where ``supervisorctl fg`` would swallow most XML-RPC faults.
   ``fg`` now prints the fault and exits.
 
+- Parsing the config file will now fail with an error message if a process
+  or group name contains a forward slash character (``/``) since it would
+  break the URLs used by the web interface.
+
 3.3.1 (2016-08-02)
 ------------------
 
