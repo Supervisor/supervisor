@@ -37,6 +37,9 @@ instances running on different servers.
 `suponoff <https://github.com/GambitResearch/suponoff>`_
     Web-based dashboard written in Python 3.  Requires Django 1.7 or later.
 
+`Supvisors <https://github.com/julien6387/supvisors>`_
+    Designed for distributed applications, written in Python 2.7. Includes an extended XML-RPC API and a Web-based dashboard.
+
 Third Party Plugins and Libraries for Supervisor
 ------------------------------------------------
 
