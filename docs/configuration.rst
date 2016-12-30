@@ -315,7 +315,8 @@ follows.
   is run as root.  supervisord uses file descriptors liberally, and will
   enter a failure mode when one cannot be obtained from the OS, so it's
   useful to be able to specify a minimum value to ensure it doesn't run out
-  of them during execution. This option is particularly useful on Solaris,
+  of them during execution.  These limits will be inherited by the managed
+  subprocesses.  This option is particularly useful on Solaris,
   which has a low per-process fd limit by default.
 
   *Default*:  1024
