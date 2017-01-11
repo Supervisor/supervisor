@@ -274,7 +274,6 @@ class KQueuePollerTests(KQueuePollerTestsBase):
         self.assertEqual(kevent.filter, filter)
         self.assertEqual(kevent.flags, flags)
 
-
 if implements_poll():
     PollerPollTestsBase = unittest.TestCase
 else:
@@ -367,8 +366,7 @@ class DummySelectPoll(object):
         self.error = error
         self.registered_as_readable = []
         self.registered_as_writable = []
-        self.unregistered_readables = []
-        self.unregistered_writables = []
+        self.unregistered = []
 
     def register(self, fd, eventmask):
         if eventmask == select.POLLIN | select.POLLPRI | select.POLLHUP:
@@ -378,11 +376,8 @@ class DummySelectPoll(object):
         else:
             raise ValueError("Registered a fd on unknown eventmask: '{0}'".format(eventmask))
 
-    def unregister_readable(self, fd):
-        self.unregistered_readables.append(fd)
-
-    def unregister_writable(self, fd):
-        self.unregistered_writables.append(fd)
+    def unregister(self, fd):
+        self.unregistered.append(fd)
 
     def poll(self, timeout):
         if self.error:
