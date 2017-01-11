@@ -13,6 +13,39 @@ from supervisor.tests.base import DummyOptions
 # not available
 SkipTestCase = object
 
+class BasePollerTests(unittest.TestCase):
+    def _makeOne(self, options):
+        from supervisor.poller import BasePoller
+        return BasePoller(options)
+
+    def test_register_readable(self):
+        inst = self._makeOne(None)
+        self.assertRaises(NotImplementedError, inst.register_readable, None)
+
+    def test_register_writable(self):
+        inst = self._makeOne(None)
+        self.assertRaises(NotImplementedError, inst.register_writable, None)
+
+    def test_unregister_readable(self):
+        inst = self._makeOne(None)
+        self.assertRaises(NotImplementedError, inst.unregister_readable, None)
+
+    def test_unregister_writable(self):
+        inst = self._makeOne(None)
+        self.assertRaises(NotImplementedError, inst.unregister_writable, None)
+
+    def test_poll(self):
+        inst = self._makeOne(None)
+        self.assertRaises(NotImplementedError, inst.poll, None)
+
+    def test_before_daemonize(self):
+        inst = self._makeOne(None)
+        self.assertEqual(inst.before_daemonize(), None)
+
+    def test_after_daemonize(self):
+        inst = self._makeOne(None)
+        self.assertEqual(inst.after_daemonize(), None)
+
 class SelectPollerTests(unittest.TestCase):
 
     def _makeOne(self, options):
@@ -29,6 +62,30 @@ class SelectPollerTests(unittest.TestCase):
         poller.register_writable(6)
         poller.register_writable(7)
         self.assertEqual(sorted(poller.writables), [6,7])
+
+    def test_unregister_readable(self):
+        poller = self._makeOne(DummyOptions())
+        poller.register_readable(6)
+        poller.register_readable(7)
+        poller.register_writable(8)
+        poller.register_writable(9)
+        poller.unregister_readable(6)
+        poller.unregister_readable(9)
+        poller.unregister_readable(100)  # not registered, ignore error
+        self.assertEqual(list(poller.readables), [7])
+        self.assertEqual(list(poller.writables), [8, 9])
+
+    def test_unregister_writable(self):
+        poller = self._makeOne(DummyOptions())
+        poller.register_readable(6)
+        poller.register_readable(7)
+        poller.register_writable(8)
+        poller.register_writable(6)
+        poller.unregister_writable(7)
+        poller.unregister_writable(6)
+        poller.unregister_writable(100)  # not registered, ignore error
+        self.assertEqual(list(poller.readables), [6, 7])
+        self.assertEqual(list(poller.writables), [8])
 
     def test_poll_returns_readables_and_writables(self):
         _select = DummySelect(result={'readables': [6],
@@ -98,19 +155,37 @@ class KQueuePollerTests(KQueuePollerTestsBase):
         self.assertEqual(len(kqueue.registered_kevents), 1)
         self.assertWriteEventAdded(kqueue.registered_kevents[0], 7)
 
-    def test_unregister(self):
+    def test_unregister_readable(self):
         kqueue = DummyKQueue()
         poller = self._makeOne(DummyOptions())
         poller._kqueue = kqueue
         poller.register_writable(7)
         poller.register_readable(8)
-        poller.unregister(7)
-        poller.unregister(100)  # not registered, ignore error
+        poller.unregister_readable(7)
+        poller.unregister_readable(8)
+        poller.unregister_readable(100)  # not registered, ignore error
+        self.assertEqual(list(poller.writables), [7])
+        self.assertEqual(list(poller.readables), [])
+        self.assertWriteEventAdded(kqueue.registered_kevents[0], 7)
+        self.assertReadEventAdded(kqueue.registered_kevents[1], 8)
+        self.assertReadEventDeleted(kqueue.registered_kevents[2], 7)
+        self.assertReadEventDeleted(kqueue.registered_kevents[3], 8)
+
+    def test_unregister_writable(self):
+        kqueue = DummyKQueue()
+        poller = self._makeOne(DummyOptions())
+        poller._kqueue = kqueue
+        poller.register_writable(7)
+        poller.register_readable(8)
+        poller.unregister_writable(7)
+        poller.unregister_writable(8)
+        poller.unregister_writable(100)  # not registered, ignore error
         self.assertEqual(list(poller.writables), [])
         self.assertEqual(list(poller.readables), [8])
         self.assertWriteEventAdded(kqueue.registered_kevents[0], 7)
         self.assertReadEventAdded(kqueue.registered_kevents[1], 8)
-        self.assertDeletedEvent(kqueue.registered_kevents[2], 7)
+        self.assertWriteEventDeleted(kqueue.registered_kevents[2], 7)
+        self.assertWriteEventDeleted(kqueue.registered_kevents[3], 8)
 
     def test_poll_returns_readables_and_writables(self):
         kqueue = DummyKQueue(result=[(6, select.KQ_FILTER_READ),
@@ -188,9 +263,11 @@ class KQueuePollerTests(KQueuePollerTestsBase):
     def assertWriteEventAdded(self, kevent, fd):
         self.assertKevent(kevent, fd, select.KQ_FILTER_WRITE, select.KQ_EV_ADD)
 
-    def assertDeletedEvent(self, kevent, fd):
-        self.assertKevent(kevent, fd, select.KQ_FILTER_READ | select.KQ_FILTER_WRITE,
-                          select.KQ_EV_DELETE)
+    def assertReadEventDeleted(self, kevent, fd):
+        self.assertKevent(kevent, fd, select.KQ_FILTER_READ, select.KQ_EV_DELETE)
+
+    def assertWriteEventDeleted(self, kevent, fd):
+        self.assertKevent(kevent, fd, select.KQ_FILTER_WRITE, select.KQ_EV_DELETE)
 
     def assertKevent(self, kevent, ident, filter, flags):
         self.assertEqual(kevent.ident, ident)
@@ -290,7 +367,8 @@ class DummySelectPoll(object):
         self.error = error
         self.registered_as_readable = []
         self.registered_as_writable = []
-        self.unregistered = []
+        self.unregistered_readables = []
+        self.unregistered_writables = []
 
     def register(self, fd, eventmask):
         if eventmask == select.POLLIN | select.POLLPRI | select.POLLHUP:
@@ -300,8 +378,11 @@ class DummySelectPoll(object):
         else:
             raise ValueError("Registered a fd on unknown eventmask: '{0}'".format(eventmask))
 
-    def unregister(self, fd):
-        self.unregistered.append(fd)
+    def unregister_readable(self, fd):
+        self.unregistered_readables.append(fd)
+
+    def unregister_writable(self, fd):
+        self.unregistered_writables.append(fd)
 
     def poll(self, timeout):
         if self.error:
