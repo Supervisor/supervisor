@@ -131,7 +131,9 @@ class PollPoller(BasePoller):
             # When a process quits it's `fd`s are closed so there
             # is no more reason to keep this `fd` registered
             # If the process restarts it's `fd`s are registered again
-            self.unregister(fd)
+            self._poller.unregister(fd)
+            self.readables.discard(fd)
+            self.writables.discard(fd)
             return True
         return False
 
