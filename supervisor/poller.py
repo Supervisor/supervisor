@@ -16,7 +16,10 @@ class BasePoller:
     def register_writable(self, fd):
         raise NotImplementedError
 
-    def unregister(self, fd):
+    def unregister_readable(self, fd):
+        raise NotImplementedError
+
+    def unregister_writable(self, fd):
         raise NotImplementedError
 
     def poll(self, timeout):
@@ -41,11 +44,11 @@ class SelectPoller(BasePoller):
     def register_writable(self, fd):
         self.writables.add(fd)
 
-    def unregister(self, fd):
-        if fd in self.readables:
-            self.readables.remove(fd)
-        if fd in self.writables:
-            self.writables.remove(fd)
+    def unregister_readable(self, fd):
+        self.readables.discard(fd)
+
+    def unregister_writable(self, fd):
+        self.writables.discard(fd)
 
     def unregister_all(self):
         self._init_fdsets()
@@ -78,15 +81,28 @@ class PollPoller(BasePoller):
         self._poller = select.poll()
         self.READ = select.POLLIN | select.POLLPRI | select.POLLHUP
         self.WRITE = select.POLLOUT
+        self.readables = set()
+        self.writables = set()
 
     def register_readable(self, fd):
         self._poller.register(fd, self.READ)
+        self.readables.add(fd)
 
     def register_writable(self, fd):
         self._poller.register(fd, self.WRITE)
+        self.writables.add(fd)
 
-    def unregister(self, fd):
+    def unregister_readable(self, fd):
+        self.readables.discard(fd)
         self._poller.unregister(fd)
+        if fd in self.writables:
+            self._poller.register(fd, self.WRITE)
+
+    def unregister_writable(self, fd):
+        self.writables.discard(fd)
+        self._poller.unregister(fd)
+        if fd in self.readables:
+            self._poller.register(fd, self.READ)
 
     def poll(self, timeout):
         fds = self._poll_fds(timeout)
@@ -143,13 +159,16 @@ class KQueuePoller(BasePoller):
                                flags=select.KQ_EV_ADD)
         self._kqueue_control(fd, kevent)
 
-    def unregister(self, fd):
-        kevent = select.kevent(
-            fd,
-            filter=(select.KQ_FILTER_READ | select.KQ_FILTER_WRITE),
-            flags=select.KQ_EV_DELETE
-            )
-        self._forget_fd(fd)
+    def unregister_readable(self, fd):
+        kevent = select.kevent(fd, filter=select.KQ_FILTER_READ,
+                               flags=select.KQ_EV_DELETE)
+        self.readables.discard(fd)
+        self._kqueue_control(fd, kevent)
+
+    def unregister_writable(self, fd):
+        kevent = select.kevent(fd, filter=select.KQ_FILTER_WRITE,
+                               flags=select.KQ_EV_DELETE)
+        self.writables.discard(fd)
         self._kqueue_control(fd, kevent)
 
     def _kqueue_control(self, fd, kevent):
@@ -161,13 +180,6 @@ class KQueuePoller(BasePoller):
                                             'Invalid file descriptor %s' % fd)
             else:
                 raise
-
-    def _forget_fd(self, fd):
-        for collection in (self.readables, self.writables):
-            try:
-                collection.remove(fd)
-            except KeyError:
-                pass
 
     def poll(self, timeout):
         readables, writables = [], []
