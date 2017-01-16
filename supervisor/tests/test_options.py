@@ -1266,6 +1266,25 @@ class ServerOptionsTests(unittest.TestCase):
             self.assertEqual(exc.args[0],
                 "section [inet_http_server] has no port value")
 
+    def test_cleanup_ignore_pidfile(self):
+        fn = tempfile.mktemp()
+
+        with open(fn, 'w') as f:
+            f.write('1234')
+
+        try:
+            instance = self._makeOne()
+            instance.pidfile = fn
+
+            # cleanup without write pidfile
+            instance.cleanup()
+            self.assertTrue(os.path.exists(fn))
+        finally:
+            try:
+                os.unlink(fn)
+            except OSError:
+                pass
+
     def test_cleanup_afunix_unlink(self):
         fn = tempfile.mktemp()
         f = open(fn, 'w')
@@ -1332,6 +1351,8 @@ class ServerOptionsTests(unittest.TestCase):
             f.close()
             instance = self._makeOne()
             instance.pidfile = pidfile
+            instance.logger = DummyLogger()
+            instance.write_pidfile()
             instance.cleanup()
             self.assertFalse(os.path.exists(pidfile))
         finally:

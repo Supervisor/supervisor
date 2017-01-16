@@ -453,6 +453,8 @@ class ServerOptions(Options):
         self.signal_receiver = SignalReceiver()
         self.poller = poller.Poller(self)
 
+        self._pidfile_wrote = False
+
     def version(self, dummy):
         """Print version to stdout and exit(0).
         """
@@ -1122,6 +1124,7 @@ class ServerOptions(Options):
         except (IOError, OSError):
             self.logger.critical('could not write pidfile %s' % self.pidfile)
         else:
+            self._pidfile_wrote = True
             self.logger.info('supervisord started with pid %s' % pid)
 
     def cleanup(self):
@@ -1130,7 +1133,9 @@ class ServerOptions(Options):
                 if self.unlink_socketfiles:
                     socketname = config['file']
                     self._try_unlink(socketname)
-        self._try_unlink(self.pidfile)
+
+        if self._pidfile_wrote:
+            self._try_unlink(self.pidfile)
 
     def _try_unlink(self, path):
         try:
