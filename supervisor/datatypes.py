@@ -4,6 +4,7 @@ import pwd
 import signal
 import socket
 import shlex
+import sys
 
 from supervisor.compat import urlparse
 from supervisor.compat import long
@@ -68,7 +69,20 @@ def dict_of_key_value_pairs(arg):
     """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'}
         Quotes can be used to allow commas in the value
     """
-    lexer = shlex.shlex(str(arg), posix=True)
+    # shlex has a bug that fixed in Python 2.7.13 and Python 3.6.0.
+    # We keep an newest version in local to solve this problem.
+    # Detail see:
+    #   http://bugs.python.org/issue21999
+    if sys.version_info < (2, 7, 13):
+        # use local shlex
+        from . import _shlex2 as _shlex
+    elif sys.version_info.major == 3 and sys.version_info < (3, 6, 0):
+        # use local shlex
+        from . import _shlex3 as _shlex
+    else:
+        _shlex = shlex
+
+    lexer = _shlex.shlex(str(arg), posix=True)
     lexer.wordchars += '/.+-():'
 
     tokens = list(lexer)
