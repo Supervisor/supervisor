@@ -3,17 +3,8 @@
 XML-RPC API Documentation
 =========================
 
-
-
-
-
-To use the XML-RPC interface, first make sure it has been configured 
-properly by specifying the rpcinterface_factory in your conf file:
-
-.. code-block:: ini
-    
-    [rpcinterface:supervisor]  
-    supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+To use the XML-RPC interface, first make sure you have configured the interface
+factory properly by setting the default factory. See :ref:`rpcinterface_factories`.
 
 Then you can connect to supervisor's HTTP port
 with any XML-RPC client library and run commands against it.  An
@@ -380,4 +371,3 @@ System Methods
     .. automethod:: methodSignature
 
     .. automethod:: multicall
-
