@@ -3,7 +3,10 @@
 XML-RPC API Documentation
 =========================
 
-To use the XML-RPC interface, connect to supervisor's HTTP port
+To use the XML-RPC interface, first make sure you have configured the interface
+factory properly by setting the default factory. See :ref:`rpcinterface_factories`.
+
+Then you can connect to supervisor's HTTP port
 with any XML-RPC client library and run commands against it.  An
 example of doing this using Python's ``xmlrpclib`` client library
 is as follows.
@@ -368,4 +371,3 @@ System Methods
     .. automethod:: methodSignature
 
     .. automethod:: multicall
-
