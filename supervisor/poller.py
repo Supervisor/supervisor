@@ -28,6 +28,9 @@ class BasePoller:
     def after_daemonize(self):
         pass
 
+    def close(self):
+        pass
+
 
 class SelectPoller(BasePoller):
 
@@ -189,8 +192,7 @@ class KQueuePoller(BasePoller):
         return readables, writables
 
     def before_daemonize(self):
-        self._kqueue.close()
-        self._kqueue = None
+        self.close()
 
     def after_daemonize(self):
         self._kqueue = select.kqueue()
@@ -198,6 +200,10 @@ class KQueuePoller(BasePoller):
             self.register_readable(fd)
         for fd in self.writables:
             self.register_writable(fd)
+
+    def close(self):
+        self._kqueue.close()
+        self._kqueue = None
 
 def implements_poll():
     return hasattr(select, 'poll')
