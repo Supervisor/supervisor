@@ -1133,9 +1133,9 @@ class ServerOptions(Options):
                 if self.unlink_socketfiles:
                     socketname = config['file']
                     self._try_unlink(socketname)
-
         if self._pidfile_wrote:
             self._try_unlink(self.pidfile)
+        self.poller.close()
 
     def _try_unlink(self, path):
         try:
@@ -2127,4 +2127,3 @@ class NoPermission(ProcessException):
     """ Indicates that the file cannot be executed because the supervisor
     process does not possess the appropriate UNIX filesystem permission
     to execute the file. """
-
