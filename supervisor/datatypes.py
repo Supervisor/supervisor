@@ -157,6 +157,7 @@ class SocketConfig:
     for TCP vs Unix sockets """
     url = '' # socket url
     addr = None #socket addr
+    backlog = None # socket listen backlog
 
     def __repr__(self):
         return '<%s at %s for %s>' % (self.__class__,
@@ -178,6 +179,9 @@ class SocketConfig:
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def get_backlog(self):
+        return self.backlog
+
     def addr(self): # pragma: no cover
         raise NotImplementedError
 
@@ -190,10 +194,11 @@ class InetStreamSocketConfig(SocketConfig):
     host = None # host name or ip to bind to
     port = None # integer port to bind to
 
-    def __init__(self, host, port):
+    def __init__(self, host, port, **kwargs):
         self.host = host.lower()
         self.port = port_number(port)
         self.url = 'tcp://%s:%d' % (self.host, self.port)
+        self.backlog = kwargs.get('backlog', None)
 
     def addr(self):
         return self.host, self.port
@@ -221,6 +226,7 @@ class UnixStreamSocketConfig(SocketConfig):
         self.url = 'unix://%s' % path
         self.mode = kwargs.get('mode', None)
         self.owner = kwargs.get('owner', None)
+        self.backlog = kwargs.get('backlog', None)
 
     def addr(self):
         return self.path

@@ -1293,6 +1293,16 @@ sections do not have.
 
   *Introduced*: 3.0
 
+``socket_backlog``
+
+  Sets socket listen(2) backlog.
+
+  *Default*: socket.SOMAXCONN
+
+  *Required*:  No.
+
+  *Introduced*: 3.3.2
+
 ``socket_owner``
 
   For UNIX domain sockets, this parameter can be used to specify the user

@@ -2389,6 +2389,7 @@ class ServerOptionsTests(unittest.TestCase):
         socket = unix:///tmp/%(program_name)s.sock
         socket_owner = testuser:testgroup
         socket_mode = 0666
+        socket_backlog = 32676
         process_name = %(program_name)s_%(process_num)s
         command = /bin/foo
         numprocs = 2
@@ -2441,6 +2442,7 @@ class ServerOptionsTests(unittest.TestCase):
                                 'unix:///tmp/foo.sock')
         self.assertEqual(exp_owner, gconf_foo.socket_config.get_owner())
         self.assertEqual(438, gconf_foo.socket_config.get_mode()) # 0666 in Py2, 0o666 in Py3
+        self.assertEqual(32676, gconf_foo.socket_config.get_backlog())
         self.assertEqual(len(gconf_foo.process_configs), 2)
         pconfig_foo = gconf_foo.process_configs[0]
         self.assertEqual(pconfig_foo.__class__, FastCGIProcessConfig)
@@ -2476,6 +2478,7 @@ class ServerOptionsTests(unittest.TestCase):
         socket = unix:///tmp/%(program_name)s%(ENV_FOO_SOCKET_EXT)s
         socket_owner = %(ENV_FOO_SOCKET_USER)s:testgroup
         socket_mode = %(ENV_FOO_SOCKET_MODE)s
+        socket_backlog = %(ENV_FOO_SOCKET_BACKLOG)s
         process_name = %(ENV_FOO_PROCESS_PREFIX)s_%(program_name)s_%(process_num)s
         command = /bin/foo --arg1=%(ENV_FOO_COMMAND_ARG1)s
         numprocs = %(ENV_FOO_NUMPROCS)s
@@ -2488,6 +2491,7 @@ class ServerOptionsTests(unittest.TestCase):
                                        'ENV_FOO_SOCKET_EXT': '.usock',
                                        'ENV_FOO_SOCKET_USER': 'testuser',
                                        'ENV_FOO_SOCKET_MODE': '0666',
+                                       'ENV_FOO_SOCKET_BACKLOG': '32676',
                                        'ENV_FOO_PROCESS_PREFIX': 'fcgi-',
                                        'ENV_FOO_COMMAND_ARG1': 'bar',
                                        'ENV_FOO_NUMPROCS': '2',
@@ -2524,6 +2528,7 @@ class ServerOptionsTests(unittest.TestCase):
                                 'unix:///tmp/foo.usock')
         self.assertEqual(exp_owner, gconf_foo.socket_config.get_owner())
         self.assertEqual(438, gconf_foo.socket_config.get_mode()) # 0666 in Py2, 0o666 in Py3
+        self.assertEqual(32676, gconf_foo.socket_config.get_backlog())
         self.assertEqual(len(gconf_foo.process_configs), 2)
         pconfig_foo = gconf_foo.process_configs[0]
         self.assertEqual(pconfig_foo.__class__, FastCGIProcessConfig)
@@ -2647,6 +2652,19 @@ class ServerOptionsTests(unittest.TestCase):
         [fcgi-program:foo]
         socket = unix:///tmp/foo.sock
         socket_mode = junk
+        command = /bin/foo
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError,instance.process_groups_from_parser,config)
+
+    def test_fcgi_program_bad_socket_backlog(self):
+        text = lstrip("""\
+        [fcgi-program:foo]
+        socket = unix:///tmp/foo.sock
+        socket_backlog = -1
         command = /bin/foo
         """)
         from supervisor.options import UnhosedConfigParser
