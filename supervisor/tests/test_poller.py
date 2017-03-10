@@ -227,7 +227,7 @@ class KQueuePollerTests(KQueuePollerTestsBase):
         self.assertKevent(kevent, fd, select.KQ_FILTER_READ, select.KQ_EV_ADD)
 
     def assertWriteEventAdded(self, kevent, fd):
-        self.assertKevent(kevent, fd, select.KQ_FILTER_WRITE, select.KQ_EV_ADD)
+        self.assertKevent(kevent, fd, select.KQ_FILTER_WRITE, select.KQ_EV_ADD | select.KQ_EV_CLEAR)
 
     def assertDeletedEvent(self, kevent, fd):
         self.assertKevent(kevent, fd, select.KQ_FILTER_READ | select.KQ_FILTER_WRITE,

@@ -140,7 +140,7 @@ class KQueuePoller(BasePoller):
     def register_writable(self, fd):
         self.writables.add(fd)
         kevent = select.kevent(fd, filter=select.KQ_FILTER_WRITE,
-                               flags=select.KQ_EV_ADD)
+                               flags=select.KQ_EV_ADD | select.KQ_EV_CLEAR)
         self._kqueue_control(fd, kevent)
 
     def unregister(self, fd):
