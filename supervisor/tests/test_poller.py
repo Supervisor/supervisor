@@ -257,6 +257,15 @@ class KQueuePollerTests(KQueuePollerTestsBase):
         poller.register_readable.assert_called_with(1)
         poller.register_writable.assert_called_with(3)
 
+    def test_close_closes_kqueue(self):
+        mock_kqueue = Mock()
+        options = DummyOptions()
+        poller = self._makeOne(options)
+        poller._kqueue = mock_kqueue
+        poller.close()
+        mock_kqueue.close.assert_called_once_with()
+        self.assertEqual(poller._kqueue, None)
+
     def assertReadEventAdded(self, kevent, fd):
         self.assertKevent(kevent, fd, select.KQ_FILTER_READ, select.KQ_EV_ADD)
 

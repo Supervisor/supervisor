@@ -18,6 +18,7 @@ from supervisor.loggers import LevelsByName
 from supervisor.tests.base import DummySupervisor
 from supervisor.tests.base import DummyLogger
 from supervisor.tests.base import DummyOptions
+from supervisor.tests.base import DummyPoller
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyProcess
 from supervisor.tests.base import DummySocketConfig
@@ -1366,6 +1367,25 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         instance.pidfile = notfound
         instance.cleanup() # shouldn't raise
+
+    def test_cleanup_closes_poller(self):
+        pidfile = tempfile.mktemp()
+        try:
+            with open(pidfile, 'w') as f:
+                f.write('2')
+            instance = self._makeOne()
+            instance.pidfile = pidfile
+
+            poller = DummyPoller({})
+            instance.poller = poller
+            self.assertFalse(poller.closed)
+            instance.cleanup()
+            self.assertTrue(poller.closed)
+        finally:
+            try:
+                os.unlink(pidfile)
+            except OSError:
+                pass
 
     def test_cleanup_fds_closes_5_upto_minfds_ignores_oserror(self):
         instance = self._makeOne()
