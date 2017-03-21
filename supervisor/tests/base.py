@@ -1169,6 +1169,7 @@ class DummyEvent:
 class DummyPoller:
     def __init__(self, options):
         self.result = [], []
+        self.closed = False
 
     def register_readable(self, fd):
         pass
@@ -1178,6 +1179,9 @@ class DummyPoller:
 
     def poll(self, timeout):
         return self.result
+
+    def close(self):
+        self.closed = True
 
 def dummy_handler(event, result):
     pass
