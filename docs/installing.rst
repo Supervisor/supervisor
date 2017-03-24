@@ -100,16 +100,17 @@ the system boots.
 
     Distribution packages of Supervisor can lag considerably behind the
     official Supervisor packages released to PyPI.  For example, Ubuntu
-    12.04 (released April 2012) offers a package based on Supervisor 3.0a8
+    12.04 (released April 2012) offered a package based on Supervisor 3.0a8
     (released January 2010).
 
 .. note::
 
-    Users have reported that the distribution package of Supervisor for
-    Ubuntu 16.04 has different behavior than previous versions.  On Ubuntu
-    10.04, 12.04, and 14.04, installing the package will configure the system
-    to start ``supervisord`` when the system boots.  On Ubuntu 16.04, this is
-    not done.  See `Ubuntu Bug #1594740 <https://bugs.launchpad.net/ubuntu/+source/supervisor/+bug/1594740>`_
+    Users reported that the distribution package of Supervisor for Ubuntu 16.04
+    had different behavior than previous versions.  On Ubuntu 10.04, 12.04, and
+    14.04, installing the package will configure the system to start
+    ``supervisord`` when the system boots.  On Ubuntu 16.04, this was not done
+    by the initial release of the package.  The package was fixed later.  See
+    `Ubuntu Bug #1594740 <https://bugs.launchpad.net/ubuntu/+source/supervisor/+bug/1594740>`_
     for more information.
 
 Installing via pip
