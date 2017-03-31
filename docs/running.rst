@@ -244,11 +244,11 @@ add <name> [...]
 
 remove <name> [...]
 
-   Removes process/group from active confi
+   Removes process/group from active config
 
 update
 
-   Reload config and add/remove as necessary
+   Reload config and then add and remove as necessary (restarts programs)
 
 clear <name>
 
@@ -278,6 +278,10 @@ pid <name>
 pid all
 
    Get the PID of every child process, one per line.
+
+reread
+
+   Reload the daemon's configuration files, without add/remove (no restarts)
 
 restart <name>
 
