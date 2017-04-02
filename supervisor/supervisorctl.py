@@ -1031,7 +1031,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             self._formatChanges(result[0])
 
     def help_reread(self):
-        self.ctl.output("reread \t\t\tReload the daemon's configuration files without add and remove")
+        self.ctl.output("reread \t\t\tReload the daemon's configuration files without add/remove")
 
     def do_add(self, arg):
         names = arg.split()
@@ -1146,8 +1146,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
             log(gname, "added process group")
 
     def help_update(self):
-        self.ctl.output("update\t\t\tReload config and add and remove as necessary, and will restart affected programs")
-        self.ctl.output("update all\t\tReload config and add and remove as necessary, and will restart affected programs")
+        self.ctl.output("update\t\t\tReload config and add/remove as necessary, and will restart affected programs")
+        self.ctl.output("update all\t\tReload config and add/remove as necessary, and will restart affected programs")
         self.ctl.output("update <gname> [...]\tUpdate specific groups")
 
     def _clearresult(self, result):
