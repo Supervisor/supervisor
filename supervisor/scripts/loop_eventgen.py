@@ -7,9 +7,11 @@
 import sys
 import time
 from supervisor import childutils
+from supervisor.monotonic import monotonic
+
 
 def main(max):
-    start = time.time()
+    start = monotonic()
     report = open('/tmp/report', 'w')
     i = 0
     while 1:
@@ -19,7 +21,7 @@ def main(max):
         report.flush()
         i+=1
         if max and i >= max:
-            end = time.time()
+            end = monotonic()
             report.write('%s per second\n' % (i / (end - start)))
             sys.exit(0)
 
