@@ -281,6 +281,33 @@ class ClientOptionsTests(unittest.TestCase):
         self.assertEqual(instance.username, 'chris')
         self.assertEqual(instance.password, '123')
 
+    def test_config_file_env(self):
+        """Making sure config file can be loaded from env."""
+        supervisord_conf = os.path.join(tempfile.mkdtemp(), 'supervisord.conf')
+        text = lstrip("""[supervisorctl]
+        serverurl=http://localhost:9001
+        username=chris
+        password=123
+        """)
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+
+        try:
+          os.environ['SUPERVISOR_CONFIG'] = supervisord_conf
+          instance = self._makeOne()
+          instance.searchpaths = []
+          exitcodes = []
+          instance.exit = lambda x: exitcodes.append(x)
+          instance.realize(args=[])
+        finally:
+          os.environ.pop('SUPERVISOR_CONFIG', None)
+
+        self.assertEqual(exitcodes, [])
+        self.assertEqual(instance.interactive, 1)
+        self.assertEqual(instance.serverurl, 'http://localhost:9001')
+        self.assertEqual(instance.username, 'chris')
+        self.assertEqual(instance.password, '123')
+
     def test_options(self):
         tempdir = tempfile.gettempdir()
         s = lstrip("""[supervisorctl]

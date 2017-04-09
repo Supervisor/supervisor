@@ -3,12 +3,13 @@ Configuration File
 
 The Supervisor configuration file is conventionally named
 :file:`supervisord.conf`.  It is used by both :program:`supervisord`
-and :program:`supervisorctl`.  If either application is started
-without the ``-c`` option (the option which is used to tell the
-application the configuration filename explicitly), the application
-will look for a file named :file:`supervisord.conf` within the
-following locations, in the specified order.  It will use the first
-file it finds.
+and :program:`supervisorctl`. Either application can be starting with
+the ``-c`` or ``--configuration`` option, which is used to tell the
+application the configuration filename explicitly. Alternatively the
+config file can be specified in the ``$SUPERVISOR_CONFIG`` environment
+variable. If neither is he application will look for a file named
+:file:`supervisord.conf` within the following locations, in the
+specified order.  It will use the first file it finds.
 
 #. :file:`$CWD/supervisord.conf`
 
