@@ -17,3 +17,4 @@ htmlcov/
 tmp/
 coverage.xml
 nosetests.xml
+.cache/
