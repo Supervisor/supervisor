@@ -340,7 +340,7 @@ def existing_dirpath(v):
     if os.path.isdir(dir):
         return nv
     raise ValueError('The directory named as part of the path %s '
-                     'does not exist.' % v)
+                     'does not exist' % v)
 
 def logging_level(value):
     s = str(value).lower()

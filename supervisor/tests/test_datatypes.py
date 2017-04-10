@@ -374,7 +374,7 @@ class ExistingDirpathTests(unittest.TestCase):
             self.fail()
         except ValueError, e:
             expected = ('The directory named as part of the path %s '
-                        'does not exist.' % path)
+                        'does not exist' % path)
             self.assertEqual(e.args[0], expected)
 
     def test_raises_if_exists_but_not_a_dir(self):
@@ -385,7 +385,7 @@ class ExistingDirpathTests(unittest.TestCase):
             self.fail()
         except ValueError, e:
             expected = ('The directory named as part of the path %s '
-                        'does not exist.' % path)
+                        'does not exist' % path)
             self.assertEqual(e.args[0], expected)
 
     def test_expands_home(self):
