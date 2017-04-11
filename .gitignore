@@ -12,7 +12,9 @@ build/
 docs/.build/
 dist/
 env*/
+venv*/
 htmlcov/
 tmp/
 coverage.xml
 nosetests.xml
+.cache/
