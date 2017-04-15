@@ -35,11 +35,8 @@ class LevelsByDescription:
     blather = LevelsByName.BLAT
 
 def _levelNumbers():
-    bynumber = {}
-    for name, number in LevelsByName.__dict__.items():
-        if not name.startswith('_'):
-            bynumber[number] = name
-    return bynumber
+    return dict((number, name) for name, number in LevelsByName.__dict__.items() \
+            if not name.startswith('_'))
 
 LOG_LEVELS_BY_NUM = _levelNumbers()
 
