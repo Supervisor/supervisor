@@ -951,6 +951,10 @@ class ServerOptions(Options):
                 syslog = boolean(get(section, sy_key, False))
                 logfiles[sy_key] = syslog
 
+                append_ts_key = '%s_append_timestamp' % k
+                append_ts = boolean(get(section,append_ts_key,False))
+                logfiles[append_ts_key] = append_ts
+
                 if lf_val is Automatic and not maxbytes:
                     self.parse_warnings.append(
                         'For [%s], AUTO logging used for %s without '
@@ -984,12 +988,14 @@ class ServerOptions(Options):
                 startretries=startretries,
                 uid=uid,
                 stdout_logfile=logfiles['stdout_logfile'],
+                stdout_append_timestamp=logfiles['stdout_append_timestamp'],
                 stdout_capture_maxbytes = stdout_cmaxbytes,
                 stdout_events_enabled = stdout_events,
                 stdout_logfile_backups=logfiles['stdout_logfile_backups'],
                 stdout_logfile_maxbytes=logfiles['stdout_logfile_maxbytes'],
                 stdout_syslog=logfiles['stdout_syslog'],
                 stderr_logfile=logfiles['stderr_logfile'],
+                stderr_append_timestamp=logfiles['stderr_append_timestamp'],
                 stderr_capture_maxbytes = stderr_cmaxbytes,
                 stderr_events_enabled = stderr_events,
                 stderr_logfile_backups=logfiles['stderr_logfile_backups'],
@@ -1813,7 +1819,7 @@ class ProcessConfig(Config):
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
         'exitcodes', 'redirect_stderr' ]
-    optional_param_names = [ 'environment', 'serverurl' ]
+    optional_param_names = [ 'environment', 'serverurl','stdout_append_timestamp','stderr_append_timestamp' ]
 
     def __init__(self, options, **params):
         self.options = options
