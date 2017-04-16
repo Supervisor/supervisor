@@ -471,7 +471,7 @@ class StatusView(MeldView):
                 if message is NOT_DONE_YET:
                     return NOT_DONE_YET
                 if message is not None:
-                    server_url = form['SERVER_URL']
+                    server_url = form['REFERER_URL']
                     location = server_url + '?message=%s' % urllib.quote(
                         message)
                     response['headers']['Location'] = location
@@ -630,6 +630,7 @@ class supervisor_ui_handler:
             form[k] = v
 
         form['SERVER_URL'] = request.get_server_url()
+        form['REFERER_URL'] = request.get_referring_url()
 
         path = form['PATH_INFO']
         # strip off all leading slashes
