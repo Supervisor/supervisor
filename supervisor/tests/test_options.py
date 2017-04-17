@@ -545,6 +545,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.startretries, 10)
         self.assertEqual(proc1.uid, 0)
         self.assertEqual(proc1.stdout_logfile, '/tmp/cat.log')
+        self.assertEqual(proc1.stdout_append_timestamp,False)
         self.assertEqual(proc1.stopsignal, signal.SIGKILL)
         self.assertEqual(proc1.stopwaitsecs, 5)
         self.assertEqual(proc1.stopasgroup, False)
