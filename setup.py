@@ -77,6 +77,7 @@ dist = setup(
     author="Chris McDonough",
     author_email="chrism@plope.com",
     packages=find_packages(),
+    setup_requires=['setuptools_git'],
     install_requires=requires,
     extras_require={
         'iterparse': ['cElementTree >= 1.0.2'],
