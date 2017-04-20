@@ -221,9 +221,8 @@ class Supervisor:
                             'read event caused by %(dispatcher)r',
                             dispatcher=dispatcher)
                         dispatcher.handle_read_event()
-                        if (not dispatcher.readable()
-                                and not dispatcher.writable()):
-                            self.options.poller.unregister(fd)
+                        if not dispatcher.readable():
+                            self.options.poller.unregister_readable(fd)
                     except asyncore.ExitNow:
                         raise
                     except:
@@ -237,9 +236,8 @@ class Supervisor:
                             'write event caused by %(dispatcher)r',
                             dispatcher=dispatcher)
                         dispatcher.handle_write_event()
-                        if (not dispatcher.readable()
-                                and not dispatcher.writable()):
-                            self.options.poller.unregister(fd)
+                        if not dispatcher.writable():
+                            self.options.poller.unregister_writable(fd)
                     except asyncore.ExitNow:
                         raise
                     except:
