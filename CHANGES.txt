@@ -25,11 +25,13 @@
   error condition occurs.  Previous versions did not set the exit status so
   it was always zero.  Patch by Luke Weber.
 
-- ``supervisorctl reload`` now shows an error message if an argument is
-  given.  Patch by Joel Krauska.
+- Fixed a bug introduced in 3.3.0 where the ``supervisorctl reload`` command
+  would crash ``supervisord`` with the error ``OSError: [Errno 9] Bad file
+  descriptor`` if the ``kqueue`` poller was used.  Patch by Jared Suttles.
 
-- ``supervisorctl`` commands ``avail``, ``reread``, and ``version`` now show
-  an error message if an argument is given.
+- Fixed a bug introduced in 3.3.0 where ``supervisord`` could get stuck in a
+  polling loop after the web interface was used, causing high CPU usage.
+  Patch by Jared Suttles.
 
 - Fixed a bug where ``supervisorctl fg`` would swallow most XML-RPC faults.
   ``fg`` now prints the fault and exits.
@@ -38,13 +40,11 @@
   or group name contains a forward slash character (``/``) since it would
   break the URLs used by the web interface.
 
-- Fixed a bug introduced in 3.3.0 where the ``supervisorctl reload`` command
-  would crash ``supervisord`` with the error ``OSError: [Errno 9] Bad file
-  descriptor`` if the ``kqueue`` poller was used.  Patch by Jared Suttles.
+- ``supervisorctl reload`` now shows an error message if an argument is
+  given.  Patch by Joel Krauska.
 
-- Fixed a bug introduced in 3.3.0 where ``supervisord`` could get stuck in a
-  polling loop after the web interface was used, causing high CPU usage.
-  Patch by Jared Suttles.
+- ``supervisorctl`` commands ``avail``, ``reread``, and ``version`` now show
+  an error message if an argument is given.
 
 3.3.1 (2016-08-02)
 ------------------
