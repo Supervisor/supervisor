@@ -38,9 +38,13 @@
   or group name contains a forward slash character (``/``) since it would
   break the URLs used by the web interface.
 
- - Fixed a bug introduced in 3.3.0 where the ``supervisorctl reload`` command
-   would crash ``supervisord`` with the error ``OSError: [Errno 9] Bad file
-   descriptor`` if the ``kqueue`` poller was used.  Patch by Jared Suttles.
+- Fixed a bug introduced in 3.3.0 where the ``supervisorctl reload`` command
+  would crash ``supervisord`` with the error ``OSError: [Errno 9] Bad file
+  descriptor`` if the ``kqueue`` poller was used.  Patch by Jared Suttles.
+
+- Fixed a bug introduced in 3.3.0 where ``supervisord`` could get stuck in a
+  polling loop after the web interface was used, causing high CPU usage.
+  Patch by Jared Suttles.
 
 3.3.1 (2016-08-02)
 ------------------
