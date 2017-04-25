@@ -405,6 +405,7 @@ class ServerOptions(Options):
     nodaemon = None
     environment = None
     httpservers = ()
+    unlink_pidfile = False
     unlink_socketfiles = True
     mood = states.SupervisorStates.RUNNING
 
@@ -452,8 +453,6 @@ class ServerOptions(Options):
         self.parse_infos = []
         self.signal_receiver = SignalReceiver()
         self.poller = poller.Poller(self)
-
-        self._pidfile_wrote = False
 
     def version(self, dummy):
         """Print version to stdout and exit(0).
@@ -1124,7 +1123,7 @@ class ServerOptions(Options):
         except (IOError, OSError):
             self.logger.critical('could not write pidfile %s' % self.pidfile)
         else:
-            self._pidfile_wrote = True
+            self.unlink_pidfile = True
             self.logger.info('supervisord started with pid %s' % pid)
 
     def cleanup(self):
@@ -1133,7 +1132,7 @@ class ServerOptions(Options):
                 if self.unlink_socketfiles:
                     socketname = config['file']
                     self._try_unlink(socketname)
-        if self._pidfile_wrote:
+        if self.unlink_pidfile:
             self._try_unlink(self.pidfile)
         self.poller.close()
 
