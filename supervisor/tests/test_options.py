@@ -1360,7 +1360,7 @@ class ServerOptionsTests(unittest.TestCase):
             instance.pidfile = pidfile
             instance.logger = DummyLogger()
             instance.write_pidfile()
-            self.assertTrue(instance._pidfile_wrote)
+            self.assertTrue(instance.unlink_pidfile)
             instance.cleanup()
             self.assertFalse(os.path.exists(pidfile))
         finally:
@@ -1383,11 +1383,11 @@ class ServerOptionsTests(unittest.TestCase):
 
         try:
             instance = self._makeOne()
-            # pidfile exists but _pidfile_wrote indicates we did not write it.
+            # pidfile exists but unlink_pidfile indicates we did not write it.
             # pidfile must be from another instance of supervisord and
             # shouldn't be removed.
             instance.pidfile = pidfile
-            self.assertFalse(instance._pidfile_wrote)
+            self.assertFalse(instance.unlink_pidfile)
             instance.cleanup()
             self.assertTrue(os.path.exists(pidfile))
         finally:
@@ -1513,7 +1513,7 @@ class ServerOptionsTests(unittest.TestCase):
             self.assertEqual(pid, os.getpid())
             msg = instance.logger.data[0]
             self.assertTrue(msg.startswith('supervisord started with pid'))
-            self.assertTrue(instance._pidfile_wrote)
+            self.assertTrue(instance.unlink_pidfile)
         finally:
             try:
                 os.unlink(fn)
@@ -1528,7 +1528,7 @@ class ServerOptionsTests(unittest.TestCase):
         instance.write_pidfile()
         msg = instance.logger.data[0]
         self.assertTrue(msg.startswith('could not write pidfile'))
-        self.assertFalse(instance._pidfile_wrote)
+        self.assertFalse(instance.unlink_pidfile)
 
     def test_close_fd(self):
         instance = self._makeOne()
