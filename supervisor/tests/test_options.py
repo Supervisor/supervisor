@@ -1267,25 +1267,6 @@ class ServerOptionsTests(unittest.TestCase):
             self.assertEqual(exc.args[0],
                 "section [inet_http_server] has no port value")
 
-    def test_cleanup_ignore_pidfile(self):
-        fn = tempfile.mktemp()
-
-        with open(fn, 'w') as f:
-            f.write('1234')
-
-        try:
-            instance = self._makeOne()
-            instance.pidfile = fn
-
-            # cleanup without write pidfile
-            instance.cleanup()
-            self.assertTrue(os.path.exists(fn))
-        finally:
-            try:
-                os.unlink(fn)
-            except OSError:
-                pass
-
     def test_cleanup_afunix_unlink(self):
         fn = tempfile.mktemp()
         f = open(fn, 'w')
@@ -1354,6 +1335,7 @@ class ServerOptionsTests(unittest.TestCase):
             instance.pidfile = pidfile
             instance.logger = DummyLogger()
             instance.write_pidfile()
+            self.assertTrue(instance._pidfile_wrote)
             instance.cleanup()
             self.assertFalse(os.path.exists(pidfile))
         finally:
@@ -1367,6 +1349,27 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         instance.pidfile = notfound
         instance.cleanup() # shouldn't raise
+
+    def test_cleanup_does_not_remove_pidfile_from_another_supervisord(self):
+        pidfile = tempfile.mktemp()
+
+        with open(pidfile, 'w') as f:
+            f.write('1234')
+
+        try:
+            instance = self._makeOne()
+            # pidfile exists but _pidfile_wrote indicates we did not write it.
+            # pidfile must be from another instance of supervisord and
+            # shouldn't be removed.
+            instance.pidfile = pidfile
+            self.assertFalse(instance._pidfile_wrote)
+            instance.cleanup()
+            self.assertTrue(os.path.exists(pidfile))
+        finally:
+            try:
+                os.unlink(pidfile)
+            except OSError:
+                pass
 
     def test_cleanup_closes_poller(self):
         pidfile = tempfile.mktemp()
@@ -1484,6 +1487,7 @@ class ServerOptionsTests(unittest.TestCase):
             self.assertEqual(pid, os.getpid())
             msg = instance.logger.data[0]
             self.assertTrue(msg.startswith('supervisord started with pid'))
+            self.assertTrue(instance._pidfile_wrote)
         finally:
             try:
                 os.unlink(fn)
@@ -1498,6 +1502,7 @@ class ServerOptionsTests(unittest.TestCase):
         instance.write_pidfile()
         msg = instance.logger.data[0]
         self.assertTrue(msg.startswith('could not write pidfile'))
+        self.assertFalse(instance._pidfile_wrote)
 
     def test_close_fd(self):
         instance = self._makeOne()
