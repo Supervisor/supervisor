@@ -417,7 +417,7 @@ class ServerOptions(Options):
     environment = None
     httpservers = ()
     unlink_pidfile = False
-    unlink_socketfiles = True
+    unlink_socketfiles = False
     mood = states.SupervisorStates.RUNNING
 
     def __init__(self):
@@ -1212,6 +1212,7 @@ class ServerOptions(Options):
     def openhttpservers(self, supervisord):
         try:
             self.httpservers = self.make_http_servers(supervisord)
+            self.unlink_socketfiles = True
         except socket.error as why:
             if why.args[0] == errno.EADDRINUSE:
                 self.usage('Another program is already listening on '
@@ -1226,7 +1227,6 @@ class ServerOptions(Options):
                 else:
                     self.usage('%s errno.%s (%d)' %
                                (help, errorname, why.args[0]))
-            self.unlink_socketfiles = False
         except ValueError as why:
             self.usage(why.args[0])
 

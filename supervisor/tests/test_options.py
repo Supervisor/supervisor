@@ -1301,6 +1301,7 @@ class ServerOptionsTests(unittest.TestCase):
         with open(fn, 'w') as f:
             f.write('foo')
         instance = self._makeOne()
+        instance.unlink_socketfiles = True
         class Server:
             pass
         instance.httpservers = [({'family':socket.AF_UNIX, 'file':fn},
@@ -1336,6 +1337,7 @@ class ServerOptionsTests(unittest.TestCase):
             with open(socketname, 'w') as f:
                 f.write('foo')
             instance = self._makeOne()
+            instance.unlink_socketfiles = True
             class Server:
                 pass
             instance.httpservers = [
