@@ -33,6 +33,10 @@
   polling loop after the web interface was used, causing high CPU usage.
   Patch by Jared Suttles.
 
+- Fixed a bug where if ``supervisord`` attempted to start but aborted due to
+  another running instance of ``supervisord`` with the same config, the
+  pidfile of the running instance would be deleted.  Patch by coldnight.
+
 - Fixed a bug where ``supervisorctl fg`` would swallow most XML-RPC faults.
   ``fg`` now prints the fault and exits.
 
