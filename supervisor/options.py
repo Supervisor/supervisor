@@ -1112,7 +1112,7 @@ class ServerOptions(Options):
         # change our umask.
         #
         # This explanation was (gratefully) garnered from
-        # http://www.hawklord.uklinux.net/system/daemons/d3.htm
+        # http://www.cems.uwe.ac.uk/~irjohnso/coursenotes/lrc/system/daemons/d3.htm
 
         pid = os.fork()
         if pid != 0:
