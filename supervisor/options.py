@@ -1132,10 +1132,6 @@ class ServerOptions(Options):
                                  % self.directory)
         os.close(0)
         self.stdin = sys.stdin = sys.__stdin__ = open("/dev/null")
-        os.close(1)
-        self.stdout = sys.stdout = sys.__stdout__ = open("/dev/null", "w")
-        os.close(2)
-        self.stderr = sys.stderr = sys.__stderr__ = open("/dev/null", "w")
         os.setsid()
         os.umask(self.umask)
         # XXX Stevens, in his Advanced Unix book, section 13.3 (page
