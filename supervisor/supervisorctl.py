@@ -741,12 +741,12 @@ class DefaultControllerPlugin(ControllerPluginBase):
             return template % (name, 'no such file')
         elif code == xmlrpc.Faults.NOT_EXECUTABLE:
             return template % (name, 'file is not executable')
-        elif code == xmlrpc.Faults.ALREADY_STARTED:
-            return template % (name, 'already started')
         elif code == xmlrpc.Faults.SPAWN_ERROR:
             return template % (name, 'spawn error')
         elif code == xmlrpc.Faults.ABNORMAL_TERMINATION:
             return template % (name, 'abnormal termination')
+        elif code == xmlrpc.Faults.ALREADY_STARTED:
+            return '%s: started already' % name
         elif code == xmlrpc.Faults.SUCCESS:
             return '%s: started' % name
         # assertion
