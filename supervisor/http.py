@@ -703,7 +703,7 @@ class logtail_handler:
         self.supervisord = supervisord
 
     def match(self, request):
-        return request.uri.startswith(self.path)
+        return self.path in request.uri
 
     def handle_request(self, request):
         if request.command != 'GET':
@@ -768,7 +768,7 @@ class mainlogtail_handler:
         self.supervisord = supervisord
 
     def match(self, request):
-        return request.uri.startswith(self.path)
+        return self.path in request.uri
 
     def handle_request(self, request):
         if request.command != 'GET':
