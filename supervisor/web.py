@@ -471,8 +471,7 @@ class StatusView(MeldView):
                 if message is NOT_DONE_YET:
                     return NOT_DONE_YET
                 if message is not None:
-                    server_url = form['SERVER_URL']
-                    location = server_url + '?message=%s' % urllib.quote(
+                    location = '?message=%s' % urllib.quote(
                         message)
                     response['headers']['Location'] = location
 
