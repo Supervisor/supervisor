@@ -10,9 +10,8 @@ Installing to A System With Internet Access
 If your system has internet access, you can get Supervisor
 installed in two ways:
 
-- Using ``easy_install``, which is a feature of `setuptools
-  <http://peak.telecommunity.com/DevCenter/setuptools>`_.  This is the
-  preferred method of installation.
+- Using `pip <https://pypi.python.org/pypi/pip>`_.  This 
+  is the preferred method of installation.
 
 - By downloading the Supervisor package and invoking
   a command.
@@ -22,15 +21,15 @@ Internet-Installing With Setuptools
 
 If the Python interpreter you're using has Setuptools installed, and
 the system has internet access, you can download and install
-supervisor in one step using ``easy_install``.
+supervisor in one step using ``pip``.
 
 .. code-block:: bash
 
-   easy_install supervisor
+   pip install supervisor
 
 Depending on the permissions of your system's Python, you might need
 to be the root user to install Supervisor successfully using
-``easy_install``.
+``pip``.
 
 Internet-Installing Without Setuptools
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -54,7 +53,7 @@ Installing To A System Without Internet Access
 
 If the system that you want to install Supervisor to does not have
 Internet access, you'll need to perform installation slightly
-differently.  Since both ``easy_install`` and ``python setup.py
+differently.  Since both ``pip`` and ``python setup.py
 install`` depend on internet access to perform downloads of dependent
 software, neither will work on machines without internet access until
 dependencies are installed.  To install to a machine which is not
