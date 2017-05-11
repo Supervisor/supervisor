@@ -756,7 +756,7 @@ class logtail_handler:
         # the lack of a Content-Length header makes the outputter
         # send a 'Transfer-Encoding: chunked' response
 
-        request.push(tail_f_producer(request, logfile, 1024))
+        request.push(tail_f_producer(request, logfile, 1024).more())
 
         request.done()
 
@@ -787,7 +787,7 @@ class mainlogtail_handler:
         # the lack of a Content-Length header makes the outputter
         # send a 'Transfer-Encoding: chunked' response
 
-        request.push(tail_f_producer(request, logfile, 1024))
+        request.push(tail_f_producer(request, logfile, 1024).more())
 
         request.done()
 
