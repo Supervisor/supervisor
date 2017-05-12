@@ -35,6 +35,7 @@ from supervisor.datatypes import byte_size
 from supervisor.datatypes import signal_number
 from supervisor.datatypes import list_of_exitcodes
 from supervisor.datatypes import dict_of_key_value_pairs
+from supervisor.datatypes import dict_from_env_file
 from supervisor.datatypes import logfile_name
 from supervisor.datatypes import list_of_strings
 from supervisor.datatypes import octal_type
@@ -885,6 +886,7 @@ class ServerOptions(Options):
         numprocs = integer(get(section, 'numprocs', 1))
         numprocs_start = integer(get(section, 'numprocs_start', 0))
         environment_str = get(section, 'environment', '', do_expand=False)
+        env_file = get(section, 'env_file', '', do_expand=False)
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
         stdout_events = boolean(get(section, 'stdout_events_enabled','false'))
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
@@ -927,6 +929,7 @@ class ServerOptions(Options):
 
             environment = dict_of_key_value_pairs(
                 expand(environment_str, expansions, 'environment'))
+            environment.update(dict_from_env_file(env_file))
 
             directory = get(section, 'directory', None)
 

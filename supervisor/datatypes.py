@@ -85,6 +85,26 @@ def dict_of_key_value_pairs(arg):
         i += 4
     return D
 
+def dict_from_env_file(fpath):
+    """ read file fpath with each line KEY=VAL into {'KEY': 'VAL'} """
+
+    D = {}
+    try:
+        import re
+        f = open(fpath, 'rt')
+        for line in f.readlines():
+            line = line.strip()
+            m = re.match(r'(.+)=(.+)', line)
+            if m:
+                key, val = m.groups()
+                D.update({key: val})
+    except FileNotFoundError:
+        pass
+    finally:
+        f.close()
+
+    return D
+
 class Automatic:
     pass
 
