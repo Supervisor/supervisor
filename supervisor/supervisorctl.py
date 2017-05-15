@@ -933,10 +933,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
     def do_reload(self, arg):
         if arg:
-            self.ctl.output('Error: reload given with a process name. Maybe you meant restart?')
+            self.ctl.output('Error: reload accepts no arguments')
             self.help_reload()
             return
- 
+
         if self.ctl.options.interactive:
             yesno = raw_input('Really restart the remote supervisord process '
                               'y/N? ')

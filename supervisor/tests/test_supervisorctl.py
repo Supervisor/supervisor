@@ -1065,6 +1065,13 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(options._server.supervisor._restarted, True)
 
+    def test_reload_arg(self):
+        plugin = self._makeOne()
+        result = plugin.do_reload('bad')
+        self.assertEqual(result, None)
+        val = plugin.ctl.stdout.getvalue()
+        self.assertTrue(val.startswith('Error: reload accepts no arguments'), val)
+
     def test_shutdown_help(self):
         plugin = self._makeOne()
         plugin.help_shutdown()
