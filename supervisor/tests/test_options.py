@@ -3064,6 +3064,11 @@ class TestProcessConfig(unittest.TestCase):
         defaults.update(kw)
         return self._getTargetClass()(*arg, **defaults)
 
+    def tearDown(self):
+        for fn in ('stdout_logfile', 'stderr_logfile'):
+            if os.path.exists(fn):
+                os.remove(fn)
+
     def test_create_autochildlogs(self):
         options = DummyOptions()
         instance = self._makeOne(options)
