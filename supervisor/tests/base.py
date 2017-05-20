@@ -56,7 +56,7 @@ class DummyOptions:
         self.cleaned_up = False
         self.pidfile_written = False
         self.directory = None
-        self.waitpid_return = None, None
+        self.waitpid_returns = [(None, None)]
         self.kills = {}
         self._signal = None
         self.parent_pipes_closed = None
@@ -144,7 +144,7 @@ class DummyOptions:
         self.pidfile_written = True
 
     def waitpid(self):
-        return self.waitpid_return
+        return self.waitpid_returns.pop(0)
 
     def kill(self, pid, sig):
         if self.kill_error:
