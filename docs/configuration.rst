@@ -911,7 +911,7 @@ where specified.
 
   *Required*:  No.
 
-  *Introduced*: 3.0, replaces 2.0's ``logfile_backups``
+  *Introduced*: 3.0
 
 ``stdout_events_enabled``
 
