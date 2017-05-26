@@ -1248,7 +1248,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
         try:
             info = supervisor.getProcessInfo(name)
-        except xmlrpclib.Fault as e:
+        except xmlrpclib.Fault, e:
             if e.faultCode == xmlrpc.Faults.BAD_NAME:
                 self.ctl.output('ERROR: bad process name supplied')
             else:
