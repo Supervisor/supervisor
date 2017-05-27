@@ -187,7 +187,6 @@ If :command:`supervisorctl` is invoked in interactive mode against a
 :program:`supervisord` that requires authentication, you will be asked
 for authentication credentials.
 
-
 :command:`supervisorctl` Command-Line Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
