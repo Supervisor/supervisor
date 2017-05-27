@@ -565,7 +565,7 @@ def makeExecutable(file, substitutions=None):
     f = open(tmpnam, 'w')
     f.write(data)
     f.close()
-    os.chmod(tmpnam, 0755)
+    os.chmod(tmpnam, int('755', 8))
     return tmpnam
 
 def makeSpew(unkillable=False):
