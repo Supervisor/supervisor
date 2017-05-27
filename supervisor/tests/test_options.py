@@ -531,7 +531,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.stdout_logfile_backups, 10)
         self.assertEqual(proc1.exitcodes, [0,2])
         self.assertEqual(proc1.directory, '/tmp')
-        self.assertEqual(proc1.umask, 002)
+        self.assertEqual(proc1.umask, 2)
         self.assertEqual(proc1.environment, dict(FAKE_ENV_VAR='/some/path'))
 
         cat2 = options.process_group_configs[1]

@@ -404,13 +404,13 @@ class SubprocessTests(unittest.TestCase):
     def test_spawn_as_child_sets_umask(self):
         options = DummyOptions()
         options.forkpid = 0
-        config = DummyPConfig(options, 'good', '/good/filename', umask=002)
+        config = DummyPConfig(options, 'good', '/good/filename', umask=2)
         instance = self._makeOne(config)
         result = instance.spawn()
         self.assertEqual(result, None)
         self.assertEqual(options.execv_args,
                          ('/good/filename', ['/good/filename']) )
-        self.assertEqual(options.umaskset, 002)
+        self.assertEqual(options.umaskset, 2)
         self.assertEqual(options.execve_called, True)
         # if the real execve() succeeds, the code that writes the
         # "was not spawned" message won't be reached.  this assertion
