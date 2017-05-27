@@ -825,7 +825,7 @@ class ServerOptions(Options):
                     socket_owner = (proc_uid, gid_for_uid(proc_uid))
 
             if socket_mode is None:
-                socket_mode = 448 # 0700 in Py2, 0o700 Py3
+                socket_mode = int('700', 8)
 
             return UnixStreamSocketConfig(path, owner=socket_owner,
                                                 mode=socket_mode)
@@ -1080,7 +1080,7 @@ class ServerOptions(Options):
                 except (TypeError, ValueError):
                     raise ValueError('Invalid chmod value %s' % chmod)
             else:
-                chmod = 448 # 0700 on py2, 0o700 on py3
+                chmod = int('700', 8)
             config['chmod'] = chmod
             config['section'] = section
             configs.append(config)
@@ -1506,8 +1506,7 @@ class ServerOptions(Options):
         elif stat.S_ISDIR(st[stat.ST_MODE]):
             raise NotExecutable("command at %r is a directory" % filename)
 
-        elif not (stat.S_IMODE(st[stat.ST_MODE]) & 73):
-            # 73 is spelled 0111 in py2, 0o111 in py3
+        elif not (stat.S_IMODE(st[stat.ST_MODE]) & int('111', 8)):
             raise NotExecutable("command at %r is not executable" % filename)
 
         elif not os.access(filename, os.X_OK):
