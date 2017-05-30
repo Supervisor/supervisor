@@ -3070,9 +3070,21 @@ class TestProcessConfig(unittest.TestCase):
         from supervisor.datatypes import Automatic
         instance.stdout_logfile = Automatic
         instance.stderr_logfile = Automatic
+        instance.redirect_stderr = False
         instance.create_autochildlogs()
         self.assertEqual(instance.stdout_logfile, options.tempfile_name)
         self.assertEqual(instance.stderr_logfile, options.tempfile_name)
+
+    def test_create_autochildlogs_redirect_stderr(self):
+        options = DummyOptions()
+        instance = self._makeOne(options)
+        from supervisor.datatypes import Automatic
+        instance.stdout_logfile = Automatic
+        instance.stderr_logfile = Automatic
+        instance.redirect_stderr = True
+        instance.create_autochildlogs()
+        self.assertEqual(instance.stdout_logfile, options.tempfile_name)
+        self.assertIs(instance.stderr_logfile, Automatic)
 
     def test_make_process(self):
         options = DummyOptions()
