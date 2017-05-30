@@ -1,3 +1,4 @@
+import select
 import sys
 import time
 
@@ -49,10 +50,18 @@ class ProcessCommunicationsProtocol:
 
 pcomm = ProcessCommunicationsProtocol()
 
+
+class WaitInterrupted(Exception):
+    pass
+
+
 class EventListenerProtocol:
-    def wait(self, stdin=sys.stdin, stdout=sys.stdout):
+    
+    SELECT_TIMEOUT = 0.5
+    
+    def wait(self, stdin=sys.stdin, stdout=sys.stdout, waiter=None):
         self.ready(stdout)
-        line = stdin.readline()
+        line = self._readline(stdin, waiter=waiter)
         headers = get_headers(line)
         payload = stdin.read(int(headers['len']))
         return headers, payload
@@ -74,5 +83,21 @@ class EventListenerProtocol:
                                data)
         stdout.write(result)
         stdout.flush()
+
+    def _readline(self, stdin, waiter=None):
+        if waiter is None:
+            return stdin.readline()
+        else:
+            while not waiter.is_set():
+                try:
+                    rdfs, _, _ = select.select(
+                        [stdin], [], [], EventListenerProtocol.SELECT_TIMEOUT)
+                except InterruptedError:
+                    continue
+
+                if rdfs:
+                    return rdfs[0].readline()
+
+            raise WaitInterrupted
 
 listener = EventListenerProtocol()
