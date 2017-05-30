@@ -42,7 +42,7 @@ class EntryPointTests(unittest.TestCase):
             sys.stdout = old_stdout
             shutil.rmtree(tempdir)
         output = new_stdout.getvalue()
-        self.assertTrue(output.find('supervisord started') != 1, output)
+        self.assertTrue('supervisord started' in output, output)
 
     if pstats:
         def test_main_profile(self):
@@ -64,8 +64,7 @@ class EntryPointTests(unittest.TestCase):
                 sys.stdout = old_stdout
                 shutil.rmtree(tempdir)
             output = new_stdout.getvalue()
-            self.assertTrue(output.find('cumulative time, call count') != -1,
-                            output)
+            self.assertTrue('cumulative time, call count' in output, output)
 
 class SupervisordTests(unittest.TestCase):
     def tearDown(self):
