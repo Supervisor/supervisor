@@ -496,7 +496,8 @@ class ServerOptions(Options):
         else:
             logfile = section.logfile
 
-        self.logfile = normalize_path(logfile)
+        if not logfile == 'syslog':
+            self.logfile = normalize_path(logfile)
 
         if self.pidfile:
             pidfile = self.pidfile
