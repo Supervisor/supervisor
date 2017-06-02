@@ -123,6 +123,8 @@ class Subprocess(object):
                 st = None
 
         else:
+            if self.config.environment is not None:
+                os.environ.update(self.config.environment)
             path = self.config.options.get_path()
             found = None
             st = None
@@ -923,6 +925,3 @@ def new_serial(inst):
         inst.serial = -1
     inst.serial += 1
     return inst.serial
-
-
-
