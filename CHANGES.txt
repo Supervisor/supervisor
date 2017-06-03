@@ -1,5 +1,5 @@
-3.3.2-dev (Next 3.x Release)
-----------------------------
+3.3.2 (2017-06-03)
+------------------
 
 - Fixed a bug introduced in 3.3.0 where the ``supervisorctl reload`` command
   would crash ``supervisord`` with the error ``OSError: [Errno 9] Bad file
