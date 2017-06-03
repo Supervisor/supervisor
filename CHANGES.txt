@@ -25,6 +25,9 @@
   error condition occurs.  Previous versions did not set the exit status so
   it was always zero.  Patch by Luke Weber.
 
+3.3.2 (2017-06-03)
+------------------
+
 - Fixed a bug introduced in 3.3.0 where the ``supervisorctl reload`` command
   would crash ``supervisord`` with the error ``OSError: [Errno 9] Bad file
   descriptor`` if the ``kqueue`` poller was used.  Patch by Jared Suttles.
