@@ -1355,8 +1355,9 @@ class ServerOptionsTests(unittest.TestCase):
     def test_cleanup_does_not_remove_pidfile_from_another_supervisord(self):
         pidfile = tempfile.mktemp()
 
-        with open(pidfile, 'w') as f:
-            f.write('1234')
+        f = open(pidfile, 'w')
+        f.write('1234')
+        f.close()
 
         try:
             instance = self._makeOne()
@@ -1376,8 +1377,9 @@ class ServerOptionsTests(unittest.TestCase):
     def test_cleanup_closes_poller(self):
         pidfile = tempfile.mktemp()
         try:
-            with open(pidfile, 'w') as f:
-                f.write('2')
+            f = open(pidfile, 'w')
+            f.write('2')
+            f.close()
             instance = self._makeOne()
             instance.pidfile = pidfile
 
