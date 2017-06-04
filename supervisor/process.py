@@ -187,11 +187,18 @@ class Subprocess(object):
         self.config.options.logger.info("spawnerr: %s" % msg)
 
     def spawn(self):
-        """Start the subprocess.  It must not be running already.
+        """Start the subprocess.  It must not be running already
+        and it's ProcessGroup must have all deps running
 
         Return the process id.  If the fork() call fails, return None.
         """
         options = self.config.options
+
+        if not self.group.can_spawn():
+            msg = 'process %r cannot start - group %r depends on processes which are not started yet'\
+                  % (self.config.name, self.group.config.name)
+            options.logger.warn(msg)
+            return
 
         if self.pid:
             msg = 'process %r already running' % self.config.name
@@ -713,6 +720,8 @@ class FastCGISubprocess(Subprocess):
 
 @total_ordering
 class ProcessGroupBase(object):
+    _can_spawn = True
+
     def __init__(self, config):
         self.config = config
         self.processes = {}
@@ -729,6 +738,12 @@ class ProcessGroupBase(object):
     def __repr__(self):
         return '<%s instance at %s named %s>' % (self.__class__, id(self),
                                                  self.config.name)
+
+    def set_can_spawn(self, can=True):
+        self._can_spawn = can
+
+    def can_spawn(self):
+        return self._can_spawn
 
     def removelogs(self):
         for process in self.processes.values():

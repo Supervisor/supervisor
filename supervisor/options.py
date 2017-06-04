@@ -674,12 +674,14 @@ class ServerOptions(Options):
             return parser.saneget(section, opt, default, **kwargs)
 
         # process heterogeneous groups
+        program_and_group_names = []
         for section in all_sections:
             if not section.startswith('group:'):
                 continue
             group_name = process_or_group_name(section.split(':', 1)[1])
             programs = list_of_strings(get(section, 'programs', None))
             priority = integer(get(section, 'priority', 999))
+            dependson = list_of_strings(get(section, 'dependson', None))
             group_processes = []
             for program in programs:
                 program_section = "program:%s" % program
@@ -690,10 +692,15 @@ class ServerOptions(Options):
                 processes = self.processes_from_section(parser, program_section,
                                                         group_name,
                                                         ProcessConfig)
+                # override dependson from the group setting
+                for p in processes:
+                    p.dependson = dependson
+
                 group_processes.extend(processes)
             groups.append(
                 ProcessGroupConfig(self, group_name, priority, group_processes)
                 )
+            program_and_group_names.append(group_name)
 
         # process "normal" homogeneous groups
         for section in all_sections:
@@ -707,6 +714,14 @@ class ServerOptions(Options):
             groups.append(
                 ProcessGroupConfig(self, program_name, priority, processes)
                 )
+            program_and_group_names.append(program_name)
+
+        # check that programs from dependson exist in the config file
+        for group in groups:
+            for dependency_name in group.get_dependencies():
+                if dependency_name not in program_and_group_names:
+                    raise ValueError('[%s] depends on [%s], but [%s] is not a runnable program or group name' % (
+                        group.name, dependency_name, dependency_name))
 
         # process "event listener" homogeneous groups
         for section in all_sections:
@@ -890,6 +905,11 @@ class ServerOptions(Options):
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
         stderr_events = boolean(get(section, 'stderr_events_enabled','false'))
         serverurl = get(section, 'serverurl', None)
+        dependson = list_of_strings(get(section, 'dependson', None))
+        dependscheck = get(section, 'dependscheck', None)
+        dependscheck_freq = integer(get(section, 'dependscheck_freq', 5))
+        dependscheck_retries = integer(get(section, 'dependscheck_retries', 3))
+
         if serverurl and serverurl.strip().upper() == 'AUTO':
             serverurl = None
 
@@ -1003,7 +1023,12 @@ class ServerOptions(Options):
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
                 environment=environment,
-                serverurl=serverurl)
+                serverurl=serverurl,
+                dependson=dependson,
+                dependscheck=dependscheck,
+                dependscheck_freq=dependscheck_freq,
+                dependscheck_retries=dependscheck_retries
+            )
 
             programs.append(pconfig)
 
@@ -1815,7 +1840,7 @@ class ProcessConfig(Config):
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
         'exitcodes', 'redirect_stderr' ]
-    optional_param_names = [ 'environment', 'serverurl' ]
+    optional_param_names = [ 'environment', 'serverurl', 'dependson' ]
 
     def __init__(self, options, **params):
         self.options = options
@@ -1939,6 +1964,11 @@ class ProcessGroupConfig(Config):
     def make_group(self):
         from supervisor.process import ProcessGroup
         return ProcessGroup(self)
+
+    def get_dependencies(self):
+        dependson_lists = [p.dependson for p in self.process_configs]
+        dependencies = reduce(lambda x,y: x+y, dependson_lists)
+        return set(dependencies)
 
 class EventListenerPoolConfig(Config):
     def __init__(self, options, name, priority, process_configs, buffer_size,
