@@ -393,6 +393,7 @@ class DummyProcess(object):
     listener_state = None
     group = None
     sent_signal = None
+    _can_spawn = True
 
     def __init__(self, config, state=None):
         self.config = config
@@ -450,6 +451,11 @@ class DummyProcess(object):
     def signal(self, signal):
         self.sent_signal = signal
 
+    def can_spawn(self):
+        return self._can_spawn
+
+    def set_can_spawn(self, can):
+        self._can_spawn = can
 
     def spawn(self):
         self.spawned = True
@@ -1011,12 +1017,16 @@ class DummyPGroupConfig:
         self.after_setuid_called = False
         self.pool_events = []
         self.buffer_size = 10
+        self.dependson = []
 
     def after_setuid(self):
         self.after_setuid_called = True
 
     def make_group(self):
         return DummyProcessGroup(self)
+
+    def get_dependencies(self):
+        return self.dependson
 
     def __repr__(self):
         return '<%s instance at %s named %s>' % (self.__class__, id(self),
@@ -1035,6 +1045,7 @@ class DummyProcessGroup(object):
         self.all_stopped = False
         self.dispatchers = {}
         self.unstopped_processes = []
+        self.processes = {}
 
     def transition(self):
         self.transitioned = True

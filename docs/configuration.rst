@@ -675,6 +675,20 @@ where specified.
 
   *Introduced*: 3.0
 
+``dependson``
+
+  A comma-separated list of dependencies for the program. These are names of other
+  programs and/or groups in the configuration. A program which ``dependson`` another
+  program or group starts only if all of its dependencies are in the ``RUNNING`` state.
+  Once started, the program runs independently (i.e. won't stop when one of it's dependencies
+  terminates)
+
+  *Default*: Empty
+
+  *Required*:  No.
+
+  *Introduced*: 3.3
+
 ``autostart``
 
   If true, this program will start automatically when supervisord is
@@ -1108,6 +1122,46 @@ where specified.
    environment=A="1",B="2"
    serverurl=AUTO
 
+``[program:x]`` Dependencies Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   In this example, `cats` will run only after `mouse` and `night` are in ``RUNNING`` state.
+
+   `tom` and `tori` will start at the same time, because a group will start its programs
+   after all group and program deps have been met.
+
+.. code-block:: ini
+
+   [program:mouse]
+   command=/bin/mouse
+   dependson=cheese
+
+   [program:cheese]
+   command=/bin/cheese
+
+
+   ;; groups
+   [group:cats]
+   dependson=night
+   programs=tom,tori
+
+   [program:tom]
+   command=/bin/cat -tom
+   dependson=mouse
+
+   [program:tori]
+   command=/bin/cat -tori
+
+
+   [group:night]
+   programs=sunset,lights
+
+   [program:sunset]
+   command=/bin/sun -down
+
+   [program:lights]
+   command=/bin/lights -on
+
 ``[include]`` Section Settings
 ------------------------------
 
@@ -1213,6 +1267,17 @@ been under them will now be moved into the ``foo`` group.
   *Required*:  No.
 
   *Introduced*: 3.0
+
+``dependson``
+
+  A comma-separated list of dependencies for all programs in this group.
+  This value will be appended to the ``dependson`` of each program belonging to this group.
+
+  *Default*: Empty
+
+  *Required*:  No.
+
+  *Introduced*: 3.3
 
 ``[group:x]`` Section Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
