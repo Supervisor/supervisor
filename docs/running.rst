@@ -109,7 +109,7 @@ value in the configuration file.
    occurs.  The value is suffix-multiplied, e.g "1" is one byte, "1MB"
    is 1 megabyte, "1GB" is 1 gigabyte.
 
--y NUM, --logfile_backups=NUM
+-z NUM, --logfile_backups=NUM
 
    Number of backup copies of the supervisord activity log to keep
    around.  Each logfile will be of size ``logfile_maxbytes``.
