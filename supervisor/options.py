@@ -456,6 +456,8 @@ class ServerOptions(Options):
                  "k", "nocleanup", flag=1, default=0)
         self.add("strip_ansi", "supervisord.strip_ansi",
                  "t", "strip_ansi", flag=1, default=0)
+        self.add("no_root_children", "supervisord.no_root_children",
+                 "x", "no_root_children", flag=1, default=0)
         self.add("profile_options", "supervisord.profile_options",
                  "", "profile_options=", profile_options, default=None)
         self.pidhistory = {}
@@ -640,6 +642,7 @@ class ServerOptions(Options):
         section.childlogdir = existing_directory(get('childlogdir', tempdir))
         section.nocleanup = boolean(get('nocleanup', 'false'))
         section.strip_ansi = boolean(get('strip_ansi', 'false'))
+        section.no_root_children = boolean(get('no_root_children', 'false'))
 
         environ_str = get('environment', '')
         environ_str = expand(environ_str, expansions, 'environment')
@@ -899,6 +902,10 @@ class ServerOptions(Options):
             uid = None
         else:
             uid = name_to_uid(user)
+
+        if self.no_root_children and uid == 0:
+            raise ValueError("Invalid root process detected")
+
 
         umask = get(section, 'umask', None)
         if umask is not None:
