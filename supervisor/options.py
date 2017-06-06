@@ -607,8 +607,8 @@ class ServerOptions(Options):
                         )
 
         sections = parser.sections()
-        if not 'supervisord' in sections:
-            raise ValueError('.ini file does not include supervisord section')
+        if 'supervisord' not in sections:
+            self.warnings.warn('.ini file does not include supervisord section')
 
         common_expansions = {'here':self.here}
         def get(opt, default, **kwargs):
@@ -1645,9 +1645,11 @@ class ClientOptions(Options):
             parser.readfp(fp)
         if need_close:
             fp.close()
+
         sections = parser.sections()
-        if not 'supervisorctl' in sections:
-            raise ValueError('.ini file does not include supervisorctl section')
+        if 'supervisorctl' not in sections:
+            self.warnings.warn('.ini file does not include supervisorctl section')
+
         serverurl = parser.getdefault('serverurl', 'http://localhost:9001',
             expansions={'here': self.here})
         if serverurl.startswith('unix://'):
@@ -1742,7 +1744,7 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
                 expansions={}):
         try:
             optval = self.get(section, option)
-        except ConfigParser.NoOptionError:
+        except (ConfigParser.NoOptionError, ConfigParser.NoSectionError):
             if default is _marker:
                 raise
             else:
