@@ -15,6 +15,7 @@ import glob
 import platform
 import warnings
 import fcntl
+import asyncore
 
 from supervisor.compat import PY3
 from supervisor.compat import ConfigParser
@@ -22,8 +23,6 @@ from supervisor.compat import as_bytes, as_string
 from supervisor.compat import xmlrpclib
 from supervisor.compat import StringIO
 from supervisor.compat import basestring
-
-from supervisor.medusa import asyncore_25 as asyncore
 
 from supervisor.datatypes import process_or_group_name
 from supervisor.datatypes import boolean

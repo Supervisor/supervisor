@@ -94,7 +94,7 @@ if __name__ == '__main__':
             print('method="%s" params=%s' % (method, params))
             return "Sure, that works"
 
-    import supervisor.medusa.asyncore_25 as asyncore
+    import asyncore
 
     hs = http_server.http_server ('', 8000)
     rpc = rpc_demo()

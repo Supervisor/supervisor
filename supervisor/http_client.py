@@ -2,12 +2,13 @@
 
 import sys
 import socket
+import asynchat
+
 
 from supervisor.compat import urlparse
 from supervisor.compat import as_bytes
 from supervisor.compat import as_string
 from supervisor.compat import encodestring
-from supervisor.medusa import asynchat_25 as asynchat
 
 CR="\x0d"
 LF="\x0a"

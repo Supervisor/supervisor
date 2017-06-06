@@ -29,13 +29,12 @@ import getpass
 import socket
 import errno
 import threading
+import asyncore
 
 from supervisor.compat import xmlrpclib
 from supervisor.compat import urlparse
 from supervisor.compat import unicode
 from supervisor.compat import raw_input
-
-from supervisor.medusa import asyncore_25 as asyncore
 
 from supervisor.options import ClientOptions
 from supervisor.options import make_namespec

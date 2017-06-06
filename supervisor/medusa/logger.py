@@ -1,6 +1,6 @@
 # -*- Mode: Python -*-
 
-import supervisor.medusa.asynchat_25 as asynchat
+import asynchat
 import socket
 import time         # these three are for the rotating logger
 import os           # |
