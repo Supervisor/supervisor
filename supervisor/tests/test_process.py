@@ -6,6 +6,7 @@ import unittest
 
 from supervisor.compat import as_bytes
 from supervisor.compat import maxint
+from supervisor.monotonic import monotonic
 
 from supervisor.tests.base import Mock, patch, sentinel
 from supervisor.tests.base import DummyOptions
@@ -683,7 +684,7 @@ class SubprocessTests(unittest.TestCase):
         instance.dispatchers = {'foo':dispatcher}
         from supervisor.states import ProcessStates
         instance.state = ProcessStates.RUNNING
-        instance.laststopreport = time.time()
+        instance.laststopreport = monotonic()
         instance.stop()
         self.assertTrue(instance.administrative_stop)
         self.assertEqual(instance.laststopreport, 0)
@@ -1044,7 +1045,7 @@ class SubprocessTests(unittest.TestCase):
         pipes = {'stdout':'','stderr':''}
         instance.pipes = pipes
         instance.config.exitcodes =[-1]
-        instance.laststart = time.time() + 3600 # 1 hour into the future
+        instance.laststart = monotonic() + 3600 # 1 hour into the future
         from supervisor.states import ProcessStates
         from supervisor import events
         instance.state = ProcessStates.STARTING
@@ -1085,7 +1086,7 @@ class SubprocessTests(unittest.TestCase):
         pipes = {'stdout':'','stderr':''}
         instance.pipes = pipes
         instance.config.exitcodes =[-1]
-        instance.laststart = time.time()
+        instance.laststart = monotonic()
         from supervisor.states import ProcessStates
         from supervisor import events
         instance.state = ProcessStates.STARTING
@@ -1115,7 +1116,7 @@ class SubprocessTests(unittest.TestCase):
         pipes = {'stdout':'','stderr':''}
         instance.pipes = pipes
         instance.config.exitcodes =[-1]
-        instance.laststart = time.time() + 3600 # 1 hour into the future
+        instance.laststart = monotonic() + 3600 # 1 hour into the future
         from supervisor.states import ProcessStates
         from supervisor import events
         instance.state = ProcessStates.RUNNING
@@ -1996,7 +1997,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
         pool = self._makeOne(gconfig)
         pool.dispatch_throttle = 5
-        pool.last_dispatch = time.time()
+        pool.last_dispatch = monotonic()
         pool.processes = {'process1': process1}
         event = DummyEvent()
         from supervisor.states import EventListenerStates
@@ -2017,7 +2018,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
         pool = self._makeOne(gconfig)
         pool.dispatch_throttle = 5
-        pool.last_dispatch = time.time() - 1000
+        pool.last_dispatch = monotonic() - 1000
         pool.processes = {'process1': process1}
         event = DummyEvent()
         from supervisor.states import EventListenerStates

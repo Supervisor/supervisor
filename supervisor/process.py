@@ -28,6 +28,8 @@ from supervisor.datatypes import RestartUnconditionally
 
 from supervisor.socket_manager import SocketManager
 
+from supervisor.monotonic import monotonic
+
 @total_ordering
 class Subprocess(object):
 
@@ -169,7 +171,7 @@ class Subprocess(object):
             events.notify(event)
 
         if new_state == ProcessStates.BACKOFF:
-            now = time.time()
+            now = monotonic()
             self.backoff += 1
             self.delay = now + self.backoff
 
@@ -204,7 +206,7 @@ class Subprocess(object):
         self.system_stop = False
         self.administrative_stop = False
 
-        self.laststart = time.time()
+        self.laststart = monotonic()
 
         self._assertInState(ProcessStates.EXITED, ProcessStates.FATAL,
                             ProcessStates.BACKOFF, ProcessStates.STOPPED)
@@ -265,7 +267,7 @@ class Subprocess(object):
         options.close_child_pipes(self.pipes)
         options.logger.info('spawned: %r with pid %s' % (self.config.name, pid))
         self.spawnerr = None
-        self.delay = time.time() + self.config.startsecs
+        self.delay = monotonic() + self.config.startsecs
         options.pidhistory[pid] = self
         return pid
 
@@ -360,7 +362,7 @@ class Subprocess(object):
     def stop_report(self):
         """ Log a 'waiting for x to stop' message with throttling. """
         if self.state == ProcessStates.STOPPING:
-            now = time.time()
+            now = monotonic()
             if now > (self.laststopreport + 2): # every 2 seconds
                 self.config.options.logger.info(
                     'waiting for %s to stop' % self.config.name)
@@ -379,7 +381,7 @@ class Subprocess(object):
         Return None if the signal was sent, or an error message string
         if an error occurred or if the subprocess is not running.
         """
-        now = time.time()
+        now = monotonic()
         options = self.config.options
 
         # If the process is in BACKOFF and we want to stop or kill it, then
@@ -490,7 +492,7 @@ class Subprocess(object):
 
         es, msg = decode_wait_status(sts)
 
-        now = time.time()
+        now = monotonic()
         self.laststop = now
         processname = self.config.name
 
@@ -590,7 +592,7 @@ class Subprocess(object):
         return self.state
 
     def transition(self):
-        now = time.time()
+        now = monotonic()
         state = self.state
 
         logger = self.config.options.logger
@@ -818,7 +820,7 @@ class EventListenerPool(ProcessGroupBase):
                     dispatch_capable = True
         if dispatch_capable:
             if self.dispatch_throttle:
-                now = time.time()
+                now = monotonic()
                 if now - self.last_dispatch < self.dispatch_throttle:
                     return
             self.dispatch()
@@ -833,7 +835,7 @@ class EventListenerPool(ProcessGroupBase):
                 # to process any further events in the buffer
                 self._acceptEvent(event, head=True)
                 break
-        self.last_dispatch = time.time()
+        self.last_dispatch = monotonic()
 
     def _acceptEvent(self, event, head=False):
         # events are required to be instances
