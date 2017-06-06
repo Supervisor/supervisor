@@ -6,10 +6,12 @@ matrix:
     include:
         - python: 2.7
           env: TOXENV=cover
-        - python: 3.5
+        - python: 3.6
           env: TOXENV=cover3
-        - python: 3.5
+        - python: 3.6
           env: TOXENV=docs
+        - python: 3.6
+          env: TOXENV=flake8
         - python: 2.6
           env: TOXENV=py26
         - python: 2.7
@@ -29,9 +31,14 @@ matrix:
         - python: pypy3
           env: TOXENV=pypy3
 
+before_install:
+    - pip install --upgrade pip
+    - 'if [[ ${TOXENV} == "flake8" ]]; then pip install flake8 ; flake8 . --count --statistics --exit-zero ; fi'
+
 install:
     # "virtualenv<14.0.0" is needed for Python 3.2 compat
     - travis_retry pip install "virtualenv<14.0.0" tox
 
 script:
     - travis_retry tox
+    - 'if [[ ${TOXENV} == "flake8" ]]; then flake8 . --count --select=E999 ; fi'  # Stop build on syntax errors
