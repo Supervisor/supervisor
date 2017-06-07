@@ -875,6 +875,7 @@ class ServerOptions(Options):
         autorestart = auto_restart(get(section, 'autorestart', 'unexpected'))
         startsecs = integer(get(section, 'startsecs', 1))
         startretries = integer(get(section, 'startretries', 3))
+        restartpause = integer(get(section, 'restartpause', 0))
         stopsignal = signal_number(get(section, 'stopsignal', 'TERM'))
         stopwaitsecs = integer(get(section, 'stopwaitsecs', 10))
         stopasgroup = boolean(get(section, 'stopasgroup', 'false'))
@@ -983,6 +984,7 @@ class ServerOptions(Options):
                 autorestart=autorestart,
                 startsecs=startsecs,
                 startretries=startretries,
+                restartpause=restartpause,
                 uid=uid,
                 stdout_logfile=logfiles['stdout_logfile'],
                 stdout_capture_maxbytes = stdout_cmaxbytes,
@@ -1806,7 +1808,7 @@ class Config(object):
 class ProcessConfig(Config):
     req_param_names = [
         'name', 'uid', 'command', 'directory', 'umask', 'priority',
-        'autostart', 'autorestart', 'startsecs', 'startretries',
+        'autostart', 'autorestart', 'startsecs', 'startretries', 'restartpause',
         'stdout_logfile', 'stdout_capture_maxbytes',
         'stdout_events_enabled', 'stdout_syslog',
         'stdout_logfile_backups', 'stdout_logfile_maxbytes',
