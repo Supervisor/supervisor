@@ -1426,14 +1426,17 @@ class ServerOptions(Options):
         self.logger = loggers.getLogger(self.loglevel)
         if self.nodaemon:
             loggers.handle_stdout(self.logger, format)
-        loggers.handle_file(
-            self.logger,
-            self.logfile,
-            format,
-            rotating=True,
-            maxbytes=self.logfile_maxbytes,
-            backups=self.logfile_backups,
-        )
+        if os.path.basename(self.logfile) == 'syslog':
+            loggers.handle_syslog(self.logger, '%(levelname)s %(message)s')
+        else:
+            loggers.handle_file(
+                self.logger,
+                self.logfile,
+                format,
+                rotating=True,
+                maxbytes=self.logfile_maxbytes,
+                backups=self.logfile_backups,
+            )
         for msg in critical_messages:
             self.logger.critical(msg)
         for msg in warn_messages:
