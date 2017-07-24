@@ -1,3 +1,13 @@
+3.0.1 (2017-07-24)
+------------------
+
+- Backported from Supervisor 3.3.3:  Fixed CVE-2017-11610.  A vulnerability
+  was found where an authenticated client can send a malicious XML-RPC request
+  to ``supervisord`` that will run arbitrary shell commands on the server.
+  The commands will be run as the same user as ``supervisord``.  Depending on
+  how ``supervisord`` has been configured, this may be root.  See
+  https://github.com/Supervisor/supervisor/issues/964 for details.
+
 3.0 (2013-07-30)
 ----------------
 
