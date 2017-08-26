@@ -211,6 +211,19 @@ class Controller(cmd.Cmd):
                     break
         return func
 
+    """colored print, gyj8714, 20160721"""
+    def output_with_color(self, stuff, end, mod, fg_color, bg_color):
+        if stuff is not None:
+            if isinstance(stuff, unicode):
+                stuff = stuff.encode('utf-8')
+            if self.stdout.isatty() == True:
+                print '\033[' + mod + ';' + fg_color + ';' +  bg_color + 'm', 
+                print stuff,
+                print '\033[0m',
+                print end,
+            else:
+                self.stdout.write(stuff + '\n')
+
     def output(self, stuff):
         if stuff is not None:
             if isinstance(stuff, unicode):
@@ -593,12 +606,24 @@ class DefaultControllerPlugin(ControllerPluginBase):
             if len(namespecs[i]) > maxlen:
                 maxlen = len(namespecs[i])
 
-        template = '%(namespec)-' + str(maxlen+3) + 's%(state)-10s%(desc)s'
+        template_namespec = '%(namespec)-' + str(maxlen+3) + 's'
+        template_state = '%(state)-10s'
+        template_desc = '%(desc)s'
         for i, info in enumerate(process_infos):
-            line = template % {'namespec': namespecs[i],
-                               'state': info['statename'],
-                               'desc': info['description']}
-            self.ctl.output(line)
+            line_namespec = template_namespec % {'namespec': namespecs[i]} 
+            line_state = template_state % {'state': info['statename']}
+            line_desc = template_desc % {'desc': info['description']}
+
+            self.ctl.output_with_color(line_namespec, '', '1','36', '40')
+            if info['statename'] == 'RUNNING':
+                self.ctl.output_with_color(line_state, '', '1', '32', '40')
+            elif info['statename'] == 'STOPPED':
+                self.ctl.output_with_color(line_state, '', '1', '31', '40')
+            elif info["statename"] == 'FATAL':
+                self.ctl.output_with_color(line_state, '', '5', '31', '40')
+            else:
+                self.ctl.output_with_color(line_state, '', '1', '33', '40')
+            self.ctl.output_with_color(line_desc, '\n', '1','36', '40')
 
     def do_status(self, arg):
         if not self.ctl.upcheck():
