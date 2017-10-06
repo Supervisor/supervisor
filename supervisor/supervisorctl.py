@@ -138,7 +138,7 @@ class Controller(cmd.Cmd):
         return
 
     def default(self, line):
-        super(Controller, self).default(line)
+        self.output('*** Unknown syntax: %s' % line)
         self.handle_error()
 
     def exec_cmdloop(self, args, options):

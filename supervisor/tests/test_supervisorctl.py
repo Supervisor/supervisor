@@ -229,6 +229,15 @@ class ControllerTests(unittest.TestCase):
         self.assertRaises(SystemExit, controller.onecmd, "")
         self.assertEqual(controller.exit_status, expected_code)
 
+    def test_onecmd_bad_command_error(self):
+        options = DummyClientOptions()
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+        controller.onecmd("badcmd")
+        self.assertEqual(controller.stdout.getvalue(),
+            "*** Unknown syntax: badcmd\n")
+        self.assertEqual(controller.exit_status, LSBInitErrorCode.GENERIC)
+
     def test_complete_action_empty(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
