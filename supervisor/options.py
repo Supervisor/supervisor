@@ -1249,7 +1249,7 @@ class ServerOptions(Options):
             return None
         msg = self.dropPrivileges(self.uid)
         if msg is None:
-            return 'Set uid to user %s' % self.uid
+            self.parse_infos.append('Set uid to user %s succeeded' % self.uid)
         return msg
 
     def dropPrivileges(self, user):
