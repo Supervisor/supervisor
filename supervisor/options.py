@@ -1245,7 +1245,10 @@ class ServerOptions(Options):
     def set_uid(self):
         if self.uid is None:
             if os.getuid() == 0:
-                return 'Supervisor running as root (no user in config file)'
+                return ('Supervisor is running as root.  Privileges were not '
+                        'dropped because no user is specified in the config '
+                        'file.  If you intend to run as root, you can set '
+                        'user=root in the config file to avoid this message.')
             return None
         msg = self.dropPrivileges(self.uid)
         if msg is None:
