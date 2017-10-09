@@ -6,7 +6,7 @@ matrix:
     include:
         - python: 2.7
           env: TOXENV=cover
-        - python: 3.5
+        - python: 3.6
           env: TOXENV=cover3
         - python: 3.5
           env: TOXENV=docs
