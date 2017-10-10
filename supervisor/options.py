@@ -1325,7 +1325,7 @@ class ServerOptions(Options):
             return 'Could not set group id of effective user'
         os.setuid(uid)
 
-    def set_uid(self):
+    def set_uid_or_exit(self):
         """Set the uid of the supervisord process.  Called during supervisord
         startup only.  No return value.  Exits the process via usage() if
         privileges could not be dropped."""
@@ -1344,7 +1344,7 @@ class ServerOptions(Options):
             else:  # failed to drop privileges
                 self.usage(msg)
 
-    def set_rlimits(self):
+    def set_rlimits_or_exit(self):
         """Set the rlimits of the supervisord process.  Called during
         supervisord startup only.  No return value.  Exits the process via
         usage() if any rlimits could not be set."""

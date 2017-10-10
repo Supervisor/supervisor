@@ -87,11 +87,11 @@ class DummyOptions:
     def cleanup_fds(self):
         self.fds_cleaned_up = True
 
-    def set_rlimits(self):
+    def set_rlimits_or_exit(self):
         self.rlimits_set = True
         self.parse_infos.append('rlimits_set')
 
-    def set_uid(self):
+    def set_uid_or_exit(self):
         self.setuid_called = True
         self.parse_criticals.append('setuid_called')
 
