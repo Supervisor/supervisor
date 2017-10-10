@@ -1243,6 +1243,9 @@ class ServerOptions(Options):
         os.kill(pid, signal)
 
     def set_uid(self):
+        """Set the uid of the supervisord process.  Called during supervisord
+        startup only.  Returns None on success or a string error message if
+        privileges could not be dropped."""
         if self.uid is None:
             if os.getuid() == 0:
                 return ('Supervisor is running as root.  Privileges were not '
@@ -1256,7 +1259,10 @@ class ServerOptions(Options):
         return msg
 
     def drop_privileges(self, user):
-        # Drop root privileges if we have them
+        """Drop privileges to become the specified user, which may be a
+        username or uid.  Called for supervisord startup and when spawning
+        subprocesses.  Returns None on success or a string error message if
+        privileges could not be dropped."""
         if user is None:
             return "No user specified to setuid to!"
 
@@ -1334,6 +1340,9 @@ class ServerOptions(Options):
         return pid, sts
 
     def set_rlimits(self):
+        """Set the rlimits of the supervisord process.  Called during
+        supervisord startup only.  Returns a list of informational messages
+        on success.  Exits via usage() if any rlimits could not be set."""
         limits = []
         if hasattr(resource, 'RLIMIT_NOFILE'):
             limits.append(
@@ -1371,7 +1380,6 @@ class ServerOptions(Options):
         msgs = []
 
         for limit in limits:
-
             min = limit['min']
             res = limit['resource']
             msg = limit['msg']
