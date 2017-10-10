@@ -1242,21 +1242,29 @@ class ServerOptions(Options):
     def kill(self, pid, signal):
         os.kill(pid, signal)
 
-    def set_uid(self):
-        """Set the uid of the supervisord process.  Called during supervisord
-        startup only.  Returns None on success or a string error message if
-        privileges could not be dropped."""
-        if self.uid is None:
-            if os.getuid() == 0:
-                return ('Supervisor is running as root.  Privileges were not '
-                        'dropped because no user is specified in the config '
-                        'file.  If you intend to run as root, you can set '
-                        'user=root in the config file to avoid this message.')
-            return None
-        msg = self.drop_privileges(self.uid)
-        if msg is None:
-            self.parse_infos.append('Set uid to user %s succeeded' % self.uid)
-        return msg
+    def waitpid(self):
+        # Need pthread_sigmask here to avoid concurrent sigchld, but Python
+        # doesn't offer in Python < 3.4.  There is still a race condition here;
+        # we can get a sigchld while we're sitting in the waitpid call.
+        # However, AFAICT, if waitpid is interrupted by SIGCHLD, as long as we
+        # call waitpid again (which happens every so often during the normal
+        # course in the mainloop), we'll eventually reap the child that we
+        # tried to reap during the interrupted call. At least on Linux, this
+        # appears to be true, or at least stopping 50 processes at once never
+        # left zombies laying around.
+        try:
+            pid, sts = os.waitpid(-1, os.WNOHANG)
+        except OSError, exc:
+            code = exc.args[0]
+            if code not in (errno.ECHILD, errno.EINTR):
+                self.logger.critical(
+                    'waitpid error %r; '
+                    'a process may not be cleaned up properly' % code
+                    )
+            if code == errno.EINTR:
+                self.logger.blather('EINTR during reap')
+            pid, sts = None, None
+        return pid, sts
 
     def drop_privileges(self, user):
         """Drop privileges to become the specified user, which may be a
@@ -1315,29 +1323,21 @@ class ServerOptions(Options):
             return 'Could not set group id of effective user'
         os.setuid(uid)
 
-    def waitpid(self):
-        # Need pthread_sigmask here to avoid concurrent sigchld, but Python
-        # doesn't offer in Python < 3.4.  There is still a race condition here;
-        # we can get a sigchld while we're sitting in the waitpid call.
-        # However, AFAICT, if waitpid is interrupted by SIGCHLD, as long as we
-        # call waitpid again (which happens every so often during the normal
-        # course in the mainloop), we'll eventually reap the child that we
-        # tried to reap during the interrupted call. At least on Linux, this
-        # appears to be true, or at least stopping 50 processes at once never
-        # left zombies laying around.
-        try:
-            pid, sts = os.waitpid(-1, os.WNOHANG)
-        except OSError, exc:
-            code = exc.args[0]
-            if code not in (errno.ECHILD, errno.EINTR):
-                self.logger.critical(
-                    'waitpid error %r; '
-                    'a process may not be cleaned up properly' % code
-                    )
-            if code == errno.EINTR:
-                self.logger.blather('EINTR during reap')
-            pid, sts = None, None
-        return pid, sts
+    def set_uid(self):
+        """Set the uid of the supervisord process.  Called during supervisord
+        startup only.  Returns None on success or a string error message if
+        privileges could not be dropped."""
+        if self.uid is None:
+            if os.getuid() == 0:
+                return ('Supervisor is running as root.  Privileges were not '
+                        'dropped because no user is specified in the config '
+                        'file.  If you intend to run as root, you can set '
+                        'user=root in the config file to avoid this message.')
+            return None
+        msg = self.drop_privileges(self.uid)
+        if msg is None:
+            self.parse_infos.append('Set uid to user %s succeeded' % self.uid)
+        return msg
 
     def set_rlimits(self):
         """Set the rlimits of the supervisord process.  Called during
