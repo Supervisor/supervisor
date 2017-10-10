@@ -449,6 +449,7 @@ class ServerOptions(Options):
                  "", "profile_options=", profile_options, default=None)
         self.pidhistory = {}
         self.process_group_configs = []
+        self.parse_criticals = []
         self.parse_warnings = []
         self.parse_infos = []
         self.signal_receiver = SignalReceiver()
@@ -534,6 +535,7 @@ class ServerOptions(Options):
     def read_config(self, fp):
         # Clear parse warnings, since we may be re-reading the
         # config a second time after a reload.
+        self.parse_criticals = []
         self.parse_warnings = []
         self.parse_infos = []
 
@@ -1325,24 +1327,27 @@ class ServerOptions(Options):
 
     def set_uid(self):
         """Set the uid of the supervisord process.  Called during supervisord
-        startup only.  Returns None on success or a string error message if
+        startup only.  No return value.  Exits the process via usage() if
         privileges could not be dropped."""
         if self.uid is None:
             if os.getuid() == 0:
-                return ('Supervisor is running as root.  Privileges were not '
-                        'dropped because no user is specified in the config '
-                        'file.  If you intend to run as root, you can set '
-                        'user=root in the config file to avoid this message.')
-            return None
-        msg = self.drop_privileges(self.uid)
-        if msg is None:
-            self.parse_infos.append('Set uid to user %s succeeded' % self.uid)
-        return msg
+                self.parse_criticals.append('Supervisor is running as root.  '
+                        'Privileges were not dropped because no user is '
+                        'specified in the config file.  If you intend to run '
+                        'as root, you can set user=root in the config file '
+                        'to avoid this message.')
+        else:
+            msg = self.drop_privileges(self.uid)
+            if msg is None:
+                self.parse_infos.append('Set uid to user %s succeeded' %
+                                        self.uid)
+            else:  # failed to drop privileges
+                self.usage(msg)
 
     def set_rlimits(self):
         """Set the rlimits of the supervisord process.  Called during
-        supervisord startup only.  Returns a list of informational messages
-        on success.  Exits via usage() if any rlimits could not be set."""
+        supervisord startup only.  No return value.  Exits the process via
+        usage() if any rlimits could not be set."""
         limits = []
         if hasattr(resource, 'RLIMIT_NOFILE'):
             limits.append(
@@ -1377,8 +1382,6 @@ class ServerOptions(Options):
                 'name':'RLIMIT_NPROC',
                 })
 
-        msgs = []
-
         for limit in limits:
             min = limit['min']
             res = limit['resource']
@@ -1396,13 +1399,12 @@ class ServerOptions(Options):
 
                 try:
                     resource.setrlimit(res, (min, hard))
-                    msgs.append('Increased %(name)s limit to %(min)s' %
-                                locals())
+                    self.parse_infos.append('Increased %(name)s limit to '
+                                '%(min)s' % locals())
                 except (resource.error, ValueError):
                     self.usage(msg % locals())
-        return msgs
 
-    def make_logger(self, critical_messages, warn_messages, info_messages):
+    def make_logger(self):
         # must be called after realize() and after supervisor does setuid()
         format =  '%(asctime)s %(levelname)s %(message)s\n'
         self.logger = loggers.getLogger(
@@ -1414,11 +1416,11 @@ class ServerOptions(Options):
             backups=self.logfile_backups,
             stdout = self.nodaemon,
             )
-        for msg in critical_messages:
+        for msg in self.parse_criticals:
             self.logger.critical(msg)
-        for msg in warn_messages:
+        for msg in self.parse_warnings:
             self.logger.warn(msg)
-        for msg in info_messages:
+        for msg in self.parse_infos:
             self.logger.info(msg)
 
     def make_http_servers(self, supervisord):

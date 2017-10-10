@@ -62,6 +62,7 @@ class DummyOptions:
         self.existing = []
         self.openreturn = None
         self.readfd_result = ''
+        self.parse_criticals = []
         self.parse_warnings = []
         self.parse_infos = []
         self.serverurl = 'http://localhost:9001'
@@ -88,11 +89,11 @@ class DummyOptions:
 
     def set_rlimits(self):
         self.rlimits_set = True
-        return ['rlimits_set']
+        self.parse_infos.append('rlimits_set')
 
     def set_uid(self):
         self.setuid_called = True
-        return 'setuid_called'
+        self.parse_criticals.append('setuid_called')
 
     def openhttpservers(self, supervisord):
         self.httpservers_opened = True
@@ -109,8 +110,8 @@ class DummyOptions:
     def get_socket_map(self):
         return self.socket_map
 
-    def make_logger(self, critical_msgs, warn_msgs, info_msgs):
-        self.make_logger_messages = critical_msgs, warn_msgs, info_msgs
+    def make_logger(self):
+        pass
 
     def clear_autochildlogdir(self):
         self.autochildlogdir_cleared = True
