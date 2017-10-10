@@ -1250,12 +1250,12 @@ class ServerOptions(Options):
                         'file.  If you intend to run as root, you can set '
                         'user=root in the config file to avoid this message.')
             return None
-        msg = self.dropPrivileges(self.uid)
+        msg = self.drop_privileges(self.uid)
         if msg is None:
             self.parse_infos.append('Set uid to user %s succeeded' % self.uid)
         return msg
 
-    def dropPrivileges(self, user):
+    def drop_privileges(self, user):
         # Drop root privileges if we have them
         if user is None:
             return "No user specified to setuid to!"

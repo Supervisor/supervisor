@@ -566,7 +566,7 @@ class Subprocess:
     def set_uid(self):
         if self.config.uid is None:
             return
-        msg = self.config.options.dropPrivileges(self.config.uid)
+        msg = self.config.options.drop_privileges(self.config.uid)
         return msg
 
     def __cmp__(self, other):
