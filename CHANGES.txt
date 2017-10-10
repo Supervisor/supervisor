@@ -11,6 +11,10 @@
 - The HTTP server now returns a Content-Type header specifying UTF-8 encoding.
   This may fix display issues in some browsers.  Patch by Katenkka.
 
+- Fixed a bug where the warning ``Supervisord is running as root and it is
+  searching for its config file`` may have been incorrectly shown by
+  ``supervisorctl`` if its executable name was changed.
+
 3.3.3 (2017-07-24)
 ------------------
 
