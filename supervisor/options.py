@@ -303,17 +303,6 @@ class Options:
                     self._set(name, value, 1)
 
         if self.configfile is None:
-            uid = os.getuid()
-            if uid == 0 and "supervisord" in self.progname: # pragma: no cover
-                self.warnings.warn(
-                    'Supervisord is running as root and it is searching '
-                    'for its configuration file in default locations '
-                    '(including its current working directory); you '
-                    'probably want to specify a "-c" argument specifying an '
-                    'absolute path to a configuration file for improved '
-                    'security.'
-                    )
-
             self.configfile = self.default_configfile()
 
         self.process_config()
@@ -475,6 +464,18 @@ class ServerOptions(Options):
     # TODO: not covered by any test, but used by dispatchers
     def getLogger(self, *args, **kwargs):
         return loggers.getLogger(*args, **kwargs)
+
+    def default_configfile(self):
+        if os.getuid() == 0:
+            self.warnings.warn(
+                'Supervisord is running as root and it is searching '
+                'for its configuration file in default locations '
+                '(including its current working directory); you '
+                'probably want to specify a "-c" argument specifying an '
+                'absolute path to a configuration file for improved '
+                'security.'
+                )
+        return Options.default_configfile(self)
 
     def realize(self, *arg, **kw):
         Options.realize(self, *arg, **kw)
