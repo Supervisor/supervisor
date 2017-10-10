@@ -220,7 +220,7 @@ class DummyOptions:
         self.execv_args = (filename, argv)
         self.execv_environment = environment
 
-    def dropPrivileges(self, uid):
+    def drop_privileges(self, uid):
         if self.setuid_msg:
             return self.setuid_msg
         self.privsdropped = uid
