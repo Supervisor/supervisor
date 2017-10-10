@@ -58,22 +58,15 @@ class Supervisor:
             # prevent crash on libdispatch-based systems, at least for the
             # first request
             self.options.cleanup_fds()
-        info_messages = []
-        critical_messages = []
-        warn_messages = []
-        setuid_msg = self.options.set_uid()
-        if setuid_msg:
-            critical_messages.append(setuid_msg)
+
+        self.options.set_uid()
+
         if self.options.first:
-            rlimit_messages = self.options.set_rlimits()
-            info_messages.extend(rlimit_messages)
-        info_messages.extend(self.options.parse_infos)
-        warn_messages.extend(self.options.parse_warnings)
+            self.options.set_rlimits()
 
         # this sets the options.logger object
         # delay logger instantiation until after setuid
-        self.options.make_logger(critical_messages, warn_messages,
-                                 info_messages)
+        self.options.make_logger()
 
         if not self.options.nocleanup:
             # clean up old automatic logs

@@ -758,10 +758,12 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc.name, 'three')
         self.assertEqual(proc.command, '/bin/pig')
 
-    def test_reload_clears_parse_warnings(self):
+    def test_reload_clears_parse_messages(self):
         instance = self._makeOne()
-        old_warning = "Warning from a prior config read"
-        instance.parse_warnings = [old_warning]
+        old_msg = "Message from a prior config read"
+        instance.parse_criticals = [old_msg]
+        instance.parse_warnings = [old_msg]
+        instance.parse_infos = [old_msg]
 
         text = lstrip("""\
         [supervisord]
@@ -772,7 +774,9 @@ class ServerOptionsTests(unittest.TestCase):
         """)
         instance.configfile = StringIO(text)
         instance.realize(args=[])
-        self.assertFalse(old_warning in instance.parse_warnings)
+        self.assertFalse(old_msg in instance.parse_criticals)
+        self.assertFalse(old_msg in instance.parse_warnings)
+        self.assertFalse(old_msg in instance.parse_infos)
 
     def test_reload_clears_parse_infos(self):
         instance = self._makeOne()
