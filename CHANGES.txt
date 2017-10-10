@@ -8,6 +8,9 @@
   between the host and query string, which caused issues when proxying with
   Nginx.  Patch by Luke Weber.
 
+- The HTTP server now returns a Content-Type header specifying UTF-8 encoding.
+  This may fix display issues in some browsers.  Patch by Katenkka.
+
 3.3.3 (2017-07-24)
 ------------------
 
