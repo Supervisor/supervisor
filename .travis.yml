@@ -24,10 +24,6 @@ matrix:
           env: TOXENV=py35
         - python: 3.6
           env: TOXENV=py36
-        - python: pypy
-          env: TOXENV=pypy
-        - python: pypy3
-          env: TOXENV=pypy3
 
 install:
     # "virtualenv<14.0.0" is needed for Python 3.2 compat
