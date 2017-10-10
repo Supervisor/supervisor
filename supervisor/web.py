@@ -146,7 +146,7 @@ class ViewContext:
 
 class MeldView:
 
-    content_type = 'text/html'
+    content_type = 'text/html;charset=utf-8'
     delay = .5
 
     def __init__(self, context):
