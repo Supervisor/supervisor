@@ -28,6 +28,10 @@
 - When ``supervisord`` successfully drops privileges during startup, it is now
   logged at the ``INFO`` level instead of ``CRIT``.
 
+- Fixed a bug in the web interface where redirect URLs did not have a slash
+  between the host and query string, which caused issues when proxying with
+  Nginx.  Patch by Luke Weber.
+
 3.3.3 (2017-07-24)
 ------------------
 - Fixed CVE-2017-11610.  A vulnerability was found where an authenticated
