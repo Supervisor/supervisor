@@ -752,7 +752,7 @@ class logtail_handler:
 
         mtime = os.stat(logfile)[stat.ST_MTIME]
         request['Last-Modified'] = http_date.build_http_date(mtime)
-        request['Content-Type'] = 'text/plain'
+        request['Content-Type'] = 'text/plain; charset=UTF-8'
         # the lack of a Content-Length header makes the outputter
         # send a 'Transfer-Encoding: chunked' response
 
@@ -783,7 +783,7 @@ class mainlogtail_handler:
 
         mtime = os.stat(logfile)[stat.ST_MTIME]
         request['Last-Modified'] = http_date.build_http_date(mtime)
-        request['Content-Type'] = 'text/plain'
+        request['Content-Type'] = 'text/plain; charset=UTF-8'
         # the lack of a Content-Length header makes the outputter
         # send a 'Transfer-Encoding: chunked' response
 

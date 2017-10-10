@@ -67,7 +67,7 @@ class DeferredWebProducer:
             self.request[header] = headers[header]
 
         if 'Content-Type' not in self.request:
-            self.request['Content-Type'] = 'text/plain'
+            self.request['Content-Type'] = 'text/plain; charset=UTF-8'
 
         if headers.get('Location'):
             self.request['Content-Length'] = 0
@@ -156,7 +156,7 @@ class ViewContext:
 
 class MeldView:
 
-    content_type = 'text/html'
+    content_type = 'text/html; charset=UTF-8'
     delay = .5
 
     def __init__(self, context):
