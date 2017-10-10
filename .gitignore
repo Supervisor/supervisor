@@ -1,6 +1,8 @@
 *~
+*.conf
 *.egg
 *.egg-info
+*.log
 *.pyc
 *.pyo
 *.swp
