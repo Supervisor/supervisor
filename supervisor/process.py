@@ -627,7 +627,7 @@ class Subprocess(object):
                 self.change_state(ProcessStates.RUNNING)
                 msg = (
                     'entered RUNNING state, process has stayed up for '
-                    '> than %s seconds (startsecs)' % self.config.startsecs)
+                    '> %s seconds (startsecs)' % self.config.startsecs)
                 logger.info('success: %s %s' % (self.config.name, msg))
 
         if state == ProcessStates.BACKOFF:
