@@ -895,6 +895,10 @@ class ServerOptions(Options):
             raise ValueError(
                 "Cannot set stopasgroup=true and killasgroup=false"
                 )
+        #begin of new directive: autodir
+        #will create these dirs later before create the log file
+        autodir_str = get(section, 'autodir', '', do_expand=False)
+        #end of new directive: autodir
 
         for process_num in range(numprocs_start, numprocs + numprocs_start):
             expansions = common_expansions
@@ -907,6 +911,14 @@ class ServerOptions(Options):
             directory = get(section, 'directory', None)
 
             logfiles = {}
+
+            #begine of new directive: autodir
+            autodir = list_of_strings(expand(autodir_str, expansions, 'autodir'))
+            for one_dir in autodir:
+                if not os.path.exists(one_dir):
+                    os.makedirs(one_dir)
+                    print 'autodir %s created' % one_dir
+            #end of new directive: autodir
 
             for k in ('stdout', 'stderr'):
                 n = '%s_logfile' % k
