@@ -917,7 +917,6 @@ class ServerOptions(Options):
             for one_dir in autodir:
                 if not os.path.exists(one_dir):
                     os.makedirs(one_dir)
-                    print 'autodir %s created' % one_dir
             #end of new directive: autodir
 
             for k in ('stdout', 'stderr'):
