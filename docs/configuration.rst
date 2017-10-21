@@ -1097,6 +1097,12 @@ section, it must contain a single key named "files".  The values in
 this key specify other configuration files to be included within the
 configuration.
 
+.. note::
+
+    The ``[include]`` section is processed only by ``supervisord``.  It is
+    ignored by ``supervisorctl``.
+
+
 ``[include]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
