@@ -393,6 +393,38 @@ class Options:
             # this causes a DeprecationWarning on setuptools >= 11.3
             return ep.load(False)
 
+    def read_include_config(self, fp, parser, expansions):
+        if parser.has_section('include'):
+            parser.expand_here(self.here)
+            if not parser.has_option('include', 'files'):
+                raise ValueError(".ini file has [include] section, but no "
+                "files setting")
+            files = parser.get('include', 'files')
+            files = expand(files, expansions, 'include.files')
+            files = files.split()
+            if hasattr(fp, 'name'):
+                base = os.path.dirname(os.path.abspath(fp.name))
+            else:
+                base = '.'
+            for pattern in files:
+                pattern = os.path.join(base, pattern)
+                filenames = glob.glob(pattern)
+                if not filenames:
+                    self.parse_warnings.append(
+                        'No file matches via include "%s"' % pattern)
+                    continue
+                for filename in sorted(filenames):
+                    if hasattr(self, 'parse_infos'):
+                        self.parse_infos.append(
+                            'Included extra file "%s" during parsing' % filename)
+                    try:
+                        parser.read(filename)
+                    except ConfigParser.ParsingError as why:
+                        raise ValueError(str(why))
+                    else:
+                        parser.expand_here(
+                            os.path.abspath(os.path.dirname(filename))
+                        )
 
 class ServerOptions(Options):
     user = None
@@ -578,36 +610,8 @@ class ServerOptions(Options):
         expansions = {'here':self.here,
                       'host_node_name':host_node_name}
         expansions.update(self.environ_expansions)
-        if parser.has_section('include'):
-            parser.expand_here(self.here)
-            if not parser.has_option('include', 'files'):
-                raise ValueError(".ini file has [include] section, but no "
-                "files setting")
-            files = parser.get('include', 'files')
-            files = expand(files, expansions, 'include.files')
-            files = files.split()
-            if hasattr(fp, 'name'):
-                base = os.path.dirname(os.path.abspath(fp.name))
-            else:
-                base = '.'
-            for pattern in files:
-                pattern = os.path.join(base, pattern)
-                filenames = glob.glob(pattern)
-                if not filenames:
-                    self.parse_warnings.append(
-                        'No file matches via include "%s"' % pattern)
-                    continue
-                for filename in sorted(filenames):
-                    self.parse_infos.append(
-                        'Included extra file "%s" during parsing' % filename)
-                    try:
-                        parser.read(filename)
-                    except ConfigParser.ParsingError as why:
-                        raise ValueError(str(why))
-                    else:
-                        parser.expand_here(
-                            os.path.abspath(os.path.dirname(filename))
-                        )
+
+        self.read_include_config(fp, parser, expansions)
 
         sections = parser.sections()
         if not 'supervisord' in sections:
@@ -1656,8 +1660,11 @@ class ClientOptions(Options):
             parser.read_file(fp)
         except AttributeError:
             parser.readfp(fp)
+
         if need_close:
             fp.close()
+        self.read_include_config(fp, parser, parser.expansions)
+
         sections = parser.sections()
         if not 'supervisorctl' in sections:
             raise ValueError('.ini file does not include supervisorctl section')
