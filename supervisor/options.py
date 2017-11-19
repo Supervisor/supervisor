@@ -22,6 +22,8 @@ from supervisor.compat import as_bytes, as_string
 from supervisor.compat import xmlrpclib
 from supervisor.compat import StringIO
 from supervisor.compat import basestring
+from supervisor.compat import urllib
+from supervisor.compat import urlparse
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -340,10 +342,22 @@ class Options:
 
     def process_config_file(self, do_usage):
         # Process config file
-        if not hasattr(self.configfile, 'read'):
-            self.here = os.path.abspath(os.path.dirname(self.configfile))
+        if hasattr(self.configfile, 'read'):
+            configfile = self.configfile
+        else:
+            url_parse = urlparse.urlparse(self.configfile, scheme='file')
+            if url_parse.scheme == 'file':
+                self.here = os.path.abspath(os.path.dirname(url_parse.path))
+                configfile = self.configfile
+            else:
+                parse_url = list(url_parse)
+                parse_url_dir = parse_url[:]
+                parse_url[2] = os.path.abspath(url_parse.path)
+                parse_url_dir[2] = os.path.dirname(parse_url[2])
+                self.here = urlparse.urlunparse(parse_url_dir)
+                configfile = urlparse.urlunparse(parse_url)
         try:
-            self.read_config(self.configfile)
+            self.read_config(configfile)
         except ValueError as msg:
             if do_usage:
                 # if this is not called from an RPC method, run usage and exit.
@@ -353,10 +367,18 @@ class Options:
                 raise ValueError(msg)
 
     def exists(self, path):
-        return os.path.exists(path)
+        url = urlparse.urlparse(path, scheme='file')
+        if url.scheme == 'file':
+            return os.path.exists(url.path)
+        return True
 
     def open(self, fn, mode='r'):
-        return open(fn, mode)
+        url = urlparse.urlparse(fn, scheme='file')
+        if url.scheme == 'file':
+            return open(url.path, mode)
+        else:
+            handler = urllib.urlopen(url.geturl())
+            return handler.fp
 
     def get_plugins(self, parser, factory_key, section_prefix):
         factories = []
@@ -668,7 +690,6 @@ class ServerOptions(Options):
         groups = []
         all_sections = parser.sections()
         homogeneous_exclude = []
-
         common_expansions = {'here':self.here}
         def get(section, opt, default, **kwargs):
             expansions = kwargs.get('expansions', {})
@@ -1640,7 +1661,13 @@ class ClientOptions(Options):
         section = self.configroot.supervisorctl
         need_close = False
         if not hasattr(fp, 'read'):
-            self.here = os.path.dirname(normalize_path(fp))
+            url_parse = urlparse.urlparse(fp, scheme='file')
+            if url_parse.scheme == 'file':
+                self.here = os.path.dirname(normalize_path(url_parse.path))
+            else:
+                parse_url = list(url_parse)
+                parse_url[2] = os.path.dirname(normalize_path(parse_url[2]))
+                self.here = urlparse.urlunparse(parse_url)
             if not self.exists(fp):
                 raise ValueError("could not find config file %s" % fp)
             try:
