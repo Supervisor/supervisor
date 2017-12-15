@@ -41,7 +41,8 @@ The following people are responsible for creating Supervisor.
 Original Author
 ~~~~~~~~~~~~~~~
 
-- `Chris McDonough <http://plope.com>`_ is the original author of Supervisor.
+- `Chris McDonough <https://github.com/mcdonc>`_ is the original author of
+  Supervisor.
 
 Contributors
 ~~~~~~~~~~~~
