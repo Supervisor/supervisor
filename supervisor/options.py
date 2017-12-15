@@ -1165,7 +1165,7 @@ class ServerOptions(Options):
             # descriptor to be closed, but it will still remain in
             # the socket_map, and eventually its file descriptor
             # will be passed to # select(), which will bomb.  See
-            # also http://www.plope.com/software/collector/253
+            # also https://web.archive.org/web/20160729222427/http://www.plope.com/software/collector/253
             server.close()
 
     def close_logger(self):
@@ -1455,7 +1455,7 @@ class ServerOptions(Options):
     def mktempfile(self, suffix, prefix, dir):
         # set os._urandomfd as a hack around bad file descriptor bug
         # seen in the wild, see
-        # http://www.plope.com/software/collector/252
+        # https://web.archive.org/web/20160729044005/http://www.plope.com/software/collector/252
         os._urandomfd = None
         fd, filename = tempfile.mkstemp(suffix, prefix, dir)
         os.close(fd)
