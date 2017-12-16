@@ -126,11 +126,11 @@ class TailFProducerTests(unittest.TestCase):
         f.flush()
         producer = self._makeOne(request, f.name, 80)
         result = producer.more()
-        self.assertEqual(result, as_bytes('a' * 80))
+        self.assertEqual(result, as_string('a' * 80))
         f.write(as_bytes('w' * 100))
         f.flush()
         result = producer.more()
-        self.assertEqual(result, as_bytes('w' * 100))
+        self.assertEqual(result, as_string('w' * 100))
         result = producer.more()
         self.assertEqual(result, http.NOT_DONE_YET)
         f.truncate(0)
@@ -155,7 +155,7 @@ class TailFProducerTests(unittest.TestCase):
         f.flush()
         producer = self._makeOne(request, f.name, 80)
         result = producer.more()
-        self.assertEqual(result, as_bytes('a' * 80))
+        self.assertEqual(result, as_string('a' * 80))
         f.close()
         f2 = open(f.name, 'wb')
         try:
@@ -164,7 +164,7 @@ class TailFProducerTests(unittest.TestCase):
             result = producer.more()
         finally:
             os.unlink(f2.name)
-        self.assertEqual(result, as_bytes('b' * 80))
+        self.assertEqual(result, as_string('b' * 80))
 
     def test_handle_more_follow_file_gone(self):
         request = DummyRequest('/logtail/foo', None, None, None)
@@ -176,12 +176,12 @@ class TailFProducerTests(unittest.TestCase):
         finally:
             os.unlink(f.name)
         result = producer.more()
-        self.assertEqual(result, as_bytes('a' * 80))
+        self.assertEqual(result, as_string('a' * 80))
         with open(filename, 'wb') as f:
             f.write(as_bytes('b' * 80))
         try:
             result = producer.more() # should open in new file
-            self.assertEqual(result, as_bytes('b' * 80))
+            self.assertEqual(result, as_string('b' * 80))
         finally:
              os.unlink(f.name)
 

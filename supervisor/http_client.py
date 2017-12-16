@@ -3,6 +3,8 @@
 import sys
 import socket
 
+from supervisor.compat import PY3
+from supervisor.compat import long
 from supervisor.compat import urlparse
 from supervisor.compat import as_bytes
 from supervisor.compat import as_string
@@ -131,12 +133,58 @@ class HTTPHandler(asynchat.async_chat):
         self.push(CRLF)
         self.push(CRLF)
 
+    # To extract chunk size precisely in Python3,
+    # we need to work on bytes string not unicode string.
+    # Therefore, we will override this method of asynchat
+    def handle_read(self):
+
+        try:
+            data = self.recv(self.ac_in_buffer_size)
+        except socket.error:
+            self.handle_error()
+            return
+
+        self.ac_in_buffer = as_bytes(self.ac_in_buffer) + as_bytes(data)
+
+        while self.ac_in_buffer:
+            lb = len(self.ac_in_buffer)
+            terminator = self.get_terminator()
+            if not terminator:
+                self.collect_incoming_data(self.ac_in_buffer)
+                self.ac_in_buffer = ''
+            elif isinstance(terminator, int) or isinstance(terminator, long):
+                n = terminator
+                if lb < n:
+                    self.collect_incoming_data(self.ac_in_buffer)
+                    self.ac_in_buffer = ''
+                    self.terminator= lb
+                else:
+                    self.collect_incoming_data(self.ac_in_buffer[:n])
+                    self.ac_in_buffer = self.ac_in_buffer[n:]
+                    self.terminator = 0
+                    self.found_terminator()
+            else:
+                terminator_len = len(as_bytes(terminator))
+                index = self.ac_in_buffer.find(as_bytes(terminator))
+                if index !=1:
+                    if index > 0:
+                        self.collect_incoming_data(self.ac_in_buffer[:index])
+
+                    self.ac_in_buffer = self.ac_in_buffer[index + terminator_len:]
+                    self.found_terminator()
+                else:
+                    self.collect_incoming_data(self.ac_in_buffer)
+                    self.ac_in_buffer = ''
 
     def feed(self, data):
-        self.listener.feed(self.url, data)
+        self.listener.feed(self.url, as_string(data))
 
-    def collect_incoming_data(self, bytes):
-        self.buffer = self.buffer + bytes
+    def collect_incoming_data(self, data):
+        if PY3:
+            self.buffer = as_string(self.buffer) + as_string(data)
+        else:
+            self.buffer = self.buffer + data
+            
         if self.part==self.body:
             self.feed(self.buffer)
             self.buffer = ''

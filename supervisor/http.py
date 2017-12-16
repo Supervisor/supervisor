@@ -15,6 +15,7 @@ except ImportError:  # Windows
 from supervisor.compat import urllib
 from supervisor.compat import sha1
 from supervisor.compat import as_bytes
+from supervisor.compat import as_string
 from supervisor.medusa import asyncore_25 as asyncore
 from supervisor.medusa import http_date
 from supervisor.medusa import http_server
@@ -49,7 +50,7 @@ class deferring_chunked_producer:
             if data is NOT_DONE_YET:
                 return NOT_DONE_YET
             elif data:
-                return '%x\r\n%s\r\n' % (len(data), data)
+                return '%x\r\n%s\r\n' % (len(as_bytes(data)), data)
             else:
                 self.producer = None
                 if self.footers:
@@ -93,7 +94,7 @@ class deferring_globbing_producer:
         self.delay = 0.1
 
     def more (self):
-        while len(self.buffer) < self.buffer_size:
+        while len(as_bytes(self.buffer)) < self.buffer_size:
             data = self.producer.more()
             if data is NOT_DONE_YET:
                 return NOT_DONE_YET
@@ -131,7 +132,7 @@ class deferring_hooked_producer:
                 self.producer = None
                 self.function (self.bytes)
             else:
-                self.bytes += len(result)
+                self.bytes += len(as_bytes(result))
             return result
         else:
             return ''
@@ -381,13 +382,8 @@ class deferring_http_channel(http_server.http_channel):
                 if data is NOT_DONE_YET:
                     self.delay = p.delay
                     return
-
                 elif data:
-                    try:
-                        self.ac_out_buffer = self.ac_out_buffer + data
-                    except TypeError:
-                        self.ac_out_buffer = as_bytes(self.ac_out_buffer) + as_bytes(data)
-
+                    self.ac_out_buffer = as_bytes(self.ac_out_buffer) + as_bytes(data)
                     self.delay = False
                     return
                 else:
@@ -670,7 +666,7 @@ class tail_f_producer:
             self.file.seek(-bytes_added, 2)
             bytes = self.file.read(bytes_added)
             self.sz = newsz
-            return bytes
+            return as_string(bytes)
         return NOT_DONE_YET
 
     def _open(self):
