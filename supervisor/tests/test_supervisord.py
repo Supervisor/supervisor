@@ -380,7 +380,7 @@ class SupervisordTests(unittest.TestCase):
         def make_gconfig(name, pconfigs, pool_events, result_handler='supervisor.dispatchers:default_handler'):
             return EventListenerPoolConfig(options, name, 25, pconfigs, 10, pool_events, result_handler)
 
-	# Test that changing an event listener command causes the diff_to_activate
+	    # Test that changing an event listener command causes the diff_to_activate
         pconfig = make_pconfig('process1', 'process1-new')
         econfig = make_econfig("TICK_60")
         group1 = make_gconfig('group1', [pconfig], econfig)
@@ -405,7 +405,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual([added, removed], [[], []])
         self.assertEqual(changed, [group1])
 
-	# Test that changing the event triggers diff_to_activate
+        # Test that changing the event triggers diff_to_activate
         options = DummyOptions()
         supervisord = self._makeOne(options)
 
@@ -433,7 +433,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual([added, removed], [[], []])
         self.assertEqual(changed, [group1])
 
-	# Test that changing the result_handler triggers diff_to_activate
+        # Test that changing the result_handler triggers diff_to_activate
         options = DummyOptions()
         supervisord = self._makeOne(options)
 
@@ -460,7 +460,6 @@ class SupervisordTests(unittest.TestCase):
 
         self.assertEqual([added, removed], [[], []])
         self.assertEqual(changed, [group1])
-
 
     def test_add_process_group(self):
         options = DummyOptions()
