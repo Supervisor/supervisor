@@ -1968,7 +1968,12 @@ class EventListenerPoolConfig(Config):
         if not isinstance(other, EventListenerPoolConfig):
             return False
 
-        if (self.name == other.name) and (self.priority == other.priority):
+        if ((self.name == other.name) and
+            (self.priority == other.priority) and
+            (self.process_configs == other.process_configs) and
+            (self.buffer_size == other.buffer_size) and
+            (self.pool_events == other.pool_events) and
+            (self.result_handler == other.result_handler)):
             return True
 
         return False
