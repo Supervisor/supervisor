@@ -96,8 +96,9 @@ class Subprocess(object):
         dispatcher = self.dispatchers[stdin_fd]
         if dispatcher.closed:
             raise OSError(errno.EPIPE, "Process' stdin channel is closed")
-
-        dispatcher.input_buffer += chars
+        dispatcher.input_buffer += chars.decode() \
+            if isinstance(chars, bytes) \
+            else chars
         dispatcher.flush() # this must raise EPIPE if the pipe is closed
 
     def get_execv_args(self):
