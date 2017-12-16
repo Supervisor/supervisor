@@ -15,6 +15,9 @@
   searching for its config file`` may have been incorrectly shown by
   ``supervisorctl`` if its executable name was changed.
 
+- Fixed a bug where rereading the configuration would not detect changes to
+  eventlisteners.  Patch by Michael Ihde.
+
 3.3.3 (2017-07-24)
 ------------------
 
