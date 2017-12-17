@@ -3,6 +3,7 @@ import time
 
 from supervisor.compat import xmlrpclib
 from supervisor.compat import long
+from supervisor.compat import as_string
 
 from supervisor.xmlrpc import SupervisorTransport
 from supervisor.events import ProcessCommunicationEvent
@@ -58,7 +59,7 @@ class EventListenerProtocol:
         return headers, payload
 
     def ready(self, stdout=sys.stdout):
-        stdout.write(PEventListenerDispatcher.READY_FOR_EVENTS_TOKEN)
+        stdout.write(as_string(PEventListenerDispatcher.READY_FOR_EVENTS_TOKEN))
         stdout.flush()
 
     def ok(self, stdout=sys.stdout):
@@ -69,7 +70,7 @@ class EventListenerProtocol:
 
     def send(self, data, stdout=sys.stdout):
         resultlen = len(data)
-        result = '%s%s\n%s' % (PEventListenerDispatcher.RESULT_TOKEN_START,
+        result = '%s%s\n%s' % (as_string(PEventListenerDispatcher.RESULT_TOKEN_START),
                                str(resultlen),
                                data)
         stdout.write(result)

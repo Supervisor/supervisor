@@ -1136,7 +1136,7 @@ class DummyStream:
         self.error = error
         self.closed = False
         self.flushed = False
-        self.written = ''
+        self.written = b''
         self._fileno = fileno
     def close(self):
         if self.error:
@@ -1151,7 +1151,7 @@ class DummyStream:
             error = self.error
             self.error = None
             raise error
-        self.written += as_string(msg)
+        self.written += as_bytes(msg)
     def seek(self, num, whence=0):
         pass
     def tell(self):
@@ -1164,7 +1164,7 @@ class DummyEvent:
         if serial is not None:
             self.serial = serial
 
-    def __str__(self):
+    def payload(self):
         return 'dummy event'
 
 class DummyPoller:

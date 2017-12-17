@@ -474,7 +474,7 @@ class SupervisorTransportTests(unittest.TestCase):
         self.assertEqual(dummy_conn.closed, True)
         self.assertEqual(dummy_conn.requestargs[0], 'POST')
         self.assertEqual(dummy_conn.requestargs[1], '/')
-        self.assertEqual(dummy_conn.requestargs[2], '')
+        self.assertEqual(dummy_conn.requestargs[2], b'')
         self.assertEqual(dummy_conn.requestargs[3]['Content-Length'], '0')
         self.assertEqual(dummy_conn.requestargs[3]['Content-Type'], 'text/xml')
         self.assertEqual(dummy_conn.requestargs[3]['Authorization'],
@@ -500,7 +500,7 @@ class SupervisorTransportTests(unittest.TestCase):
         self.assertEqual(dummy_conn.closed, False)
         self.assertEqual(dummy_conn.requestargs[0], 'POST')
         self.assertEqual(dummy_conn.requestargs[1], '/')
-        self.assertEqual(dummy_conn.requestargs[2], '')
+        self.assertEqual(dummy_conn.requestargs[2], b'')
         self.assertEqual(dummy_conn.requestargs[3]['Content-Length'], '0')
         self.assertEqual(dummy_conn.requestargs[3]['Content-Type'], 'text/xml')
         self.assertEqual(dummy_conn.requestargs[3]['Authorization'],

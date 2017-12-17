@@ -1,10 +1,10 @@
-import types
+import datetime
 import re
-import traceback
 import socket
 import sys
-import datetime
 import time
+import traceback
+import types
 from xml.etree.ElementTree import iterparse
 
 from supervisor.compat import xmlrpclib
@@ -16,6 +16,7 @@ from supervisor.compat import as_string
 from supervisor.compat import encodestring
 from supervisor.compat import decodestring
 from supervisor.compat import httplib
+from supervisor.compat import PY3
 
 from supervisor.medusa.http_server import get_header
 from supervisor.medusa.xmlrpc_handler import xmlrpc_handler
@@ -382,6 +383,12 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
 
         try:
             try:
+                # on 2.x, the Expat parser doesn't like Unicode which actually
+                # contains non-ASCII characters. It's a bit of a kludge to
+                # do it conditionally here, but it's down to how underlying
+                # libs behave
+                if not PY3:
+                    data = data.encode('ascii', 'xmlcharrefreplace')
                 params, method = self.loads(data)
             except:
                 logger.error(
@@ -427,7 +434,7 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                 # if we get anything but a function, it implies that this
                 # response doesn't need to be deferred, we can service it
                 # right away.
-                body = xmlrpc_marshal(value)
+                body = as_bytes(xmlrpc_marshal(value))
                 request['Content-Type'] = 'text/xml'
                 request['Content-Length'] = len(body)
                 request.push(body)
@@ -508,6 +515,7 @@ class SupervisorTransport(xmlrpclib.Transport):
             raise ValueError('Unknown protocol for serverurl %s' % serverurl)
 
     def request(self, host, handler, request_body, verbose=0):
+        request_body = as_bytes(request_body)
         if not self.connection:
             self.connection = self._get_connection()
             self.headers = {
@@ -538,6 +546,10 @@ class SupervisorTransport(xmlrpclib.Transport):
                                           r.reason,
                                           '' )
         data = r.read()
+        data = as_string(data)
+        # on 2.x, the Expat parser doesn't like Unicode which actually
+        # contains non-ASCII characters
+        data = data.encode('ascii', 'xmlcharrefreplace')
         p, u = self.getparser()
         p.feed(data)
         p.close()

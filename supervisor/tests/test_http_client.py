@@ -1,6 +1,8 @@
 import socket
 import sys
 import unittest
+
+from supervisor.compat import as_bytes
 from supervisor.compat import StringIO
 
 class ListenerTests(unittest.TestCase):
@@ -157,31 +159,31 @@ class HTTPHandlerTests(unittest.TestCase):
     def test_handle_connect_no_password(self):
         inst = self._makeOne()
         pushed = []
-        inst.push = lambda val: pushed.append(val)
+        inst.push = lambda val: pushed.append(as_bytes(val))
         inst.path = '/'
         inst.host = 'localhost'
         inst.handle_connect()
         self.assertTrue(inst.connected)
         self.assertEqual(
             pushed,
-            ['GET / HTTP/1.1',
-             '\r\n',
-             'Host: localhost',
-             '\r\n',
-             'Accept-Encoding: chunked',
-             '\r\n',
-             'Accept: */*',
-             '\r\n',
-             'User-agent: Supervisor HTTP Client',
-             '\r\n',
-             '\r\n',
-             '\r\n']
+            [b'GET / HTTP/1.1',
+             b'\r\n',
+             b'Host: localhost',
+             b'\r\n',
+             b'Accept-Encoding: chunked',
+             b'\r\n',
+             b'Accept: */*',
+             b'\r\n',
+             b'User-agent: Supervisor HTTP Client',
+             b'\r\n',
+             b'\r\n',
+             b'\r\n']
             )
 
     def test_handle_connect_with_password(self):
         inst = self._makeOne()
         pushed = []
-        inst.push = lambda val: pushed.append(val)
+        inst.push = lambda val: pushed.append(as_bytes(val))
         inst.path = '/'
         inst.host = 'localhost'
         inst.password = 'password'
@@ -190,20 +192,20 @@ class HTTPHandlerTests(unittest.TestCase):
         self.assertTrue(inst.connected)
         self.assertEqual(
             pushed,
-             ['GET / HTTP/1.1',
-              '\r\n',
-              'Host: localhost',
-              '\r\n',
-              'Accept-Encoding: chunked',
-              '\r\n',
-              'Accept: */*',
-              '\r\n',
-              'User-agent: Supervisor HTTP Client',
-              '\r\n',
-              'Authorization: Basic dXNlcm5hbWU6cGFzc3dvcmQ=',
-              '\r\n',
-              '\r\n',
-              '\r\n'],
+             [b'GET / HTTP/1.1',
+              b'\r\n',
+              b'Host: localhost',
+              b'\r\n',
+              b'Accept-Encoding: chunked',
+              b'\r\n',
+              b'Accept: */*',
+              b'\r\n',
+              b'User-agent: Supervisor HTTP Client',
+              b'\r\n',
+              b'Authorization: Basic dXNlcm5hbWU6cGFzc3dvcmQ=',
+              b'\r\n',
+              b'\r\n',
+              b'\r\n'],
             )
 
     def test_feed(self):
@@ -217,7 +219,7 @@ class HTTPHandlerTests(unittest.TestCase):
         inst.buffer = 'abc'
         inst.collect_incoming_data('foo')
         self.assertEqual(inst.listener.fed_data, ['abcfoo'])
-        self.assertEqual(inst.buffer, '')
+        self.assertEqual(inst.buffer, b'')
 
     def test_collect_incoming_data_part_is_not_body(self):
         inst = self._makeOne()
@@ -234,37 +236,37 @@ class HTTPHandlerTests(unittest.TestCase):
         inst.buffer = None
         inst.found_terminator()
         self.assertEqual(parted, [True])
-        self.assertEqual(inst.buffer, '')
+        self.assertEqual(inst.buffer, b'')
 
     def test_ignore(self):
         inst = self._makeOne()
         inst.buffer = None
         inst.ignore()
-        self.assertEqual(inst.buffer, '')
+        self.assertEqual(inst.buffer, b'')
 
     def test_status_line_not_startswith_http(self):
         inst = self._makeOne()
-        inst.buffer = 'NOTHTTP/1.0 200 OK'
+        inst.buffer = b'NOTHTTP/1.0 200 OK'
         self.assertRaises(ValueError, inst.status_line)
 
     def test_status_line_200(self):
         inst = self._makeOne()
-        inst.buffer = 'HTTP/1.0 200 OK'
+        inst.buffer = b'HTTP/1.0 200 OK'
         version, status, reason = inst.status_line()
-        self.assertEqual(version, 'HTTP/1.0')
+        self.assertEqual(version, b'HTTP/1.0')
         self.assertEqual(status, 200)
-        self.assertEqual(reason, 'OK')
+        self.assertEqual(reason, b'OK')
         self.assertEqual(inst.part, inst.headers)
 
     def test_status_line_not_200(self):
         inst = self._makeOne()
-        inst.buffer = 'HTTP/1.0 201 OK'
+        inst.buffer = b'HTTP/1.0 201 OK'
         closed = []
         inst.close = lambda: closed.append(True)
         version, status, reason = inst.status_line()
-        self.assertEqual(version, 'HTTP/1.0')
+        self.assertEqual(version, b'HTTP/1.0')
         self.assertEqual(status, 201)
-        self.assertEqual(reason, 'OK')
+        self.assertEqual(reason, b'OK')
         self.assertEqual(inst.part, inst.ignore)
         self.assertEqual(
             inst.listener.error_msg,
@@ -274,8 +276,8 @@ class HTTPHandlerTests(unittest.TestCase):
 
     def test_headers_empty_line_nonchunked(self):
         inst = self._makeOne()
-        inst.buffer = ''
-        inst.encoding = 'not chunked'
+        inst.buffer = b''
+        inst.encoding = b'not chunked'
         inst.length = 3
         terms = []
         inst.set_terminator = lambda L: terms.append(L)
@@ -285,47 +287,47 @@ class HTTPHandlerTests(unittest.TestCase):
 
     def test_headers_empty_line_chunked(self):
         inst = self._makeOne()
-        inst.buffer = ''
-        inst.encoding = 'chunked'
+        inst.buffer = b''
+        inst.encoding = b'chunked'
         inst.headers()
         self.assertEqual(inst.part, inst.chunked_size)
 
     def test_headers_nonempty_line_no_name_no_value(self):
         inst = self._makeOne()
-        inst.buffer = ':'
+        inst.buffer = b':'
         self.assertEqual(inst.headers(), None)
 
     def test_headers_nonempty_line_transfer_encoding(self):
         inst = self._makeOne()
-        inst.buffer = 'Transfer-Encoding: chunked'
+        inst.buffer = b'Transfer-Encoding: chunked'
         responses = []
         inst.response_header = lambda n, v: responses.append((n, v))
         inst.headers()
-        self.assertEqual(inst.encoding, 'chunked')
-        self.assertEqual(responses, [('transfer-encoding', 'chunked')])
+        self.assertEqual(inst.encoding, b'chunked')
+        self.assertEqual(responses, [(b'transfer-encoding', b'chunked')])
 
     def test_headers_nonempty_line_content_length(self):
         inst = self._makeOne()
-        inst.buffer = 'Content-Length: 3'
+        inst.buffer = b'Content-Length: 3'
         responses = []
         inst.response_header = lambda n, v: responses.append((n, v))
         inst.headers()
         self.assertEqual(inst.length, 3)
-        self.assertEqual(responses, [('content-length', '3')])
+        self.assertEqual(responses, [(b'content-length', b'3')])
 
     def test_headers_nonempty_line_arbitrary(self):
         inst = self._makeOne()
-        inst.buffer = 'X-Test: abc'
+        inst.buffer = b'X-Test: abc'
         responses = []
         inst.response_header = lambda n, v: responses.append((n, v))
         inst.headers()
-        self.assertEqual(responses, [('x-test', 'abc')])
+        self.assertEqual(responses, [(b'x-test', b'abc')])
 
     def test_response_header(self):
         inst = self._makeOne()
-        inst.response_header('a', 'b')
-        self.assertEqual(inst.listener.response_header_name, 'a')
-        self.assertEqual(inst.listener.response_header_value, 'b')
+        inst.response_header(b'a', b'b')
+        self.assertEqual(inst.listener.response_header_name, b'a')
+        self.assertEqual(inst.listener.response_header_value, b'b')
 
     def test_body(self):
         inst = self._makeOne()
@@ -342,14 +344,14 @@ class HTTPHandlerTests(unittest.TestCase):
 
     def test_chunked_size_empty_line(self):
         inst = self._makeOne()
-        inst.buffer = ''
+        inst.buffer = b''
         inst.length = 1
         self.assertEqual(inst.chunked_size(), None)
         self.assertEqual(inst.length, 1)
 
     def test_chunked_size_zero_size(self):
         inst = self._makeOne()
-        inst.buffer = '0'
+        inst.buffer = b'0'
         inst.length = 1
         self.assertEqual(inst.chunked_size(), None)
         self.assertEqual(inst.length, 1)
@@ -357,7 +359,7 @@ class HTTPHandlerTests(unittest.TestCase):
 
     def test_chunked_size_nonzero_size(self):
         inst = self._makeOne()
-        inst.buffer = '10'
+        inst.buffer = b'10'
         inst.length = 1
         terms = []
         inst.set_terminator = lambda sz: terms.append(sz)
@@ -369,19 +371,19 @@ class HTTPHandlerTests(unittest.TestCase):
     def test_chunked_body(self):
         from supervisor.http_client import CRLF
         inst = self._makeOne()
-        inst.buffer = 'buffer'
+        inst.buffer = b'buffer'
         terms = []
         lines = []
         inst.set_terminator = lambda v: terms.append(v)
         inst.feed = lambda v: lines.append(v)
         inst.chunked_body()
         self.assertEqual(terms, [CRLF])
-        self.assertEqual(lines, ['buffer'])
+        self.assertEqual(lines, [b'buffer'])
         self.assertEqual(inst.part, inst.chunked_size)
 
     def test_trailer_line_not_crlf(self):
         inst = self._makeOne()
-        inst.buffer = ''
+        inst.buffer = b''
         self.assertEqual(inst.trailer(), None)
 
     def test_trailer_line_crlf(self):
