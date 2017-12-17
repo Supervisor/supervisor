@@ -4,11 +4,7 @@ from __future__ import unicode_literals
 import sys
 import signal
 import unittest
-
-try:
-    from xmlrpc.client import ServerProxy
-except ImportError:
-    from xmlrpclib import ServerProxy
+from supervisor.compat import xmlrpclib
 
 try:
     import pexpect
@@ -81,7 +77,7 @@ class TestEndToEnd(unittest.TestCase):
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         supervisord.expect_exact('cat entered RUNNING state', timeout=10)
-        server = ServerProxy('http://127.0.0.1:9001/RPC2')
+        server = xmlrpclib.ServerProxy('http://127.0.0.1:9001/RPC2')
         for s in ('The Øresund bridge ends in Malmö', 'hello'):
             result = server.supervisor.sendProcessStdin('cat', s)
             self.assertTrue(result)
@@ -106,7 +102,7 @@ class TestEndToEnd(unittest.TestCase):
                 supervisorctl.expect_exact(s) # echoed locally
                 supervisorctl.expect_exact(s) # sent back by supervisord
             seen = True
-        except pexpect.ExceptionPexpect as e:
+        except pexpect.ExceptionPexpect:
             seen = False
         self.assertTrue(seen)
 
