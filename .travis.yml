@@ -20,7 +20,7 @@ matrix:
           env: TOXENV=py36
 
 install:
-    - travis_retry pip install virtualenv tox
+    - travis_retry pip install virtualenv tox pexpect
 
 script:
     - travis_retry tox
