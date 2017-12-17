@@ -94,7 +94,6 @@ class TestEndToEnd(unittest.TestCase):
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisorctl.kill, signal.SIGINT)
 
-        # TODO investigate - failure
         try:
             for s in ('Hi', 'Hello', 'The Øresund bridge ends in Malmö'):
                 supervisorctl.sendline(s)
