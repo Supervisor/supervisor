@@ -22,8 +22,8 @@ It may also have regressions on Python 2 as a result of attempts to
 add Python 3 support.  Help from developers with Python 3 porting
 experience is needed.  **Do not use this branch on any production system.**
 
-Supervisor 4.0 (unreleased) is planned to work under Python 2 version 2.6
-or greater and Python 3 version 3.2 or greater.  See note above about the
+Supervisor 4.0 (unreleased) is planned to work under Python 3 version 3.4
+or greater and on Python 2 version 2.7.  See note above about the
 current state of Python 3 support.
 
 Documentation
