@@ -1537,8 +1537,8 @@ class ServerOptions(Options):
         except OSError as why:
             if why.args[0] not in (errno.EWOULDBLOCK, errno.EBADF, errno.EINTR):
                 raise
-            data = ''
-        return as_string(data)
+            data = b''
+        return data
 
     def process_environment(self):
         os.environ.update(self.environment or {})
@@ -2073,7 +2073,7 @@ def tailFile(filename, offset, length):
                 length = 0
 
             if length == 0:
-                data = ''
+                data = b''
             else:
                 f.seek(offset)
                 data = f.read(length)

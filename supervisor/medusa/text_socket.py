@@ -40,6 +40,6 @@ if PY3:
             return sock, addr
 
     text_socket.__init__.__doc__ = bin_socket.__init__.__doc__
-
+    text_socket = bin_socket
 else:
     text_socket = bin_socket

@@ -6,6 +6,7 @@
 *.pyc
 *.pyo
 *.swp
+*.pss
 .DS_Store
 .coverage
 .eggs/

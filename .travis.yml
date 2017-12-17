@@ -10,14 +10,8 @@ matrix:
           env: TOXENV=cover3
         - python: 3.6
           env: TOXENV=docs
-        - python: 2.6
-          env: TOXENV=py26
         - python: 2.7
           env: TOXENV=py27
-        - python: 3.2
-          env: TOXENV=py32
-        - python: 3.3
-          env: TOXENV=py33
         - python: 3.4
           env: TOXENV=py34
         - python: 3.5
@@ -26,8 +20,7 @@ matrix:
           env: TOXENV=py36
 
 install:
-    # "virtualenv<14.0.0" is needed for Python 3.2 compat
-    - travis_retry pip install "virtualenv<14.0.0" tox
+    - travis_retry pip install virtualenv tox pexpect
 
 script:
     - travis_retry tox

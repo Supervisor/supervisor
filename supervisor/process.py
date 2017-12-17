@@ -8,6 +8,8 @@ import signal
 from supervisor.compat import maxint
 from supervisor.compat import total_ordering
 from supervisor.compat import as_bytes
+from supervisor.compat import as_string
+from supervisor.compat import PY3
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -179,8 +181,9 @@ class Subprocess(object):
         if self.state not in states:
             current_state = getProcessStateDescription(self.state)
             allowable_states = ' '.join(map(getProcessStateDescription, states))
+            processname = as_string(self.config.name)
             raise AssertionError('Assertion failed for %s: %s not in %s' %  (
-                self.config.name, current_state, allowable_states))
+                processname, current_state, allowable_states))
 
     def record_spawnerr(self, msg):
         self.spawnerr = msg
@@ -192,9 +195,10 @@ class Subprocess(object):
         Return the process id.  If the fork() call fails, return None.
         """
         options = self.config.options
+        processname = as_string(self.config.name)
 
         if self.pid:
-            msg = 'process %r already running' % self.config.name
+            msg = 'process \'%s\' already running' % processname
             options.logger.warn(msg)
             return
 
@@ -225,10 +229,10 @@ class Subprocess(object):
             code = why.args[0]
             if code == errno.EMFILE:
                 # too many file descriptors open
-                msg = 'too many open files to spawn %r' % self.config.name
+                msg = 'too many open files to spawn \'%s\'' % processname
             else:
-                msg = 'unknown error making dispatchers for %r: %s' % (
-                      self.config.name, errno.errorcode.get(code, code))
+                msg = 'unknown error making dispatchers for \'%s\': %s' % (
+                      processname, errno.errorcode.get(code, code))
             self.record_spawnerr(msg)
             self._assertInState(ProcessStates.STARTING)
             self.change_state(ProcessStates.BACKOFF)
@@ -240,11 +244,11 @@ class Subprocess(object):
             code = why.args[0]
             if code == errno.EAGAIN:
                 # process table full
-                msg  = ('Too many processes in process table to spawn %r' %
-                        self.config.name)
+                msg  = ('Too many processes in process table to spawn \'%s\'' %
+                        processname)
             else:
-                msg = 'unknown error during fork for %r: %s' % (
-                      self.config.name, errno.errorcode.get(code, code))
+                msg = 'unknown error during fork for \'%s\': %s' % (
+                      processname, errno.errorcode.get(code, code))
             self.record_spawnerr(msg)
             self._assertInState(ProcessStates.STARTING)
             self.change_state(ProcessStates.BACKOFF)
@@ -263,7 +267,7 @@ class Subprocess(object):
         self.pid = pid
         options = self.config.options
         options.close_child_pipes(self.pipes)
-        options.logger.info('spawned: %r with pid %s' % (self.config.name, pid))
+        options.logger.info('spawned: \'%s\' with pid %s' % (as_string(self.config.name), pid))
         self.spawnerr = None
         self.delay = time.time() + self.config.startsecs
         options.pidhistory[pid] = self
@@ -363,7 +367,7 @@ class Subprocess(object):
             now = time.time()
             if now > (self.laststopreport + 2): # every 2 seconds
                 self.config.options.logger.info(
-                    'waiting for %s to stop' % self.config.name)
+                    'waiting for %s to stop' % as_string(self.config.name))
                 self.laststopreport = now
 
     def give_up(self):
@@ -382,20 +386,21 @@ class Subprocess(object):
         now = time.time()
         options = self.config.options
 
+        processname = as_string(self.config.name)
         # If the process is in BACKOFF and we want to stop or kill it, then
         # BACKOFF -> STOPPED.  This is needed because if startretries is a
         # large number and the process isn't starting successfully, the stop
         # request would be blocked for a long time waiting for the retries.
         if self.state == ProcessStates.BACKOFF:
             msg = ("Attempted to kill %s, which is in BACKOFF state." %
-                   (self.config.name,))
+                   processname)
             options.logger.debug(msg)
             self.change_state(ProcessStates.STOPPED)
             return None
 
         if not self.pid:
             msg = ("attempted to kill %s with sig %s but it wasn't running" %
-                   (self.config.name, signame(sig)))
+                   (processname, signame(sig)))
             options.logger.debug(msg)
             return msg
 
@@ -411,7 +416,7 @@ class Subprocess(object):
             as_group = "process group "
 
         options.logger.debug('killing %s (pid %s) %swith signal %s'
-                             % (self.config.name,
+                             % (processname,
                                 self.pid,
                                 as_group,
                                 signame(sig))
@@ -436,7 +441,7 @@ class Subprocess(object):
             options.kill(pid, sig)
         except:
             tb = traceback.format_exc()
-            msg = 'unknown problem killing %s (%s):%s' % (self.config.name,
+            msg = 'unknown problem killing %s (%s):%s' % (processname,
                                                           self.pid, tb)
             options.logger.critical(msg)
             self.change_state(ProcessStates.UNKNOWN)
@@ -454,14 +459,15 @@ class Subprocess(object):
         if an error occurred or if the subprocess is not running.
         """
         options = self.config.options
+        processname = as_string(self.config.name)
         if not self.pid:
             msg = ("attempted to send %s sig %s but it wasn't running" %
-                   (self.config.name, signame(sig)))
+                   (processname, signame(sig)))
             options.logger.debug(msg)
             return msg
 
         options.logger.debug('sending %s (pid %s) sig %s'
-                             % (self.config.name,
+                             % (processname,
                                 self.pid,
                                 signame(sig))
                              )
@@ -475,7 +481,7 @@ class Subprocess(object):
         except:
             tb = traceback.format_exc()
             msg = 'unknown problem sending sig %s (%s):%s' % (
-                                self.config.name, self.pid, tb)
+                                processname, self.pid, tb)
             options.logger.critical(msg)
             self.change_state(ProcessStates.UNKNOWN)
             self.pid = 0
@@ -492,16 +498,16 @@ class Subprocess(object):
 
         now = time.time()
         self.laststop = now
-        processname = self.config.name
+        processname = as_string(self.config.name)
 
         if now > self.laststart:
             too_quickly = now - self.laststart < self.config.startsecs
         else:
             too_quickly = False
             self.config.options.logger.warn(
-                "process %r (%s) laststart time is in the future, don't "
+                "process \'%s\' (%s) laststart time is in the future, don't "
                 "know how long process was running so assuming it did "
-                "not exit too quickly" % (self.config.name, self.pid))
+                "not exit too quickly" % (processname, self.pid))
 
         exit_expected = es in self.config.exitcodes
 
@@ -581,9 +587,14 @@ class Subprocess(object):
         return self.config.priority == other.config.priority
 
     def __repr__(self):
+        # repr can't return anything other than a native string,
+        # but the name might be unicode - a problem on Python 2.
+        name = self.config.name
+        if not PY3:
+            name = as_string(name).encode('unicode-escape')
         return '<Subprocess at %s with name %s in state %s>' % (
             id(self),
-            self.config.name,
+            name,
             getProcessStateDescription(self.get_state()))
 
     def get_state(self):
@@ -616,6 +627,7 @@ class Subprocess(object):
                         # BACKOFF -> STARTING
                         self.spawn()
 
+        processname = as_string(self.config.name)
         if state == ProcessStates.STARTING:
             if now - self.laststart > self.config.startsecs:
                 # STARTING -> RUNNING if the proc has started
@@ -628,7 +640,7 @@ class Subprocess(object):
                 msg = (
                     'entered RUNNING state, process has stayed up for '
                     '> than %s seconds (startsecs)' % self.config.startsecs)
-                logger.info('success: %s %s' % (self.config.name, msg))
+                logger.info('success: %s %s' % (processname, msg))
 
         if state == ProcessStates.BACKOFF:
             if self.backoff > self.config.startretries:
@@ -637,7 +649,7 @@ class Subprocess(object):
                 self.give_up()
                 msg = ('entered FATAL state, too many start retries too '
                        'quickly')
-                logger.info('gave up: %s %s' % (self.config.name, msg))
+                logger.info('gave up: %s %s' % (processname, msg))
 
         elif state == ProcessStates.STOPPING:
             time_left = self.delay - now
@@ -646,8 +658,8 @@ class Subprocess(object):
                 # sigkill.  if this doesn't kill it, the process will be stuck
                 # in the STOPPING state forever.
                 self.config.options.logger.warn(
-                    'killing %r (%s) with SIGKILL' % (self.config.name,
-                                                      self.pid))
+                    'killing \'%s\' (%s) with SIGKILL' % (processname,
+                                                          self.pid))
                 self.kill(signal.SIGKILL)
 
 class FastCGISubprocess(Subprocess):
@@ -727,8 +739,13 @@ class ProcessGroupBase(object):
         return self.config.priority == other.config.priority
 
     def __repr__(self):
+        # repr can't return anything other than a native string,
+        # but the name might be unicode - a problem on Python 2.
+        name = self.config.name
+        if not PY3:
+            name = as_string(name).encode('unicode-escape')
         return '<%s instance at %s named %s>' % (self.__class__, id(self),
-                                                 self.config.name)
+                                                 name)
 
     def removelogs(self):
         for process in self.processes.values():
@@ -839,6 +856,7 @@ class EventListenerPool(ProcessGroupBase):
         # events are required to be instances
         # this has a side effect to fail with an attribute error on 'old style'
         # classes
+        processname = as_string(self.config.name)
         if not hasattr(event, 'serial'):
             event.serial = new_serial(GlobalSerial)
         if not hasattr(event, 'pool_serials'):
@@ -848,7 +866,7 @@ class EventListenerPool(ProcessGroupBase):
         else:
             self.config.options.logger.debug(
                 'rebuffering event %s for pool %s (bufsize %s)' % (
-                (event.serial, self.config.name, len(self.event_buffer))))
+                (event.serial, processname, len(self.event_buffer))))
 
         if len(self.event_buffer) >= self.config.buffer_size:
             if self.event_buffer:
@@ -856,7 +874,7 @@ class EventListenerPool(ProcessGroupBase):
                 discarded_event = self.event_buffer.pop(0)
                 self.config.options.logger.error(
                     'pool %s event buffer overflowed, discarding event %s' % (
-                    (self.config.name, discarded_event.serial)))
+                    (processname, discarded_event.serial)))
         if head:
             self.event_buffer.insert(0, event)
         else:
@@ -869,7 +887,8 @@ class EventListenerPool(ProcessGroupBase):
             if process.state != ProcessStates.RUNNING:
                 continue
             if process.listener_state == EventListenerStates.READY:
-                payload = str(event)
+                processname = as_string(process.config.name)
+                payload = event.payload()
                 try:
                     event_type = event.__class__
                     serial = event.serial
@@ -883,14 +902,14 @@ class EventListenerPool(ProcessGroupBase):
                     self.config.options.logger.debug(
                         'epipe occurred while sending event %s '
                         'to listener %s, listener state unchanged' % (
-                        event.serial, process.config.name))
+                        event.serial, processname))
                     continue
 
                 process.listener_state = EventListenerStates.BUSY
                 process.event = event
                 self.config.options.logger.debug(
                     'event %s sent to listener %s' % (
-                    event.serial, process.config.name))
+                    event.serial, processname))
                 return True
 
         return False

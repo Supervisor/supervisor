@@ -2,10 +2,13 @@
 -----------------------------
 
 - Support for Python 3 has been added.  On Python 3, Supervisor requires
-  Python 3.2 or later.
+  Python 3.4 or later.  Many thanks to Vinay Sajip, Scott Maxwell, Palm Kevin,
+  Tres Seaver, and Marc Abramowitz who all made major contributions to the
+  Python 3 porting effort.  Thanks also to all contributors who submitted
+  issue reports and patches towards this effort.
 
-- Support for Python 2.4 and 2.5 has been dropped.  On Python 2, Supervisor
-  now requires Python 2.6 or later.
+- Support for Python 2.4, 2.5, and 2.6 has been dropped.  On Python 2,
+  Supervisor now requires Python 2.7.
 
 - The ``supervisor`` package is no longer a namespace package.
 

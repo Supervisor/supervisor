@@ -36,6 +36,7 @@ import signal
 
 from supervisor.medusa import asyncore_25 as asyncore
 
+from supervisor.compat import as_string
 from supervisor.options import ServerOptions
 from supervisor.options import signame
 from supervisor import events
@@ -141,7 +142,7 @@ class Supervisor:
             # throttle 'waiting for x to die' reports
             now = time.time()
             if now > (self.lastshutdownreport + 3): # every 3 secs
-                names = [ p.config.name for p in unstopped ]
+                names = [ as_string(p.config.name) for p in unstopped ]
                 namestr = ', '.join(names)
                 self.options.logger.info('waiting for %s to die' % namestr)
                 self.lastshutdownreport = now
