@@ -22,7 +22,6 @@ from supervisor.medusa import http_server
 from supervisor.medusa import producers
 from supervisor.medusa import filesys
 from supervisor.medusa import default_handler
-from supervisor.medusa import text_socket
 
 from supervisor.medusa.auth_handler import auth_handler
 
@@ -525,7 +524,7 @@ class supervisor_af_inet_http_server(supervisor_http_server):
     def __init__(self, ip, port, logger_object):
         self.ip = ip
         self.port = port
-        sock = text_socket.text_socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.prebind(sock, logger_object)
         self.bind((ip, port))
 
@@ -570,7 +569,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
             pass
 
         while 1:
-            sock = text_socket.text_socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             try:
                 sock.bind(tempname)
                 os.chmod(tempname, sockchmod)

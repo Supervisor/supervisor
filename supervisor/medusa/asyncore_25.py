@@ -56,7 +56,6 @@ from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, \
      ENOTCONN, ESHUTDOWN, EINTR, EISCONN, errorcode
 
 from supervisor.compat import as_string, as_bytes
-from supervisor.medusa import text_socket
 
 try:
     socket_map
@@ -257,7 +256,7 @@ class dispatcher:
 
     def create_socket(self, family, type):
         self.family_and_type = family, type
-        self.socket = text_socket.text_socket(family, type)
+        self.socket = socket.socket(family, type)
         self.socket.setblocking(0)
         self._fileno = self.socket.fileno()
         self.add_channel()
