@@ -5,6 +5,7 @@ import sys
 import signal
 import unittest
 from supervisor.compat import xmlrpclib
+from supervisor.xmlrpc import SupervisorTransport
 
 try:
     import pexpect
@@ -77,14 +78,15 @@ class TestEndToEnd(unittest.TestCase):
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         supervisord.expect_exact('cat entered RUNNING state', timeout=10)
-        server = xmlrpclib.ServerProxy('http://127.0.0.1:9001/RPC2')
+        transport = SupervisorTransport('', '', 'unix:///tmp/issue-835.sock')
+        server = xmlrpclib.ServerProxy('http://anything/RPC2', transport)
         try:
             for s in ('The Øresund bridge ends in Malmö', 'hello'):
                 result = server.supervisor.sendProcessStdin('cat', s)
                 self.assertTrue(result)
                 supervisord.expect_exact(s, timeout=5)
         finally:
-            server('close')()
+            transport.connection.close()
 
     @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_836(self):
