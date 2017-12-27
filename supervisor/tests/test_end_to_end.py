@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import sys
 import signal
 import unittest
+import pkg_resources
 from supervisor.compat import xmlrpclib
 from supervisor.xmlrpc import SupervisorTransport
 
@@ -17,12 +18,13 @@ class TestEndToEnd(unittest.TestCase):
 
     @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_565(self):
-        args = '-m supervisor.supervisord -c supervisor/tests/fixtures/issue-565.conf'.split()
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-565.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         supervisord.expect_exact('success: hello entered RUNNING state')
 
-        args = '-m supervisor.supervisorctl -c supervisor/tests/fixtures/issue-565.conf tail -f hello'.split()
+        args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'tail', '-f', 'hello']
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisorctl.kill, signal.SIGINT)
 
@@ -32,7 +34,8 @@ class TestEndToEnd(unittest.TestCase):
 
     @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_638(self):
-        args = '-m supervisor.supervisord -c supervisor/tests/fixtures/issue-638.conf'.split()
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-638.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         is_py2 = sys.version_info[0] < 3
@@ -49,7 +52,8 @@ class TestEndToEnd(unittest.TestCase):
 
     @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_663(self):
-        args = '-m supervisor.supervisord -c supervisor/tests/fixtures/issue-663.conf'.split()
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-663.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         for i in range(2):
@@ -58,11 +62,12 @@ class TestEndToEnd(unittest.TestCase):
 
     @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_664(self):
-        args = '-m supervisor.supervisord -c supervisor/tests/fixtures/issue-664.conf'.split()
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-664.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         supervisord.expect_exact('test_öäü entered RUNNING state', timeout=10)
-        args = '-m supervisor.supervisorctl -c supervisor/tests/fixtures/issue-664.conf status'.split()
+        args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'status']
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisorctl.kill, signal.SIGINT)
         try:
@@ -74,7 +79,8 @@ class TestEndToEnd(unittest.TestCase):
 
     @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_835(self):
-        args = '-m supervisor.supervisord -c supervisor/tests/fixtures/issue-835.conf'.split()
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-835.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         supervisord.expect_exact('cat entered RUNNING state', timeout=10)
@@ -90,11 +96,12 @@ class TestEndToEnd(unittest.TestCase):
 
     @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_836(self):
-        args = '-m supervisor.supervisord -c supervisor/tests/fixtures/issue-836.conf'.split()
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-836.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         supervisord.expect_exact('cat entered RUNNING state', timeout=10)
-        args = '-m supervisor.supervisorctl -c supervisor/tests/fixtures/issue-836.conf fg cat'.split()
+        args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'fg', 'cat']
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisorctl.kill, signal.SIGINT)
 
