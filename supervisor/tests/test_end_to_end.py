@@ -73,7 +73,7 @@ class TestEndToEnd(unittest.TestCase):
 
     @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_835(self):
-        args = '-m supervisor.supervisord -c supervisor/tests/fixtures/issue-836.conf'.split()
+        args = '-m supervisor.supervisord -c supervisor/tests/fixtures/issue-835.conf'.split()
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         supervisord.expect_exact('cat entered RUNNING state', timeout=10)
