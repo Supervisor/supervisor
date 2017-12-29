@@ -12,6 +12,7 @@ producer, then wrap this with the 'chunked' transfer-encoding producer.
 """
 
 from asynchat import find_prefix_at_end
+from supervisor.compat import as_bytes
 
 class simple_producer:
     """producer for a string"""
