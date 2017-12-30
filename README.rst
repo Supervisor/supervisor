@@ -1,6 +1,9 @@
 Supervisor
 ==========
 
+.. image:: https://travis-ci.org/Supervisor/supervisor.svg?branch=master
+    :target: https://travis-ci.org/Supervisor/supervisor
+
 Supervisor is a client/server system that allows its users to
 control a number of processes on UNIX-like operating systems.
 
