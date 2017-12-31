@@ -430,11 +430,11 @@ class Options:
 
     def _log_parsing_messages(self):
         for msg in self.parse_criticals:
-            logger.critical(msg)
+            self.logger.critical(msg)
         for msg in self.parse_warnings:
-            logger.warn(msg)
+            self.logger.warn(msg)
         for msg in self.parse_infos:
-            logger.info(msg)
+            self.logger.info(msg)
 
 class ServerOptions(Options):
     user = None
