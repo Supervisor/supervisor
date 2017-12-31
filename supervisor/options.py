@@ -428,13 +428,13 @@ class Options:
                             os.path.abspath(os.path.dirname(filename))
                         )
 
-    def _log_parsing_messages(self):
+    def _log_parsing_messages(self, logger):
         for msg in self.parse_criticals:
-            self.logger.critical(msg)
+            logger.critical(msg)
         for msg in self.parse_warnings:
-            self.logger.warn(msg)
+            logger.warn(msg)
         for msg in self.parse_infos:
-            self.logger.info(msg)
+            logger.info(msg)
 
 class ServerOptions(Options):
     user = None
@@ -1458,7 +1458,7 @@ class ServerOptions(Options):
             maxbytes=self.logfile_maxbytes,
             backups=self.logfile_backups,
         )
-        self._log_parsing_messages()
+        self._log_parsing_messages(self.logger)
 
     def make_http_servers(self, supervisord):
         from supervisor.http import make_http_servers
@@ -1643,9 +1643,9 @@ class ClientOptions(Options):
         self.exit_on_error = 0 if self.interactive else 1
 
         format = '%(levelname)s: %(message)s\n'
-        self.logger = loggers.getLogger()
-        loggers.handle_stdout(self.logger, format)
-        self._log_parsing_messages()
+        logger = loggers.getLogger()
+        loggers.handle_stdout(logger, format)
+        self._log_parsing_messages(logger)
 
     def read_config(self, fp):
         section = self.configroot.supervisorctl
