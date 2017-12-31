@@ -30,7 +30,7 @@ class TestEndToEnd(unittest.TestCase):
 
         for i in range(1, 4):
             line = 'The Øresund bridge ends in Malmö - %d' % i
-            supervisorctl.expect_exact(line, timeout=2)
+            supervisorctl.expect_exact(line, timeout=10)
 
     @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_638(self):
@@ -43,12 +43,12 @@ class TestEndToEnd(unittest.TestCase):
             b_prefix = ''
         else:
             b_prefix = 'b'
-        supervisord.expect_exact(r"Undecodable: %s'\x88\n'" % b_prefix, timeout=2)
-        supervisord.expect('received SIGCH?LD indicating a child quit', timeout=5)
+        supervisord.expect_exact(r"Undecodable: %s'\x88\n'" % b_prefix, timeout=10)
+        supervisord.expect('received SIGCH?LD indicating a child quit', timeout=10)
         if is_py2:
             # need to investigate why this message is only printed under 2.x
             supervisord.expect_exact('gave up: produce-unicode-error entered FATAL state, '
-                                     'too many start retries too quickly', timeout=10)
+                                     'too many start retries too quickly', timeout=30)
 
     @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_663(self):
@@ -57,8 +57,8 @@ class TestEndToEnd(unittest.TestCase):
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         for i in range(2):
-            supervisord.expect_exact('OKREADY', timeout=10)
-            supervisord.expect_exact('BUSY -> ACKNOWLEDGED', timeout=2)
+            supervisord.expect_exact('OKREADY', timeout=30)
+            supervisord.expect_exact('BUSY -> ACKNOWLEDGED', timeout=10)
 
     @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_664(self):
@@ -66,12 +66,12 @@ class TestEndToEnd(unittest.TestCase):
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
-        supervisord.expect_exact('test_öäü entered RUNNING state', timeout=10)
+        supervisord.expect_exact('test_öäü entered RUNNING state', timeout=30)
         args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'status']
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisorctl.kill, signal.SIGINT)
         try:
-            supervisorctl.expect('test_öäü\s+RUNNING', timeout=5)
+            supervisorctl.expect('test_öäü\s+RUNNING', timeout=10)
             seen = True
         except pexpect.ExceptionPexpect:
             seen = False
@@ -83,14 +83,14 @@ class TestEndToEnd(unittest.TestCase):
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
-        supervisord.expect_exact('cat entered RUNNING state', timeout=10)
+        supervisord.expect_exact('cat entered RUNNING state', timeout=30)
         transport = SupervisorTransport('', '', 'unix:///tmp/issue-835.sock')
         server = xmlrpclib.ServerProxy('http://anything/RPC2', transport)
         try:
             for s in ('The Øresund bridge ends in Malmö', 'hello'):
                 result = server.supervisor.sendProcessStdin('cat', s)
                 self.assertTrue(result)
-                supervisord.expect_exact(s, timeout=5)
+                supervisord.expect_exact(s, timeout=10)
         finally:
             transport.connection.close()
 
@@ -100,7 +100,7 @@ class TestEndToEnd(unittest.TestCase):
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
-        supervisord.expect_exact('cat entered RUNNING state', timeout=10)
+        supervisord.expect_exact('cat entered RUNNING state', timeout=30)
         args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'fg', 'cat']
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisorctl.kill, signal.SIGINT)
@@ -108,7 +108,7 @@ class TestEndToEnd(unittest.TestCase):
         try:
             for s in ('Hi', 'Hello', 'The Øresund bridge ends in Malmö'):
                 supervisorctl.sendline(s)
-                supervisord.expect_exact(s, timeout=10)
+                supervisord.expect_exact(s, timeout=30)
                 supervisorctl.expect_exact(s) # echoed locally
                 supervisorctl.expect_exact(s) # sent back by supervisord
             seen = True
