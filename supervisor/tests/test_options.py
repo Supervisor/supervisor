@@ -540,7 +540,9 @@ class ClientOptionsTests(unittest.TestCase, IncludeTestsMixin):
         finally:
             shutil.rmtree(dirname, ignore_errors=True)
         options = instance.configroot.supervisorctl
-        # TODO self.assertEqual(len(options.server_configs), 2)
+        history_file = os.path.join(conf_d, 'sc_history')
+        self.assertEqual(options.serverurl, 'unix://' + conf_d + '/supervisord.sock')
+        self.assertEqual(options.history_file, history_file)
         msg = 'Included extra file "%s" during parsing' % conf_file
         self.assertTrue(msg in instance.parse_infos)
         msg = 'Included extra file "%s" during parsing' % ini_file
