@@ -102,6 +102,9 @@ class Options:
         self.require_configfile = require_configfile
         self.add(None, None, "h", "help", self.help)
         self.add("configfile", None, "c:", "configuration=")
+        self.parse_criticals = []
+        self.parse_warnings = []
+        self.parse_infos = []
 
         here = os.path.dirname(os.path.dirname(sys.argv[0]))
         searchpaths = [os.path.join(here, 'etc', 'supervisord.conf'),
@@ -414,9 +417,8 @@ class Options:
                         'No file matches via include "%s"' % pattern)
                     continue
                 for filename in sorted(filenames):
-                    if hasattr(self, 'parse_infos'):
-                        self.parse_infos.append(
-                            'Included extra file "%s" during parsing' % filename)
+                    self.parse_infos.append(
+                        'Included extra file "%s" during parsing' % filename)
                     try:
                         parser.read(filename)
                     except ConfigParser.ParsingError as why:
@@ -425,6 +427,14 @@ class Options:
                         parser.expand_here(
                             os.path.abspath(os.path.dirname(filename))
                         )
+
+    def _log_parsing_messages(self):
+        for msg in self.parse_criticals:
+            logger.critical(msg)
+        for msg in self.parse_warnings:
+            logger.warn(msg)
+        for msg in self.parse_infos:
+            logger.info(msg)
 
 class ServerOptions(Options):
     user = None
@@ -481,9 +491,6 @@ class ServerOptions(Options):
                  "", "profile_options=", profile_options, default=None)
         self.pidhistory = {}
         self.process_group_configs = []
-        self.parse_criticals = []
-        self.parse_warnings = []
-        self.parse_infos = []
         self.signal_receiver = SignalReceiver()
         self.poller = poller.Poller(self)
 
@@ -1451,12 +1458,7 @@ class ServerOptions(Options):
             maxbytes=self.logfile_maxbytes,
             backups=self.logfile_backups,
         )
-        for msg in self.parse_criticals:
-            self.logger.critical(msg)
-        for msg in self.parse_warnings:
-            self.logger.warn(msg)
-        for msg in self.parse_infos:
-            self.logger.info(msg)
+        self._log_parsing_messages()
 
     def make_http_servers(self, supervisord):
         from supervisor.http import make_http_servers
@@ -1639,6 +1641,11 @@ class ClientOptions(Options):
             self.interactive = 1
 
         self.exit_on_error = 0 if self.interactive else 1
+
+        format = '%(levelname)s: %(message)s\n'
+        self.logger = loggers.getLogger()
+        loggers.handle_stdout(self.logger, format)
+        self._log_parsing_messages()
 
     def read_config(self, fp):
         section = self.configroot.supervisorctl
