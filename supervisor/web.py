@@ -11,6 +11,7 @@ from supervisor.compat import parse_qs
 from supervisor.compat import parse_qsl
 from supervisor.compat import as_string
 from supervisor.compat import PY3
+from supervisor.compat import unicode
 
 from supervisor.medusa import producers
 from supervisor.medusa.http_server import http_date
@@ -389,9 +390,9 @@ class StatusView(MeldView):
                             rpcinterface.supervisor.stopProcess(namespec)
                             )
                     except RPCError as e:
+                        msg = 'unexpected rpc fault [%d] %s' % (e.code, e.text)
                         def stoperr():
-                            return 'unexpected rpc fault [%d] %s' % (
-                                e.code, e.text)
+                            return msg
                         stoperr.delay = 0.05
                         return stoperr
 
@@ -441,9 +442,9 @@ class StatusView(MeldView):
                         callback = rpcinterface.supervisor.clearProcessLogs(
                             namespec)
                     except RPCError as e:
+                        msg = 'unexpected rpc fault [%d] %s' % (e.code, e.text)
                         def clearerr():
-                            return 'unexpected rpc fault [%d] %s' % (
-                                e.code, e.text)
+                            return msg
                         clearerr.delay = 0.05
                         return clearerr
 

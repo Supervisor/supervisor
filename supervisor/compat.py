@@ -27,10 +27,12 @@ else: # pragma: no cover
     def as_string(s): return s if isinstance(s, unicode) else s.decode('utf-8')
 
     def is_text_stream(stream):
-        # TODO sort out for Python 2.4, 2.5 and 2.6 when a stream is
-        # opened using plain open() or codecs.open() rather than io.open()
-        if isinstance(stream, file):
-            return 'b' not in stream.mode
+        try:
+            if isinstance(stream, file):
+                return 'b' not in stream.mode
+        except NameError:  # python 3
+            pass
+
         try:
             import _io
             return isinstance(stream, _io._TextIOBase)

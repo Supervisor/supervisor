@@ -10,6 +10,7 @@ import syslog
 from supervisor.compat import PY3
 from supervisor.compat import as_string
 from supervisor.compat import StringIO
+from supervisor.compat import unicode
 
 from supervisor.tests.base import mock
 from supervisor.tests.base import DummyStream
