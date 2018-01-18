@@ -365,6 +365,12 @@ class Subprocess(object):
         """ Log a 'waiting for x to stop' message with throttling. """
         if self.state == ProcessStates.STOPPING:
             now = time.time()
+
+            if now < self.laststopreport:
+                # The system clock appears to have moved backward
+                # Reset self.laststopreport to current system time
+                self.laststopreport = now;
+
             if now > (self.laststopreport + 2): # every 2 seconds
                 self.config.options.logger.info(
                     'waiting for %s to stop' % as_string(self.config.name))
@@ -622,6 +628,11 @@ class Subprocess(object):
                     # STOPPED -> STARTING
                     self.spawn()
             elif state == ProcessStates.BACKOFF:
+                if self.delay > 0 and now < self.delay - self.backoff:
+                    # The system clock appears to have moved backward
+                    # Reset self.delay accordingly
+                    self.delay = now + self.backoff
+
                 if self.backoff <= self.config.startretries:
                     if now > self.delay:
                         # BACKOFF -> STARTING
@@ -629,6 +640,16 @@ class Subprocess(object):
 
         processname = as_string(self.config.name)
         if state == ProcessStates.STARTING:
+            if now < self.laststart:
+                # The system clock appears to have moved backward
+                # Reset self.laststart to current system time
+                self.laststart = now;
+
+            if self.delay > 0 and now < self.delay - self.config.startsecs:
+                # The system clock appears to have moved backward
+                # Reset self.delay accordingly
+                self.delay = now + self.config.startsecs
+
             if now - self.laststart > self.config.startsecs:
                 # STARTING -> RUNNING if the proc has started
                 # successfully and it has stayed up for at least
@@ -652,6 +673,11 @@ class Subprocess(object):
                 logger.info('gave up: %s %s' % (processname, msg))
 
         elif state == ProcessStates.STOPPING:
+            if self.delay > 0 and now < self.delay - self.config.stopwaitsecs:
+                # The system clock appears to have moved backward
+                # Reset self.delay accordingly
+                self.delay = now + self.config.stopwaitsecs
+
             time_left = self.delay - now
             if time_left <= 0:
                 # kill processes which are taking too long to stop with a final
@@ -836,6 +862,12 @@ class EventListenerPool(ProcessGroupBase):
         if dispatch_capable:
             if self.dispatch_throttle:
                 now = time.time()
+
+                if now < self.last_dispatch:
+                    # The system clock appears to have moved backward
+                    # Reset self.last_dispatch accordingly
+                    self.last_dispatch = now;
+
                 if now - self.last_dispatch < self.dispatch_throttle:
                     return
             self.dispatch()
