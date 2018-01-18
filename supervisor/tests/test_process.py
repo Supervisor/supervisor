@@ -738,6 +738,40 @@ class SubprocessTests(unittest.TestCase):
         instance.stop_report()
         self.assertEqual(len(options.logger.data), 1) # throttled
 
+    def test_stop_report_laststopreport_in_future(self):
+        future_time = time.time() + 3600 # 1 hour into the future
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        instance = self._makeOne(config)
+        instance.pid = 11
+        dispatcher = DummyDispatcher(writable=True)
+        instance.dispatchers = {'foo':dispatcher}
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.STOPPING
+        instance.laststopreport = future_time
+
+        # This iteration of stop_report() should reset instance.laststopreport
+        # to the current time
+        instance.stop_report()
+
+        # No logging should have taken place
+        self.assertEqual(len(options.logger.data), 0)
+
+        # Ensure instance.laststopreport has rolled backward
+        self.assertTrue(instance.laststopreport < future_time)
+
+        # Sleep for 2 seconds
+        time.sleep(2)
+
+        # This iteration of stop_report() should actaully trigger the report
+        instance.stop_report()
+
+        self.assertEqual(len(options.logger.data), 1)
+        self.assertEqual(options.logger.data[0], 'waiting for test to stop')
+        self.assertNotEqual(instance.laststopreport, 0)
+        instance.stop_report()
+        self.assertEqual(len(options.logger.data), 1) # throttled
+
     def test_give_up(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test')
@@ -1403,6 +1437,92 @@ class SubprocessTests(unittest.TestCase):
         event = L[0]
         self.assertEqual(event.__class__, events.ProcessStateRunningEvent)
 
+    def test_transition_starting_to_running_laststart_in_future(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates
+
+        future_time = time.time() + 3600 # 1 hour into the future
+        options = DummyOptions()
+        test_startsecs = 2
+
+        # this should go from STARTING to RUNNING via transition()
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process',
+                               startsecs=test_startsecs)
+        process = self._makeOne(pconfig)
+        process.backoff = 1
+        process.delay = 1
+        process.system_stop = False
+        process.laststart = future_time
+        process.pid = 1
+        process.stdout_buffer = 'abc'
+        process.stderr_buffer = 'def'
+        process.state = ProcessStates.STARTING
+
+        # This iteration of transition() should reset process.laststart
+        # to the current time
+        process.transition()
+
+        # Process state should still be STARTING
+        self.assertEqual(process.state, ProcessStates.STARTING)
+
+        # Ensure process.laststart has rolled backward
+        self.assertTrue(process.laststart < future_time)
+
+        # Sleep for (startsecs + 1)
+        time.sleep(test_startsecs + 1)
+
+        # This iteration of transition() should actaully trigger the state
+        # transition to RUNNING
+        process.transition()
+
+        # this implies RUNNING
+        self.assertEqual(process.backoff, 0)
+        self.assertEqual(process.delay, 0)
+        self.assertFalse(process.system_stop)
+        self.assertEqual(process.state, ProcessStates.RUNNING)
+        self.assertEqual(options.logger.data[0],
+                         'success: process entered RUNNING state, process has '
+                         'stayed up for > than {} seconds (startsecs)'.format(test_startsecs))
+        self.assertEqual(len(L), 1)
+        event = L[0]
+        self.assertEqual(event.__class__, events.ProcessStateRunningEvent)
+
+    def test_transition_backoff_to_starting_delay_in_future(self):
+        from supervisor import events
+        L = []
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        from supervisor.states import ProcessStates, SupervisorStates
+
+        future_time = time.time() + 3600 # 1 hour into the future
+        options = DummyOptions()
+
+        pconfig = DummyPConfig(options, 'process', 'process','/bin/process')
+        process = self._makeOne(pconfig)
+        process.laststart = 1
+        process.delay = future_time
+        process.backoff = 0
+        process.state = ProcessStates.BACKOFF
+
+        # This iteration of transition() should reset process.delay
+        # to the current time
+        process.transition()
+
+        # Process state should still be BACKOFF
+        self.assertEqual(process.state, ProcessStates.BACKOFF)
+
+        # Ensure process.delay has rolled backward
+        self.assertTrue(process.delay < future_time)
+
+        # This iteration of transition() should actaully trigger the state
+        # transition to STARTING
+        process.transition()
+
+        self.assertEqual(process.state, ProcessStates.STARTING)
+        self.assertEqual(len(L), 1)
+        self.assertEqual(L[0].__class__, events.ProcessStateStartingEvent)
+
     def test_transition_backoff_to_fatal(self):
         from supervisor import events
         L = []
@@ -2033,6 +2153,32 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         self.assertEqual(payload, b'dummy event', payload)
         self.assertEqual(process1.listener_state, EventListenerStates.BUSY)
         self.assertEqual(process1.event, event)
+
+    def test_transition_event_proc_running_with_dispatch_throttle_last_dispatch_in_future(self):
+        future_time = time.time() + 3600 # 1 hour into the future
+        options = DummyOptions()
+        from supervisor.states import ProcessStates
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.RUNNING)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        pool = self._makeOne(gconfig)
+        pool.dispatch_throttle = 5
+        pool.last_dispatch = future_time
+        pool.processes = {'process1': process1}
+        event = DummyEvent()
+        from supervisor.states import EventListenerStates
+        process1.listener_state = EventListenerStates.READY
+        class DummyGroup:
+            config = gconfig
+        process1.group = DummyGroup
+        pool._acceptEvent(event)
+        pool.transition()
+
+        self.assertEqual(process1.transitioned, True)
+        self.assertEqual(pool.event_buffer, [event]) # not popped
+
+        # Ensure pool.last_dispatch has been rolled backward
+        self.assertTrue(pool.last_dispatch < future_time)
 
     def test__dispatchEvent_notready(self):
         options = DummyOptions()
