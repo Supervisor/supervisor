@@ -245,7 +245,7 @@ remove <name> [...]
 
    Removes process/group from active config
 
-update
+update <name> [...]
 
    Reload config and then add and remove as necessary (restarts programs)
 
