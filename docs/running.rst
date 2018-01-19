@@ -244,10 +244,18 @@ add <name> [...]
 remove <name> [...]
 
    Removes process/group from active config
+   
+update
 
-update <name> [...]
+   Reload config and add/remove as necessary, and will restart affected programs
+   
+update all
 
-   Reload config and then add and remove as necessary (restarts programs)
+   Reload config and add/remove as necessary, and will restart affected programs
+
+update <gname> [...]
+
+   Update specific groups, and will restart affected programs
 
 clear <name>
 
