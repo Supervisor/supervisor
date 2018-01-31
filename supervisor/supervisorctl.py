@@ -197,21 +197,17 @@ class Controller(cmd.Cmd):
     def onecmd(self, line):
         """ Override the onecmd method to:
           - catch and print all exceptions
-          - allow for composite commands in interactive mode (foo; bar)
           - call 'do_foo' on plugins rather than ourself
         """
+        # TODO refactor: onecmd_run() and this conditional logic to raise
+        # SystemExit() was added by the exitcodes patch; it can likely all be
+        # removed now that semicolon-separated commands no longer exist.
         result = self.onecmd_run(line)
         if self.options.exit_on_error and self.exit_status is not None:
             raise SystemExit(self.exit_status)
         return result
 
     def onecmd_run(self, line):
-        origline = line
-        lines = line.split(';') # don't filter(None, line.split), as we pop
-        line = lines.pop(0)
-        # stuffing the remainder into cmdqueue will cause cmdloop to
-        # call us again for each command.
-        self.cmdqueue.extend(lines)
         cmd, arg, line = self.parseline(line)
         if not line:
             return self.emptyline()
@@ -238,7 +234,7 @@ class Controller(cmd.Cmd):
                             self.output('')
                             self.options.username = username
                             self.options.password = password
-                            return self.onecmd_run(origline)
+                            return self.onecmd_run(line)
                         else:
                             self.handle_error('Server requires authentication')
                     else:

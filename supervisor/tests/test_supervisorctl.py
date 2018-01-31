@@ -187,17 +187,6 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.helped, True)
 
-    def test_onecmd_multi_colonseparated(self):
-        options = DummyClientOptions()
-        controller = self._makeOne(options)
-        controller.stdout = StringIO()
-        plugin = DummyPlugin()
-        controller.options.plugins = (plugin,)
-        result = controller.onecmd('help; help')
-        self.assertEqual(result, None)
-        self.assertEqual(controller.cmdqueue, [' help'])
-        self.assertEqual(plugin.helped, True)
-
     def test_onecmd_empty_does_not_repeat_previous_cmd(self):
         options = DummyClientOptions()
         controller = self._makeOne(options)
