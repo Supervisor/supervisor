@@ -1297,6 +1297,7 @@ class ServerOptions(Options):
                 self.logger.blather('EINTR during reap')
             pid, sts = None, None
         return pid, sts
+
     def drop_privileges(self, user):
         """Drop privileges to become the specified user, which may be a
         username or uid.  Called for supervisord startup and when spawning
