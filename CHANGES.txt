@@ -32,22 +32,22 @@
   error condition occurs.  Previous versions did not set the exit status so
   it was always zero.  Patch by Luke Weber.
 
-- When ``supervisord`` successfully drops privileges during startup, it is now
-  logged at the ``INFO`` level instead of ``CRIT``.
-
-- Fixed a bug in the web interface where redirect URLs did not have a slash
-  between the host and query string, which caused issues when proxying with
-  Nginx.  Patch by Luke Weber.
-
-- The HTTP server now returns a Content-Type header specifying UTF-8 encoding.
-  This may fix display issues in some browsers.  Patch by Katenkka.
+- Fixed a bug where rereading the configuration would not detect changes to
+  eventlisteners.  Patch by Michael Ihde.
 
 - Fixed a bug where the warning ``Supervisord is running as root and it is
   searching for its config file`` may have been incorrectly shown by
   ``supervisorctl`` if its executable name was changed.
 
-- Fixed a bug where rereading the configuration would not detect changes to
-  eventlisteners.  Patch by Michael Ihde.
+- Fixed a bug in the web interface where redirect URLs did not have a slash
+  between the host and query string, which caused issues when proxying with
+  Nginx.  Patch by Luke Weber.
+
+- When ``supervisord`` successfully drops privileges during startup, it is now
+  logged at the ``INFO`` level instead of ``CRIT``.
+
+- The HTTP server now returns a Content-Type header specifying UTF-8 encoding.
+  This may fix display issues in some browsers.  Patch by Katenkka.
 
 3.3.3 (2017-07-24)
 ------------------
