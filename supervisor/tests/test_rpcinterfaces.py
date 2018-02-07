@@ -1163,6 +1163,30 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(configs[1]['stdout_logfile_backups'], 0)
         assert 'test_rpcinterfaces.py' in configs[0]['command']
 
+    def test_getAllConfigInfo_filters_types_not_compatible_with_xmlrpc(self):
+        options = DummyOptions()
+        supervisord = DummySupervisor(options, 'foo')
+
+        pconfig1 = DummyPConfig(options, 'process1', __file__)
+        pconfig2 = DummyPConfig(options, 'process2', __file__)
+        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig1, pconfig2])
+        supervisord.process_groups = {'group1': DummyProcessGroup(gconfig)}
+        supervisord.options.process_group_configs = [gconfig]
+        interface = self._makeOne(supervisord)
+
+        unmarshallables = [type(None)]
+
+        try:
+            from enum import Enum
+            unmarshallables.append(Enum)
+        except ImportError: # python 2
+            pass
+
+        for typ in unmarshallables:
+            for config in interface.getAllConfigInfo():
+                for k, v in config.items():
+                    self.assertFalse(isinstance(v, typ), k)
+
     def test__interpretProcessInfo(self):
         supervisord = DummySupervisor()
         interface = self._makeOne(supervisord)

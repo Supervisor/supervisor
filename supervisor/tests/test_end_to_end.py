@@ -116,5 +116,21 @@ class TestEndToEnd(unittest.TestCase):
             seen = False
         self.assertTrue(seen)
 
+    @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
+    def test_issue_1054(self):
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1054.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('cat entered RUNNING state', timeout=60)
+        args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'avail']
+        supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        try:
+            supervisorctl.expect('cat\s+in use\s+auto', timeout=30)
+            seen = True
+        except pexpect.ExceptionPexpect:
+            seen = False
+        self.assertTrue(seen)
+
 if __name__ == '__main__':
     unittest.main()
