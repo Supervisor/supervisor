@@ -18,7 +18,7 @@ else:
     BaseTestCase = object
 
 
-class TestEndToEnd(BaseTestCase):
+class EndToEndTests(BaseTestCase):
 
     def test_issue_565(self):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-565.conf')
@@ -129,5 +129,9 @@ class TestEndToEnd(BaseTestCase):
             seen = False
         self.assertTrue(seen)
 
+
+def test_suite():
+    return unittest.findTestCases(sys.modules[__name__])
+
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(defaultTest='test_suite')
