@@ -2,6 +2,10 @@ language: python
 
 sudo: false
 
+env:
+    global:
+        - END_TO_END=1
+
 matrix:
     include:
         - python: 2.7

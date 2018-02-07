@@ -1,6 +1,7 @@
 # ~*~ coding: utf-8 ~*~
 from __future__ import unicode_literals
 
+import os
 import sys
 import signal
 import unittest
@@ -8,15 +9,17 @@ import pkg_resources
 from supervisor.compat import xmlrpclib
 from supervisor.xmlrpc import SupervisorTransport
 
-try:
+
+# end-to-test tests are slow so only run them when asked
+if 'END_TO_END' in os.environ:
     import pexpect
-except ImportError:
-    pexpect = None
+    BaseTestCase = unittest.TestCase
+else:
+    BaseTestCase = object
 
 
-class TestEndToEnd(unittest.TestCase):
+class TestEndToEnd(BaseTestCase):
 
-    @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_565(self):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-565.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
@@ -32,7 +35,6 @@ class TestEndToEnd(unittest.TestCase):
             line = 'The Øresund bridge ends in Malmö - %d' % i
             supervisorctl.expect_exact(line, timeout=30)
 
-    @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_638(self):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-638.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
@@ -50,7 +52,6 @@ class TestEndToEnd(unittest.TestCase):
             supervisord.expect_exact('gave up: produce-unicode-error entered FATAL state, '
                                      'too many start retries too quickly', timeout=60)
 
-    @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_663(self):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-663.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
@@ -60,7 +61,6 @@ class TestEndToEnd(unittest.TestCase):
             supervisord.expect_exact('OKREADY', timeout=60)
             supervisord.expect_exact('BUSY -> ACKNOWLEDGED', timeout=30)
 
-    @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_664(self):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-664.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
@@ -77,7 +77,6 @@ class TestEndToEnd(unittest.TestCase):
             seen = False
         self.assertTrue(seen)
 
-    @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_835(self):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-835.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
@@ -94,7 +93,6 @@ class TestEndToEnd(unittest.TestCase):
         finally:
             transport.connection.close()
 
-    @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_836(self):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-836.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
@@ -116,7 +114,6 @@ class TestEndToEnd(unittest.TestCase):
             seen = False
         self.assertTrue(seen)
 
-    @unittest.skipUnless(pexpect, 'This test needs the pexpect library')
     def test_issue_1054(self):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1054.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
