@@ -124,7 +124,7 @@ class Controller(cmd.Cmd):
         self.options.plugins = []
         self.vocab = ['help']
         self._complete_info = None
-        self.exit_status = None
+        self.exitstatus = None
         cmd.Cmd.__init__(self, completekey, stdin, stdout)
         for name, factory, kwargs in self.options.plugin_factories:
             plugin = factory(self, **kwargs)
@@ -189,8 +189,8 @@ class Controller(cmd.Cmd):
             code = LSBInitErrorCode.GENERIC
         if message:
             self.output(message)
-        if self.exit_status is None:
-            self.exit_status = code
+        if self.exitstatus is None:
+            self.exitstatus = code
         if fatal:
             raise
 
@@ -203,8 +203,8 @@ class Controller(cmd.Cmd):
         # SystemExit() was added by the exitcodes patch; it can likely all be
         # removed now that semicolon-separated commands no longer exist.
         result = self.onecmd_run(line)
-        if self.options.exit_on_error and self.exit_status is not None:
-            raise SystemExit(self.exit_status)
+        if self.options.exit_on_error and self.exitstatus is not None:
+            raise SystemExit(self.exitstatus)
         return result
 
     def onecmd_run(self, line):
@@ -643,13 +643,13 @@ class DefaultControllerPlugin(ControllerPluginBase):
                                'desc': info['description']}
             self.ctl.output(line)
 
-    def do_status(self, arg, supress_exit_status=False):
+    def do_status(self, arg, supress_exitstatus=False):
         """In case upcheck sets an error_status we sanitize it for do_status call which should only return 4
         for this case."""
-        exit_status = self.ctl.exit_status
+        exitstatus = self.ctl.exitstatus
         if not self.ctl.upcheck():
-            if exit_status is not None:
-                self.ctl.exit_status = LSBStatusErrorCode.UNKNOWN
+            if exitstatus is not None:
+                self.ctl.exitstatus = LSBStatusErrorCode.UNKNOWN
             return
 
         supervisor = self.ctl.get_supervisor()
@@ -682,7 +682,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         self._show_statuses(matching_infos)
 
         # Special case where we consider a status call that contains a stopped status to be an error.
-        if not supress_exit_status:
+        if not supress_exitstatus:
             for info in matching_infos:
                 if info['state'] in states.STOPPED_STATES:
                     self.ctl.handle_error(code=LSBStatusErrorCode.NOT_RUNNING)
