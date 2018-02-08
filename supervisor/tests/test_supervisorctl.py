@@ -2036,15 +2036,13 @@ class DummyController:
         if code == ignore_state or code == xmlrpc.Faults.SUCCESS:
             self.output(result)
         elif code in xmlrpc.DEAD_PROGRAM_FAULTS:
-            self.handle_error(message=result, code=LSBInitErrorCodes.NOT_RUNNING)
+            self.output(result)
+            self.handle_error(code=LSBInitErrorCodes.NOT_RUNNING)
         else:
-            self.handle_error(message=result)
+            self.output(result)
+            self.handle_error()
 
-    def handle_error(self, message=None, fatal=False, code=None):
-        if code is None:
-            code = LSBInitErrorCodes.GENERIC
-        if message:
-            self.output(message)
+    def handle_error(self, code=LSBInitErrorCodes.GENERIC, fatal=False):
         if self.exitstatus is None:
             self.exitstatus = code
         if fatal:
