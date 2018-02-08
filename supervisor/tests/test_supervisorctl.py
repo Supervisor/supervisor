@@ -2019,16 +2019,13 @@ class DummyController:
     def print_topics(self, doc_headers, cmds_doc, rows, cols):
         self.topics_printed.append((doc_headers, cmds_doc, rows, cols))
 
-    def handle_xmlrpc_fault_state(self, state_handler, result, ignore_state=None):
-        code = result['status']
-        result = state_handler(result)
-        if code == ignore_state or code == xmlrpc.Faults.SUCCESS:
-            self.output(result)
-        elif code in xmlrpc.DEAD_PROGRAM_FAULTS:
-            self.output(result)
-            self.exitstatus = code=LSBInitErrorCodes.NOT_RUNNING
+    def handle_xmlrpc_fault_state(self, result, ignored_faultcode=None):
+        faultcode = result['status']
+        if faultcode in (ignored_faultcode, xmlrpc.Faults.SUCCESS):
+            pass
+        elif faultcode in xmlrpc.DEAD_PROGRAM_FAULTS:
+            self.exitstatus = LSBInitErrorCodes.NOT_RUNNING
         else:
-            self.output(result)
             self.exitstatus = LSBInitErrorCodes.GENERIC
 
 class DummyPlugin:
