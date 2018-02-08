@@ -2026,13 +2026,10 @@ class DummyController:
             self.output(result)
         elif code in xmlrpc.DEAD_PROGRAM_FAULTS:
             self.output(result)
-            self.set_exitstatus(code=LSBInitErrorCodes.NOT_RUNNING)
+            self.exitstatus = code=LSBInitErrorCodes.NOT_RUNNING
         else:
             self.output(result)
-            self.set_exitstatus(LSBInitErrorCodes.GENERIC)
-
-    def set_exitstatus(self, code):
-        self.exitstatus = code
+            self.exitstatus = LSBInitErrorCodes.GENERIC
 
 class DummyPlugin:
     def __init__(self, controller=None):
