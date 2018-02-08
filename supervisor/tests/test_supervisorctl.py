@@ -1123,7 +1123,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'failed_group:failed: ERROR (no such process)\n'
                          'foo: started\nfoo2: started\n'
                          'failed_group:failed: ERROR (spawn error)\n')
-        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.GENERIC)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.NOT_RUNNING)
 
     def test_restart_upcheck_failed(self):
         plugin = self._makeOne()
@@ -2037,14 +2037,14 @@ class DummyController:
             self.output(result)
         elif code in xmlrpc.DEAD_PROGRAM_FAULTS:
             self.output(result)
-            self.handle_error(code=LSBInitErrorCodes.NOT_RUNNING)
+            self.set_exitstatus(code=LSBInitErrorCodes.NOT_RUNNING)
         else:
             self.output(result)
-            self.handle_error()
+            self.set_exitstatus(LSBInitErrorCodes.GENERIC)
 
-    def handle_error(self, code=LSBInitErrorCodes.GENERIC):
-        if self.exitstatus is None:
-            self.exitstatus = code
+    def set_exitstatus(self, code):
+        #if self.exitstatus is None:
+        self.exitstatus = code
 
 class DummyPlugin:
     def __init__(self, controller=None):
