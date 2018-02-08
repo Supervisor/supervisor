@@ -51,12 +51,9 @@ class LSBInitErrorCode:
     UNIMPLEMENTED_FEATURE = 3
     INSUFFICIENT_PRIVLEDGES = 4
     NOT_INSTALLED = 5
-    NOT_CONFIGURED = 6
     NOT_RUNNING = 7
 
 class LSBStatusErrorCode:
-    DEAD_WITH_PID = 1
-    DEAD_WITH_LOCK = 2
     NOT_RUNNING = 3
     UNKNOWN = 4
 
