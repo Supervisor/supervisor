@@ -42,7 +42,7 @@ class fgthread_Tests(unittest.TestCase):
         try:
             inst.localtrace(None, 'line', None)
         except SystemExit as e:
-            self.assertEqual(e.code, 0)
+            self.assertEqual(e.code, None)
         else:
             self.fail("No exception thrown. Excepted SystemExit")
 

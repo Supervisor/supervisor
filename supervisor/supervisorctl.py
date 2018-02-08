@@ -108,7 +108,7 @@ class fgthread(threading.Thread):
     def localtrace(self, frame, why, arg):
         if self.killed:
             if why == 'line':
-                sys.exit(0)
+                raise SystemExit()
         return self.localtrace
 
     def kill(self):
@@ -539,11 +539,11 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     self.ctl.exitstatus = LSBInitErrorCodes.GENERIC
                 elif e.faultCode == xmlrpc.Faults.FAILED:
                     self.ctl.output(template % (name,
-                                      'unknown error reading log'))
+                                             'unknown error reading log'))
                     self.ctl.exitstatus = LSBInitErrorCodes.GENERIC
                 elif e.faultCode == xmlrpc.Faults.BAD_NAME:
                     self.ctl.output(template % (name,
-                                      'no such process name'))
+                                             'no such process name'))
                     self.ctl.exitstatus = LSBInitErrorCodes.GENERIC
                 else:
                     self.ctl.exitstatus = LSBInitErrorCodes.GENERIC
@@ -606,7 +606,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 self.ctl.exitstatus = LSBInitErrorCodes.GENERIC
             elif e.faultCode == xmlrpc.Faults.FAILED:
                 self.ctl.output(template % ('supervisord',
-                                              'unknown error reading log'))
+                                         'unknown error reading log'))
                 self.ctl.exitstatus = LSBInitErrorCodes.GENERIC
             else:
                 self.ctl.exitstatus = LSBInitErrorCodes.GENERIC
@@ -651,9 +651,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
         # XXX In case upcheck sets an exitstatus we sanitize it for
         # do_status call which should only return 4 for this case.
         # TODO review this
-        exitstatus = self.ctl.exitstatus
         if not self.ctl.upcheck():
-            if exitstatus != LSBInitErrorCodes.OK:
+            if self.ctl.exitstatus != LSBInitErrorCodes.OK:
                 self.ctl.exitstatus = LSBStatusErrorCodes.UNKNOWN
             return
 
@@ -665,6 +664,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             matching_infos = all_infos
         else:
             matching_infos = []
+
             for name in names:
                 bad_name = True
                 group_name, process_name = split_namespec(name)
@@ -758,6 +758,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def do_start(self, arg):
         if not self.ctl.upcheck():
             return
+
         names = arg.split()
         supervisor = self.ctl.get_supervisor()
 
@@ -834,6 +835,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def do_stop(self, arg):
         if not self.ctl.upcheck():
             return
+
         names = arg.split()
         supervisor = self.ctl.get_supervisor()
 
