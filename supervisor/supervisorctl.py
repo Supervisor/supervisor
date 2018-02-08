@@ -647,7 +647,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                                'desc': info['description']}
             self.ctl.output(line)
 
-    def do_status(self, arg, suppress_exitstatus=False):
+    def do_status(self, arg):
         # XXX In case upcheck sets an exitstatus we sanitize it for
         # do_status call which should only return 4 for this case.
         # TODO review this
@@ -687,12 +687,9 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     self.ctl.exitstatus = LSBStatusErrorCodes.UNKNOWN
         self._show_statuses(matching_infos)
 
-        # XXX Special case where we consider a status call that contains a stopped status to be an error.
-        # TODO review this
-        if not suppress_exitstatus:
-            for info in matching_infos:
-                if info['state'] in states.STOPPED_STATES:
-                    self.ctl.exitstatus = LSBStatusErrorCodes.NOT_RUNNING
+        for info in matching_infos:
+            if info['state'] in states.STOPPED_STATES:
+                self.ctl.exitstatus = LSBStatusErrorCodes.NOT_RUNNING
 
     def help_status(self):
         self.ctl.output("status <name>\t\tGet status for a single process")
@@ -1307,7 +1304,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
             self.ctl.exitstatus = LSBInitErrorCodes.GENERIC
             return
         self.ctl.options.serverurl = url
-        self.do_status('', suppress_exitstatus=True)
+        # TODO review this
+        old_exitstatus = self.ctl.exitstatus
+        self.do_status('')
+        self.ctl.exitstatus = old_exitstatus
 
     def help_open(self):
         self.ctl.output("open <url>\tConnect to a remote supervisord process.")
