@@ -643,12 +643,11 @@ class DefaultControllerPlugin(ControllerPluginBase):
             self.ctl.output(line)
 
     def do_status(self, arg):
-        # XXX In case upcheck sets an exitstatus we sanitize it for
-        # do_status call which should only return 4 for this case.
+        # XXX In case upcheck fails, we override the exitstatus which
+        # should only return 4 for do_status
         # TODO review this
         if not self.ctl.upcheck():
-            if self.ctl.exitstatus != LSBInitExitStatuses.SUCCESS:
-                self.ctl.exitstatus = LSBStatusExitStatuses.UNKNOWN
+            self.ctl.exitstatus = LSBStatusExitStatuses.UNKNOWN
             return
 
         supervisor = self.ctl.get_supervisor()
