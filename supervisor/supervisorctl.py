@@ -45,15 +45,15 @@ from supervisor import xmlrpc
 from supervisor import states
 from supervisor import http_client
 
-class LSBInitErrorCode:
+class LSBInitErrorCodes:
     GENERIC = 1
     INVALID_ARGS = 2
     UNIMPLEMENTED_FEATURE = 3
-    INSUFFICIENT_PRIVLEDGES = 4
+    INSUFFICIENT_PRIVILEGES = 4
     NOT_INSTALLED = 5
     NOT_RUNNING = 7
 
-class LSBStatusErrorCode:
+class LSBStatusErrorCodes:
     NOT_RUNNING = 3
     UNKNOWN = 4
 
@@ -177,13 +177,13 @@ class Controller(cmd.Cmd):
         if code == ignore_state or code == xmlrpc.Faults.SUCCESS:
             self.output(result)
         elif code in xmlrpc.DEAD_PROGRAM_FAULTS:
-            self.handle_error(message=result, code=LSBInitErrorCode.NOT_RUNNING)
+            self.handle_error(message=result, code=LSBInitErrorCodes.NOT_RUNNING)
         else:
             self.handle_error(message=result)
 
     def handle_error(self, message=None, fatal=False, code=None):
         if code is None:
-            code = LSBInitErrorCode.GENERIC
+            code = LSBInitErrorCodes.GENERIC
         if message:
             self.output(message)
         if self.exitstatus is None:
@@ -277,7 +277,7 @@ class Controller(cmd.Cmd):
                 self.handle_error(
                     'Sorry, this version of supervisorctl expects to '
                     'talk to a server with API version %s, but the '
-                    'remote version is %s.' % (rpcinterface.API_VERSION, api), code=LSBInitErrorCode.NOT_INSTALLED)
+                    'remote version is %s.' % (rpcinterface.API_VERSION, api), code=LSBInitErrorCodes.NOT_INSTALLED)
                 return False
         except xmlrpclib.Fault as e:
             if e.faultCode == xmlrpc.Faults.UNKNOWN_METHOD:
@@ -286,15 +286,15 @@ class Controller(cmd.Cmd):
                     'the supervisor namespace commands that supervisorctl '
                     'uses to control it.  Please check that the '
                     '[rpcinterface:supervisor] section is enabled in the '
-                    'configuration file (see sample.conf).', code=LSBInitErrorCode.UNIMPLEMENTED_FEATURE)
+                    'configuration file (see sample.conf).', code=LSBInitErrorCodes.UNIMPLEMENTED_FEATURE)
                 return False
             self.handle_error(fatal=True)
         except socket.error as e:
             if e.args[0] == errno.ECONNREFUSED:
-                self.handle_error(message='%s refused connection' % self.options.serverurl, code=LSBInitErrorCode.INSUFFICIENT_PRIVLEDGES)
+                self.handle_error(message='%s refused connection' % self.options.serverurl, code=LSBInitErrorCodes.INSUFFICIENT_PRIVILEGES)
                 return False
             elif e.args[0] == errno.ENOENT:
-                self.handle_error(message='%s no such file' % self.options.serverurl, code=LSBInitErrorCode.NOT_RUNNING)
+                self.handle_error(message='%s no such file' % self.options.serverurl, code=LSBInitErrorCodes.NOT_RUNNING)
                 return False
             self.handle_error(fatal=True)
         return True
@@ -646,7 +646,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         exitstatus = self.ctl.exitstatus
         if not self.ctl.upcheck():
             if exitstatus is not None:
-                self.ctl.exitstatus = LSBStatusErrorCode.UNKNOWN
+                self.ctl.exitstatus = LSBStatusErrorCodes.UNKNOWN
             return
 
         supervisor = self.ctl.get_supervisor()
@@ -675,14 +675,14 @@ class DefaultControllerPlugin(ControllerPluginBase):
                         msg = "%s: ERROR (no such group)" % group_name
                     else:
                         msg = "%s: ERROR (no such process)" % name
-                    self.ctl.handle_error(msg, code=LSBStatusErrorCode.UNKNOWN)
+                    self.ctl.handle_error(msg, code=LSBStatusErrorCodes.UNKNOWN)
         self._show_statuses(matching_infos)
 
         # Special case where we consider a status call that contains a stopped status to be an error.
         if not supress_exitstatus:
             for info in matching_infos:
                 if info['state'] in states.STOPPED_STATES:
-                    self.ctl.handle_error(code=LSBStatusErrorCode.NOT_RUNNING)
+                    self.ctl.handle_error(code=LSBStatusErrorCodes.NOT_RUNNING)
 
     def help_status(self):
         self.ctl.output("status <name>\t\tGet status for a single process")
@@ -750,7 +750,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         supervisor = self.ctl.get_supervisor()
 
         if not names:
-            self.handle_error("Error: start requires a process name", code=LSBInitErrorCode.INVALID_ARGS)
+            self.handle_error("Error: start requires a process name", code=LSBInitErrorCodes.INVALID_ARGS)
             self.help_start()
             return
 
@@ -769,7 +769,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     except xmlrpclib.Fault as e:
                         if e.faultCode == xmlrpc.Faults.BAD_NAME:
                             error = "%s: ERROR (no such group)" % group_name
-                            self.handle_error(error, code=LSBInitErrorCode.INVALID_ARGS)
+                            self.handle_error(error, code=LSBInitErrorCodes.INVALID_ARGS)
                         else:
                             self.handle_error(fatal=True)
                 else:
