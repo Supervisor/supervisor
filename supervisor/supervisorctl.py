@@ -23,12 +23,12 @@ actions.
 """
 
 import cmd
-import sys
+import errno
 import getpass
 import xmlrpclib
 import socket
-import errno
 import urlparse
+import sys
 import threading
 
 from supervisor.medusa import asyncore_25 as asyncore
@@ -59,20 +59,20 @@ class fgthread(threading.Thread):
                                                      self.ctl.options.username,
                                                      self.ctl.options.password)
 
-    def start(self):
+    def start(self): # pragma: no cover
         # Start the thread
         self.__run_backup = self.run
         self.run = self.__run
         threading.Thread.start(self)
 
-    def run(self):
+    def run(self): # pragma: no cover
         self.output_handler.get(self.ctl.options.serverurl,
                                 '/logtail/%s/stdout' % self.program)
         self.error_handler.get(self.ctl.options.serverurl,
                                '/logtail/%s/stderr' % self.program)
         asyncore.loop()
 
-    def __run(self):
+    def __run(self): # pragma: no cover
         # Hacked run function, which installs the trace
         sys.settrace(self.globaltrace)
         self.__run_backup()
@@ -168,6 +168,7 @@ class Controller(cmd.Cmd):
             return self.default(line)
         self._complete_info = None
         self.lastcmd = line
+
         if cmd == '':
             return self.default(line)
         else:
@@ -248,11 +249,11 @@ class Controller(cmd.Cmd):
                     'configuration file (see sample.conf).')
                 return False
             raise
-        except socket.error, why:
-            if why.args[0] == errno.ECONNREFUSED:
+        except socket.error, e:
+            if e.args[0] == errno.ECONNREFUSED:
                 self.output('%s refused connection' % self.options.serverurl)
                 return False
-            elif why.args[0] == errno.ENOENT:
+            elif e.args[0] == errno.ENOENT:
                 self.output('%s no such file' % self.options.serverurl)
                 return False
             raise
@@ -415,6 +416,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
         username = self.ctl.options.username
         password = self.ctl.options.password
+        handler = None
         try:
             # Python's urllib2 (at least as of Python 2.4.2) isn't up
             # to this task; it doesn't actually implement a proper
@@ -430,7 +432,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
             handler.get(self.ctl.options.serverurl, path)
             asyncore.loop()
         except KeyboardInterrupt:
-            handler.close()
+            if handler:
+                handler.close()
             self.ctl.output('')
             return
 
@@ -958,7 +961,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def help_reload(self):
         self.ctl.output("reload \t\tRestart the remote supervisord.")
 
-    def _formatChanges(self, (added, changed, dropped)):
+    def _formatChanges(self, added_changed_dropped_tuple):
+        added, changed, dropped = added_changed_dropped_tuple
         changedict = {}
         for n, t in [(added, 'available'),
                      (changed, 'changed'),
@@ -966,7 +970,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             changedict.update(dict(zip(n, [t] * len(n))))
 
         if changedict:
-            names = changedict.keys()
+            names = list(changedict.keys())
             names.sort()
             for name in names:
                 self.ctl.output("%s: %s" % (name, changedict[name]))
