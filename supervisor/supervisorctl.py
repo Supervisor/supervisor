@@ -191,15 +191,6 @@ class Controller(cmd.Cmd):
           - catch and print all exceptions
           - call 'do_foo' on plugins rather than ourself
         """
-        # TODO refactor: onecmd_run() and this conditional logic to raise
-        # SystemExit() was added by the exitcodes patch; it can likely all be
-        # removed now that semicolon-separated commands no longer exist.
-        result = self.onecmd_run(line)
-        if self.options.exit_on_error and self.exitstatus is not None:
-            raise SystemExit(self.exitstatus)
-        return result
-
-    def onecmd_run(self, line):
         cmd, arg, line = self.parseline(line)
         if not line:
             return self.emptyline()
@@ -226,7 +217,7 @@ class Controller(cmd.Cmd):
                             self.output('')
                             self.options.username = username
                             self.options.password = password
-                            return self.onecmd_run(line)
+                            return self.onecmd(line)
                         else:
                             self.output('Server requires authentication')
                             self.set_exitstatus(LSBInitErrorCodes.GENERIC)
@@ -635,7 +626,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             )
 
     def do_quit(self, arg):
-        sys.exit(0)
+        return self.ctl.do_EOF(arg)
 
     def help_quit(self):
         self.ctl.output("quit\tExit the supervisor shell.")
@@ -1407,10 +1398,11 @@ def main(args=None, options=None):
 
     if options.args:
         c.onecmd(" ".join(options.args))
+        sys.exit(c.exitstatus)
 
     if options.interactive:
         c.exec_cmdloop(args, options)
-
+        sys.exit(0)  # exitstatus always 0 for interactive mode
 
 if __name__ == "__main__":
     main()
