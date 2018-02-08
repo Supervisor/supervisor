@@ -172,8 +172,7 @@ class Controller(cmd.Cmd):
             self.output('')
             pass
 
-    def handle_xmlrpc_fault_state(self, result, ignored_faultcode=None):
-        faultcode = result['status']
+    def handle_xmlrpc_fault_state(self, faultcode, ignored_faultcode=None):
         if faultcode in (ignored_faultcode, xmlrpc.Faults.SUCCESS):
             pass
         elif faultcode in xmlrpc.DEAD_PROGRAM_FAULTS:
@@ -768,7 +767,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             results = supervisor.startAllProcesses()
             for result in results:
                 self.ctl.output(self._startresult(result))
-                self.ctl.handle_xmlrpc_fault_state(result, xmlrpc.Faults.ALREADY_STARTED)
+                self.ctl.handle_xmlrpc_fault_state(result['status'], xmlrpc.Faults.ALREADY_STARTED)
         else:
             for name in names:
                 group_name, process_name = split_namespec(name)
@@ -777,7 +776,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                         results = supervisor.startProcessGroup(group_name)
                         for result in results:
                             self.ctl.output(self._startresult(result))
-                            self.ctl.handle_xmlrpc_fault_state(result, xmlrpc.Faults.ALREADY_STARTED)
+                            self.ctl.handle_xmlrpc_fault_state(result['status'], xmlrpc.Faults.ALREADY_STARTED)
                     except xmlrpclib.Fault as e:
                         if e.faultCode == xmlrpc.Faults.BAD_NAME:
                             error = "%s: ERROR (no such group)" % group_name
@@ -795,7 +794,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                                   'group': group_name,
                                   'description': e.faultString}
                         self.ctl.output(self._startresult(error))
-                        self.ctl.handle_xmlrpc_fault_state(error, xmlrpc.Faults.ALREADY_STARTED)
+                        self.ctl.handle_xmlrpc_fault_state(error['status'], xmlrpc.Faults.ALREADY_STARTED)
                     else:
                         name = make_namespec(group_name, process_name)
                         self.ctl.output('%s: started' % name)
@@ -844,7 +843,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             results = supervisor.stopAllProcesses()
             for result in results:
                 self.ctl.output(self._stopresult(result))
-                self.ctl.handle_xmlrpc_fault_state(result, xmlrpc.Faults.NOT_RUNNING)
+                self.ctl.handle_xmlrpc_fault_state(result['status'], xmlrpc.Faults.NOT_RUNNING)
         else:
             for name in names:
                 group_name, process_name = split_namespec(name)
@@ -854,7 +853,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
                         for result in results:
                             self.ctl.output(self._stopresult(result))
-                            self.ctl.handle_xmlrpc_fault_state(result, xmlrpc.Faults.NOT_RUNNING)
+                            self.ctl.handle_xmlrpc_fault_state(result['status'], xmlrpc.Faults.NOT_RUNNING)
                     except xmlrpclib.Fault as e:
                         if e.faultCode == xmlrpc.Faults.BAD_NAME:
                             error = "%s: ERROR (no such group)" % group_name
@@ -872,7 +871,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                                  'group': group_name,
                                  'description':e.faultString}
                         self.ctl.output(self._stopresult(error))
-                        self.ctl.handle_xmlrpc_fault_state(error, xmlrpc.Faults.NOT_RUNNING)
+                        self.ctl.handle_xmlrpc_fault_state(error['status'], xmlrpc.Faults.NOT_RUNNING)
                     else:
                         name = make_namespec(group_name, process_name)
                         self.ctl.output('%s: stopped' % name)
@@ -904,7 +903,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
 
             for result in results:
                 self.ctl.output(self._signalresult(result))
-                self.ctl.handle_xmlrpc_fault_state(result)
+                self.ctl.handle_xmlrpc_fault_state(result['status'])
         else:
             for name in names:
                 group_name, process_name = split_namespec(name)
@@ -915,7 +914,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                             )
                         for result in results:
                             self.ctl.output(self._signalresult(result))
-                            self.ctl.handle_xmlrpc_fault_state(result)
+                            self.ctl.handle_xmlrpc_fault_state(result['status'])
                     except xmlrpclib.Fault as e:
                         if e.faultCode == xmlrpc.Faults.BAD_NAME:
                             error = "%s: ERROR (no such group)" % group_name
@@ -932,7 +931,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                                  'group': group_name,
                                  'description':e.faultString}
                         self.ctl.output(self._signalresult(error))
-                        self.ctl.handle_xmlrpc_fault_state(error)
+                        self.ctl.handle_xmlrpc_fault_state(error['status'])
                     else:
                         name = make_namespec(group_name, process_name)
                         self.ctl.output('%s: signalled' % name)
@@ -1271,7 +1270,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             results = supervisor.clearAllProcessLogs()
             for result in results:
                 self.ctl.output(self._clearresult(result))
-                self.ctl.handle_xmlrpc_fault_state(result)
+                self.ctl.handle_xmlrpc_fault_state(result['status'])
         else:
             for name in names:
                 group_name, process_name = split_namespec(name)
@@ -1283,7 +1282,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                              'group': group_name,
                              'description': e.faultString}
                     self.ctl.output(self._clearresult(error))
-                    self.ctl.handle_xmlrpc_fault_state(error)
+                    self.ctl.handle_xmlrpc_fault_state(error['status'])
                 else:
                     name = make_namespec(group_name, process_name)
                     self.ctl.output('%s: cleared' % name)

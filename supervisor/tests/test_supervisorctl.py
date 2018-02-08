@@ -2019,8 +2019,7 @@ class DummyController:
     def print_topics(self, doc_headers, cmds_doc, rows, cols):
         self.topics_printed.append((doc_headers, cmds_doc, rows, cols))
 
-    def handle_xmlrpc_fault_state(self, result, ignored_faultcode=None):
-        faultcode = result['status']
+    def handle_xmlrpc_fault_state(self, faultcode, ignored_faultcode=None):
         if faultcode in (ignored_faultcode, xmlrpc.Faults.SUCCESS):
             pass
         elif faultcode in xmlrpc.DEAD_PROGRAM_FAULTS:
