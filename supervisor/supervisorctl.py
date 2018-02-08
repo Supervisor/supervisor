@@ -46,6 +46,7 @@ from supervisor import states
 from supervisor import http_client
 
 class LSBInitErrorCodes:
+    OK = 0
     GENERIC = 1
     INVALID_ARGS = 2
     UNIMPLEMENTED_FEATURE = 3
@@ -121,7 +122,7 @@ class Controller(cmd.Cmd):
         self.options.plugins = []
         self.vocab = ['help']
         self._complete_info = None
-        self.exitstatus = None
+        self.exitstatus = LSBInitErrorCodes.OK
         cmd.Cmd.__init__(self, completekey, stdin, stdout)
         for name, factory, kwargs in self.options.plugin_factories:
             plugin = factory(self, **kwargs)
@@ -651,11 +652,12 @@ class DefaultControllerPlugin(ControllerPluginBase):
             self.ctl.output(line)
 
     def do_status(self, arg, supress_exitstatus=False):
-        """In case upcheck sets an error_status we sanitize it for do_status call which should only return 4
-        for this case."""
+        # XXX In case upcheck sets an error_status we sanitize it for
+        # do_status call which should only return 4 for this case.
+        # TODO review this
         exitstatus = self.ctl.exitstatus
         if not self.ctl.upcheck():
-            if exitstatus is not None:
+            if exitstatus != LSBInitErrorCodes.OK:
                 self.ctl.exitstatus = LSBStatusErrorCodes.UNKNOWN
             return
 

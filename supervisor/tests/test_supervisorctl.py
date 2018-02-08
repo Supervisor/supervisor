@@ -667,7 +667,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin = self._makeOne()
         result = plugin.do_status('foo')
         self.assertEqual(result, None)
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
         value = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(value[0].split(None, 2),
                          ['foo', 'RUNNING', 'foo description'])
@@ -700,7 +700,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         value = plugin.ctl.stdout.getvalue().strip()
         self.assertEqual(value.split(None, 2),
                          ['foo', 'RUNNING', 'foo description'])
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_status_group_name(self):
         plugin = self._makeOne()
@@ -791,7 +791,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ALREADY_STARTED: ERROR (already started)\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_start_spawnerror(self):
         plugin = self._makeOne()
@@ -822,7 +822,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: started\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_start_many(self):
         plugin = self._makeOne()
@@ -830,7 +830,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: started\nbar: started\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_start_group(self):
         plugin = self._makeOne()
@@ -839,7 +839,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo:foo_00: started\n'
                          'foo:foo_01: started\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
 
     def test_start_group_bad_name(self):
@@ -901,7 +901,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'NOT_RUNNING: ERROR (not running)\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_stop_failed(self):
         plugin = self._makeOne()
@@ -916,7 +916,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: stopped\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_stop_one_with_group_name_success(self):
         plugin = self._makeOne()
@@ -924,7 +924,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: stopped\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_stop_many(self):
         plugin = self._makeOne()
@@ -933,7 +933,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: stopped\n'
                          'bar: stopped\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_stop_group(self):
         plugin = self._makeOne()
@@ -942,7 +942,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo:foo_00: stopped\n'
                          'foo:foo_01: stopped\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_stop_group_bad_name(self):
         plugin = self._makeOne()
@@ -1040,7 +1040,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         result = plugin.do_signal('HUP foo')
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(), 'foo: signalled\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_signal_many(self):
         plugin = self._makeOne()
@@ -1049,7 +1049,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: signalled\n'
                          'bar: signalled\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_signal_group(self):
         plugin = self._makeOne()
@@ -1058,7 +1058,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo:foo_00: signalled\n'
                          'foo:foo_01: signalled\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_signal_all(self):
         plugin = self._makeOne()
@@ -1102,7 +1102,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: stopped\nfoo: started\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_restart_all(self):
         plugin = self._makeOne()
@@ -1155,7 +1155,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: cleared\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_clear_one_with_group_success(self):
         plugin = self._makeOne()
@@ -1163,7 +1163,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: cleared\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_clear_many(self):
         plugin = self._makeOne()
@@ -1171,7 +1171,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'foo: cleared\nbar: cleared\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_clear_all(self):
         plugin = self._makeOne()
@@ -1221,7 +1221,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          ['bar', 'FATAL', 'bar description'])
         self.assertEqual(value[2].split(None, 2),
                          ['baz:baz_01', 'STOPPED', 'baz description'])
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_version_help(self):
         plugin = self._makeOne()
@@ -1306,7 +1306,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ERROR: already shutting down\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_shutdown_reraises_other_xmlrpc_faults(self):
         plugin = self._makeOne()
@@ -1376,7 +1376,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin.help_reread()
         out = plugin.ctl.stdout.getvalue()
         self.assertTrue("Reload the daemon's configuration files" in out)
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_reread(self):
         plugin = self._makeOne()
@@ -1385,7 +1385,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         result = plugin.do_reread(None)
         self.assertEqual(result, None)
         self.assertEqual(calls[0], [['added'], ['changed'], ['removed']])
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_reread_arg(self):
         plugin = self._makeOne()
@@ -1513,7 +1513,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         supervisor = plugin.ctl.options._server.supervisor
         self.assertEqual(supervisor.processes, ['foo'])
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_add_already_added(self):
         plugin = self._makeOne()
@@ -1521,7 +1521,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue(),
                          'ERROR: process group already active\n')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_add_bad_name(self):
         plugin = self._makeOne()
@@ -1549,7 +1549,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin.help_remove()
         out = plugin.ctl.stdout.getvalue()
         self.assertTrue("remove <name>" in out)
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_remove(self):
         plugin = self._makeOne()
@@ -1772,7 +1772,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         value = plugin.ctl.stdout.getvalue().strip()
         self.assertEqual(value.split(), ['11', '12', '13'])
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_pid_badname(self):
         plugin = self._makeOne()
@@ -1787,7 +1787,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         result = plugin.do_pid('foo')
         self.assertEqual(result, None)
         self.assertEqual(plugin.ctl.stdout.getvalue().strip(), '11')
-        self.assertEqual(plugin.ctl.exitstatus, None)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitErrorCodes.OK)
 
     def test_pid_upcheck_failed(self):
         plugin = self._makeOne()
@@ -1998,7 +1998,7 @@ class DummyController:
         self.options = options
         self.topics_printed = []
         self.stdout = StringIO()
-        self.exitstatus = None
+        self.exitstatus = LSBInitErrorCodes.OK
 
     def upcheck(self):
         return True
@@ -2032,7 +2032,6 @@ class DummyController:
             self.set_exitstatus(LSBInitErrorCodes.GENERIC)
 
     def set_exitstatus(self, code):
-        #if self.exitstatus is None:
         self.exitstatus = code
 
 class DummyPlugin:
