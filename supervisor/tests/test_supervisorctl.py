@@ -2042,11 +2042,9 @@ class DummyController:
             self.output(result)
             self.handle_error()
 
-    def handle_error(self, code=LSBInitErrorCodes.GENERIC, fatal=False):
+    def handle_error(self, code=LSBInitErrorCodes.GENERIC):
         if self.exitstatus is None:
             self.exitstatus = code
-        if fatal:
-            raise
 
 class DummyPlugin:
     def __init__(self, controller=None):

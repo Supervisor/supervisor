@@ -183,10 +183,8 @@ class Controller(cmd.Cmd):
             self.output(result)
             self.handle_error()
 
-    def handle_error(self, code=LSBInitErrorCodes.GENERIC, fatal=False):
+    def handle_error(self, code=LSBInitErrorCodes.GENERIC):
         self.exitstatus = code
-        if fatal:
-            raise
 
     def onecmd(self, line):
         """ Override the onecmd method to:
@@ -233,7 +231,8 @@ class Controller(cmd.Cmd):
                             self.output('Server requires authentication')
                             self.handle_error()
                     else:
-                        self.handle_error(fatal=True)
+                        self.handle_error()
+                        raise
                 do_func(arg)
             except Exception:
                 (file, fun, line), t, v, tbinfo = asyncore.compact_traceback()
@@ -289,7 +288,8 @@ class Controller(cmd.Cmd):
                     'configuration file (see sample.conf).')
                 self.handle_error(code=LSBInitErrorCodes.UNIMPLEMENTED_FEATURE)
                 return False
-            self.handle_error(fatal=True)
+            self.handle_error()
+            raise
         except socket.error as e:
             if e.args[0] == errno.ECONNREFUSED:
                 self.output('%s refused connection' % self.options.serverurl)
@@ -299,7 +299,8 @@ class Controller(cmd.Cmd):
                 self.output('%s no such file' % self.options.serverurl)
                 self.handle_error(code=LSBInitErrorCodes.NOT_RUNNING)
                 return False
-            self.handle_error(fatal=True)
+            self.handle_error()
+            raise
         return True
 
     def complete(self, text, state, line=None):
@@ -557,7 +558,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                                       'no such process name'))
                     self.ctl.handle_error()
                 else:
-                    self.ctl.handle_error(fatal=True)
+                    self.ctl.handle_error()
+                    raise
             else:
                 self.ctl.output(output)
 
@@ -619,7 +621,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                                               'unknown error reading log'))
                 self.ctl.handle_error()
             else:
-                self.ctl.handle_error(fatal=True)
+                self.ctl.handle_error()
+                raise
         else:
             self.ctl.output(output)
 
@@ -729,7 +732,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                         self.ctl.output('No such process %s' % name)
                         self.ctl.handle_error()
                     else:
-                        self.ctl.handle_error(fatal=True)
+                        self.ctl.handle_error()
+                        raise
                 else:
                     self.ctl.output(str(info['pid']))
 
@@ -791,7 +795,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                             self.ctl.output(error)
                             self.ctl.handle_error(code=LSBInitErrorCodes.INVALID_ARGS)
                         else:
-                            self.ctl.handle_error(fatal=True)
+                            self.ctl.handle_error()
+                            raise
                 else:
                     try:
                         result = supervisor.startProcess(name)
@@ -864,7 +869,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                             self.ctl.output(error)
                             self.ctl.handle_error()
                         else:
-                            self.ctl.handle_error(fatal=True)
+                            self.ctl.handle_error()
+                            raise
                 else:
                     try:
                         supervisor.stopProcess(name)
@@ -981,7 +987,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                     self.ctl.output('ERROR: already shutting down')
                 else:
-                    self.ctl.handle_error(fatal=True)
+                    self.ctl.handle_error()
+                    raise
             except socket.error as e:
                 if e.args[0] == errno.ECONNREFUSED:
                     msg = 'ERROR: %s refused connection (already shut down?)'
@@ -992,7 +999,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     self.ctl.output(msg % self.ctl.options.serverurl)
                     self.ctl.handle_error()
                 else:
-                    self.ctl.handle_error(fatal=True)
+                    self.ctl.handle_error()
+                    raise
             else:
                 self.ctl.output('Shut down')
 
@@ -1021,7 +1029,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     self.ctl.output('ERROR: already shutting down')
                     self.ctl.handle_error()
                 else:
-                    self.ctl.handle_error(fatal=True)
+                    self.ctl.handle_error()
+                    raise
             else:
                 self.ctl.output('Restarted supervisord')
 
@@ -1076,7 +1085,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 self.ctl.output('ERROR: supervisor shutting down')
                 self.ctl.handle_error()
             else:
-                self.ctl.handle_error(fatal=True)
+                self.ctl.handle_error()
+                raise
         else:
             for pinfo in configinfo:
                 self.ctl.output(self._formatConfigInfo(pinfo))
@@ -1102,7 +1112,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 self.ctl.output("ERROR: %s" % e.faultString)
                 self.ctl.handle_error()
             else:
-                self.ctl.handle_error(fatal=True)
+                self.ctl.handle_error()
+                raise
         else:
             self._formatChanges(result[0])
 
@@ -1126,7 +1137,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     self.ctl.output("ERROR: no such process/group: %s" % name)
                     self.ctl.handle_error()
                 else:
-                    self.ctl.handle_error(fatal=True)
+                    self.ctl.handle_error()
+                    raise
             else:
                 self.ctl.output("%s: added process group" % name)
 
@@ -1150,7 +1162,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     self.ctl.output("ERROR: no such process/group: %s" % name)
                     self.ctl.handle_error()
                 else:
-                    self.ctl.handle_error(fatal=True)
+                    self.ctl.handle_error()
+                    raise
             else:
                 self.ctl.output("%s: removed process group" % name)
 
@@ -1171,7 +1184,8 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 self.ctl.handle_error()
                 return
             else:
-                self.ctl.handle_error(fatal=True)
+                self.ctl.handle_error()
+                raise
 
         added, changed, removed = result[0]
         valid_gnames = set(arg.split())
