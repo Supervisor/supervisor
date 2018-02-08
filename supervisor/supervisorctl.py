@@ -533,20 +533,17 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     output = supervisor.readProcessStderrLog(name,
                                                              -bytes, 0)
             except xmlrpclib.Fault as e:
+                self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 template = '%s: ERROR (%s)'
                 if e.faultCode == xmlrpc.Faults.NO_FILE:
                     self.ctl.output(template % (name, 'no log file'))
-                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 elif e.faultCode == xmlrpc.Faults.FAILED:
                     self.ctl.output(template % (name,
                                              'unknown error reading log'))
-                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 elif e.faultCode == xmlrpc.Faults.BAD_NAME:
                     self.ctl.output(template % (name,
                                              'no such process name'))
-                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 else:
-                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                     raise
             else:
                 self.ctl.output(output)
@@ -600,16 +597,14 @@ class DefaultControllerPlugin(ControllerPluginBase):
         try:
             output = supervisor.readLog(-bytes, 0)
         except xmlrpclib.Fault as e:
+            self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
             template = '%s: ERROR (%s)'
             if e.faultCode == xmlrpc.Faults.NO_FILE:
                 self.ctl.output(template % ('supervisord', 'no log file'))
-                self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
             elif e.faultCode == xmlrpc.Faults.FAILED:
                 self.ctl.output(template % ('supervisord',
                                          'unknown error reading log'))
-                self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
             else:
-                self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 raise
         else:
             self.ctl.output(output)
@@ -715,11 +710,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 try:
                     info = supervisor.getProcessInfo(name)
                 except xmlrpclib.Fault as e:
+                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                     if e.faultCode == xmlrpc.Faults.BAD_NAME:
                         self.ctl.output('No such process %s' % name)
-                        self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                     else:
-                        self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                         raise
                 else:
                     self.ctl.output(str(info['pid']))
@@ -858,12 +852,11 @@ class DefaultControllerPlugin(ControllerPluginBase):
                             self.ctl.output(self._stopresult(result))
                             self.ctl.set_exitstatus_from_xmlrpc_fault(result['status'], xmlrpc.Faults.NOT_RUNNING)
                     except xmlrpclib.Fault as e:
+                        self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                         if e.faultCode == xmlrpc.Faults.BAD_NAME:
                             error = "%s: ERROR (no such group)" % group_name
                             self.ctl.output(error)
-                            self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                         else:
-                            self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                             raise
                 else:
                     try:
@@ -988,16 +981,14 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                     raise
             except socket.error as e:
+                self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 if e.args[0] == errno.ECONNREFUSED:
                     msg = 'ERROR: %s refused connection (already shut down?)'
                     self.ctl.output(msg % self.ctl.options.serverurl)
-                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 elif e.args[0] == errno.ENOENT:
                     msg = 'ERROR: %s no such file (already shut down?)'
                     self.ctl.output(msg % self.ctl.options.serverurl)
-                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 else:
-                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                     raise
             else:
                 self.ctl.output('Shut down')
@@ -1023,11 +1014,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
             try:
                 supervisor.restart()
             except xmlrpclib.Fault as e:
+                self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                     self.ctl.output('ERROR: already shutting down')
-                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 else:
-                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                     raise
             else:
                 self.ctl.output('Restarted supervisord')
@@ -1079,11 +1069,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
         try:
             configinfo = supervisor.getAllConfigInfo()
         except xmlrpclib.Fault as e:
+            self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
             if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                 self.ctl.output('ERROR: supervisor shutting down')
-                self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
             else:
-                self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 raise
         else:
             for pinfo in configinfo:
@@ -1103,14 +1092,12 @@ class DefaultControllerPlugin(ControllerPluginBase):
         try:
             result = supervisor.reloadConfig()
         except xmlrpclib.Fault as e:
+            self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
             if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                 self.ctl.output('ERROR: supervisor shutting down')
-                self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
             elif e.faultCode == xmlrpc.Faults.CANT_REREAD:
                 self.ctl.output("ERROR: %s" % e.faultString)
-                self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
             else:
-                self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 raise
         else:
             self._formatChanges(result[0])
@@ -1152,15 +1139,13 @@ class DefaultControllerPlugin(ControllerPluginBase):
             try:
                 supervisor.removeProcessGroup(name)
             except xmlrpclib.Fault as e:
+                self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 if e.faultCode == xmlrpc.Faults.STILL_RUNNING:
                     self.ctl.output('ERROR: process/group still running: %s'
                                       % name)
-                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 elif e.faultCode == xmlrpc.Faults.BAD_NAME:
                     self.ctl.output("ERROR: no such process/group: %s" % name)
-                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 else:
-                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                     raise
             else:
                 self.ctl.output("%s: removed process group" % name)
@@ -1177,12 +1162,11 @@ class DefaultControllerPlugin(ControllerPluginBase):
         try:
             result = supervisor.reloadConfig()
         except xmlrpclib.Fault as e:
+            self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
             if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
                 self.ctl.output('ERROR: already shutting down')
-                self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 return
             else:
-                self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                 raise
 
         added, changed, removed = result[0]
