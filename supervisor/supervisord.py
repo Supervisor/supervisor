@@ -116,6 +116,7 @@ class Supervisor:
             config.after_setuid()
             self.process_groups[name] = config.make_group()
             events.notify(events.ProcessGroupAddedEvent(name))
+            self.options.logger.info('process group added: \'%s\'' % name)
             return True
         return False
 
@@ -124,6 +125,7 @@ class Supervisor:
             return False
         del self.process_groups[name]
         events.notify(events.ProcessGroupRemovedEvent(name))
+        self.options.logger.info('process group removed: \'%s\'' % name)
         return True
 
     def get_process_map(self):

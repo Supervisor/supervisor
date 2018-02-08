@@ -192,6 +192,11 @@ class SupervisorNamespaceRPCInterface:
         added = [group.name for group in added]
         changed = [group.name for group in changed]
         removed = [group.name for group in removed]
+
+        self.supervisord.options.logger.info(
+            'configuration reloaded (added: %s changed: %s removed: %s)' % (
+                added, changed, removed))
+
         return [[added, changed, removed]] # cannot return len > 1, apparently
 
     def addProcessGroup(self, name):
@@ -1018,4 +1023,3 @@ def isNotRunning(process):
 # this is not used in code but referenced via an entry point in the conf file
 def make_main_rpcinterface(supervisord):
     return SupervisorNamespaceRPCInterface(supervisord)
-
