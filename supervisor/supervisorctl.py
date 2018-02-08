@@ -312,18 +312,15 @@ class Controller(cmd.Cmd):
             import readline
             line = readline.get_line_buffer()
 
-        # take the last phrase from a line like "stop foo; start bar"
-        phrase = line.split(';')[-1]
-
         matches = []
-        # blank phrase completes to action list
-        if not phrase.strip():
+        # blank line completes to action list
+        if not line.strip():
             matches = self._complete_actions(text)
         else:
-            words = phrase.split()
+            words = line.split()
             action = words[0]
             # incomplete action completes to action list
-            if len(words) == 1 and not phrase.endswith(' '):
+            if len(words) == 1 and not line.endswith(' '):
                 matches = self._complete_actions(text)
             # actions that accept an action name
             elif action in ('help'):
