@@ -57,6 +57,10 @@ class LSBStatusErrorCodes:
     NOT_RUNNING = 3
     UNKNOWN = 4
 
+DEAD_PROGRAM_FAULTS = (xmlrpc.Faults.SPAWN_ERROR,
+                       xmlrpc.Faults.ABNORMAL_TERMINATION,
+                       xmlrpc.Faults.NOT_RUNNING)
+
 class fgthread(threading.Thread):
     """ A subclass of threading.Thread, with a kill() method.
     To be used for foreground output/error streaming.
@@ -174,7 +178,7 @@ class Controller(cmd.Cmd):
     def set_exitstatus_from_xmlrpc_fault(self, faultcode, ignored_faultcode=None):
         if faultcode in (ignored_faultcode, xmlrpc.Faults.SUCCESS):
             pass
-        elif faultcode in xmlrpc.DEAD_PROGRAM_FAULTS:
+        elif faultcode in DEAD_PROGRAM_FAULTS:
             self.exitstatus = LSBInitErrorCodes.NOT_RUNNING
         else:
             self.exitstatus = LSBInitErrorCodes.GENERIC
