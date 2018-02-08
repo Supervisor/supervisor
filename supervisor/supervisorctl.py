@@ -238,11 +238,10 @@ class Controller(cmd.Cmd):
                     break
         return func
 
-    def output(self, stuff):
-        if stuff is not None:
-            if isinstance(stuff, unicode):
-                stuff = stuff.encode('utf-8')
-            self.stdout.write(stuff + '\n')
+    def output(self, message):
+        if isinstance(message, unicode):
+            message = message.encode('utf-8')
+        self.stdout.write(message + '\n')
 
     def get_supervisor(self):
         return self.get_server_proxy('supervisor')
