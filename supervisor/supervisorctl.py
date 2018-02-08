@@ -23,11 +23,10 @@ actions.
 """
 
 import cmd
-import sys
-import getpass
-
-import socket
 import errno
+import getpass
+import socket
+import sys
 import threading
 
 from supervisor.compat import xmlrpclib
