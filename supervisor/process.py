@@ -355,6 +355,25 @@ class Subprocess(object):
             options.write(2, "supervisor: child process was not spawned\n")
             options._exit(127) # exit process with code for spawn failure
 
+    def _check_and_adjust_for_system_clock_rollback(self, test_time):
+        """
+        Check if system clock has rolled backward beyond test_time. If so, set
+        affected timestamps to test_time.
+        """
+        if self.state == ProcessStates.STARTING:
+            if test_time < self.laststart:
+                self.laststart = test_time;
+            if self.delay > 0 and test_time < self.delay - self.config.startsecs:
+                self.delay = test_time + self.config.startsecs
+        elif self.state == ProcessStates.STOPPING:
+            if test_time < self.laststopreport:
+                self.laststopreport = test_time;
+            if self.delay > 0 and test_time < self.delay - self.config.stopwaitsecs:
+                self.delay = test_time + self.config.stopwaitsecs
+        elif self.state == ProcessStates.BACKOFF:
+            if self.delay > 0 and test_time < self.delay - self.backoff:
+                self.delay = test_time + self.backoff
+
     def stop(self):
         """ Administrative stop """
         self.administrative_stop = True
@@ -366,10 +385,7 @@ class Subprocess(object):
         if self.state == ProcessStates.STOPPING:
             now = time.time()
 
-            if now < self.laststopreport:
-                # The system clock appears to have moved backward
-                # Reset self.laststopreport to current system time
-                self.laststopreport = now;
+            self._check_and_adjust_for_system_clock_rollback(now)
 
             if now > (self.laststopreport + 2): # every 2 seconds
                 self.config.options.logger.info(
@@ -610,6 +626,8 @@ class Subprocess(object):
         now = time.time()
         state = self.state
 
+        self._check_and_adjust_for_system_clock_rollback(now)
+
         logger = self.config.options.logger
 
         if self.config.options.mood > SupervisorStates.RESTARTING:
@@ -628,11 +646,6 @@ class Subprocess(object):
                     # STOPPED -> STARTING
                     self.spawn()
             elif state == ProcessStates.BACKOFF:
-                if self.delay > 0 and now < self.delay - self.backoff:
-                    # The system clock appears to have moved backward
-                    # Reset self.delay accordingly
-                    self.delay = now + self.backoff
-
                 if self.backoff <= self.config.startretries:
                     if now > self.delay:
                         # BACKOFF -> STARTING
@@ -640,16 +653,6 @@ class Subprocess(object):
 
         processname = as_string(self.config.name)
         if state == ProcessStates.STARTING:
-            if now < self.laststart:
-                # The system clock appears to have moved backward
-                # Reset self.laststart to current system time
-                self.laststart = now;
-
-            if self.delay > 0 and now < self.delay - self.config.startsecs:
-                # The system clock appears to have moved backward
-                # Reset self.delay accordingly
-                self.delay = now + self.config.startsecs
-
             if now - self.laststart > self.config.startsecs:
                 # STARTING -> RUNNING if the proc has started
                 # successfully and it has stayed up for at least
@@ -673,11 +676,6 @@ class Subprocess(object):
                 logger.info('gave up: %s %s' % (processname, msg))
 
         elif state == ProcessStates.STOPPING:
-            if self.delay > 0 and now < self.delay - self.config.stopwaitsecs:
-                # The system clock appears to have moved backward
-                # Reset self.delay accordingly
-                self.delay = now + self.config.stopwaitsecs
-
             time_left = self.delay - now
             if time_left <= 0:
                 # kill processes which are taking too long to stop with a final
