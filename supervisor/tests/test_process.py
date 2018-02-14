@@ -167,6 +167,49 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(args[0], '/bin/sh')
         self.assertEqual(args[1], ['sh', 'foo'])
 
+    def test_get_execv_args_rel_in_program_dir(self):
+        executable = 'sh foo'
+        directory = "/my/program/dir/"
+        program = os.path.join(directory, 'sh')
+        options = DummyOptions()
+        config = DummyPConfig(options, 'sh', executable, directory)
+        instance = self._makeOne(config)
+        def stat(filename):
+            if filename == program:
+                return True
+            else:
+                raise OSError
+
+        config.options.stat = Mock(config.options.stat, side_effect=stat)
+        args = instance.get_execv_args()
+        self.assertEqual(len(args), 2)
+        self.assertEqual(args[0], program)
+        self.assertEqual(args[1], ['sh', 'foo'])
+
+    def test_get_execv_args_rel_in_path(self):
+        executable = 'test_program foo'
+        directory = "/my/program/dir/"
+        program = os.path.join(directory, 'test_program')
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test_program', executable)
+        instance = self._makeOne(config)
+        def stat(filename):
+            if filename == program:
+                return True
+            else:
+                raise OSError
+
+        def get_path():
+            return ["/usr/bin", directory]
+
+        config.options.stat = Mock(config.options.stat, side_effect=stat)
+        config.options.get_path = Mock(config.options.get_path, side_effect=get_path)
+
+        args = instance.get_execv_args()
+        self.assertEqual(len(args), 2)
+        self.assertEqual(args[0], program)
+        self.assertEqual(args[1], ['test_program', 'foo'])
+
     def test_record_spawnerr(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test')
