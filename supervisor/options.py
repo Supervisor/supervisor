@@ -692,10 +692,15 @@ class ServerOptions(Options):
             if not section.startswith('eventlistener:'):
                 continue
             pool_name = section.split(':', 1)[1]
+
             # give listeners a "high" default priority so they are started first
             # and stopped last at mainloop exit
             priority = integer(get(section, 'priority', -1))
+
             buffer_size = integer(get(section, 'buffer_size', 10))
+            if buffer_size < 1:
+                raise ValueError('[%s] section sets invalid buffer_size (%d)' %
+                    (section, buffer_size))
 
             result_handler = get(section, 'result_handler',
                                        'supervisor.dispatchers:default_handler')

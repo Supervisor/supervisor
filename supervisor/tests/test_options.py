@@ -2365,6 +2365,24 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(dog1.command, '/bin/dog')
         self.assertEqual(dog1.priority, 1)
 
+    def test_event_listener_pool_disallows_buffer_size_zero(self):
+        text = lstrip("""\
+        [eventlistener:dog]
+        events=EVENT
+        command = /bin/dog
+        buffer_size = 0
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        try:
+            instance.process_groups_from_parser(config)
+            self.fail('nothing raised')
+        except ValueError as exc:
+            self.assertEqual(exc.args[0], '[eventlistener:dog] section sets '
+                'invalid buffer_size (0)')
+
     def test_event_listener_pool_disallows_redirect_stderr(self):
         text = lstrip("""\
         [eventlistener:dog]
