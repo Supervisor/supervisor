@@ -32,6 +32,9 @@
   error condition occurs.  Previous versions did not set the exit status so
   it was always zero.  Patch by Luke Weber.
 
+3.3.4 (2018-02-15)
+------------------
+
 - Fixed a bug where rereading the configuration would not detect changes to
   eventlisteners.  Patch by Michael Ihde.
 
