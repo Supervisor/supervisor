@@ -2379,7 +2379,7 @@ class ServerOptionsTests(unittest.TestCase):
         try:
             instance.process_groups_from_parser(config)
             self.fail('nothing raised')
-        except ValueError as exc:
+        except ValueError, exc:
             self.assertEqual(exc.args[0], '[eventlistener:dog] section sets '
                 'invalid buffer_size (0)')
 
