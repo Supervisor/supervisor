@@ -1904,7 +1904,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
             'epipe occurred while sending event abc to listener '
             'process1, listener state unchanged')
         self.assertEqual(options.logger.data[1],
-            'rebuffering event abc for pool whatever (bufsize 0)')
+            'rebuffering event abc for pool whatever (buf size=0, max=10)')
 
     def test__acceptEvent_attaches_pool_serial_and_serial(self):
         from supervisor.process import GlobalSerial

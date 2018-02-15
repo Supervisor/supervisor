@@ -865,8 +865,9 @@ class EventListenerPool(ProcessGroupBase):
             event.pool_serials[self.config.name] = new_serial(self)
         else:
             self.config.options.logger.debug(
-                'rebuffering event %s for pool %s (bufsize %s)' % (
-                (event.serial, processname, len(self.event_buffer))))
+                'rebuffering event %s for pool %s (buf size=%d, max=%d)' % (
+                (event.serial, processname, len(self.event_buffer),
+                self.config.buffer_size)))
 
         if len(self.event_buffer) >= self.config.buffer_size:
             if self.event_buffer:
