@@ -1,5 +1,5 @@
-3.3.4 (Next 3.x Release)
-------------------------
+3.3.4 (2018-02-15)
+------------------
 
 - Fixed a bug where rereading the configuration would not detect changes to
   eventlisteners.  Patch by Michael Ihde.
