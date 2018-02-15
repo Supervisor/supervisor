@@ -1902,7 +1902,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         self.assertEqual(process1.listener_state, EventListenerStates.READY)
         self.assertEqual(pool.event_buffer, [event])
         self.assertEqual(options.logger.data[0],
-                         'rebuffering event abc for pool whatever (bufsize 0)')
+            'rebuffering event abc for pool whatever (buf size=0, max=10)')
 
     def test__acceptEvent_attaches_pool_serial_and_serial(self):
         from supervisor.process import GlobalSerial
