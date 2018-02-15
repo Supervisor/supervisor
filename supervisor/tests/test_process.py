@@ -1643,6 +1643,16 @@ class ProcessGroupBaseTests(unittest.TestCase):
         unstopped = group.get_unstopped_processes()
         self.assertEqual(unstopped, [process1])
 
+    def test_before_remove(self):
+        options = DummyOptions()
+        from supervisor.states import ProcessStates
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        group = self._makeOne(gconfig)
+        group.processes = { 'process1': process1 }
+        group.before_remove()  # shouldn't raise
+
     def test_stop_all(self):
         from supervisor.states import ProcessStates
         options = DummyOptions()
@@ -1818,6 +1828,18 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         self.assertEqual(events.callbacks[1],
             (events.EventRejectedEvent, pool.handle_rejected))
         self.assertEqual(pool.serial, -1)
+
+    def test_before_remove_unsubscribes_from_events(self):
+        options = DummyOptions()
+        gconfig = DummyPGroupConfig(options)
+        class EventType:
+            pass
+        gconfig.pool_events = (EventType,)
+        pool = self._makeOne(gconfig)
+        from supervisor import events
+        self.assertEqual(len(events.callbacks), 2)
+        pool.before_remove()
+        self.assertEqual(len(events.callbacks), 0)
 
     def test__eventEnvelope(self):
         options = DummyOptions()

@@ -123,6 +123,7 @@ class Supervisor:
     def remove_process_group(self, name):
         if self.process_groups[name].get_unstopped_processes():
             return False
+        self.process_groups[name].before_remove()
         del self.process_groups[name]
         events.notify(events.ProcessGroupRemovedEvent(name))
         return True

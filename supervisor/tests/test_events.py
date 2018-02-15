@@ -20,6 +20,12 @@ class EventSubscriptionNotificationTests(unittest.TestCase):
         events.subscribe(None, None)
         self.assertEqual(events.callbacks, [(None, None)])
 
+    def test_unsubscribe(self):
+        from supervisor import events
+        events.callbacks[:] = [(1, 1), (2, 2), (3, 3)]
+        events.unsubscribe(2, 2)
+        self.assertEqual(events.callbacks, [(1, 1), (3, 3)])
+
     def test_clear(self):
         from supervisor import events
         events.callbacks[:] = [(None, None)]
