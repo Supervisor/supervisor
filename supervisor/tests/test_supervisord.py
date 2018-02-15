@@ -538,7 +538,9 @@ class SupervisordTests(unittest.TestCase):
         self.assertRaises(KeyError, supervisord.remove_process_group, 'asdf')
 
         supervisord.add_process_group(gconfig)
+        group = supervisord.process_groups['foo']
         result = supervisord.remove_process_group('foo')
+        self.assertTrue(group.before_remove_called)
         self.assertEqual(supervisord.process_groups, {})
         self.assertTrue(result)
 

@@ -6,6 +6,9 @@ callbacks = []
 def subscribe(type, callback):
     callbacks.append((type, callback))
 
+def unsubscribe(type, callback):
+    callbacks.remove((type, callback))
+
 def notify(event):
     for type, callback in callbacks:
         if isinstance(event, type):

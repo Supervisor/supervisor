@@ -1035,9 +1035,13 @@ class DummyProcessGroup(object):
         self.all_stopped = False
         self.dispatchers = {}
         self.unstopped_processes = []
+        self.before_remove_called = False
 
     def transition(self):
         self.transitioned = True
+
+    def before_remove(self):
+        self.before_remove_called = True
 
     def stop_all(self):
         self.all_stopped = True
