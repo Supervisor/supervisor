@@ -1789,6 +1789,29 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(plugin.ctl.stdout.getvalue().strip(), '11')
         self.assertEqual(plugin.ctl.exitstatus, LSBInitExitStatuses.SUCCESS)
 
+    def test_pid_oneprocess_not_running(self):
+        plugin = self._makeOne()
+        options = plugin.ctl.options
+        def f(*arg, **kw):
+            from supervisor.states import ProcessStates
+            return {'name': 'foo',
+                     'group':'foo',
+                     'pid': 0,
+                     'state': ProcessStates.STOPPED,
+                     'statename': 'STOPPED',
+                     'start': 0,
+                     'stop': 0,
+                     'spawnerr': '',
+                     'now': 0,
+                     'description':'foo description'
+                    }
+        options._server.supervisor.getProcessInfo = f
+        result = plugin.do_pid('foo')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue().strip(), '0')
+        self.assertEqual(plugin.ctl.exitstatus,
+                         LSBInitExitStatuses.NOT_RUNNING)
+
     def test_pid_upcheck_failed(self):
         plugin = self._makeOne()
         plugin.ctl.upcheck = lambda: False

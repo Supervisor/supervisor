@@ -714,7 +714,10 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     else:
                         raise
                 else:
-                    self.ctl.output(str(info['pid']))
+                    pid = info['pid']
+                    self.ctl.output(str(pid))
+                    if pid == 0:
+                        self.ctl.exitstatus = LSBInitExitStatuses.NOT_RUNNING
 
     def help_pid(self):
         self.ctl.output("pid\t\t\tGet the PID of supervisord.")
