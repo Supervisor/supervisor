@@ -125,7 +125,7 @@ class Subprocess(object):
                 st = None
 
         else:
-            path = self.config.options.get_path()
+            path = self.config.options.get_path(self.config.environment)
             found = None
             st = None
             for dir in path:

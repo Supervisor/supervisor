@@ -1506,13 +1506,17 @@ class ServerOptions(Options):
     def setumask(self, mask):
         os.umask(mask)
 
-    def get_path(self):
+    def get_path(self, env=None):
         """Return a list corresponding to $PATH, or a default."""
         path = ["/bin", "/usr/bin", "/usr/local/bin"]
+
         if "PATH" in os.environ:
             p = os.environ["PATH"]
             if p:
                 path = p.split(os.pathsep)
+
+        if env is not None and "PATH" in env:
+            path = env["PATH"].split(os.pathsep)
         return path
 
     def get_pid(self):

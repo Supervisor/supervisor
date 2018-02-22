@@ -1,5 +1,6 @@
 _NOW = 1151365354
 _TIMEFORMAT = '%b %d %I:%M %p'
+import os
 
 from supervisor.compat import total_ordering
 from supervisor.compat import Fault
@@ -155,8 +156,18 @@ class DummyOptions:
         import os
         return os.stat(filename)
 
-    def get_path(self):
-        return ["/bin", "/usr/bin", "/usr/local/bin"]
+    def get_path(self, env=None):
+        """Return a list corresponding to $PATH, or a default."""
+        path = ["/bin", "/usr/bin", "/usr/local/bin"]
+
+        if "PATH" in os.environ:
+            p = os.environ["PATH"]
+            if p:
+                path = p.split(os.pathsep)
+
+        if env is not None and "PATH" in env:
+            path = env["PATH"].split(os.pathsep)
+        return path
 
     def get_pid(self):
         import os
