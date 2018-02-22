@@ -555,6 +555,9 @@ class DummyPConfig:
         self.autochildlogs_created = False
         self.serverurl = serverurl
 
+    def get_path(self):
+        return ["/bin", "/usr/bin", "/usr/local/bin"]
+
     def create_autochildlogs(self):
         self.autochildlogs_created = True
 

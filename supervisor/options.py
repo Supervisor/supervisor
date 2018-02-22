@@ -1849,6 +1849,15 @@ class ProcessConfig(Config):
 
         return True
 
+    def get_path(self):
+        '''Return a list corresponding to $PATH that is configured to be set
+        in the process environment, or the system default.'''
+        if self.environment is not None:
+            path = self.environment.get('PATH')
+            if path is not None:
+                return path.split(os.pathsep)
+        return self.options.get_path()
+
     def create_autochildlogs(self):
         # temporary logfiles which are erased at start time
         get_autoname = self.options.get_autochildlog_name
