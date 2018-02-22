@@ -1014,8 +1014,7 @@ def make_allfunc(processes, predicate, func, **extra_kwargs):
     return allfunc
 
 def isRunning(process):
-    if process.get_state() in RUNNING_STATES:
-        return True
+    return process.get_state() in RUNNING_STATES
 
 def isNotRunning(process):
     return not isRunning(process)
