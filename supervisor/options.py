@@ -631,16 +631,16 @@ class ServerOptions(Options):
 
         section.user = get('user', None)
         section.umask = octal_type(get('umask', '022'))
-        section.logfile = existing_dirpath(get('logfile', 'supervisord.log'))
+        section.logfile = existing_dirpath(get('logfile', 'supervisord.log'), section.user)
         section.logfile_maxbytes = byte_size(get('logfile_maxbytes', '50MB'))
         section.logfile_backups = integer(get('logfile_backups', 10))
         section.loglevel = logging_level(get('loglevel', 'info'))
-        section.pidfile = existing_dirpath(get('pidfile', 'supervisord.pid'))
+        section.pidfile = existing_dirpath(get('pidfile', 'supervisord.pid'), section.user)
         section.identifier = get('identifier', 'supervisor')
         section.nodaemon = boolean(get('nodaemon', 'false'))
 
         tempdir = tempfile.gettempdir()
-        section.childlogdir = existing_directory(get('childlogdir', tempdir))
+        section.childlogdir = existing_directory(get('childlogdir', tempdir), section.user)
         section.nocleanup = boolean(get('nocleanup', 'false'))
         section.strip_ansi = boolean(get('strip_ansi', 'false'))
 
