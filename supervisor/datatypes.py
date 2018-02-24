@@ -326,13 +326,23 @@ def octal_type(arg):
     except (TypeError, ValueError):
         raise ValueError('%s can not be converted to an octal type' % arg)
 
-def existing_directory(v):
+def existing_directory(v, user = None):
     nv = os.path.expanduser(v)
     if os.path.isdir(nv):
         return nv
-    raise ValueError('%s is not an existing directory' % v)
+    else:
+        try:
+            if user is None:
+                os.makedirs(nv)
+            else:
+                ret = os.system("su %s -c 'mkdir -p %s'" %(user, nv))
+                if ret != 0:
+                    raise OSError
+            return nv
+        except OSError:
+            raise ValueError('%s is note an existing directory' % v)
 
-def existing_dirpath(v):
+def existing_dirpath(v, user = None):
     nv = os.path.expanduser(v)
     dir = os.path.dirname(nv)
     if not dir:
@@ -340,8 +350,18 @@ def existing_dirpath(v):
         return nv
     if os.path.isdir(dir):
         return nv
-    raise ValueError('The directory named as part of the path %s '
-                     'does not exist' % v)
+    else:
+        try:
+            if user is None:
+                os.makedirs(dir)
+            else:
+                ret = os.system("su %s -c 'mkdir -p %s'" %(user, dir))
+                if ret != 0:
+                    raise OSError
+            return nv
+        except OSError:
+            raise ValueError('The directory named as part of the path %s '
+                             'does not exist' % v)
 
 def logging_level(value):
     s = str(value).lower()
