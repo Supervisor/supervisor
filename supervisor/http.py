@@ -618,6 +618,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
                     os.unlink(tempname)
                 except OSError:
                     pass
+                raise
 
         self.server_name = '<unix domain socket>'
         self.postbind()
