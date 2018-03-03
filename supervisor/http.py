@@ -574,8 +574,8 @@ class supervisor_af_unix_http_server(supervisor_http_server):
                 sock.bind(tempname)
                 os.chmod(tempname, sockchmod)
                 try:
-                    # hard link
-                    os.link(tempname, socketname)
+                    # rename tempname socket file to socketname
+                    os.rename(tempname, socketname)
                 except OSError:
                     # Lock contention, or stale socket.
                     used = self.checkused(socketname)
@@ -613,7 +613,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
                     self.prebind(sock, logger_object)
                     break
 
-            finally:
+            except:
                 try:
                     os.unlink(tempname)
                 except OSError:
