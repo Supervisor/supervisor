@@ -438,7 +438,7 @@ class ServerOptionsTests(unittest.TestCase):
         instance.configfile = StringIO(text)
         instance.realize(args=[])
         options = instance.configroot.supervisord
-        filename = instance.mktempfile(None, None, None)
+        filename = instance.mktempfile('', 'tmp', None)
         try:
             mode = os.stat(filename).st_mode & 0o777
             self.assertEqual(oct(mode), oct(0o666 ^ options.umask))
