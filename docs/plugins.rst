@@ -40,6 +40,12 @@ instances running on different servers.
 `Supvisors <https://github.com/julien6387/supvisors>`_
     Designed for distributed applications, written in Python 2.7. Includes an extended XML-RPC API and a Web-based dashboard.
 
+`multivisor <https://github.com/tiagocoutinho/multivisor>`_
+    Centralized supervisor web-based dashboard. The frontend is based on
+    `VueJS <https://vuejs.org>`_. The backend runs a `flask <http://flask.pocoo.org>`_
+    web server. It communicates with each supervisor through a specialized supervisor
+    event-listener based on `zerorpc <http://www.zerorpc.io>`_.
+
 Third Party Plugins and Libraries for Supervisor
 ------------------------------------------------
 
