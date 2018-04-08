@@ -101,6 +101,11 @@ These also includes various event listeners.
     check applications are supposed to run as event listeners in Supervisor
     environment. On check failure Supervisor will attempt to restart
     monitored process.
+`Superfsmon <https://github.com/timakro/superfsmon>`_
+    Watch a directory and restart programs when files change.  It can monitor
+    a directory for changes, filter the file paths by glob patterns or regular
+    expressions and restart Supervisor programs individually or by group.
+
 
 Libraries that integrate Third Party Applications with Supervisor
 -----------------------------------------------------------------
