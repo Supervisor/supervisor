@@ -13,8 +13,9 @@ def process_or_group_name(name):
     """Ensures that a process or group name is not created with
        characters that break the eventlistener protocol or web UI URLs"""
     s = str(name).strip()
-    if ' ' in s or ':' in s or '/' in s:
-        raise ValueError("Invalid name: " + repr(name))
+    for character in ' :/':
+        if character in s:
+            raise ValueError("Invalid name: %r because of character: %r" % (name, character))
     return s
 
 def integer(value):
