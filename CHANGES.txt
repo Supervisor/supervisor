@@ -13,12 +13,6 @@
 
 - The ``supervisor`` package is no longer a namespace package.
 
-- Added new ``stdout_syslog`` and ``stderr_syslog`` options to the config
-  file.  These are boolean options that indicate whether process output will
-  be sent to syslog.  Supervisor can now log to both files and syslog at the
-  same time.  Specifying a log filename of ``syslog`` is still supported
-  but deprecated.  Patch by Jason R. Coombs.
-
 - The behavior of the config file expansion ``%(here)s`` has changed.  In
   previous versions, a bug caused ``%(here)s`` to always expand to the
   directory of the root config file.  Now, when ``%(here)s`` is used inside
@@ -31,6 +25,15 @@
 - ``supervisorctl`` will now set its exit status to a non-zero value when an
   error condition occurs.  Previous versions did not set the exit status so
   it was always zero.  Patch by Luke Weber.
+
+- Added new ``stdout_syslog`` and ``stderr_syslog`` options to the config
+  file.  These are boolean options that indicate whether process output will
+  be sent to syslog.  Supervisor can now log to both files and syslog at the
+  same time.  Specifying a log filename of ``syslog`` is still supported
+  but deprecated.  Patch by Jason R. Coombs.
+
+- A more descriptive error message is now emitted if a name in the config
+  file contains a disallowed character.  Patch by Rick van Hattem.
 
 - Fixed a bug where searching for a relative command ignored changes to
   ``PATH`` made in ``environment=``.  Based on a patch by dongweiming.
