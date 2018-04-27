@@ -16,7 +16,7 @@ import platform
 import warnings
 import fcntl
 
-from supervisor.compat import PY3
+from supervisor.compat import PY2
 from supervisor.compat import ConfigParser
 from supervisor.compat import as_bytes, as_string
 from supervisor.compat import xmlrpclib
@@ -1713,7 +1713,7 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
         # inline_comment_prefixes was added in Python 3 but its default makes
         # RawConfigParser behave differently than it did on Python 2.  This
         # makes it behave the same by default on Python 2 and 3.
-        if PY3 and ('inline_comment_prefixes' not in kwargs):
+        if (not PY2) and ('inline_comment_prefixes' not in kwargs):
             kwargs['inline_comment_prefixes'] = (';', '#')
 
         ConfigParser.RawConfigParser.__init__(self, *args, **kwargs)

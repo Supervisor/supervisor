@@ -16,7 +16,7 @@ from supervisor.compat import as_string
 from supervisor.compat import encodestring
 from supervisor.compat import decodestring
 from supervisor.compat import httplib
-from supervisor.compat import PY3
+from supervisor.compat import PY2
 
 from supervisor.medusa.http_server import get_header
 from supervisor.medusa.xmlrpc_handler import xmlrpc_handler
@@ -382,7 +382,7 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                 # contains non-ASCII characters. It's a bit of a kludge to
                 # do it conditionally here, but it's down to how underlying
                 # libs behave
-                if not PY3:
+                if PY2:
                     data = data.encode('ascii', 'xmlcharrefreplace')
                 params, method = self.loads(data)
             except:

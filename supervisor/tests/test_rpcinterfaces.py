@@ -16,7 +16,7 @@ from supervisor.tests.base import PopulatedDummySupervisor
 from supervisor.tests.base import _NOW
 from supervisor.tests.base import _TIMEFORMAT
 
-from supervisor.compat import as_string
+from supervisor.compat import as_string, PY2
 
 class TestBase(unittest.TestCase):
     def setUp(self):
@@ -2041,7 +2041,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(event.data, 'bar')
 
     def test_sendRemoteCommEvent_unicode_encoded_to_utf8(self):
-        from supervisor.compat import as_string, PY3
         options = DummyOptions()
         supervisord = DummySupervisor(options)
         interface = self._makeOne(supervisord)
@@ -2064,12 +2063,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertTrue(result)
         self.assertEqual(len(L), 1)
         event = L[0]
-        if PY3:
-            self.assertEqual(event.type, 'fií once')
-            self.assertEqual(event.data, 'fií twice')
-        else:
+        if PY2:
             self.assertEqual(event.type, 'fi\xc3\xad once')
             self.assertEqual(event.data, 'fi\xc3\xad twice')
+        else:
+            self.assertEqual(event.type, 'fií once')
+            self.assertEqual(event.data, 'fií twice')
 
 
 class SystemNamespaceXMLRPCInterfaceTests(TestBase):

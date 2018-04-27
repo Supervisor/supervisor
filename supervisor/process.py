@@ -9,7 +9,7 @@ from supervisor.compat import maxint
 from supervisor.compat import total_ordering
 from supervisor.compat import as_bytes
 from supervisor.compat import as_string
-from supervisor.compat import PY3
+from supervisor.compat import PY2
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -590,7 +590,7 @@ class Subprocess(object):
         # repr can't return anything other than a native string,
         # but the name might be unicode - a problem on Python 2.
         name = self.config.name
-        if not PY3:
+        if PY2:
             name = as_string(name).encode('unicode-escape')
         return '<Subprocess at %s with name %s in state %s>' % (
             id(self),
@@ -742,7 +742,7 @@ class ProcessGroupBase(object):
         # repr can't return anything other than a native string,
         # but the name might be unicode - a problem on Python 2.
         name = self.config.name
-        if not PY3:
+        if PY2:
             name = as_string(name).encode('unicode-escape')
         return '<%s instance at %s named %s>' % (self.__class__, id(self),
                                                  name)
