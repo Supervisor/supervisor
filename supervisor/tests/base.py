@@ -597,7 +597,7 @@ def makeExecutable(file, substitutions=None):
     tmpnam = tempfile.mktemp(prefix=last)
     with open(tmpnam, 'w') as f:
         f.write(data)
-    os.chmod(tmpnam, int('755', 8))
+    os.chmod(tmpnam, 0o755)
     return tmpnam
 
 def makeSpew(unkillable=False):

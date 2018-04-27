@@ -833,7 +833,7 @@ class ServerOptions(Options):
                     socket_owner = (proc_uid, gid_for_uid(proc_uid))
 
             if socket_mode is None:
-                socket_mode = int('700', 8)
+                socket_mode = 0o700
 
             return UnixStreamSocketConfig(path, owner=socket_owner,
                                                 mode=socket_mode)
@@ -1088,7 +1088,7 @@ class ServerOptions(Options):
                 except (TypeError, ValueError):
                     raise ValueError('Invalid chmod value %s' % chmod)
             else:
-                chmod = int('700', 8)
+                chmod = 0o700
             config['chmod'] = chmod
             config['section'] = section
             configs.append(config)
@@ -1525,7 +1525,7 @@ class ServerOptions(Options):
         elif stat.S_ISDIR(st[stat.ST_MODE]):
             raise NotExecutable("command at %r is a directory" % filename)
 
-        elif not (stat.S_IMODE(st[stat.ST_MODE]) & int('111', 8)):
+        elif not (stat.S_IMODE(st[stat.ST_MODE]) & 0o111):
             raise NotExecutable("command at %r is not executable" % filename)
 
         elif not os.access(filename, os.X_OK):
