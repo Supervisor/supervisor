@@ -28,7 +28,7 @@ if py_version < (3, 3):
     tests_require.append('mock')
 
 testing_extras = tests_require + [
-    'pytest', 
+    'pytest',
     'pytest-cov',
     ]
 
@@ -77,7 +77,6 @@ dist = setup(
     packages=find_packages(),
     install_requires=requires,
     extras_require={
-        'iterparse': ['cElementTree >= 1.0.2'],
         'testing': testing_extras,
         },
     tests_require=tests_require,
