@@ -40,6 +40,12 @@ instances running on different servers.
 `Supvisors <https://github.com/julien6387/supvisors>`_
     Designed for distributed applications, written in Python 2.7. Includes an extended XML-RPC API and a Web-based dashboard.
 
+`multivisor <https://github.com/tiagocoutinho/multivisor>`_
+    Centralized supervisor web-based dashboard. The frontend is based on
+    `VueJS <https://vuejs.org>`_. The backend runs a `flask <http://flask.pocoo.org>`_
+    web server. It communicates with each supervisor through a specialized supervisor
+    event-listener based on `zerorpc <http://www.zerorpc.io>`_.
+
 Third Party Plugins and Libraries for Supervisor
 ------------------------------------------------
 
@@ -95,6 +101,11 @@ These also includes various event listeners.
     check applications are supposed to run as event listeners in Supervisor
     environment. On check failure Supervisor will attempt to restart
     monitored process.
+`Superfsmon <https://github.com/timakro/superfsmon>`_
+    Watch a directory and restart programs when files change.  It can monitor
+    a directory for changes, filter the file paths by glob patterns or regular
+    expressions and restart Supervisor programs individually or by group.
+
 
 Libraries that integrate Third Party Applications with Supervisor
 -----------------------------------------------------------------

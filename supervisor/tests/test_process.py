@@ -1,6 +1,7 @@
 import errno
 import os
 import signal
+import tempfile
 import time
 import unittest
 
@@ -166,6 +167,18 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(len(args), 2)
         self.assertEqual(args[0], '/bin/sh')
         self.assertEqual(args[1], ['sh', 'foo'])
+
+    def test_get_execv_args_rel_searches_using_pconfig_path(self):
+        with tempfile.NamedTemporaryFile() as f:
+            dirname, basename = os.path.split(f.name)
+            executable = '%s foo' % basename
+            options = DummyOptions()
+            config = DummyPConfig(options, 'sh', executable)
+            config.get_path = lambda: [ dirname ]
+            instance = self._makeOne(config)
+            args = instance.get_execv_args()
+            self.assertEqual(args[0], f.name)
+            self.assertEqual(args[1], [basename, 'foo'])
 
     def test_record_spawnerr(self):
         options = DummyOptions()
@@ -1643,6 +1656,16 @@ class ProcessGroupBaseTests(unittest.TestCase):
         unstopped = group.get_unstopped_processes()
         self.assertEqual(unstopped, [process1])
 
+    def test_before_remove(self):
+        options = DummyOptions()
+        from supervisor.states import ProcessStates
+        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
+        gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
+        group = self._makeOne(gconfig)
+        group.processes = { 'process1': process1 }
+        group.before_remove()  # shouldn't raise
+
     def test_stop_all(self):
         from supervisor.states import ProcessStates
         options = DummyOptions()
@@ -1818,6 +1841,18 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
             (events.EventRejectedEvent, pool.handle_rejected))
         self.assertEqual(pool.serial, -1)
 
+    def test_before_remove_unsubscribes_from_events(self):
+        options = DummyOptions()
+        gconfig = DummyPGroupConfig(options)
+        class EventType:
+            pass
+        gconfig.pool_events = (EventType,)
+        pool = self._makeOne(gconfig)
+        from supervisor import events
+        self.assertEqual(len(events.callbacks), 2)
+        pool.before_remove()
+        self.assertEqual(len(events.callbacks), 0)
+
     def test__eventEnvelope(self):
         options = DummyOptions()
         options.identifier = 'thesupervisorname'
@@ -1904,7 +1939,7 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
             'epipe occurred while sending event abc to listener '
             'process1, listener state unchanged')
         self.assertEqual(options.logger.data[1],
-            'rebuffering event abc for pool whatever (bufsize 0)')
+            'rebuffering event abc for pool whatever (buf size=0, max=10)')
 
     def test__acceptEvent_attaches_pool_serial_and_serial(self):
         from supervisor.process import GlobalSerial

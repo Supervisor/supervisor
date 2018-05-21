@@ -3,7 +3,6 @@ _TIMEFORMAT = '%b %d %I:%M %p'
 
 from supervisor.compat import total_ordering
 from supervisor.compat import Fault
-from supervisor.compat import as_string
 from supervisor.compat import as_bytes
 
 # mock is imported here for py2/3 compat.  we only declare mock as a dependency
@@ -556,6 +555,9 @@ class DummyPConfig:
         self.autochildlogs_created = False
         self.serverurl = serverurl
 
+    def get_path(self):
+        return ["/bin", "/usr/bin", "/usr/local/bin"]
+
     def create_autochildlogs(self):
         self.autochildlogs_created = True
 
@@ -595,7 +597,7 @@ def makeExecutable(file, substitutions=None):
     tmpnam = tempfile.mktemp(prefix=last)
     with open(tmpnam, 'w') as f:
         f.write(data)
-    os.chmod(tmpnam, int('755', 8))
+    os.chmod(tmpnam, 0o755)
     return tmpnam
 
 def makeSpew(unkillable=False):
@@ -1036,9 +1038,13 @@ class DummyProcessGroup(object):
         self.all_stopped = False
         self.dispatchers = {}
         self.unstopped_processes = []
+        self.before_remove_called = False
 
     def transition(self):
         self.transitioned = True
+
+    def before_remove(self):
+        self.before_remove_called = True
 
     def stop_all(self):
         self.all_stopped = True
@@ -1136,7 +1142,7 @@ class DummyStream:
         self.error = error
         self.closed = False
         self.flushed = False
-        self.written = ''
+        self.written = b''
         self._fileno = fileno
     def close(self):
         if self.error:
@@ -1151,7 +1157,7 @@ class DummyStream:
             error = self.error
             self.error = None
             raise error
-        self.written += as_string(msg)
+        self.written += as_bytes(msg)
     def seek(self, num, whence=0):
         pass
     def tell(self):
@@ -1164,7 +1170,7 @@ class DummyEvent:
         if serial is not None:
             self.serial = serial
 
-    def __str__(self):
+    def payload(self):
         return 'dummy event'
 
 class DummyPoller:

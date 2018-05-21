@@ -16,7 +16,7 @@ import platform
 import warnings
 import fcntl
 
-from supervisor.compat import PY3
+from supervisor.compat import PY2
 from supervisor.compat import ConfigParser
 from supervisor.compat import as_bytes, as_string
 from supervisor.compat import xmlrpclib
@@ -727,10 +727,15 @@ class ServerOptions(Options):
             if not section.startswith('eventlistener:'):
                 continue
             pool_name = section.split(':', 1)[1]
+
             # give listeners a "high" default priority so they are started first
             # and stopped last at mainloop exit
             priority = integer(get(section, 'priority', -1))
+
             buffer_size = integer(get(section, 'buffer_size', 10))
+            if buffer_size < 1:
+                raise ValueError('[%s] section sets invalid buffer_size (%d)' %
+                    (section, buffer_size))
 
             result_handler = get(section, 'result_handler',
                                        'supervisor.dispatchers:default_handler')
@@ -839,7 +844,7 @@ class ServerOptions(Options):
                     socket_owner = (proc_uid, gid_for_uid(proc_uid))
 
             if socket_mode is None:
-                socket_mode = int('700', 8)
+                socket_mode = 0o700
 
             return UnixStreamSocketConfig(path, owner=socket_owner,
                                                 mode=socket_mode)
@@ -1094,7 +1099,7 @@ class ServerOptions(Options):
                 except (TypeError, ValueError):
                     raise ValueError('Invalid chmod value %s' % chmod)
             else:
-                chmod = int('700', 8)
+                chmod = 0o700
             config['chmod'] = chmod
             config['section'] = section
             configs.append(config)
@@ -1205,7 +1210,7 @@ class ServerOptions(Options):
             # descriptor to be closed, but it will still remain in
             # the socket_map, and eventually its file descriptor
             # will be passed to # select(), which will bomb.  See
-            # also http://www.plope.com/software/collector/253
+            # also https://web.archive.org/web/20160729222427/http://www.plope.com/software/collector/253
             server.close()
 
     def close_logger(self):
@@ -1308,6 +1313,7 @@ class ServerOptions(Options):
                 self.logger.blather('EINTR during reap')
             pid, sts = None, None
         return pid, sts
+
     def drop_privileges(self, user):
         """Drop privileges to become the specified user, which may be a
         username or uid.  Called for supervisord startup and when spawning
@@ -1491,7 +1497,7 @@ class ServerOptions(Options):
     def mktempfile(self, suffix, prefix, dir):
         # set os._urandomfd as a hack around bad file descriptor bug
         # seen in the wild, see
-        # http://www.plope.com/software/collector/252
+        # https://web.archive.org/web/20160729044005/http://www.plope.com/software/collector/252
         os._urandomfd = None
         fd, filename = tempfile.mkstemp(suffix, prefix, dir)
         os.close(fd)
@@ -1525,7 +1531,7 @@ class ServerOptions(Options):
         elif stat.S_ISDIR(st[stat.ST_MODE]):
             raise NotExecutable("command at %r is a directory" % filename)
 
-        elif not (stat.S_IMODE(st[stat.ST_MODE]) & int('111', 8)):
+        elif not (stat.S_IMODE(st[stat.ST_MODE]) & 0o111):
             raise NotExecutable("command at %r is not executable" % filename)
 
         elif not os.access(filename, os.X_OK):
@@ -1543,8 +1549,8 @@ class ServerOptions(Options):
         except OSError as why:
             if why.args[0] not in (errno.EWOULDBLOCK, errno.EBADF, errno.EINTR):
                 raise
-            data = ''
-        return as_string(data)
+            data = b''
+        return data
 
     def process_environment(self):
         os.environ.update(self.environment or {})
@@ -1604,7 +1610,6 @@ class ClientOptions(Options):
     username = None
     password = None
     history_file = None
-    exit_on_error = None
 
     def __init__(self):
         Options.__init__(self, require_configfile=False)
@@ -1616,9 +1621,6 @@ class ClientOptions(Options):
         self.configroot.supervisorctl.username = None
         self.configroot.supervisorctl.password = None
         self.configroot.supervisorctl.history_file = None
-
-        # Set to 0 because it's only activated in realize() if not in interactive mode.
-        self.configroot.supervisorctl.exit_on_error = 0
 
         from supervisor.supervisorctl import DefaultControllerPlugin
         default_factory = ('default', DefaultControllerPlugin, {})
@@ -1727,7 +1729,7 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
         # inline_comment_prefixes was added in Python 3 but its default makes
         # RawConfigParser behave differently than it did on Python 2.  This
         # makes it behave the same by default on Python 2 and 3.
-        if PY3 and ('inline_comment_prefixes' not in kwargs):
+        if (not PY2) and ('inline_comment_prefixes' not in kwargs):
             kwargs['inline_comment_prefixes'] = (';', '#')
 
         ConfigParser.RawConfigParser.__init__(self, *args, **kwargs)
@@ -1863,6 +1865,15 @@ class ProcessConfig(Config):
 
         return True
 
+    def get_path(self):
+        '''Return a list corresponding to $PATH that is configured to be set
+        in the process environment, or the system default.'''
+        if self.environment is not None:
+            path = self.environment.get('PATH')
+            if path is not None:
+                return path.split(os.pathsep)
+        return self.options.get_path()
+
     def create_autochildlogs(self):
         # temporary logfiles which are erased at start time
         get_autoname = self.options.get_autochildlog_name
@@ -1982,7 +1993,12 @@ class EventListenerPoolConfig(Config):
         if not isinstance(other, EventListenerPoolConfig):
             return False
 
-        if (self.name == other.name) and (self.priority == other.priority):
+        if ((self.name == other.name) and
+            (self.priority == other.priority) and
+            (self.process_configs == other.process_configs) and
+            (self.buffer_size == other.buffer_size) and
+            (self.pool_events == other.pool_events) and
+            (self.result_handler == other.result_handler)):
             return True
 
         return False
@@ -2082,7 +2098,7 @@ def tailFile(filename, offset, length):
                 length = 0
 
             if length == 0:
-                data = ''
+                data = b''
             else:
                 f.seek(offset)
                 data = f.read(length)

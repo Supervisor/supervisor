@@ -15,13 +15,13 @@ except ImportError:  # Windows
 from supervisor.compat import urllib
 from supervisor.compat import sha1
 from supervisor.compat import as_bytes
+from supervisor.compat import as_string
 from supervisor.medusa import asyncore_25 as asyncore
 from supervisor.medusa import http_date
 from supervisor.medusa import http_server
 from supervisor.medusa import producers
 from supervisor.medusa import filesys
 from supervisor.medusa import default_handler
-from supervisor.medusa import text_socket
 
 from supervisor.medusa.auth_handler import auth_handler
 
@@ -49,15 +49,16 @@ class deferring_chunked_producer:
             if data is NOT_DONE_YET:
                 return NOT_DONE_YET
             elif data:
-                return '%x\r\n%s\r\n' % (len(data), data)
+                s = '%x' % len(data)
+                return as_bytes(s) + b'\r\n' + data + b'\r\n'
             else:
                 self.producer = None
                 if self.footers:
-                    return '\r\n'.join(['0'] + self.footers) + '\r\n\r\n'
+                    return b'\r\n'.join([b'0'] + self.footers) + b'\r\n\r\n'
                 else:
-                    return '0\r\n\r\n'
+                    return b'0\r\n\r\n'
         else:
-            return ''
+            return b''
 
 class deferring_composite_producer:
     """combine a fifo of producers into one"""
@@ -76,7 +77,7 @@ class deferring_composite_producer:
             else:
                 self.producers.pop(0)
         else:
-            return ''
+            return b''
 
 
 class deferring_globbing_producer:
@@ -88,7 +89,7 @@ class deferring_globbing_producer:
 
     def __init__ (self, producer, buffer_size=1<<16):
         self.producer = producer
-        self.buffer = ''
+        self.buffer = b''
         self.buffer_size = buffer_size
         self.delay = 0.1
 
@@ -105,7 +106,7 @@ class deferring_globbing_producer:
             else:
                 break
         r = self.buffer
-        self.buffer = ''
+        self.buffer = b''
         return r
 
 
@@ -134,7 +135,7 @@ class deferring_hooked_producer:
                 self.bytes += len(result)
             return result
         else:
-            return ''
+            return b''
 
 
 class deferring_http_request(http_server.http_request):
@@ -350,13 +351,6 @@ class deferring_http_channel(http_server.http_channel):
             else:
                 return False
 
-        # It is possible that self.ac_out_buffer is equal b''
-        # and in Python3 b'' is not equal ''. This cause
-        # http_server.http_channel.writable(self) is always True.
-        # To avoid this case, we need to force self.ac_out_buffer = ''
-        if len(self.ac_out_buffer) == 0:
-            self.ac_out_buffer = ''
-
         return http_server.http_channel.writable(self)
 
     def refill_buffer (self):
@@ -371,7 +365,7 @@ class deferring_http_channel(http_server.http_channel):
                         self.producer_fifo.pop()
                         self.close()
                     return
-                elif isinstance(p, str):
+                elif isinstance(p, bytes):
                     self.producer_fifo.pop()
                     self.ac_out_buffer += p
                     return
@@ -383,11 +377,7 @@ class deferring_http_channel(http_server.http_channel):
                     return
 
                 elif data:
-                    try:
-                        self.ac_out_buffer = self.ac_out_buffer + data
-                    except TypeError:
-                        self.ac_out_buffer = as_bytes(self.ac_out_buffer) + as_bytes(data)
-
+                    self.ac_out_buffer = self.ac_out_buffer + data
                     self.delay = False
                     return
                 else:
@@ -402,8 +392,11 @@ class deferring_http_channel(http_server.http_channel):
         if self.current_request:
             self.current_request.found_terminator()
         else:
-            header = self.in_buffer
-            self.in_buffer = ''
+            # we convert the header to text to facilitate processing.
+            # some of the underlying APIs (such as splitquery)
+            # expect text rather than bytes.
+            header = as_string(self.in_buffer)
+            self.in_buffer = b''
             lines = header.split('\r\n')
 
             # --------------------------------------------------
@@ -431,12 +424,12 @@ class deferring_http_channel(http_server.http_channel):
             rpath, rquery = http_server.splitquery(uri)
             if '%' in rpath:
                 if rquery:
-                    uri = http_server.unquote (rpath) + '?' + rquery
+                    uri = http_server.unquote(rpath) + '?' + rquery
                 else:
-                    uri = http_server.unquote (rpath)
+                    uri = http_server.unquote(rpath)
 
-            r = deferring_http_request (self, request, command, uri, version,
-                                         header)
+            r = deferring_http_request(self, request, command, uri, version,
+                                       header)
             self.request_counter.increment()
             self.server.total_requests.increment()
 
@@ -531,7 +524,7 @@ class supervisor_af_inet_http_server(supervisor_http_server):
     def __init__(self, ip, port, logger_object):
         self.ip = ip
         self.port = port
-        sock = text_socket.text_socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.prebind(sock, logger_object)
         self.bind((ip, port))
 
@@ -576,7 +569,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
             pass
 
         while 1:
-            sock = text_socket.text_socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             try:
                 sock.bind(tempname)
                 os.chmod(tempname, sockchmod)
@@ -661,7 +654,7 @@ class tail_f_producer:
             newsz = self._fsize()
         except (OSError, ValueError):
             # file descriptor was closed
-            return ''
+            return b''
         bytes_added = newsz - self.sz
         if bytes_added < 0:
             self.sz = 0

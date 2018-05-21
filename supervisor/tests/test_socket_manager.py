@@ -17,7 +17,7 @@ from supervisor.tests.base import DummyLogger
 from supervisor.datatypes import UnixStreamSocketConfig
 from supervisor.datatypes import InetStreamSocketConfig
 
-class TestObject:
+class Subject:
 
     def __init__(self):
         self.value = 5
@@ -44,11 +44,11 @@ class ProxyTest(unittest.TestCase):
         self.on_deleteCalled = True
 
     def test_proxy_getattr(self):
-        proxy = self._makeOne(TestObject())
+        proxy = self._makeOne(Subject())
         self.assertEqual(5, proxy.getValue())
 
     def test_on_delete(self):
-        proxy = self._makeOne(TestObject(), on_delete=self.setOnDeleteCalled)
+        proxy = self._makeOne(Subject(), on_delete=self.setOnDeleteCalled)
         self.assertEqual(5, proxy.getValue())
         proxy = None
         gc_collect()

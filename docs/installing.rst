@@ -61,11 +61,11 @@ dependencies are installed.  To install to a machine which is not
 internet-connected, obtain the following dependencies on a machine
 which is internet-connected:
 
-- setuptools (latest) from `http://pypi.python.org/pypi/setuptools
-  <http://pypi.python.org/pypi/setuptools>`_.
+- setuptools (latest) from `https://pypi.python.org/pypi/setuptools
+  <https://pypi.python.org/pypi/setuptools>`_.
 
-- meld3 (latest) from `http://www.plope.com/software/meld3/
-  <http://www.plope.com/software/meld3/>`_.
+- meld3 (latest) from `https://pypi.python.org/pypi/meld3
+  <https://pypi.python.org/pypi/meld3>`_.
 
 Copy these files to removable media and put them on the target
 machine.  Install each onto the target machine as per its

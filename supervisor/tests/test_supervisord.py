@@ -374,6 +374,125 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual([added, removed], [[], []])
         self.assertEqual(changed, [group1])
 
+    def test_diff_changed_eventlistener(self):
+        from supervisor.events import EventTypes
+        from supervisor.options import EventListenerConfig, EventListenerPoolConfig
+
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+
+        def make_pconfig(name, command, **params):
+            result = {
+                'name': name, 'command': command,
+                'directory': None, 'umask': None, 'priority': 999, 'autostart': True,
+                'autorestart': True, 'startsecs': 10, 'startretries': 999,
+                'uid': None, 'stdout_logfile': None, 'stdout_capture_maxbytes': 0,
+                'stdout_events_enabled': False,
+                'stdout_logfile_backups': 0, 'stdout_logfile_maxbytes': 0,
+                'stdout_syslog': False,
+                'stderr_logfile': None, 'stderr_capture_maxbytes': 0,
+                'stderr_events_enabled': False,
+                'stderr_logfile_backups': 0, 'stderr_logfile_maxbytes': 0,
+                'stderr_syslog': False,
+                'redirect_stderr': False,
+                'stopsignal': None, 'stopwaitsecs': 10,
+                'stopasgroup': False,
+                'killasgroup': False,
+                'exitcodes': (0,2), 'environment': None, 'serverurl': None,
+            }
+            result.update(params)
+            return EventListenerConfig(options, **result)
+
+        def make_econfig(*pool_event_names):
+            result = []
+            for pool_event_name in pool_event_names:
+                result.append(getattr(EventTypes, pool_event_name, None))
+            return result
+
+        def make_gconfig(name, pconfigs, pool_events, result_handler='supervisor.dispatchers:default_handler'):
+            return EventListenerPoolConfig(options, name, 25, pconfigs, 10, pool_events, result_handler)
+
+	    # Test that changing an event listener command causes the diff_to_activate
+        pconfig = make_pconfig('process1', 'process1-new')
+        econfig = make_econfig("TICK_60")
+        group1 = make_gconfig('group1', [pconfig], econfig)
+
+        pconfig = make_pconfig('process2', 'process2')
+        econfig = make_econfig("TICK_3600")
+        group2 = make_gconfig('group2', [pconfig], econfig)
+        new = [group1, group2]
+
+        pconfig = make_pconfig('process1', 'process1-old')
+        econfig = make_econfig("TICK_60")
+        group3 = make_gconfig('group1', [pconfig], econfig)
+
+        pconfig = make_pconfig('process2', 'process2')
+        econfig = make_econfig("TICK_3600")
+        group4 = make_gconfig('group2', [pconfig], econfig)
+        supervisord.add_process_group(group3)
+        supervisord.add_process_group(group4)
+
+        added, changed, removed = supervisord.diff_to_active(new)
+
+        self.assertEqual([added, removed], [[], []])
+        self.assertEqual(changed, [group1])
+
+        # Test that changing the event triggers diff_to_activate
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+
+        pconfig = make_pconfig('process1', 'process1')
+        econfig = make_econfig("TICK_60")
+        group1 = make_gconfig('group1', [pconfig], econfig)
+
+        pconfig = make_pconfig('process2', 'process2')
+        econfig = make_econfig("TICK_3600")
+        group2 = make_gconfig('group2', [pconfig], econfig)
+        new = [group1, group2]
+
+        pconfig = make_pconfig('process1', 'process1')
+        econfig = make_econfig("TICK_5")
+        group3 = make_gconfig('group1', [pconfig], econfig)
+
+        pconfig = make_pconfig('process2', 'process2')
+        econfig = make_econfig("TICK_3600")
+        group4 = make_gconfig('group2', [pconfig], econfig)
+        supervisord.add_process_group(group3)
+        supervisord.add_process_group(group4)
+
+        added, changed, removed = supervisord.diff_to_active(new)
+
+        self.assertEqual([added, removed], [[], []])
+        self.assertEqual(changed, [group1])
+
+        # Test that changing the result_handler triggers diff_to_activate
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+
+        pconfig = make_pconfig('process1', 'process1')
+        econfig = make_econfig("TICK_60")
+        group1 = make_gconfig('group1', [pconfig], econfig, 'new-result-handler')
+
+        pconfig = make_pconfig('process2', 'process2')
+        econfig = make_econfig("TICK_3600")
+        group2 = make_gconfig('group2', [pconfig], econfig)
+        new = [group1, group2]
+
+        pconfig = make_pconfig('process1', 'process1')
+        econfig = make_econfig("TICK_60")
+        group3 = make_gconfig('group1', [pconfig], econfig, 'old-result-handler')
+
+        pconfig = make_pconfig('process2', 'process2')
+        econfig = make_econfig("TICK_3600")
+        group4 = make_gconfig('group2', [pconfig], econfig)
+        supervisord.add_process_group(group3)
+        supervisord.add_process_group(group4)
+
+        added, changed, removed = supervisord.diff_to_active(new)
+
+        self.assertEqual([added, removed], [[], []])
+        self.assertEqual(changed, [group1])
+
     def test_add_process_group(self):
         options = DummyOptions()
         pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
@@ -419,7 +538,9 @@ class SupervisordTests(unittest.TestCase):
         self.assertRaises(KeyError, supervisord.remove_process_group, 'asdf')
 
         supervisord.add_process_group(gconfig)
+        group = supervisord.process_groups['foo']
         result = supervisord.remove_process_group('foo')
+        self.assertTrue(group.before_remove_called)
         self.assertEqual(supervisord.process_groups, {})
         self.assertTrue(result)
 

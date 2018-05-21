@@ -56,7 +56,6 @@ from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, \
      ENOTCONN, ESHUTDOWN, EINTR, EISCONN, errorcode
 
 from supervisor.compat import as_string, as_bytes
-from supervisor.medusa import text_socket
 
 try:
     socket_map
@@ -257,7 +256,7 @@ class dispatcher:
 
     def create_socket(self, family, type):
         self.family_and_type = family, type
-        self.socket = text_socket.text_socket(family, type)
+        self.socket = socket.socket(family, type)
         self.socket.setblocking(0)
         self._fileno = self.socket.fileno()
         self.add_channel()
@@ -346,7 +345,7 @@ class dispatcher:
                 # a closed connection is indicated by signaling
                 # a read condition, and having recv() return 0.
                 self.handle_close()
-                return ''
+                return b''
             else:
                 return data
         except socket.error as why:
@@ -449,7 +448,7 @@ class dispatcher_with_send(dispatcher):
 
     def __init__(self, sock=None, map=None):
         dispatcher.__init__(self, sock, map)
-        self.out_buffer = ''
+        self.out_buffer = b''
 
     def initiate_send(self):
         num_sent = dispatcher.send(self, self.out_buffer[:512])

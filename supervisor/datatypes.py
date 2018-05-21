@@ -8,14 +8,14 @@ import shlex
 from supervisor.compat import urlparse
 from supervisor.compat import long
 from supervisor.loggers import getLevelNumByDescription
-from supervisor.medusa import text_socket
 
 def process_or_group_name(name):
     """Ensures that a process or group name is not created with
        characters that break the eventlistener protocol or web UI URLs"""
     s = str(name).strip()
-    if ' ' in s or ':' in s or '/' in s:
-        raise ValueError("Invalid name: " + repr(name))
+    for character in ' :/':
+        if character in s:
+            raise ValueError("Invalid name: %r because of character: %r" % (name, character))
     return s
 
 def integer(value):
@@ -199,7 +199,7 @@ class InetStreamSocketConfig(SocketConfig):
         return self.host, self.port
 
     def create_and_bind(self):
-        sock = text_socket.text_socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind(self.addr())
@@ -228,7 +228,7 @@ class UnixStreamSocketConfig(SocketConfig):
     def create_and_bind(self):
         if os.path.exists(self.path):
             os.unlink(self.path)
-        sock = text_socket.text_socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
             sock.bind(self.addr())
             self._chown()

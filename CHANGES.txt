@@ -2,18 +2,16 @@
 -----------------------------
 
 - Support for Python 3 has been added.  On Python 3, Supervisor requires
-  Python 3.2 or later.
+  Python 3.4 or later.  Many thanks to Vinay Sajip, Scott Maxwell, Palm Kevin,
+  Tres Seaver, Marc Abramowitz, Son Nguyen, Shane Hathaway, and Evan Andrews
+  who all made major contributions to the Python 3 porting effort.  Thanks
+  also to all contributors who submitted issue reports and patches towards
+  this effort.
 
-- Support for Python 2.4 and 2.5 has been dropped.  On Python 2, Supervisor
-  now requires Python 2.6 or later.
+- Support for Python 2.4, 2.5, and 2.6 has been dropped.  On Python 2,
+  Supervisor now requires Python 2.7.
 
 - The ``supervisor`` package is no longer a namespace package.
-
-- Added new ``stdout_syslog`` and ``stderr_syslog`` options to the config
-  file.  These are boolean options that indicate whether process output will
-  be sent to syslog.  Supervisor can now log to both files and syslog at the
-  same time.  Specifying a log filename of ``syslog`` is still supported
-  but deprecated.  Patch by Jason R. Coombs.
 
 - The behavior of the config file expansion ``%(here)s`` has changed.  In
   previous versions, a bug caused ``%(here)s`` to always expand to the
@@ -21,23 +19,44 @@
   a file included via ``[include]``, it will expand to the directory of
   that file.  Thanks to Alex Eftimie and Zoltan Toth-Czifra for the patches.
 
+- An undocumented feature where multiple ``supervisorctl`` commands could be
+  combined on a single line separated by semicolons has been removed.
+
 - ``supervisorctl`` will now set its exit status to a non-zero value when an
   error condition occurs.  Previous versions did not set the exit status so
   it was always zero.  Patch by Luke Weber.
 
-- When ``supervisord`` successfully drops privileges during startup, it is now
-  logged at the ``INFO`` level instead of ``CRIT``.
+- Added new ``stdout_syslog`` and ``stderr_syslog`` options to the config
+  file.  These are boolean options that indicate whether process output will
+  be sent to syslog.  Supervisor can now log to both files and syslog at the
+  same time.  Specifying a log filename of ``syslog`` is still supported
+  but deprecated.  Patch by Jason R. Coombs.
+
+- A more descriptive error message is now emitted if a name in the config
+  file contains a disallowed character.  Patch by Rick van Hattem.
+
+- Fixed a bug where searching for a relative command ignored changes to
+  ``PATH`` made in ``environment=``.  Based on a patch by dongweiming.
+
+3.3.4 (2018-02-15)
+------------------
+
+- Fixed a bug where rereading the configuration would not detect changes to
+  eventlisteners.  Patch by Michael Ihde.
+
+- Fixed a bug where the warning ``Supervisord is running as root and it is
+  searching for its config file`` may have been incorrectly shown by
+  ``supervisorctl`` if its executable name was changed.
 
 - Fixed a bug in the web interface where redirect URLs did not have a slash
   between the host and query string, which caused issues when proxying with
   Nginx.  Patch by Luke Weber.
 
+- When ``supervisord`` successfully drops privileges during startup, it is now
+  logged at the ``INFO`` level instead of ``CRIT``.
+
 - The HTTP server now returns a Content-Type header specifying UTF-8 encoding.
   This may fix display issues in some browsers.  Patch by Katenkka.
-
-- Fixed a bug where the warning ``Supervisord is running as root and it is
-  searching for its config file`` may have been incorrectly shown by
-  ``supervisorctl`` if its executable name was changed.
 
 3.3.3 (2017-07-24)
 ------------------
