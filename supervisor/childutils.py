@@ -41,6 +41,7 @@ class ProcessCommunicationsProtocol:
         fp.write(ProcessCommunicationEvent.BEGIN_TOKEN)
         fp.write(msg)
         fp.write(ProcessCommunicationEvent.END_TOKEN)
+        fp.flush()
 
     def stdout(self, msg):
         return self.send(msg, sys.stdout)
