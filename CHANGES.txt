@@ -4,6 +4,9 @@
 - Fixed a bug where searching for a relative command ignored changes to
   ``PATH`` made in ``environment=``.  Based on a patch by dongweiming.
 
+- ``childutils.ProcessCommunicationsProtocol`` now does an explit ``flush()``
+  after writing to ``stdout``.
+
 - A more descriptive error message is now emitted if a name in the config
   file contains a disallowed character.  Patch by Rick van Hattem.
 
