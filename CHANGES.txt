@@ -38,8 +38,8 @@
 - Fixed a bug where searching for a relative command ignored changes to
   ``PATH`` made in ``environment=``.  Based on a patch by dongweiming.
 
-- ``childutils.ProcessCommunicationsProtocol`` now does an explit ``flush()``
-  after writing to ``stdout``.
+- ``childutils.ProcessCommunicationsProtocol`` now does an explicit
+  ``flush()`` after writing to ``stdout``.
 
 3.3.4 (2018-02-15)
 ------------------
