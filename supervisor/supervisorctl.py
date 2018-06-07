@@ -783,18 +783,29 @@ class DefaultControllerPlugin(ControllerPluginBase):
                             self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                             raise
                 else:
-                    try:
-                        result = supervisor.startProcess(name)
-                    except xmlrpclib.Fault as e:
-                        error = {'status': e.faultCode,
-                                  'name': process_name,
-                                  'group': group_name,
-                                  'description': e.faultString}
-                        self.ctl.output(self._startresult(error))
-                        self.ctl.set_exitstatus_from_xmlrpc_fault(error['status'], xmlrpc.Faults.ALREADY_STARTED)
+                    start_names = []
+                    if "*" in process_name:  # multi run
+                        all_process = supervisor.getAllProcessInfo()
+                        pn_start = process_name.replace("*", "", 1)
+                        start_names.extend([(tp['group'], tp['name']) for tp in all_process if
+                                            tp['name'].startswith(pn_start)])
                     else:
-                        name = make_namespec(group_name, process_name)
-                        self.ctl.output('%s: started' % name)
+                        start_names.append((group_name, process_name))
+                    for _gname, _pname in start_names:
+                        _name = make_namespec(_gname, _pname)
+                        try:
+                            _ = supervisor.startProcess(_name)
+                        except xmlrpclib.Fault as e:
+                            error = {
+                                'status': e.faultCode,
+                                'name': _pname,
+                                'group': _gname,
+                                'description': e.faultString}
+                            self.ctl.output(self._startresult(error))
+                            self.ctl.set_exitstatus_from_xmlrpc_fault(error['status'], xmlrpc.Faults.ALREADY_STARTED)
+                        else:
+                            # _name = make_namespec(_gname, _pname)
+                            self.ctl.output('%s: started' % _name)
 
     def help_start(self):
         self.ctl.output("start <name>\t\tStart a process")
@@ -860,18 +871,29 @@ class DefaultControllerPlugin(ControllerPluginBase):
                         else:
                             raise
                 else:
-                    try:
-                        supervisor.stopProcess(name)
-                    except xmlrpclib.Fault as e:
-                        error = {'status': e.faultCode,
-                                 'name': process_name,
-                                 'group': group_name,
-                                 'description':e.faultString}
-                        self.ctl.output(self._stopresult(error))
-                        self.ctl.set_exitstatus_from_xmlrpc_fault(error['status'], xmlrpc.Faults.NOT_RUNNING)
+                    start_names = []
+                    if "*" in process_name:  # multi run
+                        all_process = supervisor.getAllProcessInfo()
+                        pn_start = process_name.replace("*", "", 1)
+                        start_names.extend([(tp['group'], tp['name']) for tp in all_process if
+                                            tp['name'].startswith(pn_start)])
                     else:
-                        name = make_namespec(group_name, process_name)
-                        self.ctl.output('%s: stopped' % name)
+                        start_names.append((group_name, process_name))
+                    for _gname, _pname in start_names:
+                        _name = make_namespec(_gname, _pname)
+                        try:
+                            supervisor.stopProcess(_name)
+                        except xmlrpclib.Fault as e:
+                            error = {
+                                'status': e.faultCode,
+                                'name': _pname,
+                                'group': _gname,
+                                'description': e.faultString}
+                            self.ctl.output(self._stopresult(error))
+                            self.ctl.set_exitstatus_from_xmlrpc_fault(error['status'], xmlrpc.Faults.NOT_RUNNING)
+                        else:
+                            # name = make_namespec(group_name, process_name)
+                            self.ctl.output('%s: stopped' % _name)
 
     def help_stop(self):
         self.ctl.output("stop <name>\t\tStop a process")
