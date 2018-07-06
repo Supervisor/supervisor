@@ -229,7 +229,7 @@ Process Control
              'start':          1200361776,
              'stop':           0,
              'now':            1200361812,
-             'state':          1,
+             'state':          20,
              'statename':      'RUNNING',
              'spawnerr':       '',
              'exitstatus':     0,
