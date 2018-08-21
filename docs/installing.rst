@@ -7,21 +7,10 @@ you're attempting to install Supervisor has internet access.
 Installing to A System With Internet Access
 -------------------------------------------
 
-If your system has internet access, you can get Supervisor
-installed in two ways:
-
-- Using ``pip``, which is now the
-  preferred method of installation for Python packages.
-
-- By downloading the Supervisor package and invoking
-  a command.
-
 Internet-Installing With Pip
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If the Python interpreter you're using has ``pip`` installed, and
-the system has internet access, you can download and install
-supervisor in one step using ``pip``.
+Supervisor can be installed with ``pip install``:
 
 .. code-block:: bash
 
@@ -113,15 +102,6 @@ the system boots.
     by the initial release of the package.  The package was fixed later.  See
     `Ubuntu Bug #1594740 <https://bugs.launchpad.net/ubuntu/+source/supervisor/+bug/1594740>`_
     for more information.
-
-Installing via pip
-------------------
-
-Supervisor can be installed with ``pip install``:
-
-.. code-block:: bash
-
-    pip install supervisor
 
 Creating a Configuration File
 -----------------------------
