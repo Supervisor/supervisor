@@ -26,8 +26,8 @@ Glossary
    Superlance
      A package which provides various event listener implementations
      that plug into Supervisor which can help monitor process memory
-     usage and crash status: `http://pypi.python.org/pypi/superlance
-     <http://pypi.python.org/pypi/superlance>`_.
+     usage and crash status: `https://pypi.org/pypi/superlance/
+     <https://pypi.org/pypi/superlance/>`_.
 
 
 

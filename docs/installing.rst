@@ -38,7 +38,7 @@ Internet-Installing Without Setuptools
 If your system does not have setuptools installed, you will need to download
 the Supervisor distribution and install it by hand.  Current and previous
 Supervisor releases may be downloaded from `PyPi
-<http://pypi.python.org/pypi/supervisor>`_.  After unpacking the software
+<https://pypi.org/pypi/supervisor/>`_.  After unpacking the software
 archive, run ``python setup.py install``.  This requires internet access.  It
 will download and install all distributions depended upon by Supervisor and
 finally install Supervisor itself.
@@ -61,11 +61,11 @@ dependencies are installed.  To install to a machine which is not
 internet-connected, obtain the following dependencies on a machine
 which is internet-connected:
 
-- setuptools (latest) from `https://pypi.python.org/pypi/setuptools
-  <https://pypi.python.org/pypi/setuptools>`_.
+- setuptools (latest) from `https://pypi.org/pypi/setuptools/
+  <https://pypi.org/pypi/setuptools/>`_.
 
-- meld3 (latest) from `https://pypi.python.org/pypi/meld3
-  <https://pypi.python.org/pypi/meld3>`_.
+- meld3 (latest) from `https://pypi.org/pypi/meld3/
+  <https://pypi.org/pypi/meld3/>`_.
 
 Copy these files to removable media and put them on the target
 machine.  Install each onto the target machine as per its
