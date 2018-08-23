@@ -52,7 +52,7 @@ Third Party Plugins and Libraries for Supervisor
 These are plugins and libraries that add new functionality to Supervisor.
 These also includes various event listeners.
 
-`superlance <http://pypi.python.org/pypi/superlance>`_
+`superlance <https://pypi.org/pypi/superlance/>`_
     Provides set of common eventlisteners that can be used to monitor
     and, for example, restart when it uses too much memory etc.
 `mr.rubber <https://github.com/collective/mr.rubber>`_
@@ -113,9 +113,9 @@ Libraries that integrate Third Party Applications with Supervisor
 These are libraries and plugins that makes it easier to use Supervisor
 with third party applications:
 
-`django-supervisor <http://pypi.python.org/pypi/django-supervisor/>`_
+`django-supervisor <https://pypi.org/pypi/django-supervisor/>`_
     Easy integration between djangocl and supervisord.
-`collective.recipe.supervisor <http://pypi.python.org/pypi/collective.recipe.supervisor>`_
+`collective.recipe.supervisor <https://pypi.org/pypi/collective.recipe.supervisor/>`_
     A buildout recipe to install supervisor.
 `puppet-module-supervisor <https://github.com/plathrop/puppet-module-supervisor>`_
     Puppet module for configuring the supervisor daemon tool.
