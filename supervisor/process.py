@@ -1,3 +1,4 @@
+import sys
 import os
 import time
 import errno
@@ -296,6 +297,21 @@ class Subprocess(object):
             # Presumably it also prevents HUP, etc received by
             # supervisord from being sent to children.
             options.setpgrp()
+
+            # Send this process a kill signal if supervisor crashes.
+            # Uses system call prctl(PR_SET_PDEATHSIG, <signal>).
+            # This will only work on Linux.
+            if self.config.prsetpdeathsig is not None \
+                    and sys.platform.startswith("linux"):
+                # Constant from http://linux.die.net/include/linux/prctl.h
+                PR_SET_PDEATHSIG = 1
+                try:
+                    import ctypes
+                    import ctypes.util
+                    libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library('c'))
+                    libc.prctl(PR_SET_PDEATHSIG, self.config.prsetpdeathsig)
+                except Exception:
+                    options.logger.debug("Could not set parent death signal.")
 
             self._prepare_child_fds()
             # sending to fd 2 will put this output in the stderr log

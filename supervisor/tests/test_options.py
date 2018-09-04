@@ -1614,6 +1614,68 @@ class ServerOptionsTests(unittest.TestCase):
         expected = "/bin/foo --host=" + platform.node()
         self.assertEqual(pconfigs[0].command, expected)
 
+    def test_processes_from_section_prsetdeathsig_error(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo
+        prsetpdeathsig = SIGKILL
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+
+        platform_mock = Mock()
+        platform_mock.return_value = "darwin"
+        @patch('sys.platform', platform_mock)
+        def parse_config(instance, config):
+            instance.processes_from_section(config, 'program:foo', 'bar')
+
+        try:
+            parse_config(instance, config)
+        except ValueError as exc:
+            self.assertTrue(exc.args[0].startswith(
+                'Cannot set prsetpdeathsig on non-linux os in section'))
+
+    def test_processes_from_section_prsetdeathsig_linux(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo
+        prsetpdeathsig = SIGKILL
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+
+        platform_mock = Mock()
+        platform_mock.return_value = "linux"
+        @patch('sys.platform', platform_mock)
+        def parse_config(instance, config):
+            return instance.processes_from_section(config, 'program:foo', 'bar')
+
+        pconfig = parse_config(instance, config)
+        self.assertEqual(pconfig[0].prsetpdeathsig, signal.SIGKILL)
+
+    def test_processes_from_section_prsetdeathsig_linux_default(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+
+        platform_mock = Mock()
+        platform_mock.return_value = "linux"
+        @patch('sys.platform', platform_mock)
+        def parse_config(instance, config):
+            return instance.processes_from_section(config, 'program:foo', 'bar')
+
+        pconfig = parse_config(instance, config)
+        self.assertEqual(pconfig[0].prsetpdeathsig, None)
+
     def test_processes_from_section_process_num_expansion(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -3078,7 +3140,7 @@ class ProcessConfigTests(unittest.TestCase):
                      'stderr_events_enabled', 'stderr_syslog',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup',
                      'killasgroup', 'exitcodes', 'redirect_stderr',
-                     'environment'):
+                     'environment', 'prsetpdeathsig'):
             defaults[name] = name
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes'):
@@ -3176,7 +3238,7 @@ class EventListenerConfigTests(unittest.TestCase):
                      'stderr_events_enabled', 'stderr_syslog',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup',
                      'killasgroup', 'exitcodes', 'redirect_stderr',
-                     'environment'):
+                     'environment', 'prsetpdeathsig'):
             defaults[name] = name
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes'):
@@ -3224,7 +3286,7 @@ class FastCGIProcessConfigTests(unittest.TestCase):
                      'stderr_events_enabled', 'stderr_syslog',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup',
                      'killasgroup', 'exitcodes', 'redirect_stderr',
-                     'environment'):
+                     'environment', 'prsetpdeathsig'):
             defaults[name] = name
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes'):
