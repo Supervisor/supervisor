@@ -300,6 +300,13 @@ class Subprocess(object):
             self._prepare_child_fds()
             # sending to fd 2 will put this output in the stderr log
 
+            # set oom_score_adj, better to do it before dropping privileges
+            # so it can also be decreased
+            oom_score_adj_msg = self.set_oom_score_adj()
+            if oom_score_adj_msg:
+                options.write(2, "supervisor: %s\n" % oom_score_adj_msg)
+                return
+
             # set user
             setuid_msg = self.set_uid()
             if setuid_msg:
@@ -578,6 +585,11 @@ class Subprocess(object):
             return
         msg = self.config.options.drop_privileges(self.config.uid)
         return msg
+
+    def set_oom_score_adj(self):
+        if self.config.oom_score_adj is None:
+            return
+        return self.config.options.set_oom_score_adj(self.config.oom_score_adj)
 
     def __lt__(self, other):
         return self.config.priority < other.config.priority
