@@ -161,7 +161,7 @@ def xmlrpc_marshal(value):
     if ismethodresponse:
         if not isinstance(value, tuple):
             value = (value,)
-        body = xmlrpclib.dumps(value,  methodresponse=ismethodresponse)
+        body = xmlrpclib.dumps(value, methodresponse=ismethodresponse)
     else:
         body = xmlrpclib.dumps(value)
     return body
