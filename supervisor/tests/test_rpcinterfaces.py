@@ -17,6 +17,7 @@ from supervisor.tests.base import _NOW
 from supervisor.tests.base import _TIMEFORMAT
 
 from supervisor.compat import as_string, PY2
+from supervisor.datatypes import Automatic
 
 class TestBase(unittest.TestCase):
     def setUp(self):
@@ -1101,8 +1102,14 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         options = DummyOptions()
         supervisord = DummySupervisor(options, 'foo')
 
-        pconfig1 = DummyPConfig(options, 'process1', __file__)
-        pconfig2 = DummyPConfig(options, 'process2', __file__)
+        pconfig1 = DummyPConfig(options, 'process1', __file__,
+                                stdout_logfile=Automatic,
+                                stderr_logfile=Automatic,
+                                )
+        pconfig2 = DummyPConfig(options, 'process2', __file__,
+                                stdout_logfile=None,
+                                stderr_logfile=None,
+                                )
         gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig1, pconfig2])
         supervisord.process_groups = {'group1': DummyProcessGroup(gconfig)}
         supervisord.options.process_group_configs = [gconfig]
@@ -1126,13 +1133,13 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(configs[0]['stderr_logfile_maxbytes'], 0)
         self.assertEqual(configs[0]['startsecs'], 10)
         self.assertEqual(configs[0]['redirect_stderr'], False)
-        self.assertEqual(configs[0]['stdout_logfile'], '')
+        self.assertEqual(configs[0]['stdout_logfile'], 'auto')
         self.assertEqual(configs[0]['exitcodes'], (0, 2))
         self.assertEqual(configs[0]['stderr_capture_maxbytes'], 0)
         self.assertEqual(configs[0]['startretries'], 999)
         self.assertEqual(configs[0]['stderr_logfile_maxbytes'], 0)
         self.assertEqual(configs[0]['inuse'], True)
-        self.assertEqual(configs[0]['stderr_logfile'], '')
+        self.assertEqual(configs[0]['stderr_logfile'], 'auto')
         self.assertEqual(configs[0]['stdout_logfile_backups'], 0)
         assert 'test_rpcinterfaces.py' in configs[0]['command']
 
@@ -1153,13 +1160,13 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(configs[1]['stderr_logfile_maxbytes'], 0)
         self.assertEqual(configs[1]['startsecs'], 10)
         self.assertEqual(configs[1]['redirect_stderr'], False)
-        self.assertEqual(configs[1]['stdout_logfile'], '')
+        self.assertEqual(configs[1]['stdout_logfile'], 'none')
         self.assertEqual(configs[1]['exitcodes'], (0, 2))
         self.assertEqual(configs[1]['stderr_capture_maxbytes'], 0)
         self.assertEqual(configs[1]['startretries'], 999)
         self.assertEqual(configs[1]['stderr_logfile_maxbytes'], 0)
         self.assertEqual(configs[1]['inuse'], True)
-        self.assertEqual(configs[1]['stderr_logfile'], '')
+        self.assertEqual(configs[1]['stderr_logfile'], 'none')
         self.assertEqual(configs[1]['stdout_logfile_backups'], 0)
         assert 'test_rpcinterfaces.py' in configs[0]['command']
 
