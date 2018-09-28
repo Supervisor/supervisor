@@ -887,7 +887,7 @@ class ServerOptions(Options):
         stopwaitsecs = integer(get(section, 'stopwaitsecs', 10))
         stopasgroup = boolean(get(section, 'stopasgroup', 'false'))
         killasgroup = boolean(get(section, 'killasgroup', stopasgroup))
-        exitcodes = list_of_exitcodes(get(section, 'exitcodes', '0,2'))
+        exitcodes = list_of_exitcodes(get(section, 'exitcodes', '0'))
         # see also redirect_stderr check in process_groups_from_parser()
         redirect_stderr = boolean(get(section, 'redirect_stderr','false'))
         numprocs = integer(get(section, 'numprocs', 1))

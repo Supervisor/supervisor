@@ -19,6 +19,12 @@
   a file included via ``[include]``, it will expand to the directory of
   that file.  Thanks to Alex Eftimie and Zoltan Toth-Czifra for the patches.
 
+- The default value for the config file setting ``exitcodes=``, the expected
+  successful exit codes of a program, has changed.  In previous versions, it
+  was ``0,2``.  This caused issues with Golang programs where ``panic()``
+  causes the exit code to be ``2``.  The default value for ``exitcodes``
+  is now ``0``.
+
 - An undocumented feature where multiple ``supervisorctl`` commands could be
   combined on a single line separated by semicolons has been removed.
 

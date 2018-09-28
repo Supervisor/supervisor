@@ -518,7 +518,7 @@ class DummyPConfig:
                  stderr_syslog=False,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
-                 exitcodes=(0,2), environment=None, serverurl=None):
+                 exitcodes=(0,), environment=None, serverurl=None):
         self.options = options
         self.name = name
         self.command = command

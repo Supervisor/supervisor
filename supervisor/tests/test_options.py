@@ -552,7 +552,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.stdout_logfile_maxbytes,
                          datatypes.byte_size('50MB'))
         self.assertEqual(proc1.stdout_logfile_backups, 10)
-        self.assertEqual(proc1.exitcodes, [0,2])
+        self.assertEqual(proc1.exitcodes, [0])
         self.assertEqual(proc1.directory, '/tmp')
         self.assertEqual(proc1.umask, 2)
         self.assertEqual(proc1.environment, dict(FAKE_ENV_VAR='/some/path'))
@@ -575,7 +575,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc2.killasgroup, False)
         self.assertEqual(proc2.stdout_logfile_maxbytes, 1024)
         self.assertEqual(proc2.stdout_logfile_backups, 2)
-        self.assertEqual(proc2.exitcodes, [0,2])
+        self.assertEqual(proc2.exitcodes, [0])
         self.assertEqual(proc2.directory, None)
 
         cat3 = options.process_group_configs[2]
@@ -616,7 +616,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc4_a.stdout_logfile_maxbytes,
                          datatypes.byte_size('50MB'))
         self.assertEqual(proc4_a.stdout_logfile_backups, 10)
-        self.assertEqual(proc4_a.exitcodes, [0,2])
+        self.assertEqual(proc4_a.exitcodes, [0])
         self.assertEqual(proc4_a.stopsignal, signal.SIGTERM)
         self.assertEqual(proc4_a.stopasgroup, False)
         self.assertEqual(proc4_a.killasgroup, False)
@@ -634,7 +634,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc4_b.stdout_logfile_maxbytes,
                          datatypes.byte_size('50MB'))
         self.assertEqual(proc4_b.stdout_logfile_backups, 10)
-        self.assertEqual(proc4_b.exitcodes, [0,2])
+        self.assertEqual(proc4_b.exitcodes, [0])
         self.assertEqual(proc4_b.stopsignal, signal.SIGTERM)
         self.assertEqual(proc4_b.stopasgroup, False)
         self.assertEqual(proc4_b.killasgroup, False)
@@ -1834,7 +1834,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.stdout_logfile_maxbytes,
                          datatypes.byte_size('78KB'))
         self.assertEqual(proc1.stdout_logfile_backups, 2)
-        self.assertEqual(proc1.exitcodes, [0,2])
+        self.assertEqual(proc1.exitcodes, [0])
         self.assertEqual(proc1.directory, '/tmp')
         self.assertEqual(proc1.umask, 2)
         self.assertEqual(proc1.environment, dict(FAKE_ENV_VAR='/some/path'))
