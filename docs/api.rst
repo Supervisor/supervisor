@@ -9,7 +9,7 @@ factory properly by setting the default factory. See :ref:`rpcinterface_factorie
 Then you can connect to supervisor's HTTP port
 with any XML-RPC client library and run commands against it.
 
-An example of doing this using Python2's ``xmlrpclib`` client library
+An example of doing this using Python 2's ``xmlrpclib`` client library
 is as follows.
 
 .. code-block:: python
@@ -17,7 +17,7 @@ is as follows.
     import xmlrpclib
     server = xmlrpclib.Server('http://localhost:9001/RPC2')
 
-An example of doing this using Python3's ``xmlrpc.client`` library
+An example of doing this using Python 3's ``xmlrpc.client`` library
 is as follows.
 
 .. code-block:: python
