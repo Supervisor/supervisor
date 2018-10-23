@@ -1286,7 +1286,7 @@ also respected by ``fcgi-program`` sections.
 ``[fcgi-program:x]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``[fcgi-program:x]`` sections have a single key which ``[program:x]``
+``[fcgi-program:x]`` sections have a few keys which ``[program:x]``
 sections do not have.
 
 ``socket``
