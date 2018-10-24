@@ -1388,7 +1388,7 @@ class ServerOptions(Options):
             limits.append(
                 {
                 'msg':('The minimum number of file descriptors required '
-                       'to run this process is %(min)s as per the "minfds" '
+                       'to run this process is %(min_limit)s as per the "minfds" '
                        'command-line argument or config file setting. '
                        'The current environment will only allow you '
                        'to open %(hard)s file descriptors.  Either raise '
@@ -1404,7 +1404,7 @@ class ServerOptions(Options):
             limits.append(
                 {
                 'msg':('The minimum number of available processes required '
-                       'to run this program is %(min)s as per the "minprocs" '
+                       'to run this program is %(min_limit)s as per the "minprocs" '
                        'command-line argument or config file setting. '
                        'The current environment will only allow you '
                        'to open %(hard)s processes.  Either raise '
@@ -1418,7 +1418,7 @@ class ServerOptions(Options):
                 })
 
         for limit in limits:
-            min = limit['min']
+            min_limit = limit['min']
             res = limit['resource']
             msg = limit['msg']
             name = limit['name']
@@ -1426,16 +1426,16 @@ class ServerOptions(Options):
 
             soft, hard = resource.getrlimit(res)
 
-            if (soft < min) and (soft != -1): # -1 means unlimited
-                if (hard < min) and (hard != -1):
+            if (soft < min_limit) and (soft != -1): # -1 means unlimited
+                if (hard < min_limit) and (hard != -1):
                     # setrlimit should increase the hard limit if we are
                     # root, if not then setrlimit raises and we print usage
-                    hard = min
+                    hard = min_limit
 
                 try:
-                    resource.setrlimit(res, (min, hard))
+                    resource.setrlimit(res, (min_limit, hard))
                     self.parse_infos.append('Increased %(name)s limit to '
-                                '%(min)s' % locals())
+                                '%(min_limit)s' % locals())
                 except (resource.error, ValueError):
                     self.usage(msg % locals())
 
