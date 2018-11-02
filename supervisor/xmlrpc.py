@@ -154,9 +154,7 @@ def xmlrpc_marshal(value):
 
 class SystemNamespaceRPCInterface:
     def __init__(self, namespaces):
-        self.namespaces = {}
-        for name, inst in namespaces:
-            self.namespaces[name] = inst
+        self.namespaces = {name: inst for name, inst in namespaces}
         self.namespaces['system'] = self
 
     def _listMethods(self):
