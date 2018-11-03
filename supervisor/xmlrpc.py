@@ -8,7 +8,6 @@ import types
 from xml.etree.ElementTree import iterparse
 
 from supervisor.compat import xmlrpclib
-from supervisor.compat import func_attribute
 from supervisor.compat import StringIO
 from supervisor.compat import urllib
 from supervisor.compat import as_bytes
@@ -167,8 +166,7 @@ class SystemNamespaceRPCInterface:
                 # introspect; any methods that don't start with underscore
                 # are published
                 func = getattr(namespace, method_name)
-                meth = getattr(func, func_attribute, None)
-                if meth is not None:
+                if callable(func):
                     if not method_name.startswith('_'):
                         sig = '%s.%s' % (ns_name, method_name)
                         methods[sig] = str(func.__doc__)

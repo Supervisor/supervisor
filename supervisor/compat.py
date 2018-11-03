@@ -129,11 +129,6 @@ except ImportError: # pragma: no cover
     from base64 import decodestring, encodestring
 
 
-if PY2: # pragma: no cover
-    func_attribute = 'im_func'
-else: # pragma: no cover
-    func_attribute = '__func__'
-
 try: # pragma: no cover
     from xmlrpc.client import Fault
 except ImportError: # pragma: no cover
