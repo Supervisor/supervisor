@@ -4,9 +4,9 @@ import errno
 import shlex
 import traceback
 import signal
+from functools import total_ordering
 
 from supervisor.compat import maxint
-from supervisor.compat import total_ordering
 from supervisor.compat import as_bytes
 from supervisor.compat import as_string
 from supervisor.compat import PY2

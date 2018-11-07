@@ -1,7 +1,8 @@
 _NOW = 1151365354
 _TIMEFORMAT = '%b %d %I:%M %p'
 
-from supervisor.compat import total_ordering
+from functools import total_ordering
+
 from supervisor.compat import Fault
 from supervisor.compat import as_bytes
 
