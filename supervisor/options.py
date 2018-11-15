@@ -15,6 +15,7 @@ import glob
 import platform
 import warnings
 import fcntl
+import codecs
 
 from supervisor.compat import PY2
 from supervisor.compat import ConfigParser
@@ -2062,7 +2063,7 @@ def tailFile(filename, offset, length):
     """
 
     try:
-        with open(filename, 'rb') as f:
+        with codecs.open(filename, 'rb', "utf-8") as f:
             overflow = False
             f.seek(0, 2)
             sz = f.tell()
