@@ -292,9 +292,13 @@ class Supervisor:
                     'received %s indicating exit request' % signame(sig))
                 self.options.mood = SupervisorStates.SHUTDOWN
             elif sig == signal.SIGHUP:
-                self.options.logger.warn(
-                    'received %s indicating restart request' % signame(sig))
-                self.options.mood = SupervisorStates.RESTARTING
+                if self.options.mood == SupervisorStates.SHUTDOWN:
+                    self.options.logger.warn(
+                        'ignored %s indicating restart request (shutdown in progress)' % signame(sig))
+                else:
+                    self.options.logger.warn(
+                        'received %s indicating restart request' % signame(sig))
+                    self.options.mood = SupervisorStates.RESTARTING
             elif sig == signal.SIGCHLD:
                 self.options.logger.debug(
                     'received %s indicating a child quit' % signame(sig))
