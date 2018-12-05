@@ -286,6 +286,10 @@ pid all
 
    Get the PID of every child process, one per line.
 
+reload
+
+   Restarts the remote supervisord
+
 reread
 
    Reload the daemon's configuration files, without add/remove (no restarts)
