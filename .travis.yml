@@ -1,7 +1,5 @@
 language: python
 
-sudo: false
-
 matrix:
     include:
         - python: 2.7
@@ -9,11 +7,9 @@ matrix:
         - python: 3.7
           env: TOXENV=cover3
           dist: xenial    # required for Python 3.7 (travis-ci/travis-ci#9069)
-          sudo: required  # required for Python 3.7 (travis-ci/travis-ci#9069)
         - python: 3.7
           env: TOXENV=docs
           dist: xenial    # required for Python 3.7 (travis-ci/travis-ci#9069)
-          sudo: required  # required for Python 3.7 (travis-ci/travis-ci#9069)
         - python: 2.7
           env:
             - TOXENV=py27
@@ -35,7 +31,6 @@ matrix:
             - TOXENV=py37
             - END_TO_END=1
           dist: xenial    # required for Python 3.7 (travis-ci/travis-ci#9069)
-          sudo: required  # required for Python 3.7 (travis-ci/travis-ci#9069)
 
 install:
     - travis_retry pip install virtualenv tox pexpect
