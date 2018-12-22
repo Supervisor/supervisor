@@ -38,14 +38,18 @@
   same time.  Specifying a log filename of ``syslog`` is still supported
   but deprecated.  Patch by Jason R. Coombs.
 
-- A more descriptive error message is now emitted if a name in the config
-  file contains a disallowed character.  Patch by Rick van Hattem.
+- Fixed a race condition where ``supervisord`` would cancel a shutdown
+  already in progress if it received ``SIGHUP``.  Now, ``supervisord`` will
+  ignore ``SIGHUP`` if shutdown is already in progress.  Patch by Livanh.
 
 - Fixed a bug where searching for a relative command ignored changes to
   ``PATH`` made in ``environment=``.  Based on a patch by dongweiming.
 
 - ``childutils.ProcessCommunicationsProtocol`` now does an explicit
   ``flush()`` after writing to ``stdout``.
+
+- A more descriptive error message is now emitted if a name in the config
+  file contains a disallowed character.  Patch by Rick van Hattem.
 
 3.3.4 (2018-02-15)
 ------------------

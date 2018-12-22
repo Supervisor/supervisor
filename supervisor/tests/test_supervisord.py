@@ -6,6 +6,9 @@ import os
 import tempfile
 import shutil
 
+from supervisor.states import ProcessStates
+from supervisor.states import SupervisorStates
+
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyPGroupConfig
@@ -188,7 +191,8 @@ class SupervisordTests(unittest.TestCase):
         options._signal = signal.SIGTERM
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.options.mood, -1)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.SHUTDOWN)
         self.assertEqual(options.logger.data[0],
                          'received SIGTERM indicating exit request')
 
@@ -197,7 +201,8 @@ class SupervisordTests(unittest.TestCase):
         options._signal = signal.SIGINT
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.options.mood, -1)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.SHUTDOWN)
         self.assertEqual(options.logger.data[0],
                          'received SIGINT indicating exit request')
 
@@ -206,25 +211,44 @@ class SupervisordTests(unittest.TestCase):
         options._signal = signal.SIGQUIT
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.options.mood, -1)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.SHUTDOWN)
         self.assertEqual(options.logger.data[0],
                          'received SIGQUIT indicating exit request')
 
-    def test_handle_sighup(self):
+    def test_handle_sighup_in_running_state(self):
         options = DummyOptions()
         options._signal = signal.SIGHUP
         supervisord = self._makeOne(options)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.RUNNING)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.options.mood, 0)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.RESTARTING)
         self.assertEqual(options.logger.data[0],
                          'received SIGHUP indicating restart request')
+
+    def test_handle_sighup_in_shutdown_state(self):
+        options = DummyOptions()
+        options._signal = signal.SIGHUP
+        supervisord = self._makeOne(options)
+        supervisord.options.mood = SupervisorStates.SHUTDOWN
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.SHUTDOWN)
+        supervisord.handle_signal()
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.SHUTDOWN) # unchanged
+        self.assertEqual(options.logger.data[0],
+                         'ignored SIGHUP indicating restart request '
+                         '(shutdown in progress)')
 
     def test_handle_sigchld(self):
         options = DummyOptions()
         options._signal = signal.SIGCHLD
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.options.mood, 1)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.RUNNING)
         # supervisor.options.signame(signal.SIGCHLD) may return "SIGCLD"
         # on linux or other systems where SIGCHLD = SIGCLD.
         msgs = ('received SIGCHLD indicating a child quit',
@@ -235,7 +259,6 @@ class SupervisordTests(unittest.TestCase):
         options = DummyOptions()
         options._signal = signal.SIGUSR2
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
-        from supervisor.process import ProcessStates
         process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
         process1.delay = time.time() - 1
         supervisord = self._makeOne(options)
@@ -246,7 +269,8 @@ class SupervisordTests(unittest.TestCase):
         dummypgroup = DummyProcessGroup(options)
         supervisord.process_groups = {None:dummypgroup}
         supervisord.handle_signal()
-        self.assertEqual(supervisord.options.mood, 1)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.RUNNING)
         self.assertEqual(options.logs_reopened, True)
         self.assertEqual(options.logger.data[0],
                          'received SIGUSR2 indicating log reopen request')
@@ -257,12 +281,12 @@ class SupervisordTests(unittest.TestCase):
         options._signal = signal.SIGUSR1
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.options.mood, 1)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.RUNNING)
         self.assertEqual(options.logger.data[0],
                          'received SIGUSR1 indicating nothing')
 
     def test_get_state(self):
-        from supervisor.states import SupervisorStates
         options = DummyOptions()
         supervisord = self._makeOne(options)
         self.assertEqual(supervisord.get_state(), SupervisorStates.RUNNING)
@@ -683,7 +707,7 @@ class SupervisordTests(unittest.TestCase):
         gconfig = DummyPGroupConfig(options)
         pgroup = DummyProcessGroup(gconfig)
         supervisord.process_groups = {'foo': pgroup}
-        supervisord.options.mood = -1
+        supervisord.options.mood = SupervisorStates.SHUTDOWN
         L = []
         def callback(event):
             L.append(event)
@@ -708,7 +732,7 @@ class SupervisordTests(unittest.TestCase):
         def callback():
             L.append(1)
         supervisord.process_groups = {'foo': pgroup}
-        supervisord.options.mood = 0
+        supervisord.options.mood = SupervisorStates.RESTARTING
         supervisord.options.test = True
         from supervisor.medusa import asyncore_25 as asyncore
         self.assertRaises(asyncore.ExitNow, supervisord.runforever)
@@ -726,14 +750,13 @@ class SupervisordTests(unittest.TestCase):
         def callback():
             L.append(1)
         supervisord.process_groups = {'foo': pgroup}
-        supervisord.options.mood = 0
+        supervisord.options.mood = SupervisorStates.RESTARTING
         supervisord.options.test = True
         supervisord.runforever()
         self.assertNotEqual(supervisord.lastshutdownreport, 0)
 
     def test_getSupervisorStateDescription(self):
         from supervisor.states import getSupervisorStateDescription
-        from supervisor.states import SupervisorStates
         result = getSupervisorStateDescription(SupervisorStates.RUNNING)
         self.assertEqual(result, 'RUNNING')
 
