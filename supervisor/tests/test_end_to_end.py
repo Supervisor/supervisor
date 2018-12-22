@@ -129,6 +129,15 @@ class EndToEndTests(BaseTestCase):
             seen = False
         self.assertTrue(seen)
 
+    def test_issue_1184(self):
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1184.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('cat entered RUNNING state', timeout=60)
+        t = SupervisorTransport(None, None, serverurl="unix:///tmp/issue-1184.sock")
+        with xmlrpclib.ServerProxy('http://localhost', transport=t) as s:
+            s.supervisor.shutdown()  # should be no ResourceWarning for unclosed fd
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
