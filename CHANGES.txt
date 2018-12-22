@@ -1,5 +1,5 @@
-3.3.5 (Next 3.x Release)
-------------------------
+3.3.5 (2018-12-22)
+------------------
 
 - Fixed a race condition where ``supervisord`` would cancel a shutdown
   already in progress if it received ``SIGHUP``.  Now, ``supervisord`` will
