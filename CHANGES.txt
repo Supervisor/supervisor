@@ -1,8 +1,8 @@
 3.4.0 (Next Release)
 --------------------
 
-- Fixed a bug where `SupervisorTransport` (the XML-RPC transport used with
-  Unix domain sockets) did not close the connection when `close()` was
+- Fixed a bug where ``SupervisorTransport`` (the XML-RPC transport used with
+  Unix domain sockets) did not close the connection when ``close()`` was
   called on it.  Patch by Jérome Perrin.
 
 3.3.5 (2018-12-22)
