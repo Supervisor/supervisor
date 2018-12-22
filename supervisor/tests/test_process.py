@@ -167,16 +167,17 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(args[1], ['sh', 'foo'])
 
     def test_get_execv_args_rel_searches_using_pconfig_path(self):
-        with tempfile.NamedTemporaryFile() as f:
-            dirname, basename = os.path.split(f.name)
-            executable = '%s foo' % basename
-            options = DummyOptions()
-            config = DummyPConfig(options, 'sh', executable)
-            config.get_path = lambda: [ dirname ]
-            instance = self._makeOne(config)
-            args = instance.get_execv_args()
-            self.assertEqual(args[0], f.name)
-            self.assertEqual(args[1], [basename, 'foo'])
+        f = tempfile.NamedTemporaryFile()
+        dirname, basename = os.path.split(f.name)
+        executable = '%s foo' % basename
+        options = DummyOptions()
+        config = DummyPConfig(options, 'sh', executable)
+        config.get_path = lambda: [ dirname ]
+        instance = self._makeOne(config)
+        args = instance.get_execv_args()
+        self.assertEqual(args[0], f.name)
+        self.assertEqual(args[1], [basename, 'foo'])
+        f.close()
 
     def test_record_spawnerr(self):
         options = DummyOptions()
