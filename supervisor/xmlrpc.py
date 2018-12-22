@@ -490,9 +490,9 @@ class SupervisorTransport(xmlrpclib.Transport):
             raise ValueError('Unknown protocol for serverurl %s' % serverurl)
 
     def close(self):
-      if self.connection:
-        self.connection.close()
-        self.connection = None
+        if self.connection:
+            self.connection.close()
+            self.connection = None
 
     def request(self, host, handler, request_body, verbose=0):
         if not self.connection:
