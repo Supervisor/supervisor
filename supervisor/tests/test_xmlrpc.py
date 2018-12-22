@@ -508,6 +508,17 @@ class SupervisorTransportTests(unittest.TestCase):
         self.assertEqual(dummy_conn.requestargs[3]['Accept'], 'text/xml')
         self.assertEqual(result, ('South Dakota',))
 
+    def test_close(self):
+        transport = self._makeOne('user', 'pass', 'http://127.0.0.1/')
+        dummy_conn = DummyConnection(200, '''<?xml version="1.0"?>
+        <methodResponse><params/></methodResponse>''')
+        def getconn():
+            return dummy_conn
+        transport._get_connection = getconn
+        transport.request('localhost', '/', '')
+        transport.close()
+        self.assertTrue(dummy_conn.closed)
+
 class TestDeferredXMLRPCResponse(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.xmlrpc import DeferredXMLRPCResponse

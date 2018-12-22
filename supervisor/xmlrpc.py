@@ -507,6 +507,11 @@ class SupervisorTransport(xmlrpclib.Transport):
         else:
             raise ValueError('Unknown protocol for serverurl %s' % serverurl)
 
+    def close(self):
+      if self.connection:
+        self.connection.close()
+        self.connection = None
+
     def request(self, host, handler, request_body, verbose=0):
         request_body = as_bytes(request_body)
         if not self.connection:
