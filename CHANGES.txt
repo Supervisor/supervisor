@@ -38,6 +38,9 @@
   same time.  Specifying a log filename of ``syslog`` is still supported
   but deprecated.  Patch by Jason R. Coombs.
 
+3.3.5 (2018-12-22)
+------------------
+
 - Fixed a race condition where ``supervisord`` would cancel a shutdown
   already in progress if it received ``SIGHUP``.  Now, ``supervisord`` will
   ignore ``SIGHUP`` if shutdown is already in progress.  Patch by Livanh.
