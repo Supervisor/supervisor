@@ -1,6 +1,10 @@
 3.3.5 (Next 3.x Release)
 ------------------------
 
+- Fixed a race condition where ``supervisord`` would cancel a shutdown
+  already in progress if it received ``SIGHUP``.  Now, ``supervisord`` will
+  ignore ``SIGHUP`` if shutdown is already in progress.  Patch by Livanh.
+
 - Fixed a bug where searching for a relative command ignored changes to
   ``PATH`` made in ``environment=``.  Based on a patch by dongweiming.
 
