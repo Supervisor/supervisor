@@ -686,13 +686,19 @@ class ServerOptions(Options):
             group_processes = []
             for program in programs:
                 program_section = "program:%s" % program
-                if not program_section in all_sections:
+                fcgi_section = "fcgi-program:%s" % program
+                if not program_section in all_sections and not fcgi_section in all_sections:
                     raise ValueError(
-                        '[%s] names unknown program %s' % (section, program))
-                homogeneous_exclude.append(program_section)
-                processes = self.processes_from_section(parser, program_section,
-                                                        group_name,
-                                                        ProcessConfig)
+                        '[%s] names unknown program or fcgi-program %s' % (section, program))
+                if program_section in all_sections and fcgi_section in all_sections:
+                     raise ValueError(
+                        '[%s] name %s is ambiguous (exists as program and fcgi-program)' %
+                        (section, program))
+                section = program_section if program_section in all_sections else fcgi_section
+                homogeneous_exclude.append(section)
+                processes = self.processes_from_section(parser, section,
+                                                        group_name, ProcessConfig)
+
                 group_processes.extend(processes)
             groups.append(
                 ProcessGroupConfig(self, group_name, priority, group_processes)

@@ -2813,6 +2813,59 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(gconfig.priority, 5)
         self.assertEqual(len(gconfig.process_configs), 4)
 
+    def test_mixed_process_groups_from_parser3(self):
+        text = lstrip("""\
+        [program:one]
+        command = /bin/cat
+
+        [fcgi-program:two]
+        command = /bin/cat
+
+        [program:many]
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/cat
+        numprocs = 2
+        priority = 1
+
+        [fcgi-program:more]
+        process_name = %(program_name)s_%(process_num)s
+        command = /bin/cat
+        numprocs = 2
+        priority = 1
+
+        [group:thegroup]
+        programs = one,two,many,more
+        priority = 5
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        gconfigs = instance.process_groups_from_parser(config)
+        self.assertEqual(len(gconfigs), 1)
+
+        gconfig = gconfigs[0]
+        self.assertEqual(gconfig.name, 'thegroup')
+        self.assertEqual(gconfig.priority, 5)
+        self.assertEqual(len(gconfig.process_configs), 6)
+
+    def test_ambiguous_process_in_heterogeneous_group(self):
+        text = lstrip("""\
+        [program:one]
+        command = /bin/cat
+
+        [fcgi-program:one]
+        command = /bin/cat
+
+        [group:thegroup]
+        programs = one""")
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError, instance.process_groups_from_parser,
+                          config)
+
     def test_unknown_program_in_heterogeneous_group(self):
         text = lstrip("""\
         [program:one]
