@@ -1140,6 +1140,43 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(event.__class__, events.ProcessStateBackoffEvent)
         self.assertEqual(event.from_state, ProcessStates.STARTING)
 
+    # This tests the case where the process has stayed alive longer than
+    # startsecs (i.e., long enough to enter the RUNNING state), however the
+    # system clock has since rolled backward such that the current time is
+    # greater than laststart but less than startsecs.
+    def test_finish_running_state_exited_too_quickly_due_to_clock_rollback(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'notthere', '/notthere',
+                              stdout_logfile='/tmp/foo', startsecs=10)
+        instance = self._makeOne(config)
+        instance.config.options.pidhistory[123] = instance
+        pipes = {'stdout':'','stderr':''}
+        instance.pipes = pipes
+        instance.config.exitcodes =[-1]
+        instance.laststart = time.time()
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        instance.state = ProcessStates.RUNNING
+        L = []
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        instance.pid = 123
+        instance.finish(123, 1)
+        self.assertFalse(instance.killing)
+        self.assertEqual(instance.pid, 0)
+        self.assertEqual(options.parent_pipes_closed, pipes)
+        self.assertEqual(instance.pipes, {})
+        self.assertEqual(instance.dispatchers, {})
+        self.assertEqual(options.logger.data[0],
+                         'exited: notthere (terminated by SIGHUP; expected)')
+        self.assertEqual(instance.exitstatus, -1)
+        self.assertEqual(len(L), 1)
+        event = L[0]
+        self.assertEqual(event.__class__,
+                         events.ProcessStateExitedEvent)
+        self.assertEqual(event.expected, True)
+        self.assertEqual(event.extra_values, [('expected', True), ('pid', 123)])
+        self.assertEqual(event.from_state, ProcessStates.RUNNING)
+
     def test_finish_running_state_laststart_in_future(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'notthere', '/notthere',
