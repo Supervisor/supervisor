@@ -363,15 +363,18 @@ class Subprocess(object):
         if self.state == ProcessStates.STARTING:
             if test_time < self.laststart:
                 self.laststart = test_time;
-            if self.delay > 0 and test_time < self.delay - self.config.startsecs:
+            if self.delay > 0 and test_time < (self.delay - self.config.startsecs):
                 self.delay = test_time + self.config.startsecs
+        elif self.state == ProcessStates.RUNNING:
+            if test_time > self.laststart and test_time < (self.laststart + self.config.startsecs):
+                self.laststart = test_time - self.config.startsecs
         elif self.state == ProcessStates.STOPPING:
             if test_time < self.laststopreport:
                 self.laststopreport = test_time;
-            if self.delay > 0 and test_time < self.delay - self.config.stopwaitsecs:
+            if self.delay > 0 and test_time < (self.delay - self.config.stopwaitsecs):
                 self.delay = test_time + self.config.stopwaitsecs
         elif self.state == ProcessStates.BACKOFF:
-            if self.delay > 0 and test_time < self.delay - self.backoff:
+            if self.delay > 0 and test_time < (self.delay - self.backoff):
                 self.delay = test_time + self.backoff
 
     def stop(self):
@@ -519,6 +522,9 @@ class Subprocess(object):
         es, msg = decode_wait_status(sts)
 
         now = time.time()
+
+        self._check_and_adjust_for_system_clock_rollback(now)
+
         self.laststop = now
         processname = as_string(self.config.name)
 
