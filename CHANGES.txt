@@ -42,6 +42,9 @@
   Unix domain sockets) did not close the connection when ``close()`` was
   called on it.  Patch by Jérome Perrin.
 
+- Fixed a bug where ``supervisorctl start <name>`` could hang for a long time
+  if the system clock rolled back.  Patch by Joe LeVeque.
+
 3.3.5 (2018-12-22)
 ------------------
 
