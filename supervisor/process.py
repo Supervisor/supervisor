@@ -355,6 +355,28 @@ class Subprocess(object):
             options.write(2, "supervisor: child process was not spawned\n")
             options._exit(127) # exit process with code for spawn failure
 
+    def _check_and_adjust_for_system_clock_rollback(self, test_time):
+        """
+        Check if system clock has rolled backward beyond test_time. If so, set
+        affected timestamps to test_time.
+        """
+        if self.state == ProcessStates.STARTING:
+            if test_time < self.laststart:
+                self.laststart = test_time;
+            if self.delay > 0 and test_time < (self.delay - self.config.startsecs):
+                self.delay = test_time + self.config.startsecs
+        elif self.state == ProcessStates.RUNNING:
+            if test_time > self.laststart and test_time < (self.laststart + self.config.startsecs):
+                self.laststart = test_time - self.config.startsecs
+        elif self.state == ProcessStates.STOPPING:
+            if test_time < self.laststopreport:
+                self.laststopreport = test_time;
+            if self.delay > 0 and test_time < (self.delay - self.config.stopwaitsecs):
+                self.delay = test_time + self.config.stopwaitsecs
+        elif self.state == ProcessStates.BACKOFF:
+            if self.delay > 0 and test_time < (self.delay - self.backoff):
+                self.delay = test_time + self.backoff
+
     def stop(self):
         """ Administrative stop """
         self.administrative_stop = True
@@ -365,6 +387,9 @@ class Subprocess(object):
         """ Log a 'waiting for x to stop' message with throttling. """
         if self.state == ProcessStates.STOPPING:
             now = time.time()
+
+            self._check_and_adjust_for_system_clock_rollback(now)
+
             if now > (self.laststopreport + 2): # every 2 seconds
                 self.config.options.logger.info(
                     'waiting for %s to stop' % as_string(self.config.name))
@@ -497,6 +522,9 @@ class Subprocess(object):
         es, msg = decode_wait_status(sts)
 
         now = time.time()
+
+        self._check_and_adjust_for_system_clock_rollback(now)
+
         self.laststop = now
         processname = as_string(self.config.name)
 
@@ -603,6 +631,8 @@ class Subprocess(object):
     def transition(self):
         now = time.time()
         state = self.state
+
+        self._check_and_adjust_for_system_clock_rollback(now)
 
         logger = self.config.options.logger
 
@@ -837,6 +867,12 @@ class EventListenerPool(ProcessGroupBase):
         if dispatch_capable:
             if self.dispatch_throttle:
                 now = time.time()
+
+                if now < self.last_dispatch:
+                    # The system clock appears to have moved backward
+                    # Reset self.last_dispatch accordingly
+                    self.last_dispatch = now;
+
                 if now - self.last_dispatch < self.dispatch_throttle:
                     return
             self.dispatch()
