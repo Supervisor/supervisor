@@ -71,6 +71,11 @@
   searching for its config file`` may have been incorrectly shown by
   ``supervisorctl`` if its executable name was changed.
 
+- Fixed a bug where ``supervisord`` would continue starting up if the
+  ``[supervisord]`` section of the config file specified ``user=`` but
+  ``setuid()`` to that user failed.  It will now exit immediately if it
+  cannot drop privileges.
+
 - Fixed a bug in the web interface where redirect URLs did not have a slash
   between the host and query string, which caused issues when proxying with
   Nginx.  Patch by Luke Weber.
@@ -83,6 +88,7 @@
 
 3.3.3 (2017-07-24)
 ------------------
+
 - Fixed CVE-2017-11610.  A vulnerability was found where an authenticated
   client can send a malicious XML-RPC request to ``supervisord`` that will
   run arbitrary shell commands on the server.  The commands will be run as
