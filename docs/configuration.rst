@@ -369,15 +369,17 @@ follows.
   Instruct :program:`supervisord` to switch users to this UNIX user
   account before doing any meaningful processing.  The user can only
   be switched if :program:`supervisord` is started as the root user.
-  If :program:`supervisord` can't switch users, it will still continue
-  but will write a log message at the ``critical`` level saying that it
-  can't drop privileges.
 
   *Default*: do not switch users
 
   *Required*:  No.
 
   *Introduced*: 3.0
+
+  *Changed*: 3.3.4.  If :program:`supervisord` can't switch to the
+  specified user, it will write an error message to ``stderr`` and
+  then exit immediately.  In earlier versions, it would continue to
+  run but would log a message at the ``critical`` level.
 
 ``directory``
 
