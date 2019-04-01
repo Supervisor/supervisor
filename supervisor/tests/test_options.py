@@ -316,6 +316,19 @@ class ClientOptionsTests(unittest.TestCase):
         options = instance.configroot.supervisorctl
         self.assertEqual(options.serverurl, 'http://localhost:9001')
 
+    def test_options_parsers_as_nonstrict_for_py2_py3_compat(self):
+        text = lstrip("""
+        [supervisorctl]
+        serverurl=http://localhost:9001 ;duplicate
+
+        [supervisorctl]
+        serverurl=http://localhost:9001 ;duplicate
+        """)
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        # should not raise configparser.DuplicateSectionError on py3
+
     def test_options_with_environment_expansions(self):
         s = lstrip("""[supervisorctl]
         serverurl=http://localhost:%(ENV_SERVER_PORT)s
@@ -689,6 +702,21 @@ class ServerOptionsTests(unittest.TestCase):
         instance.realize(args=[])
         options = instance.configroot.supervisord
         self.assertEqual(options.identifier, 'foo')
+
+    def test_options_parsers_as_nonstrict_for_py2_py3_compat(self):
+        text = lstrip("""
+        [supervisord]
+
+        [program:duplicate]
+        command=/bin/cat
+
+        [program:duplicate]
+        command=/bin/cat
+        """)
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        # should not raise configparser.DuplicateSectionError on py3
 
     def test_reload(self):
         text = lstrip("""\

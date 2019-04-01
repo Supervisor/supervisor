@@ -1722,6 +1722,12 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
         if (not PY2) and ('inline_comment_prefixes' not in kwargs):
             kwargs['inline_comment_prefixes'] = (';', '#')
 
+        # strict was added in Python 3 but its default makes RawConfigParser
+        # behave differently than it did on Python 2.  This makes it behave
+        # the same by default on Python 2 and 3.
+        if not PY2:
+            kwargs['strict'] = False
+
         ConfigParser.RawConfigParser.__init__(self, *args, **kwargs)
 
         self.section_to_file = {}
