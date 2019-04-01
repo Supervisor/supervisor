@@ -447,6 +447,7 @@ class ServerOptions(Options):
                  "t", "strip_ansi", flag=1, default=0)
         self.add("profile_options", "supervisord.profile_options",
                  "", "profile_options=", profile_options, default=None)
+        self.add(None, None, "", "strict_config_parsing_off")
         self.pidhistory = {}
         self.process_group_configs = []
         self.parse_criticals = []
@@ -561,7 +562,8 @@ class ServerOptions(Options):
             except (IOError, OSError):
                 raise ValueError("could not read config file %s" % fp)
 
-        parser = UnhosedConfigParser()
+        is_strict_config_parsing_enabled = '--strict_config_parsing_off' not in dict(self.options)
+        parser = UnhosedConfigParser(strict=is_strict_config_parsing_enabled)
         parser.expansions = self.environ_expansions
         try:
             try:
