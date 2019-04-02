@@ -27,9 +27,9 @@
 - An undocumented feature where multiple ``supervisorctl`` commands could be
   combined on a single line separated by semicolons has been removed.
 
-- ``supervisorctl`` will now set its exit status to a non-zero value when an
-  error condition occurs.  Previous versions did not set the exit status so
-  it was always zero.  Patch by Luke Weber.
+- ``supervisorctl`` will now set its exit code to a non-zero value when an
+  error condition occurs.  Previous versions did not set the exit code for
+  most error conditions so it was almost always 0.  Patch by Luke Weber.
 
 - Added new ``stdout_syslog`` and ``stderr_syslog`` options to the config
   file.  These are boolean options that indicate whether process output will
