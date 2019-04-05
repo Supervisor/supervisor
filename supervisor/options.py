@@ -670,7 +670,12 @@ class ServerOptions(Options):
                      raise ValueError(
                         '[%s] name %s is ambiguous (exists as program and fcgi-program)' %
                         (section, program))
-                section = program_section if program_section in all_sections else fcgi_section
+
+                if program_section in all_sections:
+                    section = program_section
+                else:
+                    section = fcgi_section
+
                 homogeneous_exclude.append(section)
                 processes = self.processes_from_section(parser, section,
                                                         group_name, ProcessConfig)
