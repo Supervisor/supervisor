@@ -2,7 +2,10 @@
 --------------------
 
 - FastCGI programs (``[fcgi-program:x]`` sections) can now be used in
-  groups.  Patch by Florian Apolloner.
+  groups (``[group:x]``).  Patch by Florian Apolloner.
+
+- Added a new ``socket_backlog`` option to the ``[fcgi-program:x]`` section
+  to set the listen(2) socket backlog.  Patch by Nenad Merdanovic.
 
 - Fixed a bug where ``SupervisorTransport`` (the XML-RPC transport used with
   Unix domain sockets) did not close the connection when ``close()`` was
