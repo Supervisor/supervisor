@@ -763,6 +763,14 @@ class ServerOptions(Options):
             else:
                 proc_uid = name_to_uid(proc_user)
 
+            socket_backlog = get(section, 'socket_backlog', None)
+
+            if socket_backlog is not None:
+                socket_backlog = integer(socket_backlog)
+                if (socket_backlog < 1 or socket_backlog > 65535):
+                    raise ValueError('Invalid socket_backlog value %s'
+                                                            % socket_backlog)
+
             socket_owner = get(section, 'socket_owner', None)
             if socket_owner is not None:
                 try:
@@ -786,7 +794,8 @@ class ServerOptions(Options):
 
             try:
                 socket_config = self.parse_fcgi_socket(socket, proc_uid,
-                                                    socket_owner, socket_mode)
+                                                    socket_owner, socket_mode,
+                                                    socket_backlog)
             except ValueError, e:
                 raise ValueError('%s in [%s] socket' % (str(e), section))
 
@@ -800,7 +809,8 @@ class ServerOptions(Options):
         groups.sort()
         return groups
 
-    def parse_fcgi_socket(self, sock, proc_uid, socket_owner, socket_mode):
+    def parse_fcgi_socket(self, sock, proc_uid, socket_owner, socket_mode,
+            socket_backlog):
         if sock.startswith('unix://'):
             path = sock[7:]
             #Check it's an absolute path
@@ -818,7 +828,8 @@ class ServerOptions(Options):
                 socket_mode = int('700', 8)
 
             return UnixStreamSocketConfig(path, owner=socket_owner,
-                                                mode=socket_mode)
+                                                mode=socket_mode,
+                                                backlog=socket_backlog)
 
         if socket_owner is not None or socket_mode is not None:
             raise ValueError("socket_owner and socket_mode params should"
@@ -828,7 +839,8 @@ class ServerOptions(Options):
         if m:
             host = m.group(1)
             port = int(m.group(2))
-            return InetStreamSocketConfig(host, port)
+            return InetStreamSocketConfig(host, port,
+                    backlog=socket_backlog)
 
         raise ValueError("Bad socket format %s", sock)
 

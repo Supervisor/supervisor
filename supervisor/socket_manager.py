@@ -88,7 +88,10 @@ class SocketManager:
             if self.logger:
                 self.logger.info('Creating socket %s' % self.socket_config)
             self.socket = self.socket_config.create_and_bind()
-            self.socket.listen(socket.SOMAXCONN)
+            if self.socket_config.get_backlog():
+                self.socket.listen(self.socket_config.get_backlog())
+            else:
+                self.socket.listen(socket.SOMAXCONN)
             self.prepared = True
 
     def _close(self):
