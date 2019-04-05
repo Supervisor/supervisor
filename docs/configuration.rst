@@ -1294,7 +1294,7 @@ sections do not have.
 
   *Required*:  No.
 
-  *Introduced*: 3.3.2
+  *Introduced*: 3.4.0
 
 ``socket_owner``
 
