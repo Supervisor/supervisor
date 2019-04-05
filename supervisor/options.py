@@ -16,7 +16,7 @@ import platform
 import warnings
 import fcntl
 
-from supervisor.compat import PY3
+from supervisor.compat import PY2
 from supervisor.compat import ConfigParser
 from supervisor.compat import as_bytes, as_string
 from supervisor.compat import xmlrpclib
@@ -303,17 +303,6 @@ class Options:
                     self._set(name, value, 1)
 
         if self.configfile is None:
-            uid = os.getuid()
-            if uid == 0 and "supervisord" in self.progname: # pragma: no cover
-                self.warnings.warn(
-                    'Supervisord is running as root and it is searching '
-                    'for its configuration file in default locations '
-                    '(including its current working directory); you '
-                    'probably want to specify a "-c" argument specifying an '
-                    'absolute path to a configuration file for improved '
-                    'security.'
-                    )
-
             self.configfile = self.default_configfile()
 
         self.process_config()
@@ -416,7 +405,8 @@ class ServerOptions(Options):
     nodaemon = None
     environment = None
     httpservers = ()
-    unlink_socketfiles = True
+    unlink_pidfile = False
+    unlink_socketfiles = False
     mood = states.SupervisorStates.RUNNING
 
     def __init__(self):
@@ -459,6 +449,7 @@ class ServerOptions(Options):
                  "", "profile_options=", profile_options, default=None)
         self.pidhistory = {}
         self.process_group_configs = []
+        self.parse_criticals = []
         self.parse_warnings = []
         self.parse_infos = []
         self.signal_receiver = SignalReceiver()
@@ -473,6 +464,18 @@ class ServerOptions(Options):
     # TODO: not covered by any test, but used by dispatchers
     def getLogger(self, *args, **kwargs):
         return loggers.getLogger(*args, **kwargs)
+
+    def default_configfile(self):
+        if os.getuid() == 0:
+            self.warnings.warn(
+                'Supervisord is running as root and it is searching '
+                'for its configuration file in default locations '
+                '(including its current working directory); you '
+                'probably want to specify a "-c" argument specifying an '
+                'absolute path to a configuration file for improved '
+                'security.'
+                )
+        return Options.default_configfile(self)
 
     def realize(self, *arg, **kw):
         Options.realize(self, *arg, **kw)
@@ -543,6 +546,7 @@ class ServerOptions(Options):
     def read_config(self, fp):
         # Clear parse messages, since we may be re-reading the
         # config a second time after a reload.
+        self.parse_criticals = []
         self.parse_warnings = []
         self.parse_infos = []
 
@@ -682,13 +686,19 @@ class ServerOptions(Options):
             group_processes = []
             for program in programs:
                 program_section = "program:%s" % program
-                if not program_section in all_sections:
+                fcgi_section = "fcgi-program:%s" % program
+                if not program_section in all_sections and not fcgi_section in all_sections:
                     raise ValueError(
-                        '[%s] names unknown program %s' % (section, program))
-                homogeneous_exclude.append(program_section)
-                processes = self.processes_from_section(parser, program_section,
-                                                        group_name,
-                                                        ProcessConfig)
+                        '[%s] names unknown program or fcgi-program %s' % (section, program))
+                if program_section in all_sections and fcgi_section in all_sections:
+                     raise ValueError(
+                        '[%s] name %s is ambiguous (exists as program and fcgi-program)' %
+                        (section, program))
+                section = program_section if program_section in all_sections else fcgi_section
+                homogeneous_exclude.append(section)
+                processes = self.processes_from_section(parser, section,
+                                                        group_name, ProcessConfig)
+
                 group_processes.extend(processes)
             groups.append(
                 ProcessGroupConfig(self, group_name, priority, group_processes)
@@ -712,10 +722,15 @@ class ServerOptions(Options):
             if not section.startswith('eventlistener:'):
                 continue
             pool_name = section.split(':', 1)[1]
+
             # give listeners a "high" default priority so they are started first
             # and stopped last at mainloop exit
             priority = integer(get(section, 'priority', -1))
+
             buffer_size = integer(get(section, 'buffer_size', 10))
+            if buffer_size < 1:
+                raise ValueError('[%s] section sets invalid buffer_size (%d)' %
+                    (section, buffer_size))
 
             result_handler = get(section, 'result_handler',
                                        'supervisor.dispatchers:default_handler')
@@ -834,7 +849,7 @@ class ServerOptions(Options):
                     socket_owner = (proc_uid, gid_for_uid(proc_uid))
 
             if socket_mode is None:
-                socket_mode = 448 # 0700 in Py2, 0o700 Py3
+                socket_mode = 0o700
 
             return UnixStreamSocketConfig(path, owner=socket_owner,
                                                 mode=socket_mode,
@@ -890,7 +905,7 @@ class ServerOptions(Options):
         stopwaitsecs = integer(get(section, 'stopwaitsecs', 10))
         stopasgroup = boolean(get(section, 'stopasgroup', 'false'))
         killasgroup = boolean(get(section, 'killasgroup', stopasgroup))
-        exitcodes = list_of_exitcodes(get(section, 'exitcodes', '0,2'))
+        exitcodes = list_of_exitcodes(get(section, 'exitcodes', '0'))
         # see also redirect_stderr check in process_groups_from_parser()
         redirect_stderr = boolean(get(section, 'redirect_stderr','false'))
         numprocs = integer(get(section, 'numprocs', 1))
@@ -1091,7 +1106,7 @@ class ServerOptions(Options):
                 except (TypeError, ValueError):
                     raise ValueError('Invalid chmod value %s' % chmod)
             else:
-                chmod = 448 # 0700 on py2, 0o700 on py3
+                chmod = 0o700
             config['chmod'] = chmod
             config['section'] = section
             configs.append(config)
@@ -1123,7 +1138,7 @@ class ServerOptions(Options):
         # change our umask.
         #
         # This explanation was (gratefully) garnered from
-        # http://www.hawklord.uklinux.net/system/daemons/d3.htm
+        # http://www.cems.uwe.ac.uk/~irjohnso/coursenotes/lrc/system/daemons/d3.htm
 
         pid = os.fork()
         if pid != 0:
@@ -1163,6 +1178,7 @@ class ServerOptions(Options):
         except (IOError, OSError):
             self.logger.critical('could not write pidfile %s' % self.pidfile)
         else:
+            self.unlink_pidfile = True
             self.logger.info('supervisord started with pid %s' % pid)
 
     def cleanup(self):
@@ -1171,7 +1187,9 @@ class ServerOptions(Options):
                 if self.unlink_socketfiles:
                     socketname = config['file']
                     self._try_unlink(socketname)
-        self._try_unlink(self.pidfile)
+        if self.unlink_pidfile:
+            self._try_unlink(self.pidfile)
+        self.poller.close()
 
     def _try_unlink(self, path):
         try:
@@ -1199,7 +1217,7 @@ class ServerOptions(Options):
             # descriptor to be closed, but it will still remain in
             # the socket_map, and eventually its file descriptor
             # will be passed to # select(), which will bomb.  See
-            # also http://www.plope.com/software/collector/253
+            # also https://web.archive.org/web/20160729222427/http://www.plope.com/software/collector/253
             server.close()
 
     def close_logger(self):
@@ -1220,6 +1238,7 @@ class ServerOptions(Options):
     def openhttpservers(self, supervisord):
         try:
             self.httpservers = self.make_http_servers(supervisord)
+            self.unlink_socketfiles = True
         except socket.error as why:
             if why.args[0] == errno.EADDRINUSE:
                 self.usage('Another program is already listening on '
@@ -1234,7 +1253,6 @@ class ServerOptions(Options):
                 else:
                     self.usage('%s errno.%s (%d)' %
                                (help, errorname, why.args[0]))
-            self.unlink_socketfiles = False
         except ValueError as why:
             self.usage(why.args[0])
 
@@ -1279,18 +1297,35 @@ class ServerOptions(Options):
     def kill(self, pid, signal):
         os.kill(pid, signal)
 
-    def set_uid(self):
-        if self.uid is None:
-            if os.getuid() == 0:
-                return 'Supervisor running as root (no user in config file)'
-            return None
-        msg = self.dropPrivileges(self.uid)
-        if msg is None:
-            return 'Set uid to user %s' % self.uid
-        return msg
+    def waitpid(self):
+        # Need pthread_sigmask here to avoid concurrent sigchld, but Python
+        # doesn't offer in Python < 3.4.  There is still a race condition here;
+        # we can get a sigchld while we're sitting in the waitpid call.
+        # However, AFAICT, if waitpid is interrupted by SIGCHLD, as long as we
+        # call waitpid again (which happens every so often during the normal
+        # course in the mainloop), we'll eventually reap the child that we
+        # tried to reap during the interrupted call. At least on Linux, this
+        # appears to be true, or at least stopping 50 processes at once never
+        # left zombies laying around.
+        try:
+            pid, sts = os.waitpid(-1, os.WNOHANG)
+        except OSError as exc:
+            code = exc.args[0]
+            if code not in (errno.ECHILD, errno.EINTR):
+                self.logger.critical(
+                    'waitpid error %r; '
+                    'a process may not be cleaned up properly' % code
+                    )
+            if code == errno.EINTR:
+                self.logger.blather('EINTR during reap')
+            pid, sts = None, None
+        return pid, sts
 
-    def dropPrivileges(self, user):
-        # Drop root privileges if we have them
+    def drop_privileges(self, user):
+        """Drop privileges to become the specified user, which may be a
+        username or uid.  Called for supervisord startup and when spawning
+        subprocesses.  Returns None on success or a string error message if
+        privileges could not be dropped."""
         if user is None:
             return "No user specified to setuid to!"
 
@@ -1343,37 +1378,35 @@ class ServerOptions(Options):
             return 'Could not set group id of effective user'
         os.setuid(uid)
 
-    def waitpid(self):
-        # Need pthread_sigmask here to avoid concurrent sigchld, but Python
-        # doesn't offer in Python < 3.4.  There is still a race condition here;
-        # we can get a sigchld while we're sitting in the waitpid call.
-        # However, AFAICT, if waitpid is interrupted by SIGCHLD, as long as we
-        # call waitpid again (which happens every so often during the normal
-        # course in the mainloop), we'll eventually reap the child that we
-        # tried to reap during the interrupted call. At least on Linux, this
-        # appears to be true, or at least stopping 50 processes at once never
-        # left zombies laying around.
-        try:
-            pid, sts = os.waitpid(-1, os.WNOHANG)
-        except OSError as exc:
-            code = exc.args[0]
-            if code not in (errno.ECHILD, errno.EINTR):
-                self.logger.critical(
-                    'waitpid error %r; '
-                    'a process may not be cleaned up properly' % code
-                    )
-            if code == errno.EINTR:
-                self.logger.blather('EINTR during reap')
-            pid, sts = None, None
-        return pid, sts
+    def set_uid_or_exit(self):
+        """Set the uid of the supervisord process.  Called during supervisord
+        startup only.  No return value.  Exits the process via usage() if
+        privileges could not be dropped."""
+        if self.uid is None:
+            if os.getuid() == 0:
+                self.parse_criticals.append('Supervisor is running as root.  '
+                        'Privileges were not dropped because no user is '
+                        'specified in the config file.  If you intend to run '
+                        'as root, you can set user=root in the config file '
+                        'to avoid this message.')
+        else:
+            msg = self.drop_privileges(self.uid)
+            if msg is None:
+                self.parse_infos.append('Set uid to user %s succeeded' %
+                                        self.uid)
+            else:  # failed to drop privileges
+                self.usage(msg)
 
-    def set_rlimits(self):
+    def set_rlimits_or_exit(self):
+        """Set the rlimits of the supervisord process.  Called during
+        supervisord startup only.  No return value.  Exits the process via
+        usage() if any rlimits could not be set."""
         limits = []
         if hasattr(resource, 'RLIMIT_NOFILE'):
             limits.append(
                 {
                 'msg':('The minimum number of file descriptors required '
-                       'to run this process is %(min)s as per the "minfds" '
+                       'to run this process is %(min_limit)s as per the "minfds" '
                        'command-line argument or config file setting. '
                        'The current environment will only allow you '
                        'to open %(hard)s file descriptors.  Either raise '
@@ -1389,7 +1422,7 @@ class ServerOptions(Options):
             limits.append(
                 {
                 'msg':('The minimum number of available processes required '
-                       'to run this program is %(min)s as per the "minprocs" '
+                       'to run this program is %(min_limit)s as per the "minprocs" '
                        'command-line argument or config file setting. '
                        'The current environment will only allow you '
                        'to open %(hard)s processes.  Either raise '
@@ -1402,11 +1435,8 @@ class ServerOptions(Options):
                 'name':'RLIMIT_NPROC',
                 })
 
-        msgs = []
-
         for limit in limits:
-
-            min = limit['min']
+            min_limit = limit['min']
             res = limit['resource']
             msg = limit['msg']
             name = limit['name']
@@ -1414,21 +1444,20 @@ class ServerOptions(Options):
 
             soft, hard = resource.getrlimit(res)
 
-            if (soft < min) and (soft != -1): # -1 means unlimited
-                if (hard < min) and (hard != -1):
+            if (soft < min_limit) and (soft != -1): # -1 means unlimited
+                if (hard < min_limit) and (hard != -1):
                     # setrlimit should increase the hard limit if we are
                     # root, if not then setrlimit raises and we print usage
-                    hard = min
+                    hard = min_limit
 
                 try:
-                    resource.setrlimit(res, (min, hard))
-                    msgs.append('Increased %(name)s limit to %(min)s' %
-                                locals())
+                    resource.setrlimit(res, (min_limit, hard))
+                    self.parse_infos.append('Increased %(name)s limit to '
+                                '%(min_limit)s' % locals())
                 except (resource.error, ValueError):
                     self.usage(msg % locals())
-        return msgs
 
-    def make_logger(self, critical_messages, warn_messages, info_messages):
+    def make_logger(self):
         # must be called after realize() and after supervisor does setuid()
         format = '%(asctime)s %(levelname)s %(message)s\n'
         self.logger = loggers.getLogger(self.loglevel)
@@ -1442,11 +1471,11 @@ class ServerOptions(Options):
             maxbytes=self.logfile_maxbytes,
             backups=self.logfile_backups,
         )
-        for msg in critical_messages:
+        for msg in self.parse_criticals:
             self.logger.critical(msg)
-        for msg in warn_messages:
+        for msg in self.parse_warnings:
             self.logger.warn(msg)
-        for msg in info_messages:
+        for msg in self.parse_infos:
             self.logger.info(msg)
 
     def make_http_servers(self, supervisord):
@@ -1480,7 +1509,7 @@ class ServerOptions(Options):
     def mktempfile(self, suffix, prefix, dir):
         # set os._urandomfd as a hack around bad file descriptor bug
         # seen in the wild, see
-        # http://www.plope.com/software/collector/252
+        # https://web.archive.org/web/20160729044005/http://www.plope.com/software/collector/252
         os._urandomfd = None
         fd, filename = tempfile.mkstemp(suffix, prefix, dir)
         os.close(fd)
@@ -1514,8 +1543,7 @@ class ServerOptions(Options):
         elif stat.S_ISDIR(st[stat.ST_MODE]):
             raise NotExecutable("command at %r is a directory" % filename)
 
-        elif not (stat.S_IMODE(st[stat.ST_MODE]) & 73):
-            # 73 is spelled 0111 in py2, 0o111 in py3
+        elif not (stat.S_IMODE(st[stat.ST_MODE]) & 0o111):
             raise NotExecutable("command at %r is not executable" % filename)
 
         elif not os.access(filename, os.X_OK):
@@ -1533,8 +1561,8 @@ class ServerOptions(Options):
         except OSError as why:
             if why.args[0] not in (errno.EWOULDBLOCK, errno.EBADF, errno.EINTR):
                 raise
-            data = ''
-        return as_string(data)
+            data = b''
+        return data
 
     def process_environment(self):
         os.environ.update(self.environment or {})
@@ -1594,7 +1622,6 @@ class ClientOptions(Options):
     username = None
     password = None
     history_file = None
-    exit_on_error = None
 
     def __init__(self):
         Options.__init__(self, require_configfile=False)
@@ -1606,9 +1633,6 @@ class ClientOptions(Options):
         self.configroot.supervisorctl.username = None
         self.configroot.supervisorctl.password = None
         self.configroot.supervisorctl.history_file = None
-
-        # Set to 0 because it's only activated in realize() if not in interactive mode.
-        self.configroot.supervisorctl.exit_on_error = 0
 
         from supervisor.supervisorctl import DefaultControllerPlugin
         default_factory = ('default', DefaultControllerPlugin, {})
@@ -1629,8 +1653,6 @@ class ClientOptions(Options):
         Options.realize(self, *arg, **kw)
         if not self.args:
             self.interactive = 1
-
-        self.exit_on_error = 0 if self.interactive else 1
 
     def read_config(self, fp):
         section = self.configroot.supervisorctl
@@ -1706,11 +1728,15 @@ class UnhosedConfigParser(ConfigParser.RawConfigParser):
     mysection = 'supervisord'
 
     def __init__(self, *args, **kwargs):
-        # inline_comment_prefixes was added in Python 3 but its default makes
-        # RawConfigParser behave differently than it did on Python 2.  This
-        # makes it behave the same by default on Python 2 and 3.
-        if PY3 and ('inline_comment_prefixes' not in kwargs):
-            kwargs['inline_comment_prefixes'] = (';', '#')
+        # inline_comment_prefixes and strict were added in Python 3 but their
+        # defaults make RawConfigParser behave differently than it did on
+        # Python 2.  We make it work like 2 by default for backwards compat.
+        if not PY2:
+            if 'inline_comment_prefixes' not in kwargs:
+                kwargs['inline_comment_prefixes'] = (';', '#')
+
+            if 'strict' not in kwargs:
+                kwargs['strict'] = False
 
         ConfigParser.RawConfigParser.__init__(self, *args, **kwargs)
 
@@ -1845,6 +1871,15 @@ class ProcessConfig(Config):
 
         return True
 
+    def get_path(self):
+        '''Return a list corresponding to $PATH that is configured to be set
+        in the process environment, or the system default.'''
+        if self.environment is not None:
+            path = self.environment.get('PATH')
+            if path is not None:
+                return path.split(os.pathsep)
+        return self.options.get_path()
+
     def create_autochildlogs(self):
         # temporary logfiles which are erased at start time
         get_autoname = self.options.get_autochildlog_name
@@ -1964,7 +1999,12 @@ class EventListenerPoolConfig(Config):
         if not isinstance(other, EventListenerPoolConfig):
             return False
 
-        if (self.name == other.name) and (self.priority == other.priority):
+        if ((self.name == other.name) and
+            (self.priority == other.priority) and
+            (self.process_configs == other.process_configs) and
+            (self.buffer_size == other.buffer_size) and
+            (self.pool_events == other.pool_events) and
+            (self.result_handler == other.result_handler)):
             return True
 
         return False
@@ -2064,7 +2104,7 @@ def tailFile(filename, offset, length):
                 length = 0
 
             if length == 0:
-                data = ''
+                data = b''
             else:
                 f.seek(offset)
                 data = f.read(length)
@@ -2201,4 +2241,3 @@ class NoPermission(ProcessException):
     """ Indicates that the file cannot be executed because the supervisor
     process does not possess the appropriate UNIX filesystem permission
     to execute the file. """
-

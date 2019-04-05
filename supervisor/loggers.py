@@ -15,6 +15,7 @@ import traceback
 
 from supervisor.compat import syslog
 from supervisor.compat import long
+from supervisor.compat import is_text_stream
 
 class LevelsByName:
     CRIT = 50   # messages that probably require immediate user attention
@@ -86,11 +87,24 @@ class Handler:
 
     def emit(self, record):
         try:
-            msg = self.fmt % record.asdict()
+            binary = (self.fmt == '%(message)s' and
+                      isinstance(record.msg, bytes) and
+                      (not record.kw or record.kw == {'exc_info': None}))
+            binary_stream = not is_text_stream(self.stream)
+            if binary:
+                msg = record.msg
+            else:
+                msg = self.fmt % record.asdict()
+                if binary_stream:
+                    msg = msg.encode('utf-8')
             try:
                 self.stream.write(msg)
             except UnicodeError:
-                self.stream.write(msg.encode("UTF-8"))
+                # TODO sort out later
+                # this only occurs because of a test stream type
+                # which deliberately raises an exception the first
+                # time it's called. So just do it again
+                self.stream.write(msg)
             self.flush()
         except:
             self.handleError()
@@ -112,7 +126,7 @@ class StreamHandler(Handler):
         pass
 
 class BoundIO:
-    def __init__(self, maxbytes, buf=''):
+    def __init__(self, maxbytes, buf=b''):
         self.maxbytes = maxbytes
         self.buf = buf
 
@@ -122,34 +136,34 @@ class BoundIO:
     def close(self):
         self.clear()
 
-    def write(self, s):
-        slen = len(s)
-        if len(self.buf) + slen > self.maxbytes:
-            self.buf = self.buf[slen:]
-        self.buf += s
+    def write(self, b):
+        blen = len(b)
+        if len(self.buf) + blen > self.maxbytes:
+            self.buf = self.buf[blen:]
+        self.buf += b
 
     def getvalue(self):
         return self.buf
 
     def clear(self):
-        self.buf = ''
+        self.buf = b''
 
 class FileHandler(Handler):
     """File handler which supports reopening of logs.
     """
 
-    def __init__(self, filename, mode='a'):
+    def __init__(self, filename, mode='ab'):
         Handler.__init__(self)
 
         try:
             self.stream = open(filename, mode)
         except OSError as e:
-            if mode == 'a' and e.errno == errno.ESPIPE:
+            if mode == 'ab' and e.errno == errno.ESPIPE:
                 # Python 3 can't open special files like
                 # /dev/stdout in 'a' mode due to an implicit seek call
                 # that fails with ESPIPE. Retry in 'w' mode.
                 # See: http://bugs.python.org/issue27805
-                mode = 'w'
+                mode = 'wb'
                 self.stream = open(filename, mode)
             else:
                 raise
@@ -171,7 +185,7 @@ class FileHandler(Handler):
                 raise
 
 class RotatingFileHandler(FileHandler):
-    def __init__(self, filename, mode='a', maxBytes=512*1024*1024,
+    def __init__(self, filename, mode='ab', maxBytes=512*1024*1024,
                  backupCount=10):
         """
         Open the specified file and use it as the stream for logging.
@@ -194,7 +208,7 @@ class RotatingFileHandler(FileHandler):
         If maxBytes is zero, rollover never occurs.
         """
         if maxBytes > 0:
-            mode = 'a' # doesn't make sense otherwise!
+            mode = 'ab' # doesn't make sense otherwise!
         FileHandler.__init__(self, filename, mode)
         self.maxBytes = maxBytes
         self.backupCount = backupCount
@@ -258,7 +272,7 @@ class RotatingFileHandler(FileHandler):
                     self.removeAndRename(sfn, dfn)
             dfn = self.baseFilename + ".1"
             self.removeAndRename(self.baseFilename, dfn)
-        self.stream = open(self.baseFilename, 'w')
+        self.stream = open(self.baseFilename, 'wb')
 
 class LogRecord:
     def __init__(self, level, msg, **kw):

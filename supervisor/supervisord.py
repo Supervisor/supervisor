@@ -5,7 +5,7 @@
 Usage: %s [options]
 
 Options:
--c/--configuration FILENAME -- configuration file
+-c/--configuration FILENAME -- configuration file path (searches if not given)
 -n/--nodaemon -- run in the foreground (same as 'nodaemon=true' in config file)
 -h/--help -- print this usage message and exit
 -v/--version -- print supervisord version number and exit
@@ -36,6 +36,7 @@ import signal
 
 from supervisor.medusa import asyncore_25 as asyncore
 
+from supervisor.compat import as_string
 from supervisor.options import ServerOptions
 from supervisor.options import signame
 from supervisor import events
@@ -58,22 +59,15 @@ class Supervisor:
             # prevent crash on libdispatch-based systems, at least for the
             # first request
             self.options.cleanup_fds()
-        info_messages = []
-        critical_messages = []
-        warn_messages = []
-        setuid_msg = self.options.set_uid()
-        if setuid_msg:
-            critical_messages.append(setuid_msg)
+
+        self.options.set_uid_or_exit()
+
         if self.options.first:
-            rlimit_messages = self.options.set_rlimits()
-            info_messages.extend(rlimit_messages)
-        info_messages.extend(self.options.parse_infos)
-        warn_messages.extend(self.options.parse_warnings)
+            self.options.set_rlimits_or_exit()
 
         # this sets the options.logger object
         # delay logger instantiation until after setuid
-        self.options.make_logger(critical_messages, warn_messages,
-                                 info_messages)
+        self.options.make_logger()
 
         if not self.options.nocleanup:
             # clean up old automatic logs
@@ -128,6 +122,7 @@ class Supervisor:
     def remove_process_group(self, name):
         if self.process_groups[name].get_unstopped_processes():
             return False
+        self.process_groups[name].before_remove()
         del self.process_groups[name]
         events.notify(events.ProcessGroupRemovedEvent(name))
         return True
@@ -148,7 +143,7 @@ class Supervisor:
             # throttle 'waiting for x to die' reports
             now = time.time()
             if now > (self.lastshutdownreport + 3): # every 3 secs
-                names = [ p.config.name for p in unstopped ]
+                names = [ as_string(p.config.name) for p in unstopped ]
                 namestr = ', '.join(names)
                 self.options.logger.info('waiting for %s to die' % namestr)
                 self.lastshutdownreport = now
@@ -221,9 +216,8 @@ class Supervisor:
                             'read event caused by %(dispatcher)r',
                             dispatcher=dispatcher)
                         dispatcher.handle_read_event()
-                        if (not dispatcher.readable()
-                                and not dispatcher.writable()):
-                            self.options.poller.unregister(fd)
+                        if not dispatcher.readable():
+                            self.options.poller.unregister_readable(fd)
                     except asyncore.ExitNow:
                         raise
                     except:
@@ -237,9 +231,8 @@ class Supervisor:
                             'write event caused by %(dispatcher)r',
                             dispatcher=dispatcher)
                         dispatcher.handle_write_event()
-                        if (not dispatcher.readable()
-                                and not dispatcher.writable()):
-                            self.options.poller.unregister(fd)
+                        if not dispatcher.writable():
+                            self.options.poller.unregister_writable(fd)
                     except asyncore.ExitNow:
                         raise
                     except:
@@ -299,9 +292,13 @@ class Supervisor:
                     'received %s indicating exit request' % signame(sig))
                 self.options.mood = SupervisorStates.SHUTDOWN
             elif sig == signal.SIGHUP:
-                self.options.logger.warn(
-                    'received %s indicating restart request' % signame(sig))
-                self.options.mood = SupervisorStates.RESTARTING
+                if self.options.mood == SupervisorStates.SHUTDOWN:
+                    self.options.logger.warn(
+                        'ignored %s indicating restart request (shutdown in progress)' % signame(sig))
+                else:
+                    self.options.logger.warn(
+                        'received %s indicating restart request' % signame(sig))
+                    self.options.mood = SupervisorStates.RESTARTING
             elif sig == signal.SIGCHLD:
                 self.options.logger.debug(
                     'received %s indicating a child quit' % signame(sig))

@@ -10,7 +10,8 @@ from supervisor.compat import urllib
 from supervisor.compat import parse_qs
 from supervisor.compat import parse_qsl
 from supervisor.compat import as_string
-from supervisor.compat import PY3
+from supervisor.compat import PY2
+from supervisor.compat import unicode
 
 from supervisor.medusa import producers
 from supervisor.medusa.http_server import http_date
@@ -123,7 +124,7 @@ class DeferredWebProducer:
                 )
         else:
             # fix AttributeError: 'unicode' object has no attribute 'more'
-            if (not PY3) and (len(self.request.outgoing) > 0):
+            if PY2 and (len(self.request.outgoing) > 0):
                 body = self.request.outgoing[0]
                 if isinstance(body, unicode):
                     self.request.outgoing[0] = producers.simple_producer (body)
@@ -156,7 +157,7 @@ class ViewContext:
 
 class MeldView:
 
-    content_type = 'text/html'
+    content_type = 'text/html;charset=utf-8'
     delay = .5
 
     def __init__(self, context):
@@ -389,9 +390,9 @@ class StatusView(MeldView):
                             rpcinterface.supervisor.stopProcess(namespec)
                             )
                     except RPCError as e:
+                        msg = 'unexpected rpc fault [%d] %s' % (e.code, e.text)
                         def stoperr():
-                            return 'unexpected rpc fault [%d] %s' % (
-                                e.code, e.text)
+                            return msg
                         stoperr.delay = 0.05
                         return stoperr
 
@@ -441,9 +442,9 @@ class StatusView(MeldView):
                         callback = rpcinterface.supervisor.clearProcessLogs(
                             namespec)
                     except RPCError as e:
+                        msg = 'unexpected rpc fault [%d] %s' % (e.code, e.text)
                         def clearerr():
-                            return 'unexpected rpc fault [%d] %s' % (
-                                e.code, e.text)
+                            return msg
                         clearerr.delay = 0.05
                         return clearerr
 
@@ -472,7 +473,7 @@ class StatusView(MeldView):
                     return NOT_DONE_YET
                 if message is not None:
                     server_url = form['SERVER_URL']
-                    location = server_url + '?message=%s' % urllib.quote(
+                    location = server_url + "/" + '?message=%s' % urllib.quote(
                         message)
                     response['headers']['Location'] = location
 

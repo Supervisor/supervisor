@@ -332,28 +332,89 @@ class XMLRPCHandlerTests(unittest.TestCase):
         self.assertEqual(params[11], {'k': [1, {}]})
 
 class TraverseTests(unittest.TestCase):
-    def test_underscore(self):
+    def test_security_disallows_underscore_methods(self):
         from supervisor import xmlrpc
-        self.assertRaises(xmlrpc.RPCError, xmlrpc.traverse, None, '_', None)
+        class Root:
+            pass
+        class A:
+            def _danger(self):
+                return True
+        root = Root()
+        root.a = A()
+        self.assertRaises(xmlrpc.RPCError, xmlrpc.traverse,
+            root, 'a._danger', [])
 
-    def test_notfound(self):
+    def test_security_disallows_object_traversal(self):
         from supervisor import xmlrpc
-        self.assertRaises(xmlrpc.RPCError, xmlrpc.traverse, None, 'foo', None)
+        class Root:
+            pass
+        class A:
+            pass
+        class B:
+            def danger(self):
+                return True
+        root = Root()
+        root.a = A()
+        root.a.b = B()
+        self.assertRaises(xmlrpc.RPCError, xmlrpc.traverse,
+            root, 'a.b.danger', [])
 
-    def test_badparams(self):
+    def test_namespace_name_not_found(self):
         from supervisor import xmlrpc
-        self.assertRaises(xmlrpc.RPCError, xmlrpc.traverse, self,
-                          'test_badparams', (1, 2, 3))
+        class Root:
+            pass
+        root = Root()
+        self.assertRaises(xmlrpc.RPCError, xmlrpc.traverse,
+            root, 'notfound.hello', None)
+
+    def test_method_name_not_found(self):
+        from supervisor import xmlrpc
+        class Root:
+            pass
+        class A:
+            pass
+        root = Root()
+        root.a = A()
+        self.assertRaises(xmlrpc.RPCError, xmlrpc.traverse,
+            root, 'a.notfound', [])
+
+    def test_method_name_exists_but_is_not_a_method(self):
+        from supervisor import xmlrpc
+        class Root:
+            pass
+        class A:
+            pass
+        class B:
+            pass
+        root = Root()
+        root.a = A()
+        root.a.b = B()
+        self.assertRaises(xmlrpc.RPCError, xmlrpc.traverse,
+            root, 'a.b', [])  # b is not a method
+
+    def test_bad_params(self):
+        from supervisor import xmlrpc
+        class Root:
+            pass
+        class A:
+            def hello(self, name):
+                return "Hello %s" % name
+        root = Root()
+        root.a = A()
+        self.assertRaises(xmlrpc.RPCError, xmlrpc.traverse,
+            root, 'a.hello', ["there", "extra"])  # too many params
 
     def test_success(self):
         from supervisor import xmlrpc
-        L = []
-        class Dummy:
-            def foo(self, a):
-                L.append(a)
-        dummy = Dummy()
-        xmlrpc.traverse(dummy, 'foo', [1])
-        self.assertEqual(L, [1])
+        class Root:
+            pass
+        class A:
+            def hello(self, name):
+                return "Hello %s" % name
+        root = Root()
+        root.a = A()
+        result = xmlrpc.traverse(root, 'a.hello', ["there"])
+        self.assertEqual(result, "Hello there")
 
 class SupervisorTransportTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -413,7 +474,7 @@ class SupervisorTransportTests(unittest.TestCase):
         self.assertEqual(dummy_conn.closed, True)
         self.assertEqual(dummy_conn.requestargs[0], 'POST')
         self.assertEqual(dummy_conn.requestargs[1], '/')
-        self.assertEqual(dummy_conn.requestargs[2], '')
+        self.assertEqual(dummy_conn.requestargs[2], b'')
         self.assertEqual(dummy_conn.requestargs[3]['Content-Length'], '0')
         self.assertEqual(dummy_conn.requestargs[3]['Content-Type'], 'text/xml')
         self.assertEqual(dummy_conn.requestargs[3]['Authorization'],
@@ -439,13 +500,24 @@ class SupervisorTransportTests(unittest.TestCase):
         self.assertEqual(dummy_conn.closed, False)
         self.assertEqual(dummy_conn.requestargs[0], 'POST')
         self.assertEqual(dummy_conn.requestargs[1], '/')
-        self.assertEqual(dummy_conn.requestargs[2], '')
+        self.assertEqual(dummy_conn.requestargs[2], b'')
         self.assertEqual(dummy_conn.requestargs[3]['Content-Length'], '0')
         self.assertEqual(dummy_conn.requestargs[3]['Content-Type'], 'text/xml')
         self.assertEqual(dummy_conn.requestargs[3]['Authorization'],
                          'Basic dXNlcjpwYXNz')
         self.assertEqual(dummy_conn.requestargs[3]['Accept'], 'text/xml')
         self.assertEqual(result, ('South Dakota',))
+
+    def test_close(self):
+        transport = self._makeOne('user', 'pass', 'http://127.0.0.1/')
+        dummy_conn = DummyConnection(200, '''<?xml version="1.0"?>
+        <methodResponse><params/></methodResponse>''')
+        def getconn():
+            return dummy_conn
+        transport._get_connection = getconn
+        transport.request('localhost', '/', '')
+        transport.close()
+        self.assertTrue(dummy_conn.closed)
 
 class TestDeferredXMLRPCResponse(unittest.TestCase):
     def _getTargetClass(self):

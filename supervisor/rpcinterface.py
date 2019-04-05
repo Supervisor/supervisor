@@ -8,7 +8,10 @@ from supervisor.compat import as_string
 from supervisor.compat import as_bytes
 from supervisor.compat import unicode
 
-from supervisor.datatypes import signal_number
+from supervisor.datatypes import (
+    Automatic,
+    signal_number,
+    )
 
 from supervisor.options import readFile
 from supervisor.options import tailFile
@@ -558,36 +561,37 @@ class SupervisorNamespaceRPCInterface:
         for gconfig in self.supervisord.options.process_group_configs:
             inuse = gconfig.name in self.supervisord.process_groups
             for pconfig in gconfig.process_configs:
-                configinfo.append(
-                    {
-                        'autostart': pconfig.autostart,
-                        'command': pconfig.command,
-                        'exitcodes': pconfig.exitcodes,
-                        'group': gconfig.name,
-                        'group_prio': gconfig.priority,
-                        'inuse': inuse,
-                        'killasgroup': pconfig.killasgroup,
-                        'name': pconfig.name,
-                        'process_prio': pconfig.priority,
-                        'redirect_stderr': pconfig.redirect_stderr,
-                        'startretries': pconfig.startretries,
-                        'startsecs': pconfig.startsecs,
-                        'stdout_capture_maxbytes': pconfig.stdout_capture_maxbytes,
-                        'stdout_events_enabled': pconfig.stdout_events_enabled,
-                        'stdout_logfile': pconfig.stdout_logfile,
-                        'stdout_logfile_backups': pconfig.stdout_logfile_backups,
-                        'stdout_logfile_maxbytes': pconfig.stdout_logfile_maxbytes,
-                        'stdout_syslog': pconfig.stdout_syslog,
-                        'stopsignal': pconfig.stopsignal,
-                        'stopwaitsecs': pconfig.stopwaitsecs,
-                        'stderr_capture_maxbytes': pconfig.stderr_capture_maxbytes,
-                        'stderr_events_enabled': pconfig.stderr_events_enabled,
-                        'stderr_logfile': pconfig.stderr_logfile,
-                        'stderr_logfile_backups': pconfig.stderr_logfile_backups,
-                        'stderr_logfile_maxbytes': pconfig.stderr_logfile_maxbytes,
-                        'stderr_syslog': pconfig.stderr_syslog,
+                d = {'autostart': pconfig.autostart,
+                     'command': pconfig.command,
+                     'exitcodes': pconfig.exitcodes,
+                     'group': gconfig.name,
+                     'group_prio': gconfig.priority,
+                     'inuse': inuse,
+                     'killasgroup': pconfig.killasgroup,
+                     'name': pconfig.name,
+                     'process_prio': pconfig.priority,
+                     'redirect_stderr': pconfig.redirect_stderr,
+                     'startretries': pconfig.startretries,
+                     'startsecs': pconfig.startsecs,
+                     'stdout_capture_maxbytes': pconfig.stdout_capture_maxbytes,
+                     'stdout_events_enabled': pconfig.stdout_events_enabled,
+                     'stdout_logfile': pconfig.stdout_logfile,
+                     'stdout_logfile_backups': pconfig.stdout_logfile_backups,
+                     'stdout_logfile_maxbytes': pconfig.stdout_logfile_maxbytes,
+                     'stdout_syslog': pconfig.stdout_syslog,
+                     'stopsignal': int(pconfig.stopsignal), # enum on py3
+                     'stopwaitsecs': pconfig.stopwaitsecs,
+                     'stderr_capture_maxbytes': pconfig.stderr_capture_maxbytes,
+                     'stderr_events_enabled': pconfig.stderr_events_enabled,
+                     'stderr_logfile': pconfig.stderr_logfile,
+                     'stderr_logfile_backups': pconfig.stderr_logfile_backups,
+                     'stderr_logfile_maxbytes': pconfig.stderr_logfile_maxbytes,
+                     'stderr_syslog': pconfig.stderr_syslog,
                     }
-                )
+                # no support for these types in xml-rpc
+                d.update((k, 'auto') for k, v in d.items() if v is Automatic)
+                d.update((k, 'none') for k, v in d.items() if v is None)
+                configinfo.append(d)
 
         configinfo.sort(key=lambda r: r['name'])
         return configinfo
@@ -1009,8 +1013,7 @@ def make_allfunc(processes, predicate, func, **extra_kwargs):
     return allfunc
 
 def isRunning(process):
-    if process.get_state() in RUNNING_STATES:
-        return True
+    return process.get_state() in RUNNING_STATES
 
 def isNotRunning(process):
     return not isRunning(process)

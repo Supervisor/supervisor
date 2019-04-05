@@ -7,38 +7,28 @@ you're attempting to install Supervisor has internet access.
 Installing to A System With Internet Access
 -------------------------------------------
 
-If your system has internet access, you can get Supervisor
-installed in two ways:
+Internet-Installing With Pip
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- Using ``easy_install``, which is a feature of `setuptools
-  <http://peak.telecommunity.com/DevCenter/setuptools>`_.  This is the
-  preferred method of installation.
-
-- By downloading the Supervisor package and invoking
-  a command.
-
-Internet-Installing With Setuptools
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If the Python interpreter you're using has Setuptools installed, and
-the system has internet access, you can download and install
-supervisor in one step using ``easy_install``.
+Supervisor can be installed with ``pip install``:
 
 .. code-block:: bash
 
-   easy_install supervisor
+   pip install supervisor
 
 Depending on the permissions of your system's Python, you might need
 to be the root user to install Supervisor successfully using
-``easy_install``.
+``pip``.
 
-Internet-Installing Without Setuptools
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+You can also install supervisor in a virtualenv via ``pip``.
 
-If your system does not have setuptools installed, you will need to download
+Internet-Installing Without Pip
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If your system does not have ``pip`` installed, you will need to download
 the Supervisor distribution and install it by hand.  Current and previous
 Supervisor releases may be downloaded from `PyPi
-<http://pypi.python.org/pypi/supervisor>`_.  After unpacking the software
+<https://pypi.org/pypi/supervisor/>`_.  After unpacking the software
 archive, run ``python setup.py install``.  This requires internet access.  It
 will download and install all distributions depended upon by Supervisor and
 finally install Supervisor itself.
@@ -54,18 +44,18 @@ Installing To A System Without Internet Access
 
 If the system that you want to install Supervisor to does not have
 Internet access, you'll need to perform installation slightly
-differently.  Since both ``easy_install`` and ``python setup.py
+differently.  Since both ``pip`` and ``python setup.py
 install`` depend on internet access to perform downloads of dependent
 software, neither will work on machines without internet access until
 dependencies are installed.  To install to a machine which is not
 internet-connected, obtain the following dependencies on a machine
 which is internet-connected:
 
-- setuptools (latest) from `http://pypi.python.org/pypi/setuptools
-  <http://pypi.python.org/pypi/setuptools>`_.
+- setuptools (latest) from `https://pypi.org/pypi/setuptools/
+  <https://pypi.org/pypi/setuptools/>`_.
 
-- meld3 (latest) from `http://www.plope.com/software/meld3/
-  <http://www.plope.com/software/meld3/>`_.
+- meld3 (latest) from `https://pypi.org/pypi/meld3/
+  <https://pypi.org/pypi/meld3/>`_.
 
 Copy these files to removable media and put them on the target
 machine.  Install each onto the target machine as per its
@@ -100,26 +90,18 @@ the system boots.
 
     Distribution packages of Supervisor can lag considerably behind the
     official Supervisor packages released to PyPI.  For example, Ubuntu
-    12.04 (released April 2012) offers a package based on Supervisor 3.0a8
+    12.04 (released April 2012) offered a package based on Supervisor 3.0a8
     (released January 2010).
 
 .. note::
 
-    Users have reported that the distribution package of Supervisor for
-    Ubuntu 16.04 has different behavior than previous versions.  On Ubuntu
-    10.04, 12.04, and 14.04, installing the package will configure the system
-    to start ``supervisord`` when the system boots.  On Ubuntu 16.04, this is
-    not done.  See `Ubuntu Bug #1594740 <https://bugs.launchpad.net/ubuntu/+source/supervisor/+bug/1594740>`_
+    Users reported that the distribution package of Supervisor for Ubuntu 16.04
+    had different behavior than previous versions.  On Ubuntu 10.04, 12.04, and
+    14.04, installing the package will configure the system to start
+    ``supervisord`` when the system boots.  On Ubuntu 16.04, this was not done
+    by the initial release of the package.  The package was fixed later.  See
+    `Ubuntu Bug #1594740 <https://bugs.launchpad.net/ubuntu/+source/supervisor/+bug/1594740>`_
     for more information.
-
-Installing via pip
-------------------
-
-Supervisor can be installed with ``pip install``:
-
-.. code-block:: bash
-
-    pip install supervisor
 
 Creating a Configuration File
 -----------------------------

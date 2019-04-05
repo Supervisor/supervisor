@@ -16,7 +16,8 @@ from supervisor.tests.base import PopulatedDummySupervisor
 from supervisor.tests.base import _NOW
 from supervisor.tests.base import _TIMEFORMAT
 
-from supervisor.compat import as_string
+from supervisor.compat import as_string, PY2
+from supervisor.datatypes import Automatic
 
 class TestBase(unittest.TestCase):
     def setUp(self):
@@ -1101,8 +1102,14 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         options = DummyOptions()
         supervisord = DummySupervisor(options, 'foo')
 
-        pconfig1 = DummyPConfig(options, 'process1', __file__)
-        pconfig2 = DummyPConfig(options, 'process2', __file__)
+        pconfig1 = DummyPConfig(options, 'process1', __file__,
+                                stdout_logfile=Automatic,
+                                stderr_logfile=Automatic,
+                                )
+        pconfig2 = DummyPConfig(options, 'process2', __file__,
+                                stdout_logfile=None,
+                                stderr_logfile=None,
+                                )
         gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig1, pconfig2])
         supervisord.process_groups = {'group1': DummyProcessGroup(gconfig)}
         supervisord.options.process_group_configs = [gconfig]
@@ -1126,15 +1133,16 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(configs[0]['stderr_logfile_maxbytes'], 0)
         self.assertEqual(configs[0]['startsecs'], 10)
         self.assertEqual(configs[0]['redirect_stderr'], False)
-        self.assertEqual(configs[0]['stdout_logfile'], None)
-        self.assertEqual(configs[0]['exitcodes'], (0, 2))
+        self.assertEqual(configs[0]['stdout_logfile'], 'auto')
+        self.assertEqual(configs[0]['exitcodes'], (0,))
         self.assertEqual(configs[0]['stderr_capture_maxbytes'], 0)
         self.assertEqual(configs[0]['startretries'], 999)
         self.assertEqual(configs[0]['stderr_logfile_maxbytes'], 0)
         self.assertEqual(configs[0]['inuse'], True)
-        self.assertEqual(configs[0]['stderr_logfile'], None)
+        self.assertEqual(configs[0]['stderr_logfile'], 'auto')
         self.assertEqual(configs[0]['stdout_logfile_backups'], 0)
         assert 'test_rpcinterfaces.py' in configs[0]['command']
+
         self.assertEqual(configs[1]['autostart'], True)
         self.assertEqual(configs[1]['stopwaitsecs'], 10)
         self.assertEqual(configs[1]['stdout_events_enabled'], False)
@@ -1152,15 +1160,39 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(configs[1]['stderr_logfile_maxbytes'], 0)
         self.assertEqual(configs[1]['startsecs'], 10)
         self.assertEqual(configs[1]['redirect_stderr'], False)
-        self.assertEqual(configs[1]['stdout_logfile'], None)
-        self.assertEqual(configs[1]['exitcodes'], (0, 2))
+        self.assertEqual(configs[1]['stdout_logfile'], 'none')
+        self.assertEqual(configs[1]['exitcodes'], (0,))
         self.assertEqual(configs[1]['stderr_capture_maxbytes'], 0)
         self.assertEqual(configs[1]['startretries'], 999)
         self.assertEqual(configs[1]['stderr_logfile_maxbytes'], 0)
         self.assertEqual(configs[1]['inuse'], True)
-        self.assertEqual(configs[1]['stderr_logfile'], None)
+        self.assertEqual(configs[1]['stderr_logfile'], 'none')
         self.assertEqual(configs[1]['stdout_logfile_backups'], 0)
         assert 'test_rpcinterfaces.py' in configs[0]['command']
+
+    def test_getAllConfigInfo_filters_types_not_compatible_with_xmlrpc(self):
+        options = DummyOptions()
+        supervisord = DummySupervisor(options, 'foo')
+
+        pconfig1 = DummyPConfig(options, 'process1', __file__)
+        pconfig2 = DummyPConfig(options, 'process2', __file__)
+        gconfig = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig1, pconfig2])
+        supervisord.process_groups = {'group1': DummyProcessGroup(gconfig)}
+        supervisord.options.process_group_configs = [gconfig]
+        interface = self._makeOne(supervisord)
+
+        unmarshallables = [type(None)]
+
+        try:
+            from enum import Enum
+            unmarshallables.append(Enum)
+        except ImportError: # python 2
+            pass
+
+        for typ in unmarshallables:
+            for config in interface.getAllConfigInfo():
+                for k, v in config.items():
+                    self.assertFalse(isinstance(v, typ), k)
 
     def test__interpretProcessInfo(self):
         supervisord = DummySupervisor()
@@ -2016,7 +2048,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertEqual(event.data, 'bar')
 
     def test_sendRemoteCommEvent_unicode_encoded_to_utf8(self):
-        from supervisor.compat import as_string, PY3
         options = DummyOptions()
         supervisord = DummySupervisor(options)
         interface = self._makeOne(supervisord)
@@ -2039,12 +2070,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self.assertTrue(result)
         self.assertEqual(len(L), 1)
         event = L[0]
-        if PY3:
-            self.assertEqual(event.type, 'fií once')
-            self.assertEqual(event.data, 'fií twice')
-        else:
+        if PY2:
             self.assertEqual(event.type, 'fi\xc3\xad once')
             self.assertEqual(event.data, 'fi\xc3\xad twice')
+        else:
+            self.assertEqual(event.type, 'fií once')
+            self.assertEqual(event.data, 'fií twice')
 
 
 class SystemNamespaceXMLRPCInterfaceTests(TestBase):

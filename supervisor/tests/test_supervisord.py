@@ -6,6 +6,9 @@ import os
 import tempfile
 import shutil
 
+from supervisor.states import ProcessStates
+from supervisor.states import SupervisorStates
+
 from supervisor.tests.base import DummyOptions
 from supervisor.tests.base import DummyPConfig
 from supervisor.tests.base import DummyPGroupConfig
@@ -42,7 +45,7 @@ class EntryPointTests(unittest.TestCase):
             sys.stdout = old_stdout
             shutil.rmtree(tempdir)
         output = new_stdout.getvalue()
-        self.assertTrue(output.find('supervisord started') != 1, output)
+        self.assertTrue('supervisord started' in output, output)
 
     if pstats:
         def test_main_profile(self):
@@ -64,8 +67,7 @@ class EntryPointTests(unittest.TestCase):
                 sys.stdout = old_stdout
                 shutil.rmtree(tempdir)
             output = new_stdout.getvalue()
-            self.assertTrue(output.find('cumulative time, call count') != -1,
-                            output)
+            self.assertTrue('cumulative time, call count' in output, output)
 
 class SupervisordTests(unittest.TestCase):
     def tearDown(self):
@@ -91,8 +93,9 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.fds_cleaned_up, False)
         self.assertEqual(options.rlimits_set, True)
-        self.assertEqual(options.make_logger_messages,
-                         (['setuid_called'], [], ['rlimits_set']))
+        self.assertEqual(options.parse_criticals, ['setuid_called'])
+        self.assertEqual(options.parse_warnings, [])
+        self.assertEqual(options.parse_infos, ['rlimits_set'])
         self.assertEqual(options.autochildlogdir_cleared, True)
         self.assertEqual(len(supervisord.process_groups), 1)
         self.assertEqual(supervisord.process_groups['foo'].config.options,
@@ -116,8 +119,9 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.fds_cleaned_up, True)
         self.assertFalse(hasattr(options, 'rlimits_set'))
-        self.assertEqual(options.make_logger_messages,
-                         (['setuid_called'], [], []))
+        self.assertEqual(options.parse_criticals, ['setuid_called'])
+        self.assertEqual(options.parse_warnings, [])
+        self.assertEqual(options.parse_infos, [])
         self.assertEqual(options.autochildlogdir_cleared, True)
         self.assertEqual(len(supervisord.process_groups), 1)
         self.assertEqual(supervisord.process_groups['foo'].config.options,
@@ -187,7 +191,8 @@ class SupervisordTests(unittest.TestCase):
         options._signal = signal.SIGTERM
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.options.mood, -1)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.SHUTDOWN)
         self.assertEqual(options.logger.data[0],
                          'received SIGTERM indicating exit request')
 
@@ -196,7 +201,8 @@ class SupervisordTests(unittest.TestCase):
         options._signal = signal.SIGINT
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.options.mood, -1)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.SHUTDOWN)
         self.assertEqual(options.logger.data[0],
                          'received SIGINT indicating exit request')
 
@@ -205,25 +211,44 @@ class SupervisordTests(unittest.TestCase):
         options._signal = signal.SIGQUIT
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.options.mood, -1)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.SHUTDOWN)
         self.assertEqual(options.logger.data[0],
                          'received SIGQUIT indicating exit request')
 
-    def test_handle_sighup(self):
+    def test_handle_sighup_in_running_state(self):
         options = DummyOptions()
         options._signal = signal.SIGHUP
         supervisord = self._makeOne(options)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.RUNNING)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.options.mood, 0)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.RESTARTING)
         self.assertEqual(options.logger.data[0],
                          'received SIGHUP indicating restart request')
+
+    def test_handle_sighup_in_shutdown_state(self):
+        options = DummyOptions()
+        options._signal = signal.SIGHUP
+        supervisord = self._makeOne(options)
+        supervisord.options.mood = SupervisorStates.SHUTDOWN
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.SHUTDOWN)
+        supervisord.handle_signal()
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.SHUTDOWN) # unchanged
+        self.assertEqual(options.logger.data[0],
+                         'ignored SIGHUP indicating restart request '
+                         '(shutdown in progress)')
 
     def test_handle_sigchld(self):
         options = DummyOptions()
         options._signal = signal.SIGCHLD
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.options.mood, 1)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.RUNNING)
         # supervisor.options.signame(signal.SIGCHLD) may return "SIGCLD"
         # on linux or other systems where SIGCHLD = SIGCLD.
         msgs = ('received SIGCHLD indicating a child quit',
@@ -234,7 +259,6 @@ class SupervisordTests(unittest.TestCase):
         options = DummyOptions()
         options._signal = signal.SIGUSR2
         pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
-        from supervisor.process import ProcessStates
         process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
         process1.delay = time.time() - 1
         supervisord = self._makeOne(options)
@@ -245,7 +269,8 @@ class SupervisordTests(unittest.TestCase):
         dummypgroup = DummyProcessGroup(options)
         supervisord.process_groups = {None:dummypgroup}
         supervisord.handle_signal()
-        self.assertEqual(supervisord.options.mood, 1)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.RUNNING)
         self.assertEqual(options.logs_reopened, True)
         self.assertEqual(options.logger.data[0],
                          'received SIGUSR2 indicating log reopen request')
@@ -256,12 +281,12 @@ class SupervisordTests(unittest.TestCase):
         options._signal = signal.SIGUSR1
         supervisord = self._makeOne(options)
         supervisord.handle_signal()
-        self.assertEqual(supervisord.options.mood, 1)
+        self.assertEqual(supervisord.options.mood,
+                         SupervisorStates.RUNNING)
         self.assertEqual(options.logger.data[0],
                          'received SIGUSR1 indicating nothing')
 
     def test_get_state(self):
-        from supervisor.states import SupervisorStates
         options = DummyOptions()
         supervisord = self._makeOne(options)
         self.assertEqual(supervisord.get_state(), SupervisorStates.RUNNING)
@@ -331,7 +356,7 @@ class SupervisordTests(unittest.TestCase):
                 'stopsignal': None, 'stopwaitsecs': 10,
                 'stopasgroup': False,
                 'killasgroup': False,
-                'exitcodes': (0,2), 'environment': None, 'serverurl': None,
+                'exitcodes': (0,), 'environment': None, 'serverurl': None,
             }
             result.update(params)
             return ProcessConfig(options, **result)
@@ -370,6 +395,125 @@ class SupervisordTests(unittest.TestCase):
         supervisord.add_process_group(make_gconfig('group1', [pconfig1]))
 
         added, changed, removed = supervisord.diff_to_active(new)
+        self.assertEqual([added, removed], [[], []])
+        self.assertEqual(changed, [group1])
+
+    def test_diff_changed_eventlistener(self):
+        from supervisor.events import EventTypes
+        from supervisor.options import EventListenerConfig, EventListenerPoolConfig
+
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+
+        def make_pconfig(name, command, **params):
+            result = {
+                'name': name, 'command': command,
+                'directory': None, 'umask': None, 'priority': 999, 'autostart': True,
+                'autorestart': True, 'startsecs': 10, 'startretries': 999,
+                'uid': None, 'stdout_logfile': None, 'stdout_capture_maxbytes': 0,
+                'stdout_events_enabled': False,
+                'stdout_logfile_backups': 0, 'stdout_logfile_maxbytes': 0,
+                'stdout_syslog': False,
+                'stderr_logfile': None, 'stderr_capture_maxbytes': 0,
+                'stderr_events_enabled': False,
+                'stderr_logfile_backups': 0, 'stderr_logfile_maxbytes': 0,
+                'stderr_syslog': False,
+                'redirect_stderr': False,
+                'stopsignal': None, 'stopwaitsecs': 10,
+                'stopasgroup': False,
+                'killasgroup': False,
+                'exitcodes': (0,), 'environment': None, 'serverurl': None,
+            }
+            result.update(params)
+            return EventListenerConfig(options, **result)
+
+        def make_econfig(*pool_event_names):
+            result = []
+            for pool_event_name in pool_event_names:
+                result.append(getattr(EventTypes, pool_event_name, None))
+            return result
+
+        def make_gconfig(name, pconfigs, pool_events, result_handler='supervisor.dispatchers:default_handler'):
+            return EventListenerPoolConfig(options, name, 25, pconfigs, 10, pool_events, result_handler)
+
+	    # Test that changing an event listener command causes the diff_to_activate
+        pconfig = make_pconfig('process1', 'process1-new')
+        econfig = make_econfig("TICK_60")
+        group1 = make_gconfig('group1', [pconfig], econfig)
+
+        pconfig = make_pconfig('process2', 'process2')
+        econfig = make_econfig("TICK_3600")
+        group2 = make_gconfig('group2', [pconfig], econfig)
+        new = [group1, group2]
+
+        pconfig = make_pconfig('process1', 'process1-old')
+        econfig = make_econfig("TICK_60")
+        group3 = make_gconfig('group1', [pconfig], econfig)
+
+        pconfig = make_pconfig('process2', 'process2')
+        econfig = make_econfig("TICK_3600")
+        group4 = make_gconfig('group2', [pconfig], econfig)
+        supervisord.add_process_group(group3)
+        supervisord.add_process_group(group4)
+
+        added, changed, removed = supervisord.diff_to_active(new)
+
+        self.assertEqual([added, removed], [[], []])
+        self.assertEqual(changed, [group1])
+
+        # Test that changing the event triggers diff_to_activate
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+
+        pconfig = make_pconfig('process1', 'process1')
+        econfig = make_econfig("TICK_60")
+        group1 = make_gconfig('group1', [pconfig], econfig)
+
+        pconfig = make_pconfig('process2', 'process2')
+        econfig = make_econfig("TICK_3600")
+        group2 = make_gconfig('group2', [pconfig], econfig)
+        new = [group1, group2]
+
+        pconfig = make_pconfig('process1', 'process1')
+        econfig = make_econfig("TICK_5")
+        group3 = make_gconfig('group1', [pconfig], econfig)
+
+        pconfig = make_pconfig('process2', 'process2')
+        econfig = make_econfig("TICK_3600")
+        group4 = make_gconfig('group2', [pconfig], econfig)
+        supervisord.add_process_group(group3)
+        supervisord.add_process_group(group4)
+
+        added, changed, removed = supervisord.diff_to_active(new)
+
+        self.assertEqual([added, removed], [[], []])
+        self.assertEqual(changed, [group1])
+
+        # Test that changing the result_handler triggers diff_to_activate
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+
+        pconfig = make_pconfig('process1', 'process1')
+        econfig = make_econfig("TICK_60")
+        group1 = make_gconfig('group1', [pconfig], econfig, 'new-result-handler')
+
+        pconfig = make_pconfig('process2', 'process2')
+        econfig = make_econfig("TICK_3600")
+        group2 = make_gconfig('group2', [pconfig], econfig)
+        new = [group1, group2]
+
+        pconfig = make_pconfig('process1', 'process1')
+        econfig = make_econfig("TICK_60")
+        group3 = make_gconfig('group1', [pconfig], econfig, 'old-result-handler')
+
+        pconfig = make_pconfig('process2', 'process2')
+        econfig = make_econfig("TICK_3600")
+        group4 = make_gconfig('group2', [pconfig], econfig)
+        supervisord.add_process_group(group3)
+        supervisord.add_process_group(group4)
+
+        added, changed, removed = supervisord.diff_to_active(new)
+
         self.assertEqual([added, removed], [[], []])
         self.assertEqual(changed, [group1])
 
@@ -418,7 +562,9 @@ class SupervisordTests(unittest.TestCase):
         self.assertRaises(KeyError, supervisord.remove_process_group, 'asdf')
 
         supervisord.add_process_group(gconfig)
+        group = supervisord.process_groups['foo']
         result = supervisord.remove_process_group('foo')
+        self.assertTrue(group.before_remove_called)
         self.assertEqual(supervisord.process_groups, {})
         self.assertTrue(result)
 
@@ -561,7 +707,7 @@ class SupervisordTests(unittest.TestCase):
         gconfig = DummyPGroupConfig(options)
         pgroup = DummyProcessGroup(gconfig)
         supervisord.process_groups = {'foo': pgroup}
-        supervisord.options.mood = -1
+        supervisord.options.mood = SupervisorStates.SHUTDOWN
         L = []
         def callback(event):
             L.append(event)
@@ -586,7 +732,7 @@ class SupervisordTests(unittest.TestCase):
         def callback():
             L.append(1)
         supervisord.process_groups = {'foo': pgroup}
-        supervisord.options.mood = 0
+        supervisord.options.mood = SupervisorStates.RESTARTING
         supervisord.options.test = True
         from supervisor.medusa import asyncore_25 as asyncore
         self.assertRaises(asyncore.ExitNow, supervisord.runforever)
@@ -604,14 +750,13 @@ class SupervisordTests(unittest.TestCase):
         def callback():
             L.append(1)
         supervisord.process_groups = {'foo': pgroup}
-        supervisord.options.mood = 0
+        supervisord.options.mood = SupervisorStates.RESTARTING
         supervisord.options.test = True
         supervisord.runforever()
         self.assertNotEqual(supervisord.lastshutdownreport, 0)
 
     def test_getSupervisorStateDescription(self):
         from supervisor.states import getSupervisorStateDescription
-        from supervisor.states import SupervisorStates
         result = getSupervisorStateDescription(SupervisorStates.RUNNING)
         self.assertEqual(result, 'RUNNING')
 

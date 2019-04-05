@@ -1,9 +1,12 @@
 *~
+*.conf
 *.egg
 *.egg-info
+*.log
 *.pyc
 *.pyo
 *.swp
+*.pss
 .DS_Store
 .coverage
 .eggs/
@@ -12,7 +15,9 @@ build/
 docs/.build/
 dist/
 env*/
+venv*/
 htmlcov/
 tmp/
 coverage.xml
 nosetests.xml
+.cache/

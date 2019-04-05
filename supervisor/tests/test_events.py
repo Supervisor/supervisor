@@ -20,6 +20,12 @@ class EventSubscriptionNotificationTests(unittest.TestCase):
         events.subscribe(None, None)
         self.assertEqual(events.callbacks, [(None, None)])
 
+    def test_unsubscribe(self):
+        from supervisor import events
+        events.callbacks[:] = [(1, 1), (2, 2), (3, 3)]
+        events.unsubscribe(2, 2)
+        self.assertEqual(events.callbacks, [(1, 1), (3, 3)])
+
     def test_clear(self):
         from supervisor import events
         events.callbacks[:] = [(None, None)]
@@ -273,7 +279,7 @@ class TestSerializations(unittest.TestCase):
             config = pconfig1
         process1.group = DummyGroup
         event = ProcessLogStdoutEvent(process1, 1, 'yo')
-        headers, payload = self._deserialize(str(event))
+        headers, payload = self._deserialize(event.payload())
         self.assertEqual(headers['processname'], 'process1', headers)
         self.assertEqual(headers['groupname'], 'process1', headers)
         self.assertEqual(headers['pid'], '1', headers)
@@ -288,7 +294,7 @@ class TestSerializations(unittest.TestCase):
             config = pconfig1
         process1.group = DummyGroup
         event = ProcessLogStderrEvent(process1, 1, 'yo')
-        headers, payload = self._deserialize(str(event))
+        headers, payload = self._deserialize(event.payload())
         self.assertEqual(headers['processname'], 'process1', headers)
         self.assertEqual(headers['groupname'], 'process1', headers)
         self.assertEqual(headers['pid'], '1', headers)
@@ -303,7 +309,7 @@ class TestSerializations(unittest.TestCase):
             config = pconfig1
         process1.group = DummyGroup
         event = ProcessCommunicationStdoutEvent(process1, 1, 'yo')
-        headers, payload = self._deserialize(str(event))
+        headers, payload = self._deserialize(event.payload())
         self.assertEqual(headers['processname'], 'process1', headers)
         self.assertEqual(headers['groupname'], 'process1', headers)
         self.assertEqual(headers['pid'], '1', headers)
@@ -318,7 +324,7 @@ class TestSerializations(unittest.TestCase):
         process1.group = DummyGroup
         from supervisor.events import ProcessCommunicationStderrEvent
         event = ProcessCommunicationStderrEvent(process1, 1, 'yo')
-        headers, payload = self._deserialize(str(event))
+        headers, payload = self._deserialize(event.payload())
         self.assertEqual(headers['processname'], 'process1', headers)
         self.assertEqual(headers['groupname'], 'process1', headers)
         self.assertEqual(headers['pid'], '1', headers)
@@ -327,21 +333,21 @@ class TestSerializations(unittest.TestCase):
     def test_remote_comm_event(self):
         from supervisor.events import RemoteCommunicationEvent
         event = RemoteCommunicationEvent('foo', 'bar')
-        headers, payload = self._deserialize(str(event))
+        headers, payload = self._deserialize(event.payload())
         self.assertEqual(headers['type'], 'foo', headers)
         self.assertEqual(payload, 'bar')
 
     def test_process_group_added_event(self):
         from supervisor.events import ProcessGroupAddedEvent
         event = ProcessGroupAddedEvent('foo')
-        headers, payload = self._deserialize(str(event))
+        headers, payload = self._deserialize(event.payload())
         self.assertEqual(headers['groupname'], 'foo')
         self.assertEqual(payload, '')
 
     def test_process_group_removed_event(self):
         from supervisor.events import ProcessGroupRemovedEvent
         event = ProcessGroupRemovedEvent('foo')
-        headers, payload = self._deserialize(str(event))
+        headers, payload = self._deserialize(event.payload())
         self.assertEqual(headers['groupname'], 'foo')
         self.assertEqual(payload, '')
 
@@ -360,7 +366,7 @@ class TestSerializations(unittest.TestCase):
             process1 = DummyProcess(pconfig1)
             process1.group = DummyGroup
             event = klass(process1, ProcessStates.STARTING)
-            headers, payload = self._deserialize(str(event))
+            headers, payload = self._deserialize(event.payload())
             self.assertEqual(len(headers), 3)
             self.assertEqual(headers['processname'], 'process1')
             self.assertEqual(headers['groupname'], 'process1')
@@ -384,7 +390,7 @@ class TestSerializations(unittest.TestCase):
             process1.group = DummyGroup
             process1.pid = 1
             event = klass(process1, ProcessStates.STARTING)
-            headers, payload = self._deserialize(str(event))
+            headers, payload = self._deserialize(event.payload())
             self.assertEqual(len(headers), 4)
             self.assertEqual(headers['processname'], 'process1')
             self.assertEqual(headers['groupname'], 'process1')
@@ -407,7 +413,7 @@ class TestSerializations(unittest.TestCase):
             process1 = DummyProcess(pconfig1)
             process1.group = DummyGroup
             event = klass(process1, ProcessStates.STARTING)
-            headers, payload = self._deserialize(str(event))
+            headers, payload = self._deserialize(event.payload())
             self.assertEqual(len(headers), 4)
             self.assertEqual(headers['processname'], 'process1')
             self.assertEqual(headers['groupname'], 'process1')
@@ -416,11 +422,11 @@ class TestSerializations(unittest.TestCase):
             self.assertEqual(payload, '')
             process1.backoff = 1
             event = klass(process1, ProcessStates.STARTING)
-            headers, payload = self._deserialize(str(event))
+            headers, payload = self._deserialize(event.payload())
             self.assertEqual(headers['tries'], '1')
             process1.backoff = 2
             event = klass(process1, ProcessStates.STARTING)
-            headers, payload = self._deserialize(str(event))
+            headers, payload = self._deserialize(event.payload())
             self.assertEqual(headers['tries'], '2')
 
     def test_process_state_exited_event_expected(self):
@@ -436,7 +442,7 @@ class TestSerializations(unittest.TestCase):
         event = events.ProcessStateExitedEvent(process1,
                                                ProcessStates.STARTING,
                                                expected=True)
-        headers, payload = self._deserialize(str(event))
+        headers, payload = self._deserialize(event.payload())
         self.assertEqual(len(headers), 5)
         self.assertEqual(headers['processname'], 'process1')
         self.assertEqual(headers['groupname'], 'process1')
@@ -458,7 +464,7 @@ class TestSerializations(unittest.TestCase):
         event = events.ProcessStateExitedEvent(process1,
                                                ProcessStates.STARTING,
                                                expected=False)
-        headers, payload = self._deserialize(str(event))
+        headers, payload = self._deserialize(event.payload())
         self.assertEqual(len(headers), 5)
         self.assertEqual(headers['processname'], 'process1')
         self.assertEqual(headers['groupname'], 'process1')
@@ -470,7 +476,7 @@ class TestSerializations(unittest.TestCase):
     def test_supervisor_sc_event(self):
         from supervisor import events
         event = events.SupervisorRunningEvent()
-        headers, payload = self._deserialize(str(event))
+        headers, payload = self._deserialize(event.payload())
         self.assertEqual(headers, {})
         self.assertEqual(payload, '')
 
@@ -482,7 +488,7 @@ class TestSerializations(unittest.TestCase):
             events.Tick3600Event,
             ):
             event = klass(1, 2)
-            headers, payload = self._deserialize(str(event))
+            headers, payload = self._deserialize(event.payload())
             self.assertEqual(headers, {'when':'1'})
             self.assertEqual(payload, '')
 

@@ -9,9 +9,9 @@ from supervisor.compat import as_string
 from supervisor.compat import encodestring
 from supervisor.medusa import asynchat_25 as asynchat
 
-CR="\x0d"
-LF="\x0a"
-CRLF=CR+LF
+CR = b'\x0d'
+LF = b'\x0a'
+CRLF = CR+LF
 
 class Listener(object):
 
@@ -28,6 +28,10 @@ class Listener(object):
         pass
 
     def feed(self, url, data):
+        try:
+            data = as_string(data)
+        except UnicodeDecodeError:
+            data = 'Undecodable: %r' % data
         sys.stdout.write(data)
         sys.stdout.flush()
 
@@ -46,7 +50,7 @@ class HTTPHandler(asynchat.async_chat):
         asynchat.async_chat.__init__(self, conn, map)
         self.listener = listener
         self.user_agent = 'Supervisor HTTP Client'
-        self.buffer = ''
+        self.buffer = b''
         self.set_terminator(CRLF)
         self.connected = 0
         self.part = self.status_line
@@ -139,21 +143,21 @@ class HTTPHandler(asynchat.async_chat):
         self.buffer = self.buffer + bytes
         if self.part==self.body:
             self.feed(self.buffer)
-            self.buffer = ''
+            self.buffer = b''
 
     def found_terminator(self):
         self.part()
-        self.buffer = ''
+        self.buffer = b''
 
     def ignore(self):
-        self.buffer = ''
+        self.buffer = b''
 
     def status_line(self):
         line = self.buffer
 
         version, status, reason = line.split(None, 2)
         status = int(status)
-        if not version.startswith('HTTP/'):
+        if not version.startswith(b'HTTP/'):
             raise ValueError(line)
 
         self.listener.status(self.url, status)
@@ -170,19 +174,19 @@ class HTTPHandler(asynchat.async_chat):
     def headers(self):
         line = self.buffer
         if not line:
-            if self.encoding=="chunked":
+            if self.encoding == b'chunked':
                 self.part = self.chunked_size
             else:
                 self.part = self.body
                 self.set_terminator(self.length)
         else:
-            name, value = line.split(":", 1)
+            name, value = line.split(b':', 1)
             if name and value:
                 name = name.lower()
                 value = value.strip()
-                if name=="transfer-encoding":
+                if name == b'transfer-encoding':
                     self.encoding = value
-                elif name=="content-length":
+                elif name == b'content-length':
                     self.length = int(value)
                 self.response_header(name, value)
 
@@ -218,6 +222,6 @@ class HTTPHandler(asynchat.async_chat):
         # http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.6.1
         # trailer        = *(entity-header CRLF)
         line = self.buffer
-        if line==CRLF:
+        if line == CRLF:
             self.done()
             self.close()

@@ -109,7 +109,7 @@ value in the configuration file.
    occurs.  The value is suffix-multiplied, e.g "1" is one byte, "1MB"
    is 1 megabyte, "1GB" is 1 gigabyte.
 
--y NUM, --logfile_backups=NUM
+-z NUM, --logfile_backups=NUM
 
    Number of backup copies of the supervisord activity log to keep
    around.  Each logfile will be of size ``logfile_maxbytes``.
@@ -243,11 +243,19 @@ add <name> [...]
 
 remove <name> [...]
 
-   Removes process/group from active confi
-
+   Removes process/group from active config
+   
 update
 
-   Reload config and add/remove as necessary
+   Reload config and add/remove as necessary, and will restart affected programs
+   
+update all
+
+   Reload config and add/remove as necessary, and will restart affected programs
+
+update <gname> [...]
+
+   Update specific groups, and will restart affected programs
 
 clear <name>
 
@@ -277,6 +285,14 @@ pid <name>
 pid all
 
    Get the PID of every child process, one per line.
+
+reload
+
+   Restarts the remote supervisord
+
+reread
+
+   Reload the daemon's configuration files, without add/remove (no restarts)
 
 restart <name>
 

@@ -1,9 +1,9 @@
 _NOW = 1151365354
 _TIMEFORMAT = '%b %d %I:%M %p'
 
-from supervisor.compat import total_ordering
+from functools import total_ordering
+
 from supervisor.compat import Fault
-from supervisor.compat import as_string
 from supervisor.compat import as_bytes
 
 # mock is imported here for py2/3 compat.  we only declare mock as a dependency
@@ -81,6 +81,7 @@ class DummyOptions:
         self.existing = []
         self.openreturn = None
         self.readfd_result = ''
+        self.parse_criticals = []
         self.parse_warnings = []
         self.parse_infos = []
         self.serverurl = 'http://localhost:9001'
@@ -105,13 +106,13 @@ class DummyOptions:
     def cleanup_fds(self):
         self.fds_cleaned_up = True
 
-    def set_rlimits(self):
+    def set_rlimits_or_exit(self):
         self.rlimits_set = True
-        return ['rlimits_set']
+        self.parse_infos.append('rlimits_set')
 
-    def set_uid(self):
+    def set_uid_or_exit(self):
         self.setuid_called = True
-        return 'setuid_called'
+        self.parse_criticals.append('setuid_called')
 
     def openhttpservers(self, supervisord):
         self.httpservers_opened = True
@@ -128,8 +129,8 @@ class DummyOptions:
     def get_socket_map(self):
         return self.socket_map
 
-    def make_logger(self, critical_msgs, warn_msgs, info_msgs):
-        self.make_logger_messages = critical_msgs, warn_msgs, info_msgs
+    def make_logger(self):
+        pass
 
     def clear_autochildlogdir(self):
         self.autochildlogdir_cleared = True
@@ -220,7 +221,7 @@ class DummyOptions:
         self.execv_args = (filename, argv)
         self.execv_environment = environment
 
-    def dropPrivileges(self, uid):
+    def drop_privileges(self, uid):
         if self.setuid_msg:
             return self.setuid_msg
         self.privsdropped = uid
@@ -521,7 +522,7 @@ class DummyPConfig:
                  stderr_syslog=False,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
-                 exitcodes=(0,2), environment=None, serverurl=None):
+                 exitcodes=(0,), environment=None, serverurl=None):
         self.options = options
         self.name = name
         self.command = command
@@ -557,6 +558,9 @@ class DummyPConfig:
         self.umask = umask
         self.autochildlogs_created = False
         self.serverurl = serverurl
+
+    def get_path(self):
+        return ["/bin", "/usr/bin", "/usr/local/bin"]
 
     def create_autochildlogs(self):
         self.autochildlogs_created = True
@@ -597,7 +601,7 @@ def makeExecutable(file, substitutions=None):
     tmpnam = tempfile.mktemp(prefix=last)
     with open(tmpnam, 'w') as f:
         f.write(data)
-    os.chmod(tmpnam, 493) # 0755 on Py2, 0o755 on Py3
+    os.chmod(tmpnam, 0o755)
     return tmpnam
 
 def makeSpew(unkillable=False):
@@ -1038,9 +1042,13 @@ class DummyProcessGroup(object):
         self.all_stopped = False
         self.dispatchers = {}
         self.unstopped_processes = []
+        self.before_remove_called = False
 
     def transition(self):
         self.transitioned = True
+
+    def before_remove(self):
+        self.before_remove_called = True
 
     def stop_all(self):
         self.all_stopped = True
@@ -1138,7 +1146,7 @@ class DummyStream:
         self.error = error
         self.closed = False
         self.flushed = False
-        self.written = ''
+        self.written = b''
         self._fileno = fileno
     def close(self):
         if self.error:
@@ -1153,7 +1161,7 @@ class DummyStream:
             error = self.error
             self.error = None
             raise error
-        self.written += as_string(msg)
+        self.written += as_bytes(msg)
     def seek(self, num, whence=0):
         pass
     def tell(self):
@@ -1166,12 +1174,13 @@ class DummyEvent:
         if serial is not None:
             self.serial = serial
 
-    def __str__(self):
+    def payload(self):
         return 'dummy event'
 
 class DummyPoller:
     def __init__(self, options):
         self.result = [], []
+        self.closed = False
 
     def register_readable(self, fd):
         pass
@@ -1181,6 +1190,9 @@ class DummyPoller:
 
     def poll(self, timeout):
         return self.result
+
+    def close(self):
+        self.closed = True
 
 def dummy_handler(event, result):
     pass

@@ -369,15 +369,17 @@ follows.
   Instruct :program:`supervisord` to switch users to this UNIX user
   account before doing any meaningful processing.  The user can only
   be switched if :program:`supervisord` is started as the root user.
-  If :program:`supervisord` can't switch users, it will still continue
-  but will write a log message at the ``critical`` level saying that it
-  can't drop privileges.
 
   *Default*: do not switch users
 
   *Required*:  No.
 
   *Introduced*: 3.0
+
+  *Changed*: 3.3.4.  If :program:`supervisord` can't switch to the
+  specified user, it will write an error message to ``stderr`` and
+  then exit immediately.  In earlier versions, it would continue to
+  run but would log a message at the ``critical`` level.
 
 ``directory``
 
@@ -755,11 +757,16 @@ where specified.
   request, :program:`supervisord` will restart the process if it exits
   with an exit code that is not defined in this list.
 
-  *Default*: 0,2
+  *Default*: 0
 
   *Required*:  No.
 
   *Introduced*: 3.0
+
+  .. note::
+
+      In Supervisor versions prior to 4.0, the default was ``0,2``.  In
+      Supervisor 4.0, the default was changed to ``0``.
 
 ``stopsignal``
 
@@ -911,7 +918,7 @@ where specified.
 
   *Required*:  No.
 
-  *Introduced*: 3.0, replaces 2.0's ``logfile_backups``
+  *Introduced*: 3.0
 
 ``stdout_events_enabled``
 
@@ -1088,7 +1095,7 @@ where specified.
    autorestart=unexpected
    startsecs=10
    startretries=3
-   exitcodes=0,2
+   exitcodes=0
    stopsignal=TERM
    stopwaitsecs=10
    stopasgroup=false
@@ -1116,6 +1123,12 @@ The :file:`supervisord.conf` file may contain a section named
 section, it must contain a single key named "files".  The values in
 this key specify other configuration files to be included within the
 configuration.
+
+.. note::
+
+    The ``[include]`` section is processed only by ``supervisord``.  It is
+    ignored by ``supervisorctl``.
+
 
 ``[include]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1269,13 +1282,18 @@ the web server and the process manager to each do what they do best.
    number ``0`` (zero).  When the last child in the group exits,
    Supervisor will close the socket.
 
+.. note::
+
+   Prior to Supervisor 3.4.0, FastCGI programs (``[fcgi-program:x]``)
+   could not be referenced in groups (``[group:x]``).
+
 All the options available to ``[program:x]`` sections are
 also respected by ``fcgi-program`` sections.
 
 ``[fcgi-program:x]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``[fcgi-program:x]`` sections have a single key which ``[program:x]``
+``[fcgi-program:x]`` sections have a few keys which ``[program:x]``
 sections do not have.
 
 ``socket``
@@ -1348,7 +1366,7 @@ above constraints and additions.
    autorestart=unexpected
    startsecs=1
    startretries=3
-   exitcodes=0,2
+   exitcodes=0
    stopsignal=QUIT
    stopasgroup=false
    killasgroup=false
@@ -1430,7 +1448,7 @@ above constraints and additions.
    autorestart=unexpected
    startsecs=1
    startretries=3
-   exitcodes=0,2
+   exitcodes=0
    stopsignal=QUIT
    stopwaitsecs=10
    stopasgroup=false

@@ -1,14 +1,13 @@
-import types
+import datetime
 import re
-import traceback
 import socket
 import sys
-import datetime
 import time
+import traceback
+import types
 from xml.etree.ElementTree import iterparse
 
 from supervisor.compat import xmlrpclib
-from supervisor.compat import func_attribute
 from supervisor.compat import StringIO
 from supervisor.compat import urllib
 from supervisor.compat import as_bytes
@@ -16,11 +15,11 @@ from supervisor.compat import as_string
 from supervisor.compat import encodestring
 from supervisor.compat import decodestring
 from supervisor.compat import httplib
+from supervisor.compat import PY2
 
 from supervisor.medusa.http_server import get_header
 from supervisor.medusa.xmlrpc_handler import xmlrpc_handler
 from supervisor.medusa import producers
-from supervisor.medusa import text_socket
 
 from supervisor.http import NOT_DONE_YET
 
@@ -43,10 +42,6 @@ class Faults:
     ALREADY_ADDED = 90
     STILL_RUNNING = 91
     CANT_REREAD = 92
-
-DEAD_PROGRAM_FAULTS = (Faults.SPAWN_ERROR,
-                       Faults.ABNORMAL_TERMINATION,
-                       Faults.NOT_RUNNING)
 
 def getFaultDescription(code):
     for faultname in Faults.__dict__:
@@ -151,7 +146,7 @@ def xmlrpc_marshal(value):
     if ismethodresponse:
         if not isinstance(value, tuple):
             value = (value,)
-        body = xmlrpclib.dumps(value,  methodresponse=ismethodresponse)
+        body = xmlrpclib.dumps(value, methodresponse=ismethodresponse)
     else:
         body = xmlrpclib.dumps(value)
     return body
@@ -171,8 +166,7 @@ class SystemNamespaceRPCInterface:
                 # introspect; any methods that don't start with underscore
                 # are published
                 func = getattr(namespace, method_name)
-                meth = getattr(func, func_attribute, None)
-                if meth is not None:
+                if callable(func):
                     if not method_name.startswith('_'):
                         sig = '%s.%s' % (ns_name, method_name)
                         methods[sig] = str(func.__doc__)
@@ -382,6 +376,12 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
 
         try:
             try:
+                # on 2.x, the Expat parser doesn't like Unicode which actually
+                # contains non-ASCII characters. It's a bit of a kludge to
+                # do it conditionally here, but it's down to how underlying
+                # libs behave
+                if PY2:
+                    data = data.encode('ascii', 'xmlcharrefreplace')
                 params, method = self.loads(data)
             except:
                 logger.error(
@@ -427,7 +427,7 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                 # if we get anything but a function, it implies that this
                 # response doesn't need to be deferred, we can service it
                 # right away.
-                body = xmlrpc_marshal(value)
+                body = as_bytes(xmlrpc_marshal(value))
                 request['Content-Type'] = 'text/xml'
                 request['Content-Length'] = len(body)
                 request.push(body)
@@ -446,18 +446,27 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
         return traverse(self.rpcinterface, method, params)
 
 def traverse(ob, method, params):
-    path = method.split('.')
-    for name in path:
-        if name.startswith('_'):
-            # security (don't allow things that start with an underscore to
-            # be called remotely)
-            raise RPCError(Faults.UNKNOWN_METHOD)
-        ob = getattr(ob, name, None)
-        if ob is None:
-            raise RPCError(Faults.UNKNOWN_METHOD)
+    dotted_parts = method.split('.')
+    # security (CVE-2017-11610, don't allow object traversal)
+    if len(dotted_parts) != 2:
+        raise RPCError(Faults.UNKNOWN_METHOD)
+    namespace, method = dotted_parts
+
+    # security (don't allow methods that start with an underscore to
+    # be called remotely)
+    if method.startswith('_'):
+        raise RPCError(Faults.UNKNOWN_METHOD)
+
+    rpcinterface = getattr(ob, namespace, None)
+    if rpcinterface is None:
+        raise RPCError(Faults.UNKNOWN_METHOD)
+
+    func = getattr(rpcinterface, method, None)
+    if not isinstance(func, types.MethodType):
+        raise RPCError(Faults.UNKNOWN_METHOD)
 
     try:
-        return ob(*params)
+        return func(*params)
     except TypeError:
         raise RPCError(Faults.INCORRECT_PARAMETERS)
 
@@ -498,7 +507,13 @@ class SupervisorTransport(xmlrpclib.Transport):
         else:
             raise ValueError('Unknown protocol for serverurl %s' % serverurl)
 
+    def close(self):
+        if self.connection:
+            self.connection.close()
+            self.connection = None
+
     def request(self, host, handler, request_body, verbose=0):
+        request_body = as_bytes(request_body)
         if not self.connection:
             self.connection = self._get_connection()
             self.headers = {
@@ -529,6 +544,10 @@ class SupervisorTransport(xmlrpclib.Transport):
                                           r.reason,
                                           '' )
         data = r.read()
+        data = as_string(data)
+        # on 2.x, the Expat parser doesn't like Unicode which actually
+        # contains non-ASCII characters
+        data = data.encode('ascii', 'xmlcharrefreplace')
         p, u = self.getparser()
         p.feed(data)
         p.close()
@@ -536,7 +555,7 @@ class SupervisorTransport(xmlrpclib.Transport):
 
 class UnixStreamHTTPConnection(httplib.HTTPConnection):
     def connect(self): # pragma: no cover
-        self.sock = text_socket.text_socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         # we abuse the host parameter as the socketname
         self.sock.connect(self.socketfile)
 

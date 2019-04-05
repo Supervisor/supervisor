@@ -12,6 +12,7 @@ producer, then wrap this with the 'chunked' transfer-encoding producer.
 """
 
 from asynchat import find_prefix_at_end
+from supervisor.compat import as_bytes
 
 class simple_producer:
     """producer for a string"""
@@ -26,7 +27,7 @@ class simple_producer:
             return result
         else:
             result = self.data
-            self.data = ''
+            self.data = b''
             return result
 
 class scanning_producer:
@@ -47,7 +48,7 @@ class scanning_producer:
             self.pos += len(result)
             return result
         else:
-            return ''
+            return b''
 
 class lines_producer:
     """producer for a list of lines"""
@@ -74,7 +75,7 @@ class buffer_list_producer:
 
     def more (self):
         if self.index >= len(self.buffers):
-            return ''
+            return b''
         else:
             data = self.buffers[self.index]
             self.index += 1
@@ -92,14 +93,14 @@ class file_producer:
 
     def more (self):
         if self.done:
-            return ''
+            return b''
         else:
             data = self.file.read (self.out_buffer_size)
             if not data:
                 self.file.close()
                 del self.file
                 self.done = 1
-                return ''
+                return b''
             else:
                 return data
 
@@ -113,7 +114,7 @@ class file_producer:
 class output_producer:
     """Acts like an output file; suitable for capturing sys.stdout"""
     def __init__ (self):
-        self.data = ''
+        self.data = b''
 
     def write (self, data):
         lines = data.split('\n')
@@ -154,7 +155,7 @@ class composite_producer:
             else:
                 self.producers.pop(0)
         else:
-            return ''
+            return b''
 
 
 class globbing_producer:
@@ -166,7 +167,7 @@ class globbing_producer:
 
     def __init__ (self, producer, buffer_size=1<<16):
         self.producer = producer
-        self.buffer = ''
+        self.buffer = b''
         self.buffer_size = buffer_size
 
     def more (self):
@@ -177,7 +178,7 @@ class globbing_producer:
             else:
                 break
         r = self.buffer
-        self.buffer = ''
+        self.buffer = b''
         return r
 
 
@@ -231,15 +232,16 @@ class chunked_producer:
         if self.producer:
             data = self.producer.more()
             if data:
-                return '%x\r\n%s\r\n' % (len(data), data)
+                s = '%x' % len(data)
+                return as_bytes(s) + b'\r\n' + data + b'\r\n'
             else:
                 self.producer = None
                 if self.footers:
-                    return '\r\n'.join(['0'] + self.footers) + '\r\n\r\n'
+                    return b'\r\n'.join([b'0'] + self.footers) + b'\r\n\r\n'
                 else:
-                    return '0\r\n\r\n'
+                    return b'0\r\n\r\n'
         else:
-            return ''
+            return b''
 
 try:
     import zlib
@@ -265,7 +267,7 @@ class compressed_producer:
 
     def more (self):
         if self.producer:
-            cdata = ''
+            cdata = b''
             # feed until we get some output
             while not cdata:
                 data = self.producer.more()
@@ -276,7 +278,7 @@ class compressed_producer:
                     cdata = self.compressor.compress (data)
             return cdata
         else:
-            return ''
+            return b''
 
 class escaping_producer:
 
@@ -287,7 +289,7 @@ class escaping_producer:
         self.producer = producer
         self.esc_from = esc_from
         self.esc_to = esc_to
-        self.buffer = ''
+        self.buffer = b''
         self.find_prefix_at_end = find_prefix_at_end
 
     def more (self):
@@ -305,7 +307,7 @@ class escaping_producer:
                 return buffer[:-i]
             else:
                 # no prefix, return it all
-                self.buffer = ''
+                self.buffer = b''
                 return buffer
         else:
             return buffer

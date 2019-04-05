@@ -127,8 +127,8 @@ Supervisor Components
   :program:`supervisorctl`.  It provides a shell-like interface to the
   features provided by :program:`supervisord`.  From
   :program:`supervisorctl`, a user can connect to different
-  :program:`supervisord` processes, get status on the subprocesses
-  controlled by, stop and start subprocesses of, and get lists of
+  :program:`supervisord` processes (one at a time), get status on the
+  subprocesses controlled by, stop and start subprocesses of, and get lists of
   running processes of a :program:`supervisord`.
 
   The command-line client talks to the server across a UNIX domain
@@ -162,4 +162,5 @@ It will likely work fine on most UNIX systems.
 
 Supervisor will *not* run at all under any version of Windows.
 
-Supervisor works under Python 2 version 2.6 or greater and Python 3 version 3.2 or greater.
+Supervisor is intended to work on Python 3 version 3.4 or later
+and on Python 2 version 2.7.

@@ -69,7 +69,7 @@ class LogtailHandlerTests(HandlerTests, unittest.TestCase):
             from supervisor.medusa import http_date
             self.assertEqual(request.headers['Last-Modified'],
                 http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
-            self.assertEqual(request.headers['Content-Type'], 'text/plain')
+            self.assertEqual(request.headers['Content-Type'], 'text/plain;charset=utf-8')
             self.assertEqual(len(request.producers), 1)
             self.assertEqual(request._done, True)
 
@@ -105,7 +105,7 @@ class MainLogTailHandlerTests(HandlerTests, unittest.TestCase):
             from supervisor.medusa import http_date
             self.assertEqual(request.headers['Last-Modified'],
                 http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
-            self.assertEqual(request.headers['Content-Type'], 'text/plain')
+            self.assertEqual(request.headers['Content-Type'], 'text/plain;charset=utf-8')
             self.assertEqual(len(request.producers), 1)
             self.assertEqual(request._done, True)
 
@@ -122,15 +122,15 @@ class TailFProducerTests(unittest.TestCase):
         request = DummyRequest('/logtail/foo', None, None, None)
         from supervisor import http
         f = tempfile.NamedTemporaryFile()
-        f.write(as_bytes('a' * 80))
+        f.write(b'a' * 80)
         f.flush()
         producer = self._makeOne(request, f.name, 80)
         result = producer.more()
-        self.assertEqual(result, as_bytes('a' * 80))
-        f.write(as_bytes('w' * 100))
+        self.assertEqual(result, b'a' * 80)
+        f.write(as_bytes(b'w' * 100))
         f.flush()
         result = producer.more()
-        self.assertEqual(result, as_bytes('w' * 100))
+        self.assertEqual(result, b'w' * 100)
         result = producer.more()
         self.assertEqual(result, http.NOT_DONE_YET)
         f.truncate(0)
@@ -155,33 +155,33 @@ class TailFProducerTests(unittest.TestCase):
         f.flush()
         producer = self._makeOne(request, f.name, 80)
         result = producer.more()
-        self.assertEqual(result, as_bytes('a' * 80))
+        self.assertEqual(result, b'a' * 80)
         f.close()
         f2 = open(f.name, 'wb')
         try:
-            f2.write(as_bytes('b' * 80))
+            f2.write(as_bytes(b'b' * 80))
             f2.close()
             result = producer.more()
         finally:
             os.unlink(f2.name)
-        self.assertEqual(result, as_bytes('b' * 80))
+        self.assertEqual(result, b'b' * 80)
 
     def test_handle_more_follow_file_gone(self):
         request = DummyRequest('/logtail/foo', None, None, None)
         filename = tempfile.mktemp()
         with open(filename, 'wb') as f:
-            f.write(as_bytes('a' * 80))
+            f.write(b'a' * 80)
         try:
             producer = self._makeOne(request, f.name, 80)
         finally:
             os.unlink(f.name)
         result = producer.more()
-        self.assertEqual(result, as_bytes('a' * 80))
+        self.assertEqual(result, b'a' * 80)
         with open(filename, 'wb') as f:
-            f.write(as_bytes('b' * 80))
+            f.write(as_bytes(b'b' * 80))
         try:
             result = producer.more() # should open in new file
-            self.assertEqual(result, as_bytes('b' * 80))
+            self.assertEqual(result, b'b' * 80)
         finally:
              os.unlink(f.name)
 
@@ -199,28 +199,28 @@ class DeferringChunkedProducerTests(unittest.TestCase):
         self.assertEqual(producer.more(), NOT_DONE_YET)
 
     def test_more_string(self):
-        wrapped = DummyProducer('hello')
+        wrapped = DummyProducer(b'hello')
         producer = self._makeOne(wrapped)
-        self.assertEqual(producer.more(), '5\r\nhello\r\n')
+        self.assertEqual(producer.more(), b'5\r\nhello\r\n')
 
     def test_more_nodata(self):
         wrapped = DummyProducer()
-        producer = self._makeOne(wrapped, footers=['a', 'b'])
-        self.assertEqual(producer.more(), '0\r\na\r\nb\r\n\r\n')
+        producer = self._makeOne(wrapped, footers=[b'a', b'b'])
+        self.assertEqual(producer.more(), b'0\r\na\r\nb\r\n\r\n')
 
     def test_more_nodata_footers(self):
-        wrapped = DummyProducer('')
-        producer = self._makeOne(wrapped, footers=['a', 'b'])
-        self.assertEqual(producer.more(), '0\r\na\r\nb\r\n\r\n')
+        wrapped = DummyProducer(b'')
+        producer = self._makeOne(wrapped, footers=[b'a', b'b'])
+        self.assertEqual(producer.more(), b'0\r\na\r\nb\r\n\r\n')
 
     def test_more_nodata_nofooters(self):
-        wrapped = DummyProducer('')
+        wrapped = DummyProducer(b'')
         producer = self._makeOne(wrapped)
-        self.assertEqual(producer.more(), '0\r\n\r\n')
+        self.assertEqual(producer.more(), b'0\r\n\r\n')
 
     def test_more_noproducer(self):
         producer = self._makeOne(None)
-        self.assertEqual(producer.more(), '')
+        self.assertEqual(producer.more(), b'')
 
 class DeferringCompositeProducerTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -241,12 +241,12 @@ class DeferringCompositeProducerTests(unittest.TestCase):
         producer = self._makeOne([wrapped1, wrapped2])
         self.assertEqual(producer.more(), 'hello')
         self.assertEqual(producer.more(), 'goodbye')
-        self.assertEqual(producer.more(), '')
+        self.assertEqual(producer.more(), b'')
 
     def test_more_nodata(self):
         wrapped = DummyProducer()
         producer = self._makeOne([wrapped])
-        self.assertEqual(producer.more(), '')
+        self.assertEqual(producer.more(), b'')
 
 class DeferringGlobbingProducerTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -264,16 +264,16 @@ class DeferringGlobbingProducerTests(unittest.TestCase):
     def test_more_string(self):
         wrapped = DummyProducer('hello', 'there', 'guy')
         producer = self._makeOne(wrapped, buffer_size=1)
-        self.assertEqual(producer.more(), 'hello')
+        self.assertEqual(producer.more(), b'hello')
 
         wrapped = DummyProducer('hello', 'there', 'guy')
         producer = self._makeOne(wrapped, buffer_size=50)
-        self.assertEqual(producer.more(), 'hellothereguy')
+        self.assertEqual(producer.more(), b'hellothereguy')
 
     def test_more_nodata(self):
         wrapped = DummyProducer()
         producer = self._makeOne(wrapped)
-        self.assertEqual(producer.more(), '')
+        self.assertEqual(producer.more(), b'')
 
 class DeferringHookedProducerTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -305,12 +305,12 @@ class DeferringHookedProducerTests(unittest.TestCase):
         def callback(bytes):
             L.append(bytes)
         producer = self._makeOne(wrapped, callback)
-        self.assertEqual(producer.more(), '')
+        self.assertEqual(producer.more(), b'')
         self.assertEqual(L, [0])
 
     def test_more_noproducer(self):
         producer = self._makeOne(None, None)
-        self.assertEqual(producer.more(), '')
+        self.assertEqual(producer.more(), b'')
 
 class DeferringHttpRequestTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -622,7 +622,7 @@ class TopLevelFunctionTests(unittest.TestCase):
         socketfile = tempfile.mktemp()
         inet = {'family':socket.AF_INET, 'host':'localhost', 'port':17735,
                 'username':None, 'password':None, 'section':'inet_http_server'}
-        unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':448, # 0700 in Py2, 0o700 in Py3
+        unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':0o700,
                 'chown':(-1, -1), 'username':None, 'password':None,
                 'section':'unix_http_server'}
         servers = self._make_http_servers([inet, unix])
@@ -650,7 +650,7 @@ class TopLevelFunctionTests(unittest.TestCase):
         inet = {'family':socket.AF_INET, 'host':'localhost', 'port':17736,
                 'username':'username', 'password':'password',
                 'section':'inet_http_server'}
-        unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':448, # 0700 in Py2, 0o700 in Py3
+        unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':0o700,
                 'chown':(-1, -1), 'username':'username', 'password':'password',
                 'section':'unix_http_server'}
         servers = self._make_http_servers([inet, unix])
@@ -676,7 +676,7 @@ class DummyProducer:
         if self.data:
             return self.data.pop(0)
         else:
-            return ''
+            return b''
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
