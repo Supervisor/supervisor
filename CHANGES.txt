@@ -1,5 +1,5 @@
-4.0.0.dev0 (Next 4.x Release)
------------------------------
+4.0.0 (2019-04-05)
+------------------
 
 - Support for Python 3 has been added.  On Python 3, Supervisor requires
   Python 3.4 or later.  Many thanks to Vinay Sajip, Scott Maxwell, Palm Kevin,
