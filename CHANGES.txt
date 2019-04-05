@@ -1,6 +1,9 @@
 3.4.0 (Next Release)
 --------------------
 
+- FastCGI programs (``[fcgi-program:x]`` sections) can now be used in
+  groups.  Patch by Florian Apolloner.
+
 - Fixed a bug where ``SupervisorTransport`` (the XML-RPC transport used with
   Unix domain sockets) did not close the connection when ``close()`` was
   called on it.  Patch by Jérome Perrin.
