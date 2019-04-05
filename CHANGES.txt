@@ -1,5 +1,5 @@
-3.4.0 (Next Release)
---------------------
+3.4.0 (2019-04-05)
+------------------
 
 - FastCGI programs (``[fcgi-program:x]`` sections) can now be used in
   groups (``[group:x]``).  Patch by Florian Apolloner.
