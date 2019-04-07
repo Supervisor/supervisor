@@ -6,10 +6,10 @@ matrix:
           env: TOXENV=cover
         - python: 3.7
           env: TOXENV=cover3
-          dist: xenial    # required for Python 3.7 (travis-ci/travis-ci#9069)
+          dist: xenial          # required for Python >= 3.7
         - python: 3.7
           env: TOXENV=docs
-          dist: xenial    # required for Python 3.7 (travis-ci/travis-ci#9069)
+          dist: xenial          # required for Python >= 3.7
         - python: 2.7
           env:
             - TOXENV=py27
@@ -30,7 +30,14 @@ matrix:
           env:
             - TOXENV=py37
             - END_TO_END=1
-          dist: xenial    # required for Python 3.7 (travis-ci/travis-ci#9069)
+          dist: xenial          # required for Python >= 3.7
+        - name: "Python: 3.7 on macOS"
+          language: sh          # 'language: python' is not yet supported on Travis CI macOS
+          os: osx
+          osx_image: xcode10.2  # Python 3.7.2 running on macOS 10.14.3
+          env:
+            - TOXENV=py37
+            - END_TO_END=1
 
 install:
     - travis_retry pip install virtualenv tox pexpect
