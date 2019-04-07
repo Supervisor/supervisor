@@ -31,7 +31,8 @@ matrix:
             - TOXENV=py37
             - END_TO_END=1
           dist: xenial    # required for Python >= 3.7
-        - os: osx
+        - python: 3.7
+          os: osx
           osx_image: xcode10.2  # Python 3.7.2 running on macOS 10.14.3
           env:
             - TOXENV=py37
