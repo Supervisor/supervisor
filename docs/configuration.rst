@@ -227,6 +227,12 @@ follows.
   option can include the value ``%(here)s``, which expands to the
   directory in which the supervisord configuration file was found.
 
+  .. note::
+
+    If ``logfile`` is set to a special file like ``/dev/stdout`` that is
+    not seekable, log rotation must be disabled by setting
+    ``logfile_maxbytes = 0``.
+
   *Default*:  :file:`$CWD/supervisord.log`
 
   *Required*:  No.
@@ -876,6 +882,12 @@ where specified.
      (``stdout_logfile``) when rotation (``stdout_logfile_maxbytes``)
      is enabled.  This will result in the file being corrupted.
 
+  .. note::
+
+    If ``stdout_logfile`` is set to a special file like ``/dev/stdout``
+    that is not seekable, log rotation must be disabled by setting
+    ``stdout_logfile_maxbytes = 0``.
+
   *Default*: ``AUTO``
 
   *Required*:  No.
@@ -954,6 +966,12 @@ where specified.
      It is not possible for two processes to share a single log file
      (``stderr_logfile``) when rotation (``stderr_logfile_maxbytes``)
      is enabled.  This will result in the file being corrupted.
+
+  .. note::
+
+    If ``stderr_logfile`` is set to a special file like ``/dev/stderr``
+    that is not seekable, log rotation must be disabled by setting
+    ``stderr_logfile_maxbytes = 0``.
 
   *Default*: ``AUTO``
 
