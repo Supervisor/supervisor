@@ -1,4 +1,4 @@
-include CHANGES.txt
+include CHANGES.rst
 include COPYRIGHT.txt
 include LICENSES.txt
 include README.rst
