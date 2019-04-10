@@ -129,6 +129,13 @@ class EndToEndTests(BaseTestCase):
             seen = False
         self.assertTrue(seen)
 
+    def test_issue_1224(self):
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1224.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('cat entered RUNNING state', timeout=60)
+
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
