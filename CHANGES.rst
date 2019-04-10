@@ -1,5 +1,5 @@
-4.0.1.dev0 (Next Release)
--------------------------
+4.0.1 (2019-04-10)
+------------------
 
 - Fixed an issue on Python 3 where an ``OSError: [Errno 29] Illegal seek``
   would occur if ``logfile`` in the ``[supervisord]`` section was set to
