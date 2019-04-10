@@ -7,8 +7,7 @@ import datetime
 import meld3
 
 from supervisor.compat import urllib
-from supervisor.compat import parse_qs
-from supervisor.compat import parse_qsl
+from supervisor.compat import urlparse
 from supervisor.compat import as_string
 from supervisor.compat import PY2
 from supervisor.compat import unicode
@@ -619,8 +618,8 @@ class supervisor_ui_handler:
         query = form['QUERY_STRING']
 
         # we only handle x-www-form-urlencoded values from POSTs
-        form_urlencoded = parse_qsl(data)
-        query_data = parse_qs(query)
+        form_urlencoded = urlparse.parse_qsl(data)
+        query_data = urlparse.parse_qs(query)
 
         for k, v in query_data.items():
             # ignore dupes
