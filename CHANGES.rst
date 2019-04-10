@@ -1,7 +1,11 @@
 4.0.1.dev0 (Next Release)
 -------------------------
 
-
+- Fixed an issue on Python 3 where an ``OSError: [Errno 29] Illegal seek``
+  would occur if ``logfile`` in the ``[supervisord]`` section was set to
+  a special file like ``/dev/stdout`` that was not seekable, even if
+  ``logfile_maxbytes = 0`` was set to disable rotation.  The issue only
+  affected the main log and not child logs.  Patch by Martin Falatic.
 
 4.0.0 (2019-04-05)
 ------------------
