@@ -123,7 +123,7 @@ class EndToEndTests(BaseTestCase):
         args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'avail']
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
         try:
-            supervisorctl.expect('cat\s+in use\\s+auto', timeout=30)
+            supervisorctl.expect('cat\\s+in use\\s+auto', timeout=30)
             seen = True
         except pexpect.ExceptionPexpect:
             seen = False
