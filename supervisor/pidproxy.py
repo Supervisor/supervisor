@@ -25,9 +25,9 @@ class PidProxy:
         while 1:
             time.sleep(5)
             try:
-                pid, sts = os.waitpid(-1, os.WNOHANG)
+                pid = os.waitpid(-1, os.WNOHANG)[0]
             except OSError:
-                pid, sts = None, None
+                pid = None
             if pid:
                 break
 

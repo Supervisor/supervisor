@@ -1543,7 +1543,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor import events
         L = []
         events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
-        from supervisor.states import ProcessStates, SupervisorStates
+        from supervisor.states import ProcessStates
 
         future_time = time.time() + 3600 # 1 hour into the future
         options = DummyOptions()
