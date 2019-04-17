@@ -14,6 +14,10 @@ matrix:
           env:
             - TOXENV=py27
             - END_TO_END=1
+        - python: 2.7
+          env:
+            - TOXENV=py27-configparser
+            - END_TO_END=1
         - python: 3.4
           env:
             - TOXENV=py34
