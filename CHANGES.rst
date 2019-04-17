@@ -1,6 +1,12 @@
 4.0.2.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug where inline comments in the config file were not parsed
+  correctly such that the comments were included as part of the values.
+  This only occurred on Python 2, and only where the environment had an
+  extra ``configparser`` module installed.  The bug was introduced in
+  Supervisor 4.0.0 because of Python 2/3 compatibility code that expected
+  a Python 2 environment to only have a ``ConfigParser`` module.
 
 4.0.1 (2019-04-10)
 ------------------
