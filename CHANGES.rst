@@ -1,5 +1,5 @@
-4.0.2.dev0 (Next Release)
--------------------------
+4.0.2 (2019-04-17)
+------------------
 
 - Fixed a bug where inline comments in the config file were not parsed
   correctly such that the comments were included as part of the values.
