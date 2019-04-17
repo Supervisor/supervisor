@@ -62,9 +62,9 @@ except ImportError: # pragma: no cover
     syslog = None
 
 try: # pragma: no cover
-    import configparser as ConfigParser
+    import ConfigParser
 except ImportError: # pragma: no cover
-   import ConfigParser
+    import configparser as ConfigParser
 
 try: # pragma: no cover
     from StringIO import StringIO
@@ -85,7 +85,6 @@ try: # pragma: no cover
     from base64 import decodebytes as decodestring, encodebytes as encodestring
 except ImportError: # pragma: no cover
     from base64 import decodestring, encodestring
-
 
 try: # pragma: no cover
     from xmlrpc.client import Fault
