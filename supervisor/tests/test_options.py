@@ -305,16 +305,27 @@ class ClientOptionsTests(unittest.TestCase):
         self.assertEqual(options.password, '123')
         self.assertEqual(options.history_file, history_file)
 
-    def test_options_ignores_inline_comments(self):
+    def test_options_ignores_space_prefixed_inline_comments(self):
         text = lstrip("""
         [supervisorctl]
-        serverurl=http://localhost:9001 ;comment should not be in serverurl
+        serverurl=http://127.0.0.1:9001 ; use an http:// url to specify an inet socket
         """)
         instance = self._makeOne()
         instance.configfile = StringIO(text)
         instance.realize(args=[])
         options = instance.configroot.supervisorctl
-        self.assertEqual(options.serverurl, 'http://localhost:9001')
+        self.assertEqual(options.serverurl, 'http://127.0.0.1:9001')
+
+    def test_options_ignores_tab_prefixed_inline_comments(self):
+        text = lstrip("""
+        [supervisorctl]
+        serverurl=http://127.0.0.1:9001\t;use an http:// url to specify an inet socket
+        """)
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        options = instance.configroot.supervisorctl
+        self.assertEqual(options.serverurl, 'http://127.0.0.1:9001')
 
     def test_options_parses_as_nonstrict_for_py2_py3_compat(self):
         text = lstrip("""
@@ -692,16 +703,30 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.minfds, 2048)
         self.assertEqual(instance.minprocs, 300)
 
-    def test_options_ignores_inline_comments(self):
+    def test_options_ignores_space_prefixed_inline_comments(self):
         text = lstrip("""
         [supervisord]
-        identifier=foo ;comment should not be in identifier
+        logfile=/var/log/supervisor/supervisord.log ;(main log file;default $CWD/supervisord.log)
+        minfds=123 ; (min. avail startup file descriptors;default 1024)
         """)
         instance = self._makeOne()
         instance.configfile = StringIO(text)
         instance.realize(args=[])
         options = instance.configroot.supervisord
-        self.assertEqual(options.identifier, 'foo')
+        self.assertEqual(options.logfile, "/var/log/supervisor/supervisord.log")
+        self.assertEqual(options.minfds, 123)
+
+    def test_options_ignores_tab_prefixed_inline_comments(self):
+        text = lstrip("""
+        [supervisord]
+        logfile=/var/log/supervisor/supervisord.log\t;(main log file;default $CWD/supervisord.log)
+        minfds=123\t; (min. avail startup file descriptors;default 1024)
+        """)
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        options = instance.configroot.supervisord
+        self.assertEqual(options.minfds, 123)
 
     def test_options_parses_as_nonstrict_for_py2_py3_compat(self):
         text = lstrip("""
