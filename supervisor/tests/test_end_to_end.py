@@ -136,6 +136,54 @@ class EndToEndTests(BaseTestCase):
         self.addCleanup(supervisord.kill, signal.SIGINT)
         supervisord.expect_exact('cat entered RUNNING state', timeout=60)
 
+    def test_issue_1231a(self):
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('success: hello entered RUNNING state')
+
+        args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'tail', '-f', 'hello']
+        supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisorctl.kill, signal.SIGINT)
+
+        for i in range(1, 4):
+            line = '%d - hash=57d94b…381088' % i
+            supervisorctl.expect_exact(line, timeout=30)
+
+
+    def test_issue_1231b(self):
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('success: hello entered RUNNING state')
+
+        args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'tail', '-f', 'hello']
+        env = os.environ.copy()
+        env['LANG'] = 'oops'
+        supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8',
+                                      env=env)
+        self.addCleanup(supervisorctl.kill, signal.SIGINT)
+
+        # For Python 3 < 3.7, LANG=oops leads to warnings because of the
+        # stdout encoding. For 3.7 (and presumably later), the encoding is
+        # utf-8 when LANG=oops.
+        if sys.version_info[:2] < (3, 7):
+            supervisorctl.expect('Warning: sys.stdout.encoding is set to ',
+                                 timeout=30)
+            supervisorctl.expect('Unicode output may fail.', timeout=30)
+
+        for i in range(1, 4):
+            line = '%d - hash=57d94b…381088' % i
+            try:
+                supervisorctl.expect_exact(line, timeout=30)
+            except pexpect.exceptions.EOF:
+                self.assertIn('Unable to write Unicode to stdout because it '
+                              'has encoding ',
+                              supervisorctl.before)
+                break
+
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

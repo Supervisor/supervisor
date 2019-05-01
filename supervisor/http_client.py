@@ -29,10 +29,23 @@ class Listener(object):
 
     def feed(self, url, data):
         try:
-            data = as_string(data)
+            sdata = as_string(data)
         except UnicodeDecodeError:
-            data = 'Undecodable: %r' % data
-        sys.stdout.write(data)
+            sdata = 'Undecodable: %r' % data
+        # We've got Unicode data in sdata now, but writing to stdout sometimes
+        # fails - see issue #1231.
+        try:
+            sys.stdout.write(sdata)
+        except UnicodeEncodeError as e:
+            if sys.version_info[0] < 3:
+                # This might seem like The Wrong Thing To Do (writing bytes
+                # rather than text to an output stream), but it seems to work
+                # OK for Python 2.7.
+                sys.stdout.write(data)
+            else:
+                s = ('Unable to write Unicode to stdout because it has '
+                     'encoding %s' % sys.stdout.encoding)
+                raise ValueError(s)
         sys.stdout.flush()
 
     def close(self, url):

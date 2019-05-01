@@ -440,6 +440,14 @@ class DefaultControllerPlugin(ControllerPluginBase):
     name = 'default'
     listener = None # for unit tests
     def _tailf(self, path):
+        def not_all_langs():
+            enc = getattr(sys.stdout, 'encoding', '').lower()
+            return None if enc.startswith('utf') else sys.stdout.encoding
+
+        problematic_enc = not_all_langs()
+        if problematic_enc:
+            self.ctl.output('Warning: sys.stdout.encoding is set to %s, so '
+                            'Unicode output may fail.' % problematic_enc)
         self.ctl.output('==> Press Ctrl-C to exit <==')
 
         username = self.ctl.options.username
