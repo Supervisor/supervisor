@@ -139,13 +139,17 @@ class POutputDispatcher(PDispatcher):
             warnings.warn("Specifying 'syslog' for filename is deprecated. "
                 "Use %s_syslog instead." % channel, DeprecationWarning)
             fmt = ' '.join((config.name, fmt))
-        self.mainlog = loggers.handle_file(
-            config.options.getLogger(),
-            filename=logfile,
-            fmt=fmt,
-            rotating=not not maxbytes, # optimization
-            maxbytes=maxbytes,
-            backups=backups)
+        if logfile == 'STDOUT':
+            self.mainlog = config.options.getLogger()
+            loggers.handle_stdout(self.mainlog, fmt=fmt)
+        else:
+            self.mainlog = loggers.handle_file(
+                config.options.getLogger(),
+                filename=logfile,
+                fmt=fmt,
+                rotating=not not maxbytes, # optimization
+                maxbytes=maxbytes,
+                backups=backups)
 
         if getattr(config, '%s_syslog' % channel, False):
             fmt = config.name + ' %(message)s'
@@ -299,14 +303,17 @@ class PEventListenerDispatcher(PDispatcher):
         if logfile:
             maxbytes = getattr(process.config, '%s_logfile_maxbytes' % channel)
             backups = getattr(process.config, '%s_logfile_backups' % channel)
-            self.childlog = loggers.handle_file(
-                process.config.options.getLogger(),
-                logfile,
-                '%(message)s',
-                rotating=not not maxbytes, # optimization
-                maxbytes=maxbytes,
-                backups=backups,
-            )
+            if logfile == 'STDOUT':
+                self.childlog = process.config.options.getLogger()
+                loggers.handle_stdout(self.childlog, '%(message)s')
+            else:
+                self.childlog = loggers.handle_file(
+                    process.config.options.getLogger(),
+                    logfile,
+                    '%(message)s',
+                    rotating=not not maxbytes, # optimization
+                    maxbytes=maxbytes,
+                    backups=backups)
 
     def removelogs(self):
         if self.childlog is not None:

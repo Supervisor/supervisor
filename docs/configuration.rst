@@ -869,9 +869,11 @@ where specified.
   true, also place stderr output in this file).  If ``stdout_logfile``
   is unset or set to ``AUTO``, supervisor will automatically choose a
   file location.  If this is set to ``NONE``, supervisord will create
-  no log file.  ``AUTO`` log files and their backups will be deleted
-  when :program:`supervisord` restarts.  The ``stdout_logfile`` value
-  can contain Python string expressions that will evaluated against a
+  no log file. If this is set to ``STDOUT``, supervisord will handle
+  stdout as ``stream`` not a ``file`` (useful when using systemd logging)
+  ``AUTO`` log files and their backups will be deleted when
+  :program:`supervisord` restarts.  The ``stdout_logfile`` value can
+  contain Python string expressions that will evaluated against a
   dictionary that contains the keys ``group_name``, ``host_node_name``,
   ``process_num``, ``program_name``, and ``here`` (the directory of the
   supervisord config file).
@@ -885,8 +887,8 @@ where specified.
   .. note::
 
     If ``stdout_logfile`` is set to a special file like ``/dev/stdout``
-    that is not seekable, log rotation must be disabled by setting
-    ``stdout_logfile_maxbytes = 0``.
+    or a stream like ``STDOUT`` that is not seekable, log rotation must
+    be disabled by setting ``stdout_logfile_maxbytes = 0``.
 
   *Default*: ``AUTO``
 
