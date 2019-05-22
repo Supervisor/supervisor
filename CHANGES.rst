@@ -1,5 +1,5 @@
-4.0.3.dev0 (Next Release)
--------------------------
+4.0.3 (2019-05-22)
+------------------
 
 - Fixed an issue on Python 2 where running ``supervisorctl tail -f <name>``
   would fail with the message
