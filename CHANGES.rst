@@ -1,6 +1,17 @@
 4.0.3.dev0 (Next Release)
 -------------------------
 
+- Fixed an issue on Python 2 where running ``supervisorctl tail -f <name>``
+  would fail with the message
+  ``Cannot connect, error: <type 'exceptions.UnicodeEncodeError'>`` where it
+  may have worked on Supervisor 3.x.  The issue was introduced in Supervisor
+  4.0.0 due to new bytes/strings conversions necessary to add Python 3 support.
+  For ``supervisorctl`` to correctly display logs with Unicode characters, the
+  terminal encoding specified by the environment must support it.  If not, the
+  ``UnicodeEncodeError`` may still occur on either Python 2 or 3.  A new
+  warning message is now printed if a problematic terminal encoding is
+  detected.  Patch by Vinay Sajip.
+
 4.0.2 (2019-04-17)
 ------------------
 
