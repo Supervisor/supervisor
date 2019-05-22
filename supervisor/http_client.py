@@ -3,10 +3,11 @@
 import sys
 import socket
 
-from supervisor.compat import urlparse
 from supervisor.compat import as_bytes
 from supervisor.compat import as_string
 from supervisor.compat import encodestring
+from supervisor.compat import PY2
+from supervisor.compat import urlparse
 from supervisor.medusa import asynchat_25 as asynchat
 
 CR = b'\x0d'
@@ -37,7 +38,7 @@ class Listener(object):
         try:
             sys.stdout.write(sdata)
         except UnicodeEncodeError as e:
-            if sys.version_info[0] < 3:
+            if PY2:
                 # This might seem like The Wrong Thing To Do (writing bytes
                 # rather than text to an output stream), but it seems to work
                 # OK for Python 2.7.
