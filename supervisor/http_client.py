@@ -37,7 +37,7 @@ class Listener(object):
         # fails - see issue #1231.
         try:
             sys.stdout.write(sdata)
-        except UnicodeEncodeError as e:
+        except UnicodeEncodeError:
             if PY2:
                 # This might seem like The Wrong Thing To Do (writing bytes
                 # rather than text to an output stream), but it seems to work
