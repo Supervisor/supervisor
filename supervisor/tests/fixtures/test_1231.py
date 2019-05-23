@@ -9,7 +9,7 @@ def main():
                         format='%(levelname)s [%(asctime)s] %(message)s',
                         datefmt='%m-%d|%H:%M:%S')
     i = 1
-    while True:
+    while i < 500:
         delay = random.randint(400, 1200)
         time.sleep(delay / 1000.0)
         logging.info('%d - hash=57d94b…381088', i)
