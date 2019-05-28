@@ -436,18 +436,22 @@ class ControllerPluginBase:
             self.ctl.output('')
             self.ctl.print_topics(self.doc_header, cmds_doc, 15, 80)
 
+def not_all_langs():
+    enc = getattr(sys.stdout, 'encoding', '').lower()
+    return None if enc.startswith('utf') else sys.stdout.encoding
+
+def check_encoding(ctl):
+    problematic_enc = not_all_langs()
+    if problematic_enc:
+        ctl.output('Warning: sys.stdout.encoding is set to %s, so Unicode '
+                   'output may fail. Check your LANG and PYTHONIOENCODING '
+                   'environment settings.' % problematic_enc)
+
 class DefaultControllerPlugin(ControllerPluginBase):
     name = 'default'
     listener = None # for unit tests
     def _tailf(self, path):
-        def not_all_langs():
-            enc = getattr(sys.stdout, 'encoding', '').lower()
-            return None if enc.startswith('utf') else sys.stdout.encoding
-
-        problematic_enc = not_all_langs()
-        if problematic_enc:
-            self.ctl.output('Warning: sys.stdout.encoding is set to %s, so '
-                            'Unicode output may fail.' % problematic_enc)
+        check_encoding(self.ctl)
         self.ctl.output('==> Press Ctrl-C to exit <==')
 
         username = self.ctl.options.username
@@ -532,6 +536,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             return self._tailf('/logtail/%s/%s' % (name, channel))
 
         else:
+            check_encoding(self.ctl)
             try:
                 if channel is 'stdout':
                     output = supervisor.readProcessStdoutLog(name,
