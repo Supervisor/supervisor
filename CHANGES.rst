@@ -1,6 +1,8 @@
 4.0.4.dev0 (Next Release)
 -------------------------
 
+- Improved the warning message added in 4.0.3 so it is now emitted for
+  both ``tail`` and ``tail -f``.  Patch by Vinay Sajip.
 
 4.0.3 (2019-05-22)
 ------------------
