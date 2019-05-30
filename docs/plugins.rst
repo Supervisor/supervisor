@@ -55,6 +55,8 @@ These also includes various event listeners.
 `superlance <https://pypi.org/pypi/superlance/>`_
     Provides set of common eventlisteners that can be used to monitor
     and, for example, restart when it uses too much memory etc.
+`superhooks <https://pypi.org/project/superhooks/>`_
+    Send Supervisor event notifications to HTTP1.1 webhooks.
 `mr.rubber <https://github.com/collective/mr.rubber>`_
     An event listener that makes it possible to scale the number of
     processes to the number of cores on the supervisor host.
