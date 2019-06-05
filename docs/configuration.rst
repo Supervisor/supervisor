@@ -157,6 +157,19 @@ inserted.  If the configuration file has no ``[inet_http_server]``
 section, an inet HTTP server will not be started.  The allowable
 configuration values are as follows.
 
+.. warning::
+
+  The inet HTTP server is not enabled by default.  If you choose to enable it,
+  please read the following security warning.  The inet HTTP server is intended
+  for use within a trusted environment only.  It should only be bound to localhost
+  or only accessible from within an isolated, trusted network.  The inet HTTP server
+  does not support any form of encryption.  The inet HTTP server does not use
+  authentication by default (see the ``username=`` and ``password=`` options).
+  The inet HTTP server can be controlled remotely from :program:`supervisorctl`.
+  It also serves a web interface that allows subprocesses to be started or stopped,
+  and subprocess logs to be viewed.  **Never expose the inet HTTP server to the
+  public internet.**
+
 ``[inet_http_server]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -166,7 +179,8 @@ configuration values are as follows.
   supervisor will listen for HTTP/XML-RPC requests.
   :program:`supervisorctl` will use XML-RPC to communicate with
   :program:`supervisord` over this port.  To listen on all interfaces
-  in the machine, use ``:9001`` or ``*:9001``.
+  in the machine, use ``:9001`` or ``*:9001``.  Please read the security
+  warning above.
 
   *Default*:  No default.
 
