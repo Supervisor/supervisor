@@ -4,6 +4,16 @@
 - Improved the warning message added in 4.0.3 so it is now emitted for
   both ``tail`` and ``tail -f``.  Patch by Vinay Sajip.
 
+- CVE-2019-12105.  Documentation addition only, no code changes.  This CVE
+  states that ``inet_http_server`` does not use authentication by default
+  (`details <https://github.com/Supervisor/supervisor/issues/1245>`_).  Note that
+  ``inet_http_server`` is not enabled by default, and is also not enabled
+  in the example configuration output by ``echo_supervisord_conf``.  The
+  behavior of the ``inet_http_server`` options have been correctly documented,
+  and have not changed, since the feature was introduced in 2006.  A new
+  `warning message <https://github.com/Supervisor/supervisor/commit/4e334d9cf2a1daff685893e35e72398437df3dcb>`_
+  was added to the documentation.
+
 4.0.3 (2019-05-22)
 ------------------
 
