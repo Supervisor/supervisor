@@ -88,7 +88,7 @@ configuration values are as follows.
 .. warning::
 
   The example configuration output by :program:`echo_supervisord_conf` uses
-  ``/tmp/supervisord.sock`` as the socket file.  That path is an example only
+  ``/tmp/supervisor.sock`` as the socket file.  That path is an example only
   and will likely need to be changed to a location more appropriate for your
   system.  Some systems periodically delete older files in ``/tmp``.  If the
   socket file is deleted, :program:`supervisorctl` will be unable to
