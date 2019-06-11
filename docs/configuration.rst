@@ -73,18 +73,26 @@ configuration values are as follows.
 
 ``file``
 
-  A path to a UNIX domain socket (e.g. :file:`/tmp/supervisord.sock`)
-  on which supervisor will listen for HTTP/XML-RPC requests.
-  :program:`supervisorctl` uses XML-RPC to communicate with
-  :program:`supervisord` over this port.  This option can include the
-  value ``%(here)s``, which expands to the directory in which the
-  :program:`supervisord` configuration file was found.
+  A path to a UNIX domain socket on which supervisor will listen for
+  HTTP/XML-RPC requests.  :program:`supervisorctl` uses XML-RPC to
+  communicate with :program:`supervisord` over this port.  This option
+  can include the value ``%(here)s``, which expands to the directory
+  in which the :program:`supervisord` configuration file was found.
 
   *Default*:  None.
 
   *Required*:  No.
 
   *Introduced*: 3.0
+
+.. warning::
+
+  The example configuration output by :program:`echo_supervisord_conf` uses
+  ``/tmp/supervisord.sock`` as the socket file.  That path is an example only
+  and will likely need to be changed to a location more appropriate for your
+  system.  Some systems periodically delete older files in ``/tmp``.  If the
+  socket file is deleted, :program:`supervisorctl` will be unable to
+  connect to :program:`supervisord`.
 
 ``chmod``
 
