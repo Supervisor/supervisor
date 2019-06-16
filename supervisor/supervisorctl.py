@@ -538,7 +538,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         else:
             check_encoding(self.ctl)
             try:
-                if channel is 'stdout':
+                if channel == 'stdout':
                     output = supervisor.readProcessStdoutLog(name,
                                                              -bytes, 0)
                 else:
