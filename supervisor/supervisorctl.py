@@ -541,7 +541,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 if channel is 'stdout':
                     output = supervisor.readProcessStdoutLog(name,
                                                              -bytes, 0)
-                else: # if channel is 'stderr'
+                else:
                     output = supervisor.readProcessStderrLog(name,
                                                              -bytes, 0)
             except xmlrpclib.Fault as e:
