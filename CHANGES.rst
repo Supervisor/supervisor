@@ -1,6 +1,11 @@
 4.0.4.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug where ``supervisorctl tail <name> stdout`` would actually tail
+  ``stderr``.  Note that ``tail <name>`` without the explicit ``stdout``
+  correctly tailed ``stdout``.  The bug existed since 3.0a3 (released in
+  2007).  Patch by Arseny Hofman.
+
 - Improved the warning message added in 4.0.3 so it is now emitted for
   both ``tail`` and ``tail -f``.  Patch by Vinay Sajip.
 
