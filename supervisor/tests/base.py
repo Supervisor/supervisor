@@ -760,7 +760,7 @@ class DummySupervisorRPCNamespace:
     def getPID(self):
         return 42
 
-    def readProcessStdoutLog(self, name, offset, length):
+    def _read_log(self, channel, name, offset, length):
         from supervisor import xmlrpc
         if name == 'BAD_NAME':
             raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
@@ -768,11 +768,15 @@ class DummySupervisorRPCNamespace:
             raise Fault(xmlrpc.Faults.FAILED, 'FAILED')
         elif name == 'NO_FILE':
             raise Fault(xmlrpc.Faults.NO_FILE, 'NO_FILE')
-        a = 'output line\n' * 10
+        a = (channel + ' line\n') * 10
         return a[offset:]
 
+    def readProcessStdoutLog(self, name, offset, length):
+        return self._read_log('stdout', name, offset, length)
     readProcessLog = readProcessStdoutLog
-    readProcessStderrLog = readProcessStdoutLog
+
+    def readProcessStderrLog(self, name, offset, length):
+        return self._read_log('stderr', name, offset, length)
 
     def getAllProcessInfo(self):
         return self.all_process_info

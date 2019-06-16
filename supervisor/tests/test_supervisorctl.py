@@ -522,7 +522,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 12)
-        self.assertEqual(lines[0], 'output line')
+        self.assertEqual(lines[0], 'stdout line')
 
     def test_tail_no_file(self):
         plugin = self._makeOne()
@@ -557,7 +557,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 3)
-        self.assertEqual(lines[0], 'tput line')
+        self.assertEqual(lines[0], 'dout line')
 
     def test_tail_explicit_channel_stdout_nomodifier(self):
         plugin = self._makeOne()
@@ -565,7 +565,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 12)
-        self.assertEqual(lines[0], 'output line')
+        self.assertEqual(lines[0], 'stdout line')
 
     def test_tail_explicit_channel_stderr_nomodifier(self):
         plugin = self._makeOne()
@@ -573,7 +573,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         self.assertEqual(result, None)
         lines = plugin.ctl.stdout.getvalue().split('\n')
         self.assertEqual(len(lines), 12)
-        self.assertEqual(lines[0], 'output line')
+        self.assertEqual(lines[0], 'stderr line')
 
     def test_tail_explicit_channel_unrecognized(self):
         plugin = self._makeOne()
