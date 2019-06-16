@@ -23,13 +23,10 @@ You can view the current Supervisor documentation online `in HTML format
 <http://supervisord.org/>`_ .  This is where you should go for detailed
 installation and configuration documentation.
 
-Mailing list, Reporting Bugs, and Viewing the Source Repository
----------------------------------------------------------------
+Reporting Bugs and Viewing the Source Repository
+------------------------------------------------
 
-You may subscribe to the `Supervisor-users mailing list
-<http://lists.supervisord.org/mailman/listinfo/supervisor-users>`_.
-
-Please report bugs in the `Github issue tracker
+Please report bugs in the `GitHub issue tracker
 <https://github.com/Supervisor/supervisor/issues>`_.
 
 You can view the source repository for supervisor via
@@ -39,7 +36,6 @@ You can view the source repository for supervisor via
 Contributing
 ------------
 
-If you'd like to contribute to supervisor directly, please contact the
-`Supervisor-users mailing list
-<http://lists.supervisord.org/mailman/listinfo/supervisor-users>`_.
-
+We'll review contributions from the community in
+`pull requests <https://help.github.com/articles/using-pull-requests>`_
+on GitHub.
