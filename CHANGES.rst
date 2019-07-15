@@ -1,5 +1,5 @@
-4.0.4.dev0 (Next Release)
--------------------------
+4.0.4 (2019-07-15)
+------------------
 
 - Fixed a bug where ``supervisorctl tail <name> stdout`` would actually tail
   ``stderr``.  Note that ``tail <name>`` without the explicit ``stdout``
