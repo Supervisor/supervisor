@@ -105,6 +105,8 @@ class Handler:
                 # which deliberately raises an exception the first
                 # time it's called. So just do it again
                 self.stream.write(msg)
+            except TypeError:
+                self.stream.write(msg.decode(sys.stdout.encoding))
             self.flush()
         except:
             self.handleError()
