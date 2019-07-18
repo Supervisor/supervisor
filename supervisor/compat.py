@@ -105,3 +105,8 @@ try: # pragma: no cover
     import thread
 except ImportError: # pragma: no cover
     import _thread as thread
+
+try: # pragma: no cover
+    from html import escape
+except ImportError: # pragma: no cover
+    from cgi import escape
