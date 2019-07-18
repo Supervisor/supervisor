@@ -1,4 +1,10 @@
-from cgi import escape
+from supervisor.compat import PY2
+
+if PY2:
+    from cgi import escape
+else:
+    from html import escape
+
 
 def html_repr (object):
     so = escape (repr (object))
