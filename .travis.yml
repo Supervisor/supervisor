@@ -35,11 +35,14 @@ matrix:
             - TOXENV=py37
             - END_TO_END=1
           dist: xenial          # required for Python >= 3.7
+
+        # TODO: change to "python: 3.8" when it is available
         - python: 3.8-dev
           env:
             - TOXENV=py38
             - END_TO_END=1
           dist: xenial          # required for Python >= 3.7
+
         - name: "Python: 3.7 on macOS"
           language: sh          # 'language: python' is not yet supported on Travis CI macOS
           os: osx
