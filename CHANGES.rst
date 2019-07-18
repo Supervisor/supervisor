@@ -1,6 +1,8 @@
-4.0.5 (Next Release)
---------------------
+4.0.5.dev0 (Next Release)
+-------------------------
 
+- Fixed a Python 3.8 compatibility issue caused by the removal of
+  ``cgi.escape()``.  Patch by Mattia Procopio.
 
 4.0.4 (2019-07-15)
 ------------------
