@@ -1,8 +1,11 @@
-4.0.5.dev0 (Next Release)
+4.1.0.dev0 (Next Release)
 -------------------------
 
 - Fixed a Python 3.8 compatibility issue caused by the removal of
   ``cgi.escape()``.  Patch by Mattia Procopio.
+
+- The ``meld3`` package is no longer a dependency.  A version of ``meld3``
+  is now included within the ``supervisor`` package itself.
 
 4.0.4 (2019-07-15)
 ------------------

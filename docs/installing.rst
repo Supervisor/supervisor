@@ -54,9 +54,6 @@ which is internet-connected:
 - setuptools (latest) from `https://pypi.org/pypi/setuptools/
   <https://pypi.org/pypi/setuptools/>`_.
 
-- meld3 (latest) from `https://pypi.org/pypi/meld3/
-  <https://pypi.org/pypi/meld3/>`_.
-
 Copy these files to removable media and put them on the target
 machine.  Install each onto the target machine as per its
 instructions.  This typically just means unpacking each file and
