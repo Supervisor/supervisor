@@ -683,7 +683,7 @@ class MeldElementInterfaceTests(unittest.TestCase):
         div.tail = '   '
         span = self._makeOne('span', {})
         div.append(span)
-        div2 = div.clone()
+        div.clone()
 
     def test_clone(self):
         div = self._makeOne('div', {'id':'thediv'})
@@ -811,10 +811,6 @@ class MeldElementInterfaceTests(unittest.TestCase):
         div = self._makeOne('div', {'id':'div1'})
         span = self._makeOne('span', {})
         span2 = self._makeOne('span', {'id':'2'})
-        span3 = self._makeOne('span3', {'id':'3'})
-        span4 = self._makeOne('span4', {'id':'4'})
-        span5 = self._makeOne('span5', {'id':'5'})
-        span6 = self._makeOne('span6', {'id':'6'})
         div2 = self._makeOne('div2', {'id':'div2'})
         div.append(span)
         span.append(span2)
@@ -1169,7 +1165,7 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(title.tag, xhtml_ns % 'title')
         self.assertEqual(title.attrib[_MELD_ID], 'title')
         self.assertEqual(title.parent, head)
-        comment = root[1]
+
         body = root[2]
         self.assertEqual(body.tag, xhtml_ns % 'body')
         self.assertEqual(body.attrib, {})
@@ -1251,10 +1247,7 @@ class ParserTests(unittest.TestCase):
         comment = body[0]
         self.assertEqual(comment.tag, Comment)
 
-        br1 = body[1]
-        br2 = body[2]
         table = body[3]
-
         self.assertEqual(table.tag, 'table')
         self.assertEqual(table.attrib, {'style':
                                         'text-align: left; width: 100px;',
@@ -1262,11 +1255,8 @@ class ParserTests(unittest.TestCase):
                                         'cellpadding':'2',
                                         'cellspacing':'2'})
         self.assertEqual(table.parent, body)
-        br3 = body[4]
         href = body[5]
         self.assertEqual(href.tag, 'a')
-        br4 = body[6]
-        br5 = body[7]
         img = body[8]
         self.assertEqual(img.tag, 'img')
 
@@ -1675,31 +1665,6 @@ class WriterTests(unittest.TestCase):
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html><body>Hello!</body></html>"""
         self.assertNormalizedXMLEqual(actual, expected)
-
-    def test_write_entities_xhtml_no_doctype(self):
-        root = self._parse_html(_ENTITIES_XHTML)
-        # this will be considered an XHTML document by default; we needn't
-        # declare a doctype
-        actual = self._write_xhtml(root)
-        expected =r"""<html>
-<head></head>
-<body>
-  <!-- test entity references -->
-  <p>&nbsp;</p>
-</body>
-</html>"""
-
-    def test_write_entities_xhtml_with_doctype(self):
-        dt = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">'
-        root = self._parse_html(dt + _ENTITIES_XHTML)
-        actual = self._write_xhtml(root)
-        expected =r"""<html>
-<head></head>
-<body>
-  <!-- test entity references -->
-  <p>&nbsp;</p>
-</body>
-</html>"""
 
     def test_unknown_entity(self):
         # exception thrown may vary by python or expat version
