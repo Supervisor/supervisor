@@ -215,14 +215,14 @@ if os.name == 'posix':
             self.persona = persona
 
         def become_persona (self):
-            if self.persona is not (None, None):
+            if self.persona != (None, None):
                 uid, gid = self.persona
                 # the order of these is important!
                 os.setegid (gid)
                 os.seteuid (uid)
 
         def become_nobody (self):
-            if self.persona is not (None, None):
+            if self.persona != (None, None):
                 os.seteuid (self.PROCESS_UID)
                 os.setegid (self.PROCESS_GID)
 
