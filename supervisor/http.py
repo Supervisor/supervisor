@@ -316,7 +316,7 @@ class deferring_http_request(http_server.http_request):
 
         if 'HTTP_HOST' in environ:
             host = environ['HTTP_HOST'].strip()
-            parsed = urlparse.urlparse(host)
+            parsed = urlparse.urlparse('//' + host)
             hostname, port = parsed.hostname, str(parsed.port)
         else:
             hostname = environ['SERVER_NAME'].strip()
