@@ -513,7 +513,6 @@ class StatusView(MeldView):
 
         if data:
             iterator = root.findmeld('tr').repeat(data)
-            shaded_tr = False
 
             for tr_element, item in iterator:
                 status_text = tr_element.findmeld('status_text')
@@ -543,9 +542,6 @@ class StatusView(MeldView):
                         anchor.content(actionitem['name'])
                         if actionitem['target']:
                             anchor.attributes(target=actionitem['target'])
-                if shaded_tr:
-                    tr_element.attrib['class'] = 'shade'
-                shaded_tr = not shaded_tr
         else:
             table = root.findmeld('statustable')
             table.replace('No programs to manage')
