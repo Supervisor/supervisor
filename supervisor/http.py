@@ -12,11 +12,10 @@ try:
 except ImportError:  # Windows
     import getpass as pwd
 
+from supervisor.compat import urllib
 from supervisor.compat import sha1
 from supervisor.compat import as_bytes
 from supervisor.compat import as_string
-from supervisor.compat import urlparse
-
 from supervisor.medusa import asyncore_25 as asyncore
 from supervisor.medusa import http_date
 from supervisor.medusa import http_server
@@ -316,8 +315,7 @@ class deferring_http_request(http_server.http_request):
 
         if 'HTTP_HOST' in environ:
             host = environ['HTTP_HOST'].strip()
-            parsed = urlparse.urlparse(host)
-            hostname, port = parsed.hostname, str(parsed.port)
+            hostname, port = urllib.splitport(host)
         else:
             hostname = environ['SERVER_NAME'].strip()
             port = environ['SERVER_PORT']
