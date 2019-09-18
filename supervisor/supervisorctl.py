@@ -1053,7 +1053,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             for name in names:
                 self.ctl.output("%s: %s" % (name, changedict[name]))
         else:
-            self.ctl.output("No config updates to processes")
+            self.ctl.output("No config updates to process")
 
     def _formatConfigInfo(self, configinfo):
         name = make_namespec(configinfo['group'], configinfo['name'])
