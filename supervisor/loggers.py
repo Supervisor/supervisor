@@ -16,6 +16,7 @@ import traceback
 from supervisor.compat import syslog
 from supervisor.compat import long
 from supervisor.compat import is_text_stream
+from supervisor.compat import as_string
 
 class LevelsByName:
     CRIT = 50   # messages that probably require immediate user attention
@@ -289,7 +290,7 @@ class LogRecord:
             asctime = '%s,%03d' % (part1, msecs)
             levelname = LOG_LEVELS_BY_NUM[self.level]
             if self.kw:
-                msg = self.msg % self.kw
+                msg = as_string(self.msg) % self.kw
             else:
                 msg = self.msg
             self.dictrepr = {'message':msg, 'levelname':levelname,
@@ -369,8 +370,9 @@ class SyslogHandler(Handler):
         try:
             params = record.asdict()
             message = params['message']
-            for line in message.rstrip('\n').split('\n'):
-                params['message'] = line
+            split_char = b'\n' if isinstance(message, bytes) else '\n'
+            for line in message.rstrip(split_char).split(split_char):
+                params['message'] = as_string(line)
                 msg = self.fmt % params
                 try:
                     self._syslog(msg)
