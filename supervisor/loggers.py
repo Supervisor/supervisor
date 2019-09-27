@@ -16,6 +16,7 @@ import traceback
 from supervisor.compat import syslog
 from supervisor.compat import long
 from supervisor.compat import is_text_stream
+from supervisor.compat import as_string
 
 class LevelsByName:
     CRIT = 50   # messages that probably require immediate user attention
@@ -277,7 +278,7 @@ class RotatingFileHandler(FileHandler):
 class LogRecord:
     def __init__(self, level, msg, **kw):
         self.level = level
-        self.msg = msg
+        self.msg = as_string(msg)
         self.kw = kw
         self.dictrepr = None
 

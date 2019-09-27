@@ -535,9 +535,12 @@ class SyslogHandlerTests(HandlerTests, unittest.TestCase):
     @mock.patch('syslog.syslog', MockSysLog())
     def test_emit_ascii_noerror(self):
         handler = self._makeOne()
-        record = self._makeLogRecord('hello!')
+        record = self._makeLogRecord(b'hello!')
         handler.emit(record)
         syslog.syslog.assert_called_with('hello!')
+        record = self._makeLogRecord('hi!')
+        handler.emit(record)
+        syslog.syslog.assert_called_with('hi!')
 
     @mock.patch('syslog.syslog', MockSysLog())
     def test_close(self):
