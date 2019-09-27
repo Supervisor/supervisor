@@ -278,7 +278,7 @@ class RotatingFileHandler(FileHandler):
 class LogRecord:
     def __init__(self, level, msg, **kw):
         self.level = level
-        self.msg = as_string(msg)
+        self.msg = msg
         self.kw = kw
         self.dictrepr = None
 
@@ -290,9 +290,9 @@ class LogRecord:
             asctime = '%s,%03d' % (part1, msecs)
             levelname = LOG_LEVELS_BY_NUM[self.level]
             if self.kw:
-                msg = self.msg % self.kw
+                msg = as_string(self.msg) % self.kw
             else:
-                msg = self.msg
+                msg = as_string(self.msg)
             self.dictrepr = {'message':msg, 'levelname':levelname,
                              'asctime':asctime}
         return self.dictrepr
