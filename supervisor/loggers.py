@@ -289,10 +289,9 @@ class LogRecord:
             part1 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
             asctime = '%s,%03d' % (part1, msecs)
             levelname = LOG_LEVELS_BY_NUM[self.level]
+            msg = as_string(self.msg)
             if self.kw:
-                msg = as_string(self.msg) % self.kw
-            else:
-                msg = as_string(self.msg)
+                msg = msg % self.kw
             self.dictrepr = {'message':msg, 'levelname':levelname,
                              'asctime':asctime}
         return self.dictrepr
