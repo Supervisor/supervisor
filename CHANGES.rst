@@ -1,5 +1,5 @@
-4.1.0.dev0 (Next Release)
--------------------------
+4.1.0 (2019-10-19)
+------------------
 
 - Fixed a bug on Python 3 only where logging to syslog did not work and
   would log the exception ``TypeError: a bytes-like object is required, not 'str'``
