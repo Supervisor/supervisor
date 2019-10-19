@@ -7,7 +7,7 @@
 *.swp
 *.pss
 .DS_Store
-.coverage
+.coverage*
 .eggs/
 .pytest_cache/
 .tox/
