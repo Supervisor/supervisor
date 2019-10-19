@@ -1,6 +1,10 @@
 4.1.0.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug on Python 3 only where logging to syslog did not work and
+  would log the exception ``TypeError: a bytes-like object is required, not 'str'``
+  to the main ``supervisord`` log file.  Patch by Vinay Sajip and Josh Staley.
+
 - Fixed a Python 3.8 compatibility issue caused by the removal of
   ``cgi.escape()``.  Patch by Mattia Procopio.
 
