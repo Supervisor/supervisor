@@ -1,6 +1,9 @@
 4.1.1.dev0 (Next Release)
 -------------------------
 
+- When ``supervisord`` reaps an unknown PID, it will now log a description
+  of the ``waitpid`` status.  Patch by Andrey Zelenchuk.
+
 4.1.0 (2019-10-19)
 ------------------
 
