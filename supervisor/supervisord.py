@@ -37,7 +37,8 @@ import signal
 from supervisor.medusa import asyncore_25 as asyncore
 
 from supervisor.compat import as_string
-from supervisor.options import ServerOptions, decode_wait_status
+from supervisor.options import ServerOptions
+from supervisor.options import decode_wait_status
 from supervisor.options import signame
 from supervisor import events
 from supervisor.states import SupervisorStates
