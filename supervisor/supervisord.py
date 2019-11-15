@@ -37,7 +37,7 @@ import signal
 from supervisor.medusa import asyncore_25 as asyncore
 
 from supervisor.compat import as_string
-from supervisor.options import ServerOptions
+from supervisor.options import ServerOptions, decode_wait_status
 from supervisor.options import signame
 from supervisor import events
 from supervisor.states import SupervisorStates
@@ -275,7 +275,8 @@ class Supervisor:
         if pid:
             process = self.options.pidhistory.get(pid, None)
             if process is None:
-                self.options.logger.info('reaped unknown pid %s' % pid)
+                _, msg = decode_wait_status(sts)
+                self.options.logger.info('reaped unknown pid %s (%s)' % (pid, msg))
             else:
                 process.finish(pid, sts)
                 del self.options.pidhistory[pid]
