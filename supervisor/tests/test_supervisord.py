@@ -184,7 +184,7 @@ class SupervisordTests(unittest.TestCase):
         supervisord.reap(once=True)
         self.assertEqual(process.finished, None)
         self.assertEqual(options.logger.data[0],
-                         'reaped unknown pid 2')
+                         'reaped unknown pid 2 (exit status 0)')
 
     def test_handle_sigterm(self):
         options = DummyOptions()
