@@ -952,7 +952,7 @@ class ServerOptions(Options):
 
         for process_num in range(numprocs_start, numprocs + numprocs_start):
             expansions = common_expansions
-            expansions.update({'process_num': process_num})
+            expansions.update({'process_num': process_num, 'numprocs': numprocs})
             expansions.update(self.environ_expansions)
 
             environment = dict_of_key_value_pairs(
