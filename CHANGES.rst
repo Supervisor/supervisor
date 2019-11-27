@@ -1,7 +1,7 @@
 4.1.1.dev0 (Next Release)
 -------------------------
 
-- Fixed a bug introduced in 4.0.4 where ``supervisorctl tail -f foo | grep bar``
+- Fixed a bug introduced in 4.0.3 where ``supervisorctl tail -f foo | grep bar``
   would fail with the error ``NoneType object has no attribute 'lower'``.  This
   only occurred on Python 2.7 and only when piped.  Patch by Slawa Pidgorny.
 
