@@ -748,6 +748,9 @@ class logtail_handler:
         request['Content-Type'] = 'text/plain;charset=utf-8'
         # the lack of a Content-Length header makes the outputter
         # send a 'Transfer-Encoding: chunked' response
+        request['X-Accel-Buffering'] = 'no'
+        # tell reverse proxy server (e.g., nginx) to disable proxy buffering
+        # (see also http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering)
 
         request.push(tail_f_producer(request, logfile, 1024))
 
