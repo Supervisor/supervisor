@@ -206,6 +206,20 @@ class EndToEndTests(BaseTestCase):
                                  timeout=30)
             supervisorctl.expect('Unicode output may fail.', timeout=30)
 
+    def test_issue_1298(self):
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1298.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('success: spew entered RUNNING state')
+
+        cmd = "'%s' -m supervisor.supervisorctl -c '%s' tail -f spew | /bin/cat -u" % (
+            sys.executable, filename
+            )
+        bash = pexpect.spawn('/bin/sh', ['-c', cmd], encoding='utf-8')
+        self.addCleanup(bash.kill, signal.SIGINT)
+        bash.expect('spewage 2', timeout=30)
+
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
 
