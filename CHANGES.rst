@@ -4,6 +4,9 @@
 - When ``supervisord`` reaps an unknown PID, it will now log a description
   of the ``waitpid`` status.  Patch by Andrey Zelenchuk.
 
+- The HTTP server will now send an ``X-Accel-Buffering: no`` header in
+  logtail responses to fix Nginx proxy buffering.  Patch by Weizhao Li.
+
 4.1.0 (2019-10-19)
 ------------------
 
