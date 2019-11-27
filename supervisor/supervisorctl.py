@@ -437,7 +437,8 @@ class ControllerPluginBase:
             self.ctl.print_topics(self.doc_header, cmds_doc, 15, 80)
 
 def not_all_langs():
-    enc = getattr(sys.stdout, 'encoding', '').lower()
+    enc = getattr(sys.stdout, 'encoding', '')
+    enc = str(enc).lower()
     return None if enc.startswith('utf') else sys.stdout.encoding
 
 def check_encoding(ctl):
