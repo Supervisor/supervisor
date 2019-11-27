@@ -70,6 +70,7 @@ class LogtailHandlerTests(HandlerTests, unittest.TestCase):
             self.assertEqual(request.headers['Last-Modified'],
                 http_date.build_http_date(os.stat(t)[stat.ST_MTIME]))
             self.assertEqual(request.headers['Content-Type'], 'text/plain;charset=utf-8')
+            self.assertEqual(request.headers['X-Accel-Buffering'], 'no')
             self.assertEqual(len(request.producers), 1)
             self.assertEqual(request._done, True)
 
