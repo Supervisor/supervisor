@@ -447,6 +447,8 @@ class ServerOptions(Options):
                  "t", "strip_ansi", flag=1, default=0)
         self.add("profile_options", "supervisord.profile_options",
                  "", "profile_options=", profile_options, default=None)
+        self.add("quiet", "supervisord.quiet",
+                 "q", "quiet", flag=1, default=0)
         self.pidhistory = {}
         self.process_group_configs = []
         self.parse_criticals = []
