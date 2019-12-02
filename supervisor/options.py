@@ -1465,7 +1465,7 @@ class ServerOptions(Options):
         # must be called after realize() and after supervisor does setuid()
         format = '%(asctime)s %(levelname)s %(message)s\n'
         self.logger = loggers.getLogger(self.loglevel)
-        if self.nodaemon and not quiet:
+        if self.nodaemon and not self.quiet:
             loggers.handle_stdout(self.logger, format)
         loggers.handle_file(
             self.logger,
