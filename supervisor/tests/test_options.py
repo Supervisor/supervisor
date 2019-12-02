@@ -470,6 +470,7 @@ class ServerOptionsTests(unittest.TestCase):
         loglevel=error
         pidfile=supervisord.pid
         nodaemon=true
+        quiet=true
         identifier=fleeb
         childlogdir=%(tempdir)s
         nocleanup=true
@@ -539,6 +540,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(options.loglevel, 40)
         self.assertEqual(options.pidfile, 'supervisord.pid')
         self.assertEqual(options.nodaemon, True)
+        self.assertEqual(options.quiet, True)
         self.assertEqual(options.identifier, 'fleeb')
         self.assertEqual(options.childlogdir, tempfile.gettempdir())
         self.assertEqual(len(options.server_configs), 1)
@@ -688,6 +690,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.loglevel, 40)
         self.assertEqual(instance.pidfile, os.path.join(here,'supervisord.pid'))
         self.assertEqual(instance.nodaemon, True)
+        self.assertEqual(instance.quiet, True)
         self.assertEqual(instance.passwdfile, None)
         self.assertEqual(instance.identifier, 'fleeb')
         self.assertEqual(instance.childlogdir, tempfile.gettempdir())
