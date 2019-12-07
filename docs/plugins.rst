@@ -44,6 +44,10 @@ instances running on different servers.
     web server. It communicates with each supervisor through a specialized supervisor
     event-listener based on `zerorpc <http://www.zerorpc.io>`_.
 
+`Dart <https://github.com/plockaby/dart>`_
+    Web-based dashboard and command line tool written in Python using PostgreSQL
+    with a REST API, event monitoring, and configuration management.
+
 Third Party Plugins and Libraries for Supervisor
 ------------------------------------------------
 
