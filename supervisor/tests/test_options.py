@@ -470,6 +470,7 @@ class ServerOptionsTests(unittest.TestCase):
         loglevel=error
         pidfile=supervisord.pid
         nodaemon=true
+        silent=true
         identifier=fleeb
         childlogdir=%(tempdir)s
         nocleanup=true
@@ -539,6 +540,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(options.loglevel, 40)
         self.assertEqual(options.pidfile, 'supervisord.pid')
         self.assertEqual(options.nodaemon, True)
+        self.assertEqual(options.silent, True)
         self.assertEqual(options.identifier, 'fleeb')
         self.assertEqual(options.childlogdir, tempfile.gettempdir())
         self.assertEqual(len(options.server_configs), 1)
@@ -688,6 +690,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.loglevel, 40)
         self.assertEqual(instance.pidfile, os.path.join(here,'supervisord.pid'))
         self.assertEqual(instance.nodaemon, True)
+        self.assertEqual(instance.silent, True)
         self.assertEqual(instance.passwdfile, None)
         self.assertEqual(instance.identifier, 'fleeb')
         self.assertEqual(instance.childlogdir, tempfile.gettempdir())
@@ -1817,6 +1820,7 @@ class ServerOptionsTests(unittest.TestCase):
             'ENV_SUPD_LOGFILE_BACKUPS': '10',
             'ENV_SUPD_LOGLEVEL': 'info',
             'ENV_SUPD_NODAEMON': 'false',
+            'ENV_SUPD_SILENT': 'false',
             'ENV_SUPD_MINFDS': '1024',
             'ENV_SUPD_MINPROCS': '200',
             'ENV_SUPD_UMASK': '002',
@@ -1852,6 +1856,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.logfile_backups, 10)
         self.assertEqual(instance.loglevel, LevelsByName.INFO)
         self.assertEqual(instance.nodaemon, False)
+        self.assertEqual(instance.silent, False)
         self.assertEqual(instance.minfds, 1024)
         self.assertEqual(instance.minprocs, 200)
         self.assertEqual(instance.nocleanup, True)

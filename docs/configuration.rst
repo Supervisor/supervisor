@@ -334,6 +334,16 @@ follows.
 
   *Introduced*: 3.0
 
+``silent``
+
+  If true and not daemonized, logs will not be directed to stdout.
+
+  *Default*:  false
+
+  *Required*: No.
+
+  *Introduced*: 4.2.0
+
 ``minfds``
 
   The minimum number of file descriptors that must be available before
