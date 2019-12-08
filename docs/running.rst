@@ -79,6 +79,10 @@ value in the configuration file.
 
    Run :program:`supervisord` in the foreground.
 
+-s, --silent
+
+   No output directed to stdout.
+
 -h, --help
 
    Show :command:`supervisord` command help.

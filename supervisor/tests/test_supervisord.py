@@ -69,6 +69,48 @@ class EntryPointTests(unittest.TestCase):
             output = new_stdout.getvalue()
             self.assertTrue('cumulative time, call count' in output, output)
 
+    def test_silent_off(self):
+        from supervisor.supervisord import main
+        conf = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), 'fixtures',
+            'donothing.conf')
+        new_stdout = StringIO()
+        new_stdout.fileno = lambda: 1
+        old_stdout = sys.stdout
+
+        try:
+            tempdir = tempfile.mkdtemp()
+            log = os.path.join(tempdir, 'log')
+            pid = os.path.join(tempdir, 'pid')
+            sys.stdout = new_stdout
+            main(args=['-c', conf, '-l', log, '-j', pid, '-n'], test=True)
+        finally:
+            sys.stdout = old_stdout
+            shutil.rmtree(tempdir)
+        output = new_stdout.getvalue()
+        self.assertGreater(len(output), 0)
+
+    def test_silent_on(self):
+        from supervisor.supervisord import main
+        conf = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), 'fixtures',
+            'donothing.conf')
+        new_stdout = StringIO()
+        new_stdout.fileno = lambda: 1
+        old_stdout = sys.stdout
+
+        try:
+            tempdir = tempfile.mkdtemp()
+            log = os.path.join(tempdir, 'log')
+            pid = os.path.join(tempdir, 'pid')
+            sys.stdout = new_stdout
+            main(args=['-c', conf, '-l', log, '-j', pid, '-n', '-s'], test=True)
+        finally:
+            sys.stdout = old_stdout
+            shutil.rmtree(tempdir)
+        output = new_stdout.getvalue()
+        self.assertEqual(len(output), 0)
+
 class SupervisordTests(unittest.TestCase):
     def tearDown(self):
         from supervisor.events import clear

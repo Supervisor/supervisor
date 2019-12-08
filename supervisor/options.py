@@ -403,7 +403,7 @@ class ServerOptions(Options):
     pidfile = None
     passwdfile = None
     nodaemon = None
-    quiet = None
+    silent = None
     environment = None
     httpservers = ()
     unlink_pidfile = False
@@ -448,8 +448,8 @@ class ServerOptions(Options):
                  "t", "strip_ansi", flag=1, default=0)
         self.add("profile_options", "supervisord.profile_options",
                  "", "profile_options=", profile_options, default=None)
-        self.add("quiet", "supervisord.quiet",
-                 "s", "quiet", flag=1, default=0)
+        self.add("silent", "supervisord.silent",
+                 "s", "silent", flag=1, default=0)
         self.pidhistory = {}
         self.process_group_configs = []
         self.parse_criticals = []
@@ -641,7 +641,7 @@ class ServerOptions(Options):
         section.pidfile = existing_dirpath(get('pidfile', 'supervisord.pid'))
         section.identifier = get('identifier', 'supervisor')
         section.nodaemon = boolean(get('nodaemon', 'false'))
-        section.quiet = boolean(get('quiet', 'false'))
+        section.silent = boolean(get('silent', 'false'))
 
         tempdir = tempfile.gettempdir()
         section.childlogdir = existing_directory(get('childlogdir', tempdir))
@@ -1465,7 +1465,7 @@ class ServerOptions(Options):
         # must be called after realize() and after supervisor does setuid()
         format = '%(asctime)s %(levelname)s %(message)s\n'
         self.logger = loggers.getLogger(self.loglevel)
-        if self.nodaemon and not self.quiet:
+        if self.nodaemon and not self.silent:
             loggers.handle_stdout(self.logger, format)
         loggers.handle_file(
             self.logger,

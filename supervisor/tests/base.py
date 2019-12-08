@@ -89,6 +89,7 @@ class DummyOptions:
         self.chdir_error = None
         self.umaskset = None
         self.poller = DummyPoller(self)
+        self.silent = False
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
