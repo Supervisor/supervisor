@@ -36,8 +36,7 @@ matrix:
             - END_TO_END=1
           dist: xenial          # required for Python >= 3.7
 
-        # TODO: change to "python: 3.8" when it is available
-        - python: 3.8-dev
+        - python: 3.8
           env:
             - TOXENV=py38
             - END_TO_END=1
