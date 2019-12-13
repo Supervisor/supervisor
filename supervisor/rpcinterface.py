@@ -703,8 +703,6 @@ class SupervisorNamespaceRPCInterface:
         if logfile is None or not os.path.exists(logfile):
             raise RPCError(Faults.NO_FILE, logfile)
 
-        # TODO: also provide a way to simply return logfile
-        # print(('D20191213T020824', logfile))
         try:
             ret = as_string(readFile(logfile, int(offset), int(length)))
             import base64
