@@ -558,6 +558,9 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 else:
                     raise
             else:
+                import base64
+                output = base64.b64decode(output)
+                output = output.decode("utf-8", "ignore")
                 self.ctl.output(output)
 
     def help_tail(self):
