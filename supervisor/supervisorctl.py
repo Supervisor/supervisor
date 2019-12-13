@@ -477,6 +477,21 @@ class DefaultControllerPlugin(ControllerPluginBase):
             self.ctl.output('')
             return
 
+    def do_query(self, arg):
+      args = arg.split()
+      supervisor = self.ctl.get_supervisor()
+      import json
+      info = None
+      if len(args) > 0:
+        name = args[0]
+        info = supervisor.getProcessInfo(name)
+        if len(args) >= 2:
+          attr = args[1]
+          info = info[attr]
+      else:
+        info = supervisor.getAllProcessInfo()
+      self.ctl.output(json.dumps(info))
+
     def do_tail(self, arg):
         if not self.ctl.upcheck():
             return
