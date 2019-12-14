@@ -220,7 +220,7 @@ Name                            Description
 =============================   ==============================================
 ACKNOWLEDGED                    The event listener has acknowledged (accepted
                                 or rejected) an event send.
-READY                           Event notificatons may be sent to this event
+READY                           Event notifications may be sent to this event
                                 listener
 BUSY                            Event notifications may not be sent to this
                                 event listener.
