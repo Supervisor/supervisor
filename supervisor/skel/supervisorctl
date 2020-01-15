@@ -1,0 +1,34 @@
+# Time-stamp: < supervisorctl (2020-01-15 23:49) >
+# supervisorctl bash completion
+# based on https://gist.github.com/pfreixes/3187511
+
+_supervisor()
+{
+    local cur prev opts base suggestions
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    suggestions=
+
+    if test "$prev" = "start" ; then
+        # arguments to 'start' command
+        suggestions=$(supervisorctl status | grep -e STOPPED | awk '{print $1}')
+        suggestions="$suggestions all"
+    elif test "$prev" = "stop" ; then
+        # arguments to 'stop' command
+        suggestions=$(supervisorctl status | grep -e RUNNING | awk '{print $1}')
+        suggestions="$suggestions all"
+    elif test "$prev" = "restart" -o "$prev" = "status"; then
+        # arguments to 'restart' or 'status' command
+        suggestions=$(supervisorctl avail | awk '{print $1}')
+        suggestions="$suggestions all"
+    else
+        # options
+        # could also be parsed, but seems a bit hacky
+        suggestions="add exit open reload restart start tail avail fg pid remove shutdown status update clear maintail quit reread signal stop version"
+    fi
+    COMPREPLY=( $(compgen -W "${suggestions}" -- ${cur}) )
+    return 0
+}
+
+command -v supervisorctl > /dev/null && complete -F _supervisor supervisorctl
