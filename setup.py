@@ -25,7 +25,7 @@ elif (3, 0) < py_version < (3, 4):
 requires = []
 tests_require = []
 if py_version < (3, 3):
-    tests_require.append('mock')
+    tests_require.append('mock<4.0.0.dev0')
 
 testing_extras = tests_require + [
     'pytest',
