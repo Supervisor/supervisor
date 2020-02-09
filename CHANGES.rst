@@ -1,5 +1,9 @@
-4.1.1.dev0 (Next Release)
+4.2.0.dev0 (Next Release)
 -------------------------
+
+- When ``supervisord`` is run in the foreground, a new ``--silent`` option
+  suppresses the main log from being echoed to ``stdout`` as it normally
+  would.  Patch by Trevor Foster.
 
 - Fixed a bug introduced in 4.0.3 where ``supervisorctl tail -f foo | grep bar``
   would fail with the error ``NoneType object has no attribute 'lower'``.  This
