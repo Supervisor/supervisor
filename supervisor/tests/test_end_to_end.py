@@ -9,7 +9,6 @@ import pkg_resources
 from supervisor.compat import xmlrpclib
 from supervisor.xmlrpc import SupervisorTransport
 
-
 # end-to-test tests are slow so only run them when asked
 if 'END_TO_END' in os.environ:
     import pexpect
@@ -187,14 +186,14 @@ class EndToEndTests(BaseTestCase):
     def test_issue_1231c(self):
         # TODO fails (intermittently?) on python 3.6 only
         # https://github.com/Supervisor/supervisor/issues/1327
-        if sys.version_info[:2] == (3, 6):
-            return
+        # if sys.version_info[:2] == (3, 6):
+            # return
 
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
-        supervisord.expect_exact('success: hello entered RUNNING state')
+        supervisord.expect_exact('success: hello entered RUNNING state', timeout=10)
 
         args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'tail', 'hello']
         env = os.environ.copy()
