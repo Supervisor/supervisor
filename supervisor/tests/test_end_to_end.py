@@ -136,7 +136,7 @@ class EndToEndTests(BaseTestCase):
         supervisord.expect_exact('cat entered RUNNING state', timeout=60)
 
     def test_issue_1231a(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231.conf')
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231a.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -152,7 +152,7 @@ class EndToEndTests(BaseTestCase):
 
 
     def test_issue_1231b(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231.conf')
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231b.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -184,16 +184,11 @@ class EndToEndTests(BaseTestCase):
                 break
 
     def test_issue_1231c(self):
-        # TODO fails (intermittently?) on python 3.6 only
-        # https://github.com/Supervisor/supervisor/issues/1327
-        # if sys.version_info[:2] == (3, 6):
-            # return
-
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231.conf')
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231c.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
-        supervisord.expect_exact('success: hello entered RUNNING state', timeout=10)
+        supervisord.expect_exact('success: hello entered RUNNING state')
 
         args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'tail', 'hello']
         env = os.environ.copy()
