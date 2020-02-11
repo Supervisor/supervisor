@@ -137,7 +137,7 @@ class EndToEndTests(BaseTestCase):
         supervisord.expect_exact('cat entered RUNNING state', timeout=60)
 
     def test_issue_1231a(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231.conf')
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231a.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -153,7 +153,7 @@ class EndToEndTests(BaseTestCase):
 
 
     def test_issue_1231b(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231.conf')
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231b.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -185,7 +185,7 @@ class EndToEndTests(BaseTestCase):
                 break
 
     def test_issue_1231c(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231.conf')
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231c.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
