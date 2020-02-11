@@ -17,18 +17,23 @@ else:
     BaseTestCase = object
 
 
+def kill_and_wait(p):
+    p.kill(signal.SIGINT)
+    p.wait()
+
+
 class EndToEndTests(BaseTestCase):
 
     def test_issue_565(self):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-565.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisord.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisord)
         supervisord.expect_exact('success: hello entered RUNNING state')
 
         args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'tail', '-f', 'hello']
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisorctl.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisorctl)
 
         for i in range(1, 4):
             line = 'The Øresund bridge ends in Malmö - %d' % i
@@ -38,7 +43,7 @@ class EndToEndTests(BaseTestCase):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-638.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisord.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisord)
         is_py2 = sys.version_info[0] < 3
         if is_py2:
             b_prefix = ''
@@ -55,7 +60,7 @@ class EndToEndTests(BaseTestCase):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-663.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisord.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisord)
         for i in range(2):
             supervisord.expect_exact('OKREADY', timeout=60)
             supervisord.expect_exact('BUSY -> ACKNOWLEDGED', timeout=30)
@@ -64,11 +69,11 @@ class EndToEndTests(BaseTestCase):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-664.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisord.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisord)
         supervisord.expect_exact('test_öäü entered RUNNING state', timeout=60)
         args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'status']
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisorctl.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisorctl)
         try:
             supervisorctl.expect('test_öäü\\s+RUNNING', timeout=30)
             seen = True
@@ -80,7 +85,7 @@ class EndToEndTests(BaseTestCase):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-835.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisord.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisord)
         supervisord.expect_exact('cat entered RUNNING state', timeout=60)
         transport = SupervisorTransport('', '', 'unix:///tmp/issue-835.sock')
         server = xmlrpclib.ServerProxy('http://anything/RPC2', transport)
@@ -96,11 +101,11 @@ class EndToEndTests(BaseTestCase):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-836.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisord.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisord)
         supervisord.expect_exact('cat entered RUNNING state', timeout=60)
         args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'fg', 'cat']
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisorctl.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisorctl)
 
         try:
             for s in ('Hi', 'Hello', 'The Øresund bridge ends in Malmö'):
@@ -117,10 +122,11 @@ class EndToEndTests(BaseTestCase):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1054.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisord.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisord)
         supervisord.expect_exact('cat entered RUNNING state', timeout=60)
         args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'avail']
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(kill_and_wait, supervisorctl)
         try:
             supervisorctl.expect('cat\\s+in use\\s+auto', timeout=30)
             seen = True
@@ -132,19 +138,19 @@ class EndToEndTests(BaseTestCase):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1224.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisord.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisord)
         supervisord.expect_exact('cat entered RUNNING state', timeout=60)
 
     def test_issue_1231a(self):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231a.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisord.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisord)
         supervisord.expect_exact('success: hello entered RUNNING state')
 
         args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'tail', '-f', 'hello']
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisorctl.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisorctl)
 
         for i in range(1, 4):
             line = '%d - hash=57d94b…381088' % i
@@ -155,7 +161,7 @@ class EndToEndTests(BaseTestCase):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231b.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisord.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisord)
         supervisord.expect_exact('success: hello entered RUNNING state')
 
         args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'tail', '-f', 'hello']
@@ -163,7 +169,7 @@ class EndToEndTests(BaseTestCase):
         env['LANG'] = 'oops'
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8',
                                       env=env)
-        self.addCleanup(supervisorctl.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisorctl)
 
         # For Python 3 < 3.7, LANG=oops leads to warnings because of the
         # stdout encoding. For 3.7 (and presumably later), the encoding is
@@ -187,7 +193,7 @@ class EndToEndTests(BaseTestCase):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231c.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisord.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisord)
         supervisord.expect_exact('success: hello entered RUNNING state')
 
         args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'tail', 'hello']
@@ -195,7 +201,7 @@ class EndToEndTests(BaseTestCase):
         env['LANG'] = 'oops'
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8',
                                       env=env)
-        self.addCleanup(supervisorctl.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisorctl)
 
         # For Python 3 < 3.7, LANG=oops leads to warnings because of the
         # stdout encoding. For 3.7 (and presumably later), the encoding is
@@ -209,7 +215,7 @@ class EndToEndTests(BaseTestCase):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1298.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
-        self.addCleanup(supervisord.kill, signal.SIGINT)
+        self.addCleanup(kill_and_wait, supervisord)
         supervisord.expect_exact('success: spew entered RUNNING state')
 
         cmd = "'%s' -m supervisor.supervisorctl -c '%s' tail -f spew | /bin/cat -u" % (
