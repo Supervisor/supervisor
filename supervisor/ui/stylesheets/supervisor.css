@@ -17,7 +17,7 @@ body, td, input, select, textarea, a {
   font: 12px/1.5em arial, helvetica, verdana, sans-serif;
   color: #333;
 }
-html, body, form, fieldset, h1, h2, h3, h4, h5, h6, 
+html, body, form, fieldset, h1, h2, h3, h4, h5, h6,
 p, pre, blockquote, ul, ol, dl, address {
   margin: 0;
   padding: 0;
@@ -38,7 +38,7 @@ body {
   background-color: #FFFFF3;
   color: #333;
 }
-a:link, 
+a:link,
 a:visited {
   color: #333;
 }
@@ -57,10 +57,10 @@ a:hover {
 }
 /* clear float */
 .clr:after {
-  content: "."; 
-  display: block; 
-  height: 0; 
-  clear: both; 
+  content: ".";
+  display: block;
+  height: 0;
+  clear: both;
   visibility: hidden;
 }
 .clr {display: inline-block;}
@@ -81,7 +81,7 @@ html, body {
   width: 782px;
   margin: 0 auto -31px;
 }
-#footer, 
+#footer,
 .push {
   height: 30px;
 }
@@ -121,26 +121,20 @@ html, body {
   text-decoration: none;
 }
 
-#refresh a {
-  width: 62px;
-  background: url("../images/button_refresh.gif") 0 0 no-repeat;
+.action-button {
+  border: 1px solid #919191;
+  text-transform: uppercase;
+  padding: 0 5px;
+  border-radius: 4px;
+  color: #50504d;
+  font-size: 12px;
+  background: #fbfbfb;
+  font-weight: 600;
 }
-#refresh a:hover {
-  background-position: -62px;
-}
-#restart_all a {
-  width: 84px;
-  background: url("../images/button_restart.gif") 0 0 no-repeat;
-}
-#restart_all a:hover {
-  background-position: -84px;
-}
-#stop_all a {
-  width: 65px;
-  background: url("../images/button_stop.gif") 0 0 no-repeat;
-}
-#stop_all a:hover {
-  background-position: -65px;
+
+.action-button:hover {
+  border: 1px solid #88b0f2;
+  background: #ffffff;
 }
 
 table {
@@ -196,10 +190,10 @@ tr.shade td {
 .statusnominal {
   background-image: url("../images/state0.gif");
 }
-.statusrunning { 
+.statusrunning {
   background-image: url("../images/state2.gif");
 }
-.statuserror { 
+.statuserror {
   background-image: url("../images/state3.gif");
 }
 
