@@ -51,7 +51,7 @@ matrix:
             - END_TO_END=1
 
 install:
-    - travis_retry pip install virtualenv tox pexpect==4.7.0
+    - travis_retry pip install virtualenv tox
 
 script:
     - travis_retry tox
