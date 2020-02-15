@@ -5,15 +5,17 @@
   suppresses the main log from being echoed to ``stdout`` as it normally
   would.  Patch by Trevor Foster.
 
-- Fixed a bug introduced in 4.0.3 where ``supervisorctl tail -f foo | grep bar``
-  would fail with the error ``NoneType object has no attribute 'lower'``.  This
-  only occurred on Python 2.7 and only when piped.  Patch by Slawa Pidgorny.
+- Web UI buttons no longer use backgroud images.  Patch by Dmytro Karpovych.
+
+- The HTTP server will now send an ``X-Accel-Buffering: no`` header in
+  logtail responses to fix Nginx proxy buffering.  Patch by Weizhao Li.
 
 - When ``supervisord`` reaps an unknown PID, it will now log a description
   of the ``waitpid`` status.  Patch by Andrey Zelenchuk.
 
-- The HTTP server will now send an ``X-Accel-Buffering: no`` header in
-  logtail responses to fix Nginx proxy buffering.  Patch by Weizhao Li.
+- Fixed a bug introduced in 4.0.3 where ``supervisorctl tail -f foo | grep bar``
+  would fail with the error ``NoneType object has no attribute 'lower'``.  This
+  only occurred on Python 2.7 and only when piped.  Patch by Slawa Pidgorny.
 
 4.1.0 (2019-10-19)
 ------------------
