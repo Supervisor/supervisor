@@ -5,7 +5,7 @@
   suppresses the main log from being echoed to ``stdout`` as it normally
   would.  Patch by Trevor Foster.
 
-- Web UI buttons no longer use backgroud images.  Patch by Dmytro Karpovych.
+- Web UI buttons no longer use background images.  Patch by Dmytro Karpovych.
 
 - The HTTP server will now send an ``X-Accel-Buffering: no`` header in
   logtail responses to fix Nginx proxy buffering.  Patch by Weizhao Li.
