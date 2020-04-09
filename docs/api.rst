@@ -225,6 +225,7 @@ Process Control
 ---------------
 
   .. autoclass:: SupervisorNamespaceRPCInterface
+    :noindex:
 
     .. automethod:: getProcessInfo
 
@@ -352,6 +353,7 @@ Process Logging
 ---------------
 
   .. autoclass:: SupervisorNamespaceRPCInterface
+    :noindex:
 
     .. automethod:: readProcessStdoutLog
 
