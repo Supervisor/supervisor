@@ -1674,12 +1674,12 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         text = lstrip("""\
         [program:foo]
+        process_name = foo_%(process_num)d
         command = /bin/foo --num=%(process_num)d
         directory = /tmp/foo_%(process_num)d
         stderr_logfile = /tmp/foo_%(process_num)d_stderr
         stdout_logfile = /tmp/foo_%(process_num)d_stdout
         environment = NUM=%(process_num)d
-        process_name = foo_%(process_num)d
         numprocs = 2
         """)
         from supervisor.options import UnhosedConfigParser
@@ -1696,6 +1696,23 @@ class ServerOptionsTests(unittest.TestCase):
             self.assertEqual(pconfigs[num].stdout_logfile,
                 '/tmp/foo_%d_stdout' % num)
             self.assertEqual(pconfigs[num].environment, {'NUM': '%d' % num})
+
+    def test_processes_from_section_numprocs_expansion(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        process_name = foo_%(process_num)d
+        command = /bin/foo --numprocs=%(numprocs)d
+        numprocs = 2
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(len(pconfigs), 2)
+        for num in (0, 1):
+            self.assertEqual(pconfigs[num].name, 'foo_%d' % num)
+            self.assertEqual(pconfigs[num].command, "/bin/foo --numprocs=%d" % 2)
 
     def test_processes_from_section_expands_directory(self):
         instance = self._makeOne()

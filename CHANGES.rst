@@ -5,6 +5,10 @@
   suppresses the main log from being echoed to ``stdout`` as it normally
   would.  Patch by Trevor Foster.
 
+- Parsing ``command=`` now supports a new expansion, ``%(numprocs)d``, that
+  expands to the value of ``numprocs=`` in the same section.  Patch by
+  Santjago Corkez.
+
 - Web UI buttons no longer use background images.  Patch by Dmytro Karpovych.
 
 - The HTTP server will now send an ``X-Accel-Buffering: no`` header in
