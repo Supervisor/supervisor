@@ -240,29 +240,29 @@ class StatusView(MeldView):
         processname = urllib.quote(make_namespec(process.group.config.name,
                                                  process.config.name))
         start = {
-        'name':'Start',
-        'href':'index.html?processname=%s&amp;action=start' % processname,
-        'target':None,
+            'name': 'Start',
+            'href': 'index.html?processname=%s&amp;action=start' % processname,
+            'target': None,
         }
         restart = {
-        'name':'Restart',
-        'href':'index.html?processname=%s&amp;action=restart' % processname,
-        'target':None,
+            'name': 'Restart',
+            'href': 'index.html?processname=%s&amp;action=restart' % processname,
+            'target': None,
         }
         stop = {
-        'name':'Stop',
-        'href':'index.html?processname=%s&amp;action=stop' % processname,
-        'target':None,
+            'name': 'Stop',
+            'href': 'index.html?processname=%s&amp;action=stop' % processname,
+            'target': None,
         }
         clearlog = {
-        'name':'Clear Log',
-        'href':'index.html?processname=%s&amp;action=clearlog' % processname,
-        'target':None,
+            'name': 'Clear Log',
+            'href': 'index.html?processname=%s&amp;action=clearlog' % processname,
+            'target': None,
         }
         tailf = {
-        'name':'Tail -f',
-        'href':'logtail/%s' % processname,
-        'target':'_blank'
+            'name': 'Tail -f',
+            'href': 'logtail/%s' % processname,
+            'target': '_blank'
         }
         if state == ProcessStates.RUNNING:
             actions = [restart, stop, clearlog, tailf]
