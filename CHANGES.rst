@@ -11,6 +11,10 @@
 
 - Web UI buttons no longer use background images.  Patch by Dmytro Karpovych.
 
+- The Web UI now has a link to view ``tail -f stderr`` for a process in
+  addition to the existing ``tail -f stdout`` link.  Based on a
+  patch by OuroborosCoding.
+
 - The HTTP server will now send an ``X-Accel-Buffering: no`` header in
   logtail responses to fix Nginx proxy buffering.  Patch by Weizhao Li.
 

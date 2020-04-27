@@ -259,18 +259,23 @@ class StatusView(MeldView):
             'href': 'index.html?processname=%s&amp;action=clearlog' % processname,
             'target': None,
         }
-        tailf = {
-            'name': 'Tail -f',
+        tailf_stdout = {
+            'name': 'Tail -f Stdout',
             'href': 'logtail/%s' % processname,
             'target': '_blank'
         }
+        tailf_stderr = {
+            'name': 'Tail -f Stderr',
+            'href': 'logtail/%s/stderr' % processname,
+            'target': '_blank'
+        }
         if state == ProcessStates.RUNNING:
-            actions = [restart, stop, clearlog, tailf]
+            actions = [restart, stop, clearlog, tailf_stdout, tailf_stderr]
         elif state in (ProcessStates.STOPPED, ProcessStates.EXITED,
                        ProcessStates.FATAL):
-            actions = [start, None, clearlog, tailf]
+            actions = [start, None, clearlog, tailf_stdout, tailf_stderr]
         else:
-            actions = [None, None, clearlog, tailf]
+            actions = [None, None, clearlog, tailf_stdout, tailf_stderr]
         return actions
 
     def css_class_for_state(self, state):
