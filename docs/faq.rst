@@ -4,7 +4,7 @@ Frequently Asked Questions
 Q
   My program never starts and supervisor doesn't indicate any error?
 
-A 
+A
   Make sure the ``x`` bit is set on the executable file you're using in
   the ``command=`` line of your program section.
 
@@ -34,6 +34,6 @@ Q
   memory automatically?
 
 A
-  The :term:`superlance` package contains a console script that can be
+  The :term:`Superlance` package contains a console script that can be
   used as a Supervisor event listener named ``memmon`` which helps
   with this task.  It works on Linux and Mac OS X.

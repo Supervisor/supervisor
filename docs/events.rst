@@ -323,7 +323,7 @@ stderr, and responds with an ``OK`` result, and then subsequently a
    if __name__ == '__main__':
        main()
 
-Other sample event listeners are present within the :term:`superlance`
+Other sample event listeners are present within the :term:`Superlance`
 package, including one which can monitor supervisor subprocesses and
 restart a process if it is using "too much" memory.
 
