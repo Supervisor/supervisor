@@ -1,5 +1,5 @@
-4.2.0.dev0 (Next Release)
--------------------------
+4.2.0 (2020-04-30)
+------------------
 
 - When ``supervisord`` is run in the foreground, a new ``--silent`` option
   suppresses the main log from being echoed to ``stdout`` as it normally
