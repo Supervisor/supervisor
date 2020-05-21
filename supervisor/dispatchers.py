@@ -140,7 +140,7 @@ class POutputDispatcher(PDispatcher):
         else:
             fmt = '%(message)s'
         
-	if logfile == 'syslog':
+        if logfile == 'syslog':
             warnings.warn("Specifying 'syslog' for filename is deprecated. "
                 "Use %s_syslog instead." % channel, DeprecationWarning)
             fmt = ' '.join((config.name, fmt))
