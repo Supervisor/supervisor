@@ -518,7 +518,7 @@ class DummyPConfig:
                  stdout_logfile_backups=0, stdout_logfile_maxbytes=0,
                  stdout_syslog=False,
                  stderr_logfile=None, stderr_capture_maxbytes=0,
-                 stderr_events_enabled=False,stdout_append_timestamp=False,stderr_append_timestamp=False,
+                 stderr_events_enabled=False, stdout_append_timestamp=False, stderr_append_timestamp=False,
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  stderr_syslog=False,
                  redirect_stderr=False,

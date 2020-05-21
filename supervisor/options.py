@@ -1860,7 +1860,7 @@ class ProcessConfig(Config):
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
         'exitcodes', 'redirect_stderr' ]
-    optional_param_names = [ 'environment', 'serverurl','stdout_append_timestamp','stderr_append_timestamp' ]
+    optional_param_names = [ 'environment', 'serverurl', 'stdout_append_timestamp', 'stderr_append_timestamp' ]
 
     def __init__(self, options, **params):
         self.options = options
