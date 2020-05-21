@@ -136,7 +136,7 @@ class POutputDispatcher(PDispatcher):
         backups = getattr(config, '%s_logfile_backups' % channel)
         append_timestamp = getattr(config,'%s_append_timestamp' % channel)
         if append_timestamp:
-            fmt = '%(asctime)s: %(message)s'
+            fmt = '%(asctime)s %(message)s'
         else:
             fmt = '%(message)s'
         
