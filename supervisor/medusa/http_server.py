@@ -511,8 +511,8 @@ class http_channel (asynchat.async_chat):
         if chan_len:
             for i in range(chan_len):
                 if channels[i].__class__ == self.__class__:
-                    if (now - channel[i].last_used) > channel[i].zombie_timeout:
-                        channel[i].close()
+                    if (now - channels[i].last_used) > channels[i].zombie_timeout:
+                        channels[i].close()
 
     # --------------------------------------------------
     # send/recv overrides, good place for instrumentation.
