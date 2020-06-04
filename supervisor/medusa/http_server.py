@@ -506,10 +506,13 @@ class http_channel (asynchat.async_chat):
 
     def kill_zombies (self):
         now = int (time.time())
-        for channel in list(asyncore.socket_map.values()):
-            if channel.__class__ == self.__class__:
-                if (now - channel.last_used) > channel.zombie_timeout:
-                    channel.close()
+        channels = list(asyncore.socket_map.values())
+        chan_len = len(channels)
+        if chan_len:
+            for i in range(chan_len):
+                if channels[i].__class__ == self.__class__:
+                    if (now - channel[i].last_used) > channel[i].zombie_timeout:
+                        channel[i].close()
 
     # --------------------------------------------------
     # send/recv overrides, good place for instrumentation.
