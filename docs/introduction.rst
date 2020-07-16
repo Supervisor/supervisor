@@ -156,7 +156,7 @@ XML-RPC Interface
 Platform Requirements
 ---------------------
 
-Supervisor has been tested and is known to run on Linux (Ubuntu 9.10),
+Supervisor has been tested and is known to run on Linux (Ubuntu 18.04),
 Mac OS X (10.4/10.5/10.6), and Solaris (10 for Intel) and FreeBSD 6.1.
 It will likely work fine on most UNIX systems.
 
