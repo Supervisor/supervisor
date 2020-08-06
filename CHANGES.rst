@@ -1,6 +1,10 @@
 4.2.1.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug on Python 3 where a network error could cause ``supervisord``
+  to crash with the error ``<class 'TypeError'>:can't concat str to bytes ``.
+  Patch by Vinay Sajip.
+
 - Fixed a bug where a test would fail on systems with glibc 2.3.1 because
   the default value of SOMAXCONN changed.
 
