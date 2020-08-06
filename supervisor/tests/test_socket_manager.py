@@ -204,8 +204,21 @@ class SocketManagerTest(unittest.TestCase):
         self.assertTrue(sock_manager.is_prepared())
         self.assertFalse(sock.bind_called)
         self.assertTrue(sock.listen_called)
-        self.assertEqual(sock.listen_backlog, socket.SOMAXCONN)
         self.assertFalse(sock.close_called)
+
+    def test_prepare_socket_uses_configured_backlog(self):
+        conf = DummySocketConfig(1, backlog=42)
+        sock_manager = self._makeOne(conf)
+        sock = sock_manager.get_socket()
+        self.assertTrue(sock_manager.is_prepared())
+        self.assertEqual(sock.listen_backlog, conf.get_backlog())
+
+    def test_prepare_socket_uses_somaxconn_if_no_backlog_configured(self):
+        conf = DummySocketConfig(1, backlog=None)
+        sock_manager = self._makeOne(conf)
+        sock = sock_manager.get_socket()
+        self.assertTrue(sock_manager.is_prepared())
+        self.assertEqual(sock.listen_backlog, socket.SOMAXCONN)
 
     def test_tcp_socket_already_taken(self):
         conf = InetStreamSocketConfig('127.0.0.1', 51041)

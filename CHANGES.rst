@@ -1,6 +1,8 @@
 4.2.1.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug where a test would fail on systems with glibc 2.3.1 because
+  the default value of SOMAXCONN changed.
 
 4.2.0 (2020-04-30)
 ------------------
