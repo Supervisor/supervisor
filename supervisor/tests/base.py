@@ -358,7 +358,7 @@ class DummySocketConfig:
         return not self.__eq__(other)
 
     def get_backlog(self):
-        return 128
+        return 4096
 
     def create_and_bind(self):
         return DummySocket(self.fd)
