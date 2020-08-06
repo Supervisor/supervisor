@@ -352,7 +352,7 @@ class dispatcher:
             # winsock sometimes throws ENOTCONN
             if why.args[0] in [ECONNRESET, ENOTCONN, ESHUTDOWN]:
                 self.handle_close()
-                return ''
+                return b''
             else:
                 raise
 
