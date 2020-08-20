@@ -1,5 +1,5 @@
-4.2.1.dev0 (Next Release)
--------------------------
+4.2.1 (2020-08-20)
+------------------
 
 - Fixed a bug on Python 3 where a network error could cause ``supervisord``
   to crash with the error ``<class 'TypeError'>:can't concat str to bytes``.
