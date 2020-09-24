@@ -910,6 +910,7 @@ class ServerOptions(Options):
         stopasgroup = boolean(get(section, 'stopasgroup', 'false'))
         killasgroup = boolean(get(section, 'killasgroup', stopasgroup))
         exitcodes = list_of_exitcodes(get(section, 'exitcodes', '0'))
+        exit_supervisord = boolean(get(section, 'exit_supervisord', 'false'))
         # see also redirect_stderr check in process_groups_from_parser()
         redirect_stderr = boolean(get(section, 'redirect_stderr','false'))
         numprocs = integer(get(section, 'numprocs', 1))
@@ -1031,6 +1032,7 @@ class ServerOptions(Options):
                 stopasgroup=stopasgroup,
                 killasgroup=killasgroup,
                 exitcodes=exitcodes,
+                exit_supervisord=exit_supervisord,
                 redirect_stderr=redirect_stderr,
                 environment=environment,
                 serverurl=serverurl)
@@ -1853,7 +1855,7 @@ class ProcessConfig(Config):
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
-        'exitcodes', 'redirect_stderr' ]
+        'exitcodes', 'exit_supervisord', 'redirect_stderr' ]
     optional_param_names = [ 'environment', 'serverurl' ]
 
     def __init__(self, options, **params):

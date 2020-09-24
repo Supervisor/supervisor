@@ -636,6 +636,8 @@ class Subprocess(object):
 
         logger = self.config.options.logger
 
+        processname = as_string(self.config.name)
+
         if self.config.options.mood > SupervisorStates.RESTARTING:
             # dont start any processes if supervisor is shutting down
             if state == ProcessStates.EXITED:
@@ -647,6 +649,7 @@ class Subprocess(object):
                         if self.exitstatus not in self.config.exitcodes:
                             # EXITED -> STARTING
                             self.spawn()
+
             elif state == ProcessStates.STOPPED and not self.laststart:
                 if self.config.autostart:
                     # STOPPED -> STARTING
@@ -657,7 +660,6 @@ class Subprocess(object):
                         # BACKOFF -> STARTING
                         self.spawn()
 
-        processname = as_string(self.config.name)
         if state == ProcessStates.STARTING:
             if now - self.laststart > self.config.startsecs:
                 # STARTING -> RUNNING if the proc has started
@@ -691,6 +693,12 @@ class Subprocess(object):
                     'killing \'%s\' (%s) with SIGKILL' % (processname,
                                                           self.pid))
                 self.kill(signal.SIGKILL)
+
+        if self.config.exit_supervisord:
+            if self.state == ProcessStates.EXITED or self.state == ProcessStates.FATAL :
+                # no trying to restart for can't restar, so exit supervisord
+                logger.info('%s exit means supervisord exit' % processname)
+                self.config.options.mood = SupervisorStates.SHUTDOWN
 
 class FastCGISubprocess(Subprocess):
     """Extends Subprocess class to handle FastCGI subprocesses"""

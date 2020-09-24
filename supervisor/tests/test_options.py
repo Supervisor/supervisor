@@ -3223,7 +3223,7 @@ class ProcessConfigTests(unittest.TestCase):
                      'stderr_logfile', 'stderr_capture_maxbytes',
                      'stderr_events_enabled', 'stderr_syslog',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup',
-                     'killasgroup', 'exitcodes', 'redirect_stderr',
+                     'killasgroup', 'exitcodes', 'exit_supervisord', 'redirect_stderr',
                      'environment'):
             defaults[name] = name
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
@@ -3321,7 +3321,7 @@ class EventListenerConfigTests(unittest.TestCase):
                      'stderr_logfile', 'stderr_capture_maxbytes',
                      'stderr_events_enabled', 'stderr_syslog',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup',
-                     'killasgroup', 'exitcodes', 'redirect_stderr',
+                     'killasgroup', 'exitcodes', 'exit_supervisord', 'redirect_stderr',
                      'environment'):
             defaults[name] = name
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
@@ -3369,7 +3369,7 @@ class FastCGIProcessConfigTests(unittest.TestCase):
                      'stderr_logfile', 'stderr_capture_maxbytes',
                      'stderr_events_enabled', 'stderr_syslog',
                      'stopsignal', 'stopwaitsecs', 'stopasgroup',
-                     'killasgroup', 'exitcodes', 'redirect_stderr',
+                     'killasgroup', 'exitcodes', 'exit_supervisord', 'redirect_stderr',
                      'environment'):
             defaults[name] = name
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',

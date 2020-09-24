@@ -398,7 +398,7 @@ class SupervisordTests(unittest.TestCase):
                 'stopsignal': None, 'stopwaitsecs': 10,
                 'stopasgroup': False,
                 'killasgroup': False,
-                'exitcodes': (0,), 'environment': None, 'serverurl': None,
+                'exitcodes': (0,), 'exit_supervisord': False, 'environment': None, 'serverurl': None,
             }
             result.update(params)
             return ProcessConfig(options, **result)
@@ -464,7 +464,7 @@ class SupervisordTests(unittest.TestCase):
                 'stopsignal': None, 'stopwaitsecs': 10,
                 'stopasgroup': False,
                 'killasgroup': False,
-                'exitcodes': (0,), 'environment': None, 'serverurl': None,
+                'exitcodes': (0,), 'exit_supervisord': False, 'environment': None, 'serverurl': None,
             }
             result.update(params)
             return EventListenerConfig(options, **result)
