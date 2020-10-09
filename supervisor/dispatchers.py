@@ -129,7 +129,7 @@ class POutputDispatcher(PDispatcher):
         """
 
         logfile = getattr(config, '%s_logfile' % channel)
-        if not logfile:
+        if logfile == '':
             return
 
         maxbytes = getattr(config, '%s_logfile_maxbytes' % channel)
@@ -139,17 +139,23 @@ class POutputDispatcher(PDispatcher):
             warnings.warn("Specifying 'syslog' for filename is deprecated. "
                 "Use %s_syslog instead." % channel, DeprecationWarning)
             fmt = ' '.join((config.name, fmt))
-        self.mainlog = loggers.handle_file(
-            config.options.getLogger(),
-            filename=logfile,
-            fmt=fmt,
-            rotating=not not maxbytes, # optimization
-            maxbytes=maxbytes,
-            backups=backups)
+        if logfile is not None:
+            self.mainlog = loggers.handle_file(
+                config.options.getLogger(),
+                filename=logfile,
+                fmt=fmt,
+                rotating=not not maxbytes, # optimization
+                maxbytes=maxbytes,
+                backups=backups)
 
         if getattr(config, '%s_syslog' % channel, False):
             fmt = config.name + ' %(message)s'
-            loggers.handle_syslog(self.mainlog, fmt)
+            if logfile is not None:
+                loggers.handle_syslog(self.mainlog, fmt)
+            else:
+                self.mainlog = loggers.handle_syslog(
+                    config.options.getLogger(),
+                    fmt=fmt)
 
     def removelogs(self):
         for log in (self.mainlog, self.capturelog):

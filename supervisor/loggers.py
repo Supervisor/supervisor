@@ -406,6 +406,8 @@ def handle_syslog(logger, fmt):
     handler.setLevel(logger.level)
     logger.addHandler(handler)
 
+    return logger
+
 def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
     if filename == 'syslog':
         handler = SyslogHandler()
