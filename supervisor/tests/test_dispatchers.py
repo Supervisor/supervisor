@@ -514,9 +514,10 @@ class POutputDispatcherTests(unittest.TestCase):
 
     def test_no_logfile_and_no_syslog(self):
         from supervisor.datatypes import boolean, logfile_name
+        from supervisor.loggers import LevelsByName
         from supervisor.options import ProcessConfig, ServerOptions
         options = ServerOptions() # need real options to get a real logger
-        options.loglevel = 20 # INFO, see loggers.py LevelsByName
+        options.loglevel = LevelsByName.TRAC
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile=logfile_name('NONE'),
                               stdout_syslog=boolean('false'))
@@ -529,10 +530,10 @@ class POutputDispatcherTests(unittest.TestCase):
 
     def test_no_logfile_and_syslog(self):
         from supervisor.datatypes import boolean, logfile_name
-        from supervisor.loggers import SyslogHandler
+        from supervisor.loggers import LevelsByName, SyslogHandler
         from supervisor.options import ServerOptions
         options = ServerOptions() # need real options to get a real logger
-        options.loglevel = 20 # INFO, see loggers.py LevelsByName
+        options.loglevel = LevelsByName.TRAC
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile=logfile_name('NONE'),
                               stdout_syslog=boolean('true'))
@@ -547,10 +548,10 @@ class POutputDispatcherTests(unittest.TestCase):
  
     def test_logfile_and_no_syslog(self):
         from supervisor.datatypes import boolean, logfile_name
-        from supervisor.loggers import FileHandler
+        from supervisor.loggers import FileHandler, LevelsByName
         from supervisor.options import ServerOptions
         options = ServerOptions() # need real options to get a real logger
-        options.loglevel = 20 # INFO, see loggers.py LevelsByName
+        options.loglevel = LevelsByName.TRAC
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile=logfile_name('/tmp/foo'),
                               stdout_syslog=boolean('false'))
@@ -564,10 +565,10 @@ class POutputDispatcherTests(unittest.TestCase):
  
     def test_logfile_and_syslog(self):
         from supervisor.datatypes import boolean, logfile_name
-        from supervisor.loggers import FileHandler, SyslogHandler
+        from supervisor.loggers import FileHandler, LevelsByName, SyslogHandler
         from supervisor.options import ServerOptions
         options = ServerOptions() # need real options to get a real logger
-        options.loglevel = 20 # INFO, see loggers.py LevelsByName
+        options.loglevel = LevelsByName.TRAC
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile=logfile_name('/tmp/foo'),
                               stdout_syslog=boolean('true'))
