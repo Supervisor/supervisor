@@ -512,12 +512,21 @@ class POutputDispatcherTests(unittest.TestCase):
             self._makeOne(process)
             self.assertEqual(len(w), 1)
 
+    def test_logfile_is_empty_string(self):
+        from supervisor.datatypes import logfile_name
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile=logfile_name(''))
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertEqual(dispatcher.process, process)
+        self.assertEqual(dispatcher.channel, 'stdout')
+        self.assertEqual(dispatcher.fd, 0)
+        self.assertEqual(dispatcher.mainlog, None)
+
     def test_no_logfile_and_no_syslog(self):
         from supervisor.datatypes import boolean, logfile_name
-        from supervisor.loggers import LevelsByName
-        from supervisor.options import ProcessConfig, ServerOptions
-        options = ServerOptions() # need real options to get a real logger
-        options.loglevel = LevelsByName.TRAC
+        options = DummyOptions()
         config = DummyPConfig(options, 'process1', '/bin/process1',
                               stdout_logfile=logfile_name('NONE'),
                               stdout_syslog=boolean('false'))

@@ -129,6 +129,8 @@ class POutputDispatcher(PDispatcher):
         """
 
         logfile = getattr(config, '%s_logfile' % channel)
+        if logfile == '':
+            return
 
         maxbytes = getattr(config, '%s_logfile_maxbytes' % channel)
         backups = getattr(config, '%s_logfile_backups' % channel)
