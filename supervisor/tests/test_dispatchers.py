@@ -478,17 +478,6 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.fd, 0)
         self.assertEqual(dispatcher.mainlog, None)
 
-    def test_ctor_stdout_logfile_magic_name_of_syslog_deprecated(self):
-        import warnings
-        options = DummyOptions()
-        config = DummyPConfig(options, 'process1', '/bin/process1')
-        config.stdout_logfile = 'syslog' # magically causes syslog logging
-        process = DummyProcess(config)
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter('always')
-            self._makeOne(process)
-            self.assertEqual(len(w), 1)
-
     def test_ctor_stdout_logfile_none_and_stdout_syslog_false(self):
         from supervisor.datatypes import boolean, logfile_name
         options = DummyOptions()

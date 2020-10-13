@@ -1772,6 +1772,42 @@ class ServerOptionsTests(unittest.TestCase):
             'also been set to a filename, the filename has been ignored')
         self.assertEqual(pconfigs[0].stderr_logfile, None)
 
+    def test_processes_from_section_rewrites_stdout_logfile_of_syslog(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo
+        stdout_logfile = syslog
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(instance.parse_warnings[0],
+            'For [program:foo], stdout_logfile=syslog but this is deprecated '
+            'and will be removed.  Use stdout_syslog=true to enable syslog '
+            'instead.')
+        self.assertEqual(pconfigs[0].stdout_logfile, None)
+        self.assertEqual(pconfigs[0].stdout_syslog, True)
+
+    def test_processes_from_section_rewrites_stderr_logfile_of_syslog(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo
+        stderr_logfile = syslog
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(instance.parse_warnings[0],
+            'For [program:foo], stderr_logfile=syslog but this is deprecated '
+            'and will be removed.  Use stderr_syslog=true to enable syslog '
+            'instead.')
+        self.assertEqual(pconfigs[0].stderr_logfile, None)
+        self.assertEqual(pconfigs[0].stderr_syslog, True)
+
     def test_processes_from_section_redirect_stderr_with_auto(self):
         instance = self._makeOne()
         text = lstrip("""\

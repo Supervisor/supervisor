@@ -1,4 +1,3 @@
-import warnings
 import errno
 from supervisor.medusa.asyncore_25 import compact_traceback
 
@@ -96,7 +95,7 @@ class POutputDispatcher(PDispatcher):
         self.process = process
         self.event_type = event_type
         self.fd = fd
-        self.channel = channel = self.event_type.channel
+        self.channel = self.event_type.channel
 
         self._init_mainlog()
         self._init_capturelog()
@@ -126,14 +125,6 @@ class POutputDispatcher(PDispatcher):
         maxbytes = getattr(config, '%s_logfile_maxbytes' % channel)
         backups = getattr(config, '%s_logfile_backups' % channel)
         to_syslog = getattr(config, '%s_syslog' % channel)
-
-        # rewrite deprecated "syslog" magic logfile into the modern equivalent
-        # TODO remove this in a future version
-        if logfile == 'syslog':
-            warnings.warn("Specifying 'syslog' for filename is deprecated. "
-                "Use %s_syslog instead." % channel, DeprecationWarning)
-            logfile = None
-            to_syslog = True
 
         if logfile or to_syslog:
             self.mainlog = config.options.getLogger()
