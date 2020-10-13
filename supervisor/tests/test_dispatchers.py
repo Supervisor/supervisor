@@ -554,7 +554,7 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(len(dispatcher.mainlog.handlers), 1)
         self.assertEqual(dispatcher.mainlog.handlers[0].__class__,
             SyslogHandler)
- 
+
     def test_logfile_and_no_syslog(self):
         from supervisor.datatypes import boolean, logfile_name
         from supervisor.loggers import FileHandler, LevelsByName
@@ -571,7 +571,8 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.fd, 0)
         self.assertEqual(len(dispatcher.mainlog.handlers), 1)
         self.assertEqual(dispatcher.mainlog.handlers[0].__class__, FileHandler)
- 
+        dispatcher.mainlog.close()
+
     def test_logfile_and_syslog(self):
         from supervisor.datatypes import boolean, logfile_name
         from supervisor.loggers import FileHandler, LevelsByName, SyslogHandler
@@ -591,8 +592,7 @@ class POutputDispatcherTests(unittest.TestCase):
             dispatcher.mainlog.handlers))
         self.assertTrue(any(isinstance(h, SyslogHandler) for h in
             dispatcher.mainlog.handlers))
-
-
+        dispatcher.mainlog.close()
 
 
 class PInputDispatcherTests(unittest.TestCase):
