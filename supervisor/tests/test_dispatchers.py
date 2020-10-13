@@ -428,7 +428,7 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(len(dispatcher.childlog.data), 2)
         self.assertEqual(dispatcher.childlog.data[1], ansi)
 
-    def test_ctor_nologfiles(self):
+    def test_ctor_no_logfiles(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'process1', '/bin/process1')
         process = DummyProcess(config)
@@ -463,18 +463,6 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.channel, 'stdout')
         self.assertEqual(dispatcher.fd, 0)
         self.assertEqual(dispatcher.capturelog.__class__,DummyLogger)
-        self.assertEqual(dispatcher.mainlog, None)
-        self.assertEqual(dispatcher.childlog, None)
-
-    def test_ctor_nologs(self):
-        options = DummyOptions()
-        config = DummyPConfig(options, 'process1', '/bin/process1')
-        process = DummyProcess(config)
-        dispatcher = self._makeOne(process)
-        self.assertEqual(dispatcher.process, process)
-        self.assertEqual(dispatcher.channel, 'stdout')
-        self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(dispatcher.capturelog, None)
         self.assertEqual(dispatcher.mainlog, None)
         self.assertEqual(dispatcher.childlog, None)
 
