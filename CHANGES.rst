@@ -6,6 +6,11 @@
   the same program had also been configured.  The file and syslog options
   can now be used independently.  Patch by Scott Stroupe.
 
+- Fixed a bug where the ``logfile`` option in the ``[supervisord]``
+  section would not log to syslog when the special filename of
+  ``syslog`` was supplied, as is supported by all other log filename
+  options.  Patch by Frank Cuny.
+
 4.2.1 (2020-08-20)
 ------------------
 
