@@ -81,7 +81,7 @@ class POutputDispatcher(PDispatcher):
     """
 
     capturemode = False # are we capturing process event data
-    mainlog = None #  the process' "normal" logger
+    mainlog = None # the process' "normal" (non-capture) logger
     capturelog = None # the logger while we're in capturemode
     childlog = None # the current logger (event or main)
     output_buffer = b'' # data waiting to be logged
@@ -126,39 +126,41 @@ class POutputDispatcher(PDispatcher):
     def _setup_logging(self, config, channel):
         """
         Configure the main log according to the process' configuration and
-        channel. Sets `mainlog` on self. Returns nothing.
+        channel.  Sets `mainlog` on self if process logging is configured.
+        Returns nothing.
         """
 
         logfile = getattr(config, '%s_logfile' % channel)
-        if logfile == '':
-            return
-
         maxbytes = getattr(config, '%s_logfile_maxbytes' % channel)
         backups = getattr(config, '%s_logfile_backups' % channel)
-        fmt = '%(message)s'
+        to_syslog = getattr(config, '%s_syslog' % channel)
+
+        # rewrite deprecated "syslog" magic logfile into the modern equivalent
+        # TODO remove this in a future version
         if logfile == 'syslog':
             warnings.warn("Specifying 'syslog' for filename is deprecated. "
                 "Use %s_syslog instead." % channel, DeprecationWarning)
-            fmt = ' '.join((config.name, fmt))
-        if logfile is not None:
+            logfile = None
+            to_syslog = True
+
+        if logfile or to_syslog:
             self.mainlog = config.options.getLogger()
+
+        if logfile:
             loggers.handle_file(
                 self.mainlog,
                 filename=logfile,
-                fmt=fmt,
+                fmt='%(message)s',
                 rotating=not not maxbytes, # optimization
                 maxbytes=maxbytes,
-                backups=backups)
+                backups=backups
+            )
 
-        if getattr(config, '%s_syslog' % channel, False):
-            fmt = config.name + ' %(message)s'
-            if logfile is not None:
-                loggers.handle_syslog(self.mainlog, fmt)
-            else:
-                self.mainlog = config.options.getLogger()
-                loggers.handle_syslog(
-                    self.mainlog,
-                    fmt=fmt)
+        if to_syslog:
+            loggers.handle_syslog(
+                self.mainlog,
+                fmt=config.name + ' %(message)s'
+            )
 
     def removelogs(self):
         for log in (self.mainlog, self.capturelog):
