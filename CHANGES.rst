@@ -9,7 +9,7 @@
 - Fixed a bug where the ``logfile`` option in the ``[supervisord]``
   section would not log to syslog when the special filename of
   ``syslog`` was supplied, as is supported by all other log filename
-  options.  Patch by Frank Cuny.
+  options.  Patch by Franck Cuny.
 
 4.2.1 (2020-08-20)
 ------------------
