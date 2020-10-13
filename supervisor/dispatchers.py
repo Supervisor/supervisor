@@ -103,8 +103,9 @@ class POutputDispatcher(PDispatcher):
         capture_maxbytes = getattr(process.config,
                                    '%s_capture_maxbytes' % channel)
         if capture_maxbytes:
-            self.capturelog = loggers.handle_boundIO(
-                self.process.config.options.getLogger(),
+            self.capturelog = self.process.config.options.getLogger()
+            loggers.handle_boundIO(
+                self.capturelog,
                 fmt='%(message)s',
                 maxbytes=capture_maxbytes,
                 )
@@ -140,8 +141,9 @@ class POutputDispatcher(PDispatcher):
                 "Use %s_syslog instead." % channel, DeprecationWarning)
             fmt = ' '.join((config.name, fmt))
         if logfile is not None:
-            self.mainlog = loggers.handle_file(
-                config.options.getLogger(),
+            self.mainlog = config.options.getLogger()
+            loggers.handle_file(
+                self.mainlog,
                 filename=logfile,
                 fmt=fmt,
                 rotating=not not maxbytes, # optimization
@@ -153,8 +155,9 @@ class POutputDispatcher(PDispatcher):
             if logfile is not None:
                 loggers.handle_syslog(self.mainlog, fmt)
             else:
-                self.mainlog = loggers.handle_syslog(
-                    config.options.getLogger(),
+                self.mainlog = config.options.getLogger()
+                loggers.handle_syslog(
+                    self.mainlog,
                     fmt=fmt)
 
     def removelogs(self):
@@ -305,8 +308,9 @@ class PEventListenerDispatcher(PDispatcher):
         if logfile:
             maxbytes = getattr(process.config, '%s_logfile_maxbytes' % channel)
             backups = getattr(process.config, '%s_logfile_backups' % channel)
-            self.childlog = loggers.handle_file(
-                process.config.options.getLogger(),
+            self.childlog = process.config.options.getLogger()
+            loggers.handle_file(
+                self.childlog,
                 logfile,
                 '%(message)s',
                 rotating=not not maxbytes, # optimization
