@@ -88,8 +88,13 @@ def dict_of_key_value_pairs(arg):
 class Automatic:
     pass
 
+class Syslog:
+    """TODO deprecated; remove this special 'syslog' filename in the future"""
+    pass
+
 LOGFILE_NONES = ('none', 'off', None)
 LOGFILE_AUTOS = (Automatic, 'auto')
+LOGFILE_SYSLOGS = (Syslog, 'syslog')
 
 def logfile_name(val):
     if hasattr(val, 'lower'):
@@ -101,6 +106,8 @@ def logfile_name(val):
         return None
     elif coerced in LOGFILE_AUTOS:
         return Automatic
+    elif coerced in LOGFILE_SYSLOGS:
+        return Syslog
     else:
         return existing_dirpath(val)
 

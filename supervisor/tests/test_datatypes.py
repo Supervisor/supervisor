@@ -230,6 +230,18 @@ class LogfileNameTests(unittest.TestCase):
             actual = self._callFUT(thing)
             self.assertEqual(actual, datatypes.Automatic)
 
+    def test_returns_syslog_for_syslog_values(self):
+        for thing in datatypes.LOGFILE_SYSLOGS:
+            actual = self._callFUT(thing)
+            self.assertEqual(actual, datatypes.Syslog)
+
+    def test_returns_syslog_for_uppered_syslog_values(self):
+        for thing in datatypes.LOGFILE_SYSLOGS:
+            if hasattr(thing, 'upper'):
+                thing = thing.upper()
+            actual = self._callFUT(thing)
+            self.assertEqual(actual, datatypes.Syslog)
+
     def test_returns_existing_dirpath_for_other_values(self):
         func = datatypes.existing_dirpath
         datatypes.existing_dirpath = lambda path: path

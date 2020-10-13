@@ -46,6 +46,7 @@ from supervisor.datatypes import InetStreamSocketConfig
 from supervisor.datatypes import UnixStreamSocketConfig
 from supervisor.datatypes import url
 from supervisor.datatypes import Automatic
+from supervisor.datatypes import Syslog
 from supervisor.datatypes import auto_restart
 from supervisor.datatypes import profile_options
 
@@ -988,7 +989,7 @@ class ServerOptions(Options):
 
                 # rewrite deprecated "syslog" magic logfile into the equivalent
                 # TODO remove this in a future version
-                if lf_val == 'syslog':
+                if lf_val is Syslog:
                     self.parse_warnings.append(
                         'For [%s], %s=syslog but this is deprecated and will '
                         'be removed.  Use %s=true to enable syslog instead.' % (
