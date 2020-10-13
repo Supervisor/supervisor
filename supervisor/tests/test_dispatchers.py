@@ -478,6 +478,99 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.mainlog, None)
         self.assertEqual(dispatcher.childlog, None)
 
+    def test_ctor_stdout_logfile_is_empty_string(self):
+        from supervisor.datatypes import logfile_name
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile=logfile_name(''))
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertEqual(dispatcher.process, process)
+        self.assertEqual(dispatcher.channel, 'stdout')
+        self.assertEqual(dispatcher.fd, 0)
+        self.assertEqual(dispatcher.mainlog, None)
+
+    def test_ctor_stdout_logfile_magic_name_of_syslog_deprecated(self):
+        import warnings
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1')
+        config.stdout_logfile = 'syslog' # magically causes syslog logging
+        process = DummyProcess(config)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            self._makeOne(process)
+            self.assertEqual(len(w), 1)
+
+    def test_ctor_stdout_logfile_none_and_stdout_syslog_false(self):
+        from supervisor.datatypes import boolean, logfile_name
+        options = DummyOptions()
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile=logfile_name('NONE'),
+                              stdout_syslog=boolean('false'))
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertEqual(dispatcher.process, process)
+        self.assertEqual(dispatcher.channel, 'stdout')
+        self.assertEqual(dispatcher.fd, 0)
+        self.assertEqual(dispatcher.mainlog, None)
+
+    def test_ctor_stdout_logfile_none_and_stdout_syslog_true(self):
+        from supervisor.datatypes import boolean, logfile_name
+        from supervisor.loggers import LevelsByName, SyslogHandler
+        from supervisor.options import ServerOptions
+        options = ServerOptions() # need real options to get a real logger
+        options.loglevel = LevelsByName.TRAC
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile=logfile_name('NONE'),
+                              stdout_syslog=boolean('true'))
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertEqual(dispatcher.process, process)
+        self.assertEqual(dispatcher.channel, 'stdout')
+        self.assertEqual(dispatcher.fd, 0)
+        self.assertEqual(len(dispatcher.mainlog.handlers), 1)
+        self.assertEqual(dispatcher.mainlog.handlers[0].__class__,
+            SyslogHandler)
+
+    def test_ctor_stdout_logfile_str_and_stdout_syslog_false(self):
+        from supervisor.datatypes import boolean, logfile_name
+        from supervisor.loggers import FileHandler, LevelsByName
+        from supervisor.options import ServerOptions
+        options = ServerOptions() # need real options to get a real logger
+        options.loglevel = LevelsByName.TRAC
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile=logfile_name('/tmp/foo'),
+                              stdout_syslog=boolean('false'))
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertEqual(dispatcher.process, process)
+        self.assertEqual(dispatcher.channel, 'stdout')
+        self.assertEqual(dispatcher.fd, 0)
+        self.assertEqual(len(dispatcher.mainlog.handlers), 1)
+        self.assertEqual(dispatcher.mainlog.handlers[0].__class__, FileHandler)
+        dispatcher.mainlog.close()
+
+    def test_ctor_stdout_logfile_str_and_stdout_syslog_true(self):
+        from supervisor.datatypes import boolean, logfile_name
+        from supervisor.loggers import FileHandler, LevelsByName, SyslogHandler
+        from supervisor.options import ServerOptions
+        options = ServerOptions() # need real options to get a real logger
+        options.loglevel = LevelsByName.TRAC
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile=logfile_name('/tmp/foo'),
+                              stdout_syslog=boolean('true'))
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        self.assertEqual(dispatcher.process, process)
+        self.assertEqual(dispatcher.channel, 'stdout')
+        self.assertEqual(dispatcher.fd, 0)
+        self.assertEqual(len(dispatcher.mainlog.handlers), 2)
+        self.assertTrue(any(isinstance(h, FileHandler) for h in
+            dispatcher.mainlog.handlers))
+        self.assertTrue(any(isinstance(h, SyslogHandler) for h in
+            dispatcher.mainlog.handlers))
+        dispatcher.mainlog.close()
+
     def test_repr(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'process1', '/bin/process1')
@@ -499,100 +592,6 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.closed, True)
         dispatcher.close() # make sure we don't error if we try to close twice
         self.assertEqual(dispatcher.closed, True)
-
-
-    def test_syslog_logfile_deprecated(self):
-        import warnings
-        options = DummyOptions()
-        config = DummyPConfig(options, 'process1', '/bin/process1')
-        config.stdout_logfile = 'syslog'
-        process = DummyProcess(config)
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter('always')
-            self._makeOne(process)
-            self.assertEqual(len(w), 1)
-
-    def test_logfile_is_empty_string(self):
-        from supervisor.datatypes import logfile_name
-        options = DummyOptions()
-        config = DummyPConfig(options, 'process1', '/bin/process1',
-                              stdout_logfile=logfile_name(''))
-        process = DummyProcess(config)
-        dispatcher = self._makeOne(process)
-        self.assertEqual(dispatcher.process, process)
-        self.assertEqual(dispatcher.channel, 'stdout')
-        self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(dispatcher.mainlog, None)
-
-    def test_no_logfile_and_no_syslog(self):
-        from supervisor.datatypes import boolean, logfile_name
-        options = DummyOptions()
-        config = DummyPConfig(options, 'process1', '/bin/process1',
-                              stdout_logfile=logfile_name('NONE'),
-                              stdout_syslog=boolean('false'))
-        process = DummyProcess(config)
-        dispatcher = self._makeOne(process)
-        self.assertEqual(dispatcher.process, process)
-        self.assertEqual(dispatcher.channel, 'stdout')
-        self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(dispatcher.mainlog, None)
-
-    def test_no_logfile_and_syslog(self):
-        from supervisor.datatypes import boolean, logfile_name
-        from supervisor.loggers import LevelsByName, SyslogHandler
-        from supervisor.options import ServerOptions
-        options = ServerOptions() # need real options to get a real logger
-        options.loglevel = LevelsByName.TRAC
-        config = DummyPConfig(options, 'process1', '/bin/process1',
-                              stdout_logfile=logfile_name('NONE'),
-                              stdout_syslog=boolean('true'))
-        process = DummyProcess(config)
-        dispatcher = self._makeOne(process)
-        self.assertEqual(dispatcher.process, process)
-        self.assertEqual(dispatcher.channel, 'stdout')
-        self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(len(dispatcher.mainlog.handlers), 1)
-        self.assertEqual(dispatcher.mainlog.handlers[0].__class__,
-            SyslogHandler)
-
-    def test_logfile_and_no_syslog(self):
-        from supervisor.datatypes import boolean, logfile_name
-        from supervisor.loggers import FileHandler, LevelsByName
-        from supervisor.options import ServerOptions
-        options = ServerOptions() # need real options to get a real logger
-        options.loglevel = LevelsByName.TRAC
-        config = DummyPConfig(options, 'process1', '/bin/process1',
-                              stdout_logfile=logfile_name('/tmp/foo'),
-                              stdout_syslog=boolean('false'))
-        process = DummyProcess(config)
-        dispatcher = self._makeOne(process)
-        self.assertEqual(dispatcher.process, process)
-        self.assertEqual(dispatcher.channel, 'stdout')
-        self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(len(dispatcher.mainlog.handlers), 1)
-        self.assertEqual(dispatcher.mainlog.handlers[0].__class__, FileHandler)
-        dispatcher.mainlog.close()
-
-    def test_logfile_and_syslog(self):
-        from supervisor.datatypes import boolean, logfile_name
-        from supervisor.loggers import FileHandler, LevelsByName, SyslogHandler
-        from supervisor.options import ServerOptions
-        options = ServerOptions() # need real options to get a real logger
-        options.loglevel = LevelsByName.TRAC
-        config = DummyPConfig(options, 'process1', '/bin/process1',
-                              stdout_logfile=logfile_name('/tmp/foo'),
-                              stdout_syslog=boolean('true'))
-        process = DummyProcess(config)
-        dispatcher = self._makeOne(process)
-        self.assertEqual(dispatcher.process, process)
-        self.assertEqual(dispatcher.channel, 'stdout')
-        self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(len(dispatcher.mainlog.handlers), 2)
-        self.assertTrue(any(isinstance(h, FileHandler) for h in
-            dispatcher.mainlog.handlers))
-        self.assertTrue(any(isinstance(h, SyslogHandler) for h in
-            dispatcher.mainlog.handlers))
-        dispatcher.mainlog.close()
 
 
 class PInputDispatcherTests(unittest.TestCase):
