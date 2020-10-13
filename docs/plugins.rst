@@ -117,8 +117,6 @@ Libraries that integrate Third Party Applications with Supervisor
 These are libraries and plugins that makes it easier to use Supervisor
 with third party applications:
 
-`django-supervisor <https://pypi.org/pypi/django-supervisor/>`_
-    Easy integration between djangocl and supervisord.
 `collective.recipe.supervisor <https://pypi.org/pypi/collective.recipe.supervisor/>`_
     A buildout recipe to install supervisor.
 `puppet-module-supervisor <https://github.com/plathrop/puppet-module-supervisor>`_
