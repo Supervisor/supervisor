@@ -1,6 +1,10 @@
 4.2.2.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug where the ``stdout_syslog`` and ``stderr_syslog`` options
+  of a ``[program:x]`` section could not be used unless file logging for
+  the same program had also been configured.  The file and syslog options
+  can now be used independently.  Patch by Scott Stroupe.
 
 4.2.1 (2020-08-20)
 ------------------
