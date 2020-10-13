@@ -70,7 +70,8 @@ class PDispatcher:
 
 class POutputDispatcher(PDispatcher):
     """
-    A Process Output (stdout/stderr) dispatcher. Serves several purposes:
+    Dispatcher for one channel (stdout or stderr) of one process.
+    Serves several purposes:
 
     - capture output sent within <!--XSUPERVISOR:BEGIN--> and
       <!--XSUPERVISOR:END--> tags and signal a ProcessCommunicationEvent
@@ -79,10 +80,10 @@ class POutputDispatcher(PDispatcher):
       config.
     """
 
+    childlog = None # the current logger (normallog or capturelog)
+    normallog = None # the "normal" (non-capture) logger
+    capturelog = None # the logger used while we're in capturemode
     capturemode = False # are we capturing process event data
-    mainlog = None # the process' "normal" (non-capture) logger
-    capturelog = None # the logger while we're in capturemode
-    childlog = None # the current logger (mainlog or capturelog)
     output_buffer = b'' # data waiting to be logged
 
     def __init__(self, process, event_type, fd):
@@ -97,10 +98,10 @@ class POutputDispatcher(PDispatcher):
         self.fd = fd
         self.channel = self.event_type.channel
 
-        self._init_mainlog()
+        self._init_normallog()
         self._init_capturelog()
 
-        self.childlog = self.mainlog
+        self.childlog = self.normallog
 
         # all code below is purely for minor speedups
         begintoken = self.event_type.BEGIN_TOKEN
@@ -113,10 +114,10 @@ class POutputDispatcher(PDispatcher):
         self.stdout_events_enabled = config.stdout_events_enabled
         self.stderr_events_enabled = config.stderr_events_enabled
 
-    def _init_mainlog(self):
+    def _init_normallog(self):
         """
-        Configure the main (non-capture) log for this process.
-        Sets self.mainlog if process logging is configured.
+        Configure the "normal" (non-capture) log for this channel of this
+        process.  Sets self.normallog if logging is enabled.
         """
         config = self.process.config
         channel = self.channel
@@ -127,11 +128,11 @@ class POutputDispatcher(PDispatcher):
         to_syslog = getattr(config, '%s_syslog' % channel)
 
         if logfile or to_syslog:
-            self.mainlog = config.options.getLogger()
+            self.normallog = config.options.getLogger()
 
         if logfile:
             loggers.handle_file(
-                self.mainlog,
+                self.normallog,
                 filename=logfile,
                 fmt='%(message)s',
                 rotating=not not maxbytes, # optimization
@@ -141,15 +142,15 @@ class POutputDispatcher(PDispatcher):
 
         if to_syslog:
             loggers.handle_syslog(
-                self.mainlog,
+                self.normallog,
                 fmt=config.name + ' %(message)s'
             )
 
     def _init_capturelog(self):
         """
-        Configure the capture log for this process.  This is used to generate
-        a ProcessCommunicationEvent when special output is detected.
-        Sets self.capturelog if capture mode is configured.
+        Configure the capture log for this process.  This log is used to
+        temporarily capture output when special output is detected.
+        Sets self.capturelog if capturing is enabled.
         """
         capture_maxbytes = getattr(self.process.config,
                                    '%s_capture_maxbytes' % self.channel)
@@ -162,14 +163,14 @@ class POutputDispatcher(PDispatcher):
                 )
 
     def removelogs(self):
-        for log in (self.mainlog, self.capturelog):
+        for log in (self.normallog, self.capturelog):
             if log is not None:
                 for handler in log.handlers:
                     handler.remove()
                     handler.reopen()
 
     def reopenlogs(self):
-        for log in (self.mainlog, self.capturelog):
+        for log in (self.normallog, self.capturelog):
             if log is not None:
                 for handler in log.handlers:
                     handler.reopen()
@@ -264,7 +265,7 @@ class POutputDispatcher(PDispatcher):
                 for handler in self.capturelog.handlers:
                     handler.remove()
                     handler.reopen()
-                self.childlog = self.mainlog
+                self.childlog = self.normallog
 
     def writable(self):
         return False

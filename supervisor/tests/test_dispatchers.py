@@ -152,8 +152,8 @@ class POutputDispatcherTests(unittest.TestCase):
         process = DummyProcess(config)
         dispatcher = self._makeOne(process)
         dispatcher.removelogs()
-        self.assertEqual(dispatcher.mainlog.handlers[0].reopened, True)
-        self.assertEqual(dispatcher.mainlog.handlers[0].removed, True)
+        self.assertEqual(dispatcher.normallog.handlers[0].reopened, True)
+        self.assertEqual(dispatcher.normallog.handlers[0].removed, True)
         self.assertEqual(dispatcher.childlog.handlers[0].reopened, True)
         self.assertEqual(dispatcher.childlog.handlers[0].removed, True)
 
@@ -165,7 +165,7 @@ class POutputDispatcherTests(unittest.TestCase):
         dispatcher = self._makeOne(process)
         dispatcher.reopenlogs()
         self.assertEqual(dispatcher.childlog.handlers[0].reopened, True)
-        self.assertEqual(dispatcher.mainlog.handlers[0].reopened, True)
+        self.assertEqual(dispatcher.normallog.handlers[0].reopened, True)
 
     def test_record_output_log_non_capturemode(self):
         # stdout/stderr goes to the process log and the main log,
@@ -437,7 +437,7 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.channel, 'stdout')
         self.assertEqual(dispatcher.fd, 0)
         self.assertEqual(dispatcher.capturelog, None)
-        self.assertEqual(dispatcher.mainlog, None)
+        self.assertEqual(dispatcher.normallog, None)
         self.assertEqual(dispatcher.childlog, None)
 
     def test_ctor_logfile_only(self):
@@ -450,8 +450,8 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.channel, 'stdout')
         self.assertEqual(dispatcher.fd, 0)
         self.assertEqual(dispatcher.capturelog, None)
-        self.assertEqual(dispatcher.mainlog.__class__, DummyLogger)
-        self.assertEqual(dispatcher.childlog, dispatcher.mainlog)
+        self.assertEqual(dispatcher.normallog.__class__, DummyLogger)
+        self.assertEqual(dispatcher.childlog, dispatcher.normallog)
 
     def test_ctor_capturelog_only(self):
         options = DummyOptions()
@@ -462,8 +462,8 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.process, process)
         self.assertEqual(dispatcher.channel, 'stdout')
         self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(dispatcher.capturelog.__class__,DummyLogger)
-        self.assertEqual(dispatcher.mainlog, None)
+        self.assertEqual(dispatcher.capturelog.__class__, DummyLogger)
+        self.assertEqual(dispatcher.normallog, None)
         self.assertEqual(dispatcher.childlog, None)
 
     def test_ctor_stdout_logfile_is_empty_string(self):
@@ -476,7 +476,7 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.process, process)
         self.assertEqual(dispatcher.channel, 'stdout')
         self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(dispatcher.mainlog, None)
+        self.assertEqual(dispatcher.normallog, None)
 
     def test_ctor_stdout_logfile_none_and_stdout_syslog_false(self):
         from supervisor.datatypes import boolean, logfile_name
@@ -489,7 +489,7 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.process, process)
         self.assertEqual(dispatcher.channel, 'stdout')
         self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(dispatcher.mainlog, None)
+        self.assertEqual(dispatcher.normallog, None)
 
     def test_ctor_stdout_logfile_none_and_stdout_syslog_true(self):
         from supervisor.datatypes import boolean, logfile_name
@@ -505,8 +505,8 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.process, process)
         self.assertEqual(dispatcher.channel, 'stdout')
         self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(len(dispatcher.mainlog.handlers), 1)
-        self.assertEqual(dispatcher.mainlog.handlers[0].__class__,
+        self.assertEqual(len(dispatcher.normallog.handlers), 1)
+        self.assertEqual(dispatcher.normallog.handlers[0].__class__,
             SyslogHandler)
 
     def test_ctor_stdout_logfile_str_and_stdout_syslog_false(self):
@@ -523,9 +523,9 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.process, process)
         self.assertEqual(dispatcher.channel, 'stdout')
         self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(len(dispatcher.mainlog.handlers), 1)
-        self.assertEqual(dispatcher.mainlog.handlers[0].__class__, FileHandler)
-        dispatcher.mainlog.close()
+        self.assertEqual(len(dispatcher.normallog.handlers), 1)
+        self.assertEqual(dispatcher.normallog.handlers[0].__class__, FileHandler)
+        dispatcher.normallog.close()
 
     def test_ctor_stdout_logfile_str_and_stdout_syslog_true(self):
         from supervisor.datatypes import boolean, logfile_name
@@ -541,12 +541,12 @@ class POutputDispatcherTests(unittest.TestCase):
         self.assertEqual(dispatcher.process, process)
         self.assertEqual(dispatcher.channel, 'stdout')
         self.assertEqual(dispatcher.fd, 0)
-        self.assertEqual(len(dispatcher.mainlog.handlers), 2)
+        self.assertEqual(len(dispatcher.normallog.handlers), 2)
         self.assertTrue(any(isinstance(h, FileHandler) for h in
-            dispatcher.mainlog.handlers))
+            dispatcher.normallog.handlers))
         self.assertTrue(any(isinstance(h, SyslogHandler) for h in
-            dispatcher.mainlog.handlers))
-        dispatcher.mainlog.close()
+            dispatcher.normallog.handlers))
+        dispatcher.normallog.close()
 
     def test_repr(self):
         options = DummyOptions()
