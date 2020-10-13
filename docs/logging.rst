@@ -15,12 +15,10 @@ messages that result from events, and debug and informational
 messages.  The path to the activity log is configured via the
 ``logfile`` parameter in the ``[supervisord]`` section of the
 configuration file, defaulting to :file:`$CWD/supervisord.log`.  If
-the value of this option is the special string "syslog", the logs of
-the :program"`supervisord` will be routed to the syslog service
-instead of being written to a files.  As a consequence, the options
-``logfile_maxbytes`` and ``logfile_backups`` will be ignored.
-Sample activity log traffic is shown in the example below.  Some lines
-have been broken to better fit the screen.
+the value of this option is the special string ``syslog``, the
+activity log will be routed to the syslog service instead of being
+written to a file.  Sample activity log traffic is shown in the
+example below.  Some lines have been broken to better fit the screen.
 
 Sample Activity Log Output
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
