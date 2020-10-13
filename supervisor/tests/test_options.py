@@ -884,6 +884,25 @@ class ServerOptionsTests(unittest.TestCase):
                 self.assertTrue('contains parsing errors:' in exc.args[0])
                 self.assertTrue(f.name in exc.args[0])
 
+    def test_read_config_logfile_with_nonexistent_dirpath(self):
+        instance = self._makeOne()
+        logfile_with_nonexistent_dir = os.path.join(
+            os.path.dirname(__file__), "nonexistent",
+            "supervisord.log"
+            )
+        text = lstrip("""\
+        [supervisord]
+        logfile=%s
+        """ % logfile_with_nonexistent_dir)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                "The directory named as part of the path %s does not exist" %
+                logfile_with_nonexistent_dir
+            )
+
     def test_read_config_no_supervisord_section_raises_valueerror(self):
         instance = self._makeOne()
         try:
