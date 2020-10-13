@@ -83,7 +83,7 @@ class POutputDispatcher(PDispatcher):
     capturemode = False # are we capturing process event data
     mainlog = None # the process' "normal" (non-capture) logger
     capturelog = None # the logger while we're in capturemode
-    childlog = None # the current logger (event or main)
+    childlog = None # the current logger (mainlog or capturelog)
     output_buffer = b'' # data waiting to be logged
 
     def __init__(self, process, event_type, fd):
@@ -98,17 +98,8 @@ class POutputDispatcher(PDispatcher):
         self.fd = fd
         self.channel = channel = self.event_type.channel
 
-        self._setup_logging(process.config, channel)
-
-        capture_maxbytes = getattr(process.config,
-                                   '%s_capture_maxbytes' % channel)
-        if capture_maxbytes:
-            self.capturelog = self.process.config.options.getLogger()
-            loggers.handle_boundIO(
-                self.capturelog,
-                fmt='%(message)s',
-                maxbytes=capture_maxbytes,
-                )
+        self._init_mainlog()
+        self._init_capturelog()
 
         self.childlog = self.mainlog
 
@@ -123,12 +114,13 @@ class POutputDispatcher(PDispatcher):
         self.stdout_events_enabled = config.stdout_events_enabled
         self.stderr_events_enabled = config.stderr_events_enabled
 
-    def _setup_logging(self, config, channel):
+    def _init_mainlog(self):
         """
-        Configure the main log according to the process' configuration and
-        channel.  Sets `mainlog` on self if process logging is configured.
-        Returns nothing.
+        Configure the main (non-capture) log for this process.
+        Sets self.mainlog if process logging is configured.
         """
+        config = self.process.config
+        channel = self.channel
 
         logfile = getattr(config, '%s_logfile' % channel)
         maxbytes = getattr(config, '%s_logfile_maxbytes' % channel)
@@ -161,6 +153,22 @@ class POutputDispatcher(PDispatcher):
                 self.mainlog,
                 fmt=config.name + ' %(message)s'
             )
+
+    def _init_capturelog(self):
+        """
+        Configure the capture log for this process.  This is used to generate
+        a ProcessCommunicationEvent when special output is detected.
+        Sets self.capturelog if capture mode is configured.
+        """
+        capture_maxbytes = getattr(self.process.config,
+                                   '%s_capture_maxbytes' % self.channel)
+        if capture_maxbytes:
+            self.capturelog = self.process.config.options.getLogger()
+            loggers.handle_boundIO(
+                self.capturelog,
+                fmt='%(message)s',
+                maxbytes=capture_maxbytes,
+                )
 
     def removelogs(self):
         for log in (self.mainlog, self.capturelog):
