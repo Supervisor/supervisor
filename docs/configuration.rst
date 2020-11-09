@@ -396,7 +396,7 @@ follows.
   include the value ``%(here)s``, which expands to the directory in
   which the :program:`supervisord` configuration file was found.
 
-  *Default*: value of Python's :func:`tempfile.get_tempdir`
+  *Default*: value of Python's :func:`tempfile.gettempdir`
 
   *Required*:  No.
 
