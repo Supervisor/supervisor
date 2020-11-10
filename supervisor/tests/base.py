@@ -1,7 +1,9 @@
 _NOW = 1151365354
 _TIMEFORMAT = '%b %d %I:%M %p'
 
-from functools import total_ordering
+import errno
+import functools
+import os
 
 from supervisor.compat import Fault
 from supervisor.compat import as_bytes
@@ -215,7 +217,7 @@ class DummyOptions:
     def execve(self, filename, argv, environment):
         self.execve_called = True
         if self.execv_error:
-            if self.execv_error == 1:
+            if self.execv_error == errno.EPERM:
                 raise OSError(self.execv_error)
             else:
                 raise RuntimeError(self.execv_error)
@@ -374,7 +376,7 @@ class DummySocketManager:
     def get_socket(self):
         return DummySocket(self._config.fd)
 
-@total_ordering
+@functools.total_ordering
 class DummyProcess(object):
     # Initial state; overridden by instance variables
     pid = 0 # Subprocess pid; 0 when not running
@@ -1040,7 +1042,7 @@ class DummyFCGIGroupConfig(DummyPGroupConfig):
         DummyPGroupConfig.__init__(self, options, name, priority, pconfigs)
         self.socket_config = socket_config
 
-@total_ordering
+@functools.total_ordering
 class DummyProcessGroup(object):
     def __init__(self, config):
         self.config = config
