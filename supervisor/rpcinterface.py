@@ -299,6 +299,10 @@ class SupervisorNamespaceRPCInterface:
         if process.get_state() in RUNNING_STATES:
             raise RPCError(Faults.ALREADY_STARTED, name)
 
+        if process.get_state() == ProcessStates.UNKNOWN:
+            raise RPCError(Faults.FAILED,
+                           "%s is in an unknown process state" % name)
+
         process.spawn()
 
         # We call reap() in order to more quickly obtain the side effects of

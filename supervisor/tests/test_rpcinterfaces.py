@@ -311,7 +311,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self._assertRPCError(xmlrpc.Faults.STILL_RUNNING,
                              interface.removeProcessGroup, 'group1')
 
-
     def test_startProcess_already_started(self):
         from supervisor import xmlrpc
         options = DummyOptions()
@@ -323,6 +322,22 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             xmlrpc.Faults.ALREADY_STARTED,
             interface.startProcess, 'foo'
             )
+
+    def test_startProcess_unknown_state(self):
+        from supervisor import xmlrpc
+        from supervisor.states import ProcessStates
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', __file__, autostart=False)
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        supervisord.set_procattr('foo', 'pid', 10)
+        supervisord.set_procattr('foo', 'state', ProcessStates.UNKNOWN)
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(
+            xmlrpc.Faults.FAILED,
+            interface.startProcess, 'foo'
+            )
+        process = supervisord.process_groups['foo'].processes['foo']
+        self.assertEqual(process.spawned, False)
 
     def test_startProcess_bad_group_name(self):
         options = DummyOptions()
