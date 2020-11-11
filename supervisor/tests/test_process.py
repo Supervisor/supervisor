@@ -1004,6 +1004,29 @@ class SubprocessTests(unittest.TestCase):
         self.assertTrue(instance.pid in options.kills)
         self.assertEqual(options.kills[instance.pid], signal.SIGWINCH)
 
+    def test_signal_from_running_error_ESRCH(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        options.kill_exception = OSError(errno.ESRCH,
+                                         os.strerror(errno.ESRCH))
+        instance = self._makeOne(config)
+        L = []
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        instance.pid = 11
+        instance.state = ProcessStates.RUNNING
+        instance.signal(signal.SIGWINCH)
+        self.assertEqual(options.logger.data[0],
+            'sending test (pid 11) sig SIGWINCH')
+        self.assertEqual(options.logger.data[1], 'unable to signal test (pid 11), '
+            'it probably just now exited on its own: %s' %
+            str(options.kill_exception))
+        self.assertFalse(instance.killing)
+        self.assertEqual(instance.state, ProcessStates.RUNNING) # unchanged
+        self.assertEqual(instance.pid, 11) # unchanged
+        self.assertEqual(len(L), 0)
+
     def test_signal_from_running_error(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test')

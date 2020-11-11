@@ -512,7 +512,18 @@ class Subprocess(object):
                             ProcessStates.STOPPING)
 
         try:
-            options.kill(self.pid, sig)
+            try:
+                options.kill(self.pid, sig)
+            except OSError as exc:
+                if exc.errno == errno.ESRCH:
+                    msg = ("unable to signal %s (pid %s), it probably just now exited "
+                           "on its own: %s" % (processname, self.pid,
+                           str(exc)))
+                    options.logger.debug(msg)
+                    # we could change the state here but we intentionally do
+                    # not.  we will do it during normal SIGCHLD processing.
+                    return None
+                raise
         except:
             tb = traceback.format_exc()
             msg = 'unknown problem sending sig %s (%s):%s' % (
