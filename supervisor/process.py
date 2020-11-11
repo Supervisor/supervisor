@@ -403,7 +403,8 @@ class Subprocess(object):
         self.change_state(ProcessStates.FATAL)
 
     def kill(self, sig):
-        """Send a signal to the subprocess.  This may or may not kill it.
+        """Send a signal to the subprocess with the intention to kill
+        it (to make it exit).  This may or may not actually kill it.
 
         Return None if the signal was sent, or an error message string
         if an error occurred or if the subprocess is not running.
@@ -463,7 +464,17 @@ class Subprocess(object):
             pid = -self.pid
 
         try:
-            options.kill(pid, sig)
+            try:
+                options.kill(pid, sig)
+            except OSError as exc:
+                if exc.errno == errno.ESRCH:
+                    msg = ("unable to signal %s (pid %s), it probably just exited "
+                           "on its own: %s" % (processname, self.pid, str(exc)))
+                    options.logger.debug(msg)
+                    # we could change the state here but we intentionally do
+                    # not.  we will do it during normal SIGCHLD processing.
+                    return None
+                raise
         except:
             tb = traceback.format_exc()
             msg = 'unknown problem killing %s (%s):%s' % (processname,

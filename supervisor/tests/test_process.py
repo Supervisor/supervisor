@@ -884,6 +884,31 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(event1.__class__, events.ProcessStateStoppingEvent)
         self.assertEqual(event2.__class__, events.ProcessStateUnknownEvent)
 
+    def test_kill_from_running_error_ESRCH(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test')
+        options.kill_exception = OSError(errno.ESRCH,
+                                         os.strerror(errno.ESRCH))
+        instance = self._makeOne(config)
+        L = []
+        from supervisor.states import ProcessStates
+        from supervisor import events
+        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        instance.pid = 11
+        instance.state = ProcessStates.RUNNING
+        instance.kill(signal.SIGTERM)
+        self.assertEqual(options.logger.data[0], 'killing test (pid 11) with '
+            'signal SIGTERM')
+        self.assertEqual(options.logger.data[1], 'unable to signal test (pid 11), '
+            'it probably just exited on its own: %s' %
+            str(options.kill_exception))
+        self.assertTrue(instance.killing)
+        self.assertEqual(instance.pid, 11) # unchanged
+        self.assertEqual(instance.state, ProcessStates.STOPPING)
+        self.assertEqual(len(L), 1)
+        event1 = L[0]
+        self.assertEqual(event1.__class__, events.ProcessStateStoppingEvent)
+
     def test_kill_from_stopping(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test')

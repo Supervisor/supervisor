@@ -1,6 +1,9 @@
 4.2.2.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug where ``supervisord`` could crash if a subprocess exited
+  immediately before trying to kill it.
+
 - Fixed a bug where the ``stdout_syslog`` and ``stderr_syslog`` options
   of a ``[program:x]`` section could not be used unless file logging for
   the same program had also been configured.  The file and syslog options
