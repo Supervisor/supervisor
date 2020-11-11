@@ -470,7 +470,6 @@ class Subprocess(object):
                                                           self.pid, tb)
             options.logger.critical(msg)
             self.change_state(ProcessStates.UNKNOWN)
-            self.pid = 0
             self.killing = False
             self.delay = 0
             return msg
@@ -509,7 +508,6 @@ class Subprocess(object):
                                 processname, self.pid, tb)
             options.logger.critical(msg)
             self.change_state(ProcessStates.UNKNOWN)
-            self.pid = 0
             return msg
 
         return None

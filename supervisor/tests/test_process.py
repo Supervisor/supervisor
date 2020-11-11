@@ -876,7 +876,7 @@ class SubprocessTests(unittest.TestCase):
             'unknown problem killing test'))
         self.assertTrue('Traceback' in options.logger.data[1])
         self.assertFalse(instance.killing)
-        self.assertEqual(instance.pid, 0)
+        self.assertEqual(instance.pid, 11) # unchanged
         self.assertEqual(instance.state, ProcessStates.UNKNOWN)
         self.assertEqual(len(L), 2)
         event1 = L[0]
@@ -1027,7 +1027,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertTrue('Traceback' in options.logger.data[1])
         self.assertFalse(instance.killing)
         self.assertEqual(instance.state, ProcessStates.UNKNOWN)
-        self.assertEqual(instance.pid, 0)
+        self.assertEqual(instance.pid, 11) # unchanged
         self.assertEqual(len(L), 1)
         event = L[0]
         self.assertEqual(event.__class__, events.ProcessStateUnknownEvent)
