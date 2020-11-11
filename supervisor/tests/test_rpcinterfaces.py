@@ -187,7 +187,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         from supervisor import xmlrpc
         options = DummyOptions()
         options.existing = [options.logfile]
-        options.remove_exception = os.error(errno.EPERM)
+        options.remove_exception = OSError(errno.EPERM,
+                                           os.strerror(errno.EPERM))
         supervisord = DummySupervisor(options)
         interface = self._makeOne(supervisord)
         self.assertRaises(xmlrpc.RPCError, interface.clearLog)
@@ -1999,7 +2000,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = PopulatedDummySupervisor(options, 'process1', pconfig1)
         supervisord.set_procattr('process1', 'pid', 42)
         supervisord.set_procattr('process1', 'killing', False)
-        supervisord.set_procattr('process1', 'write_exception', OSError(errno.EPIPE))
+        supervisord.set_procattr('process1', 'write_exception',
+            OSError(errno.EPIPE, os.strerror(errno.EPIPE)))
         interface   = self._makeOne(supervisord)
         from supervisor import xmlrpc
         self._assertRPCError(xmlrpc.Faults.NO_FILE,
@@ -2012,7 +2014,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = PopulatedDummySupervisor(options, 'process1', pconfig1)
         supervisord.set_procattr('process1', 'pid', 42)
         supervisord.set_procattr('process1', 'killing', False)
-        supervisord.set_procattr('process1', 'write_exception', OSError(errno.EINTR))
+        supervisord.set_procattr('process1', 'write_exception',
+            OSError(errno.EINTR, os.strerror(errno.EINTR)))
         interface   = self._makeOne(supervisord)
         self.assertRaises(OSError,
                           interface.sendProcessStdin,

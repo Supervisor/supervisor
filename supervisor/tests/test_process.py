@@ -225,7 +225,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_spawn_fail_make_pipes_emfile(self):
         options = DummyOptions()
-        options.make_pipes_exception = OSError(errno.EMFILE)
+        options.make_pipes_exception = OSError(errno.EMFILE,
+                                               os.strerror(errno.EMFILE))
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
         from supervisor.states import ProcessStates
@@ -250,7 +251,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_spawn_fail_make_pipes_other(self):
         options = DummyOptions()
-        options.make_pipes_exception = OSError(errno.EPERM)
+        options.make_pipes_exception = OSError(errno.EPERM,
+                                               os.strerror(errno.EPERM))
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
         from supervisor.states import ProcessStates
@@ -301,7 +303,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_spawn_fork_fail_eagain(self):
         options = DummyOptions()
-        options.fork_exception = OSError(errno.EAGAIN)
+        options.fork_exception = OSError(errno.EAGAIN,
+                                         os.strerror(errno.EAGAIN))
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
         from supervisor.states import ProcessStates
@@ -327,7 +330,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_spawn_fork_fail_other(self):
         options = DummyOptions()
-        options.fork_exception = OSError(errno.EPERM)
+        options.fork_exception = OSError(errno.EPERM,
+                                         os.strerror(errno.EPERM))
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
         from supervisor.states import ProcessStates
@@ -436,7 +440,8 @@ class SubprocessTests(unittest.TestCase):
     def test_spawn_as_child_cwd_fail(self):
         options = DummyOptions()
         options.forkpid = 0
-        options.chdir_exception = OSError(errno.ENOENT)
+        options.chdir_exception = OSError(errno.ENOENT,
+                                          os.strerror(errno.ENOENT))
         config = DummyPConfig(options, 'good', '/good/filename',
                               directory='/tmp')
         instance = self._makeOne(config)
@@ -458,7 +463,8 @@ class SubprocessTests(unittest.TestCase):
     def test_spawn_as_child_execv_fail_oserror(self):
         options = DummyOptions()
         options.forkpid = 0
-        options.execv_exception = OSError(errno.EPERM)
+        options.execv_exception = OSError(errno.EPERM,
+                                          os.strerror(errno.EPERM))
         config = DummyPConfig(options, 'good', '/good/filename')
         instance = self._makeOne(config)
         result = instance.spawn()
@@ -641,7 +647,8 @@ class SubprocessTests(unittest.TestCase):
         options.forkpid = 1
         instance.spawn()
         stdin_fd = instance.pipes['stdin']
-        instance.dispatchers[stdin_fd].flush_exception = OSError(errno.EPIPE)
+        instance.dispatchers[stdin_fd].flush_exception = OSError(errno.EPIPE,
+                                                    os.strerror(errno.EPIPE))
         self.assertRaises(OSError, instance.write, sent)
 
     def _dont_test_spawn_and_kill(self):
@@ -853,7 +860,8 @@ class SubprocessTests(unittest.TestCase):
     def test_kill_from_running_error(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test')
-        options.kill_exception = OSError(errno.EPERM)
+        options.kill_exception = OSError(errno.EPERM,
+                                         os.strerror(errno.EPERM))
         instance = self._makeOne(config)
         L = []
         from supervisor.states import ProcessStates
@@ -1002,7 +1010,8 @@ class SubprocessTests(unittest.TestCase):
     def test_signal_from_running_error(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test')
-        options.kill_exception = OSError(errno.EPERM)
+        options.kill_exception = OSError(errno.EPERM,
+                                         os.strerror(errno.EPERM))
         instance = self._makeOne(config)
         L = []
         from supervisor.states import ProcessStates
@@ -2089,7 +2098,8 @@ class EventListenerPoolTests(ProcessGroupBaseTests):
         gconfig = DummyPGroupConfig(options, pconfigs=[pconfig1])
         pool = self._makeOne(gconfig)
         process1 = pool.processes['process1']
-        process1.write_exception = OSError(errno.EPIPE)
+        process1.write_exception = OSError(errno.EPIPE,
+                                           os.strerror(errno.EPIPE))
         process1.listener_state = EventListenerStates.READY
         event = DummyEvent()
         pool._acceptEvent(event)
