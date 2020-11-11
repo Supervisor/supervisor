@@ -1,10 +1,10 @@
-import os
-import time
 import errno
-import shlex
-import traceback
+import functools
+import os
 import signal
-from functools import total_ordering
+import shlex
+import time
+import traceback
 
 from supervisor.compat import maxint
 from supervisor.compat import as_bytes
@@ -30,7 +30,7 @@ from supervisor.datatypes import RestartUnconditionally
 
 from supervisor.socket_manager import SocketManager
 
-@total_ordering
+@functools.total_ordering
 class Subprocess(object):
 
     """A class to manage a subprocess."""
@@ -753,7 +753,7 @@ class FastCGISubprocess(Subprocess):
         for i in range(3, options.minfds):
             options.close_fd(i)
 
-@total_ordering
+@functools.total_ordering
 class ProcessGroupBase(object):
     def __init__(self, config):
         self.config = config
