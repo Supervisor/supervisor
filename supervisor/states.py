@@ -20,6 +20,10 @@ RUNNING_STATES = (ProcessStates.RUNNING,
                   ProcessStates.BACKOFF,
                   ProcessStates.STARTING)
 
+SIGNALLABLE_STATES = (ProcessStates.RUNNING,
+                     ProcessStates.STARTING,
+                     ProcessStates.STOPPING)
+
 def getProcessStateDescription(code):
     return _process_states_by_code.get(code)
 

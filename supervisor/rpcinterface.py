@@ -39,6 +39,7 @@ from supervisor.states import getProcessStateDescription
 from supervisor.states import (
     RUNNING_STATES,
     STOPPED_STATES,
+    SIGNALLABLE_STATES
     )
 
 API_VERSION  = '3.0'
@@ -501,7 +502,7 @@ class SupervisorNamespaceRPCInterface:
         except ValueError:
             raise RPCError(Faults.BAD_SIGNAL, signal)
 
-        if process.get_state() not in RUNNING_STATES:
+        if process.get_state() not in SIGNALLABLE_STATES:
             raise RPCError(Faults.NOT_RUNNING, name)
 
         msg = process.signal(sig)
@@ -529,7 +530,7 @@ class SupervisorNamespaceRPCInterface:
         processes.sort()
         processes = [(group, process) for process in processes]
 
-        sendall = make_allfunc(processes, isRunning, self.signalProcess,
+        sendall = make_allfunc(processes, isSignallable, self.signalProcess,
                                signal=signal)
         result = sendall()
         self._update('signalProcessGroup')
@@ -543,7 +544,7 @@ class SupervisorNamespaceRPCInterface:
         @return array         An array of process status info structs
         """
         processes = self._getAllProcesses()
-        signalall = make_allfunc(processes, isRunning, self.signalProcess,
+        signalall = make_allfunc(processes, isSignallable, self.signalProcess,
             signal=signal)
         result = signalall()
         self._update('signalAllProcesses')
@@ -1017,6 +1018,10 @@ def isRunning(process):
 
 def isNotRunning(process):
     return not isRunning(process)
+
+def isSignallable(process):
+    if process.get_state() in SIGNALLABLE_STATES:
+        return True
 
 # this is not used in code but referenced via an entry point in the conf file
 def make_main_rpcinterface(supervisord):
