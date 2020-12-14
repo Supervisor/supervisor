@@ -36,7 +36,8 @@ instances running on different servers.
     Web-based dashboard written in Python 3.  Requires Django 1.7 or later.
 
 `Supvisors <https://github.com/julien6387/supvisors>`_
-    Designed for distributed applications, written in Python 2.7. Includes an extended XML-RPC API and a Web-based dashboard.
+    Designed for distributed applications, written in Python 3.6. Includes an extended XML-RPC API,
+    a Web-based dashboard and special features such as staged start and stop.
 
 `multivisor <https://github.com/tiagocoutinho/multivisor>`_
     Centralized supervisor web-based dashboard. The frontend is based on
