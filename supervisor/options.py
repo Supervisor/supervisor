@@ -102,7 +102,7 @@ class Options:
         self.attr_priorities = {}
         self.require_configfile = require_configfile
         self.add(None, None, "h", "help", self.help)
-        self.add("configfile", None, "c:", "configuration=")
+        self.add("configfile", None, "c:", "configuration=", env="SUPERVISOR_CONFIG")
 
         here = os.path.dirname(os.path.dirname(sys.argv[0]))
         searchpaths = [os.path.join(here, 'etc', 'supervisord.conf'),
