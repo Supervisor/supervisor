@@ -3787,7 +3787,7 @@ class TestDirectories(unittest.TestCase):
             0o777
         )
         # Should return false if directory exists and isn't created in the check
-        self.assertFalse(directory_config.check())
+        self.assertFalse(directory_config.verify_exists())
 
     def check_directory_does_not_exist(self):
         from supervisor.options import DirectoryConfig    
@@ -3800,7 +3800,7 @@ class TestDirectories(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             # Directory doesn't exist, should raise ValueError
-            directory_config.check()
+            directory_config.verify_exists()
 
     def check_directory_not_a_directory(self):
         from supervisor.options import DirectoryConfig    
@@ -3815,7 +3815,7 @@ class TestDirectories(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             # Path exists, but not a directory
-            directory_config.check()
+            directory_config.verify_exists()
 
     def check_create(self):
         from supervisor.options import DirectoryConfig        
@@ -3828,7 +3828,7 @@ class TestDirectories(unittest.TestCase):
             0o777
         )
         # With create = True, the directory will be created
-        self.assertTrue(directory_config.check())
+        self.assertTrue(directory_config.verify_exists())
         self.assertTrue(os.path.isdir(directory))
 
 
