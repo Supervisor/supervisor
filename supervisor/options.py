@@ -2121,11 +2121,12 @@ class DirectoryConfig(object):
         )
 
     def check(self):
-        """Check if the direcory exists, and potentially try to create."""        
+        """Check if the directory exists, and potentially try to
+        create it. Return True if directory was created."""        
         if os.path.exists(self.path):            
             if not os.path.isdir(self.path):             
                 raise ValueError(
-                    "required directory (%s) path %s is not a directory"
+                    "required directory (%s) %s is not a directory"
                     % (self.name, self.path)
                 )
         else:            
