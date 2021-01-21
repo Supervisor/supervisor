@@ -9,6 +9,7 @@ import signal
 import shutil
 import errno
 import platform
+import tempfile
 
 from supervisor.compat import StringIO
 from supervisor.compat import as_bytes
@@ -3255,13 +3256,36 @@ class ServerOptionsTests(unittest.TestCase):
         msg = instance.drop_privileges(42)
         self.assertEqual(msg, "Can't drop privilege as nonroot user")
 
-    def test_daemonize_notifies_poller_before_and_after_fork(self):
+    def test_directories_from_parser(self):
+        from supervisor.options import DirectoryConfig
+        text = lstrip("""\
+        [directory:dir1]
+        path = /foo/bar
+        
+        [directory:dir2]
+        path = /foo/new
+        create = True
+
+        [directory:dir3]
+        path = /foo/new2
+        create = True
+        mode = 755
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
         instance = self._makeOne()
-        instance._daemonize = lambda: None
-        instance.poller = Mock()
-        instance.daemonize()
-        instance.poller.before_daemonize.assert_called_once_with()
-        instance.poller.after_daemonize.assert_called_once_with()
+        directories = instance.directories_from_parser(config)        
+
+        self.assertEqual(
+            directories,
+            [
+                DirectoryConfig('dir1', '/foo/bar', False, 0o777),
+                DirectoryConfig('dir2', '/foo/new', True, 0o777),
+                DirectoryConfig('dir3', '/foo/new2', True, 0o755)
+            ]
+        )
+        
 
 class ProcessConfigTests(unittest.TestCase):
     def _getTargetClass(self):
@@ -3731,6 +3755,82 @@ class UtilFunctionsTests(unittest.TestCase):
         self.assertEqual(s('process'), ('process', 'process'))
         self.assertEqual(s('group:'), ('group', None))
         self.assertEqual(s('group:*'), ('group', None))
+
+
+class TestDirectories(unittest.TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp("supervisor", "testdir")
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def test_repr(self):
+        from supervisor.options import DirectoryConfig
+        directory_config = DirectoryConfig(
+            "foo",
+            "/foo/bar",
+            True,
+            0o777
+        )
+        self.assertEqual(
+            repr(directory_config),
+            "DirectoryConfig('foo', '/foo/bar', True, 0o777)"
+        )
+    
+    def check_directory_exists(self):
+        from supervisor.options import DirectoryConfig            
+        directory_config = DirectoryConfig(
+            "foo",
+            self.temp_dir,
+            False,
+            0o777
+        )
+        # Should return false if directory exists and isn't created in the check
+        self.assertFalse(directory_config.check())
+
+    def check_directory_does_not_exist(self):
+        from supervisor.options import DirectoryConfig    
+        directory = os.path.join(self.temp_dir, "nothing_here")   
+        directory_config = DirectoryConfig(
+            "foo",
+            directory,
+            False,
+            0o777
+        )
+        with self.assertRaises(ValueError):
+            # Directory doesn't exist, should raise ValueError
+            directory_config.check()
+
+    def check_directory_not_a_directory(self):
+        from supervisor.options import DirectoryConfig    
+        directory = os.path.join(self.temp_dir, "foo")
+        with open(directory, "w") as fh:
+            fh.write("test")
+        directory_config = DirectoryConfig(
+            "foo",
+            directory,
+            False,
+            0o777
+        )
+        with self.assertRaises(ValueError):
+            # Path exists, but not a directory
+            directory_config.check()
+
+    def check_create(self):
+        from supervisor.options import DirectoryConfig        
+        directory = os.path.join(self.temp_dir, "foo/bar")
+        self.assertFalse(os.path.exists(directory))
+        directory_config = DirectoryConfig(
+            "foo",
+            directory,
+            True,
+            0o777
+        )
+        # With create = True, the directory will be created
+        self.assertTrue(directory_config.check())
+        self.assertTrue(os.path.isdir(directory))
+
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])

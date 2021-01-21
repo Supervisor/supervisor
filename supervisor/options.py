@@ -1523,8 +1523,7 @@ class ServerOptions(Options):
     
     def check_directories(self):
         # must be called after realize() and after supervisor does setuid()
-        for directory in self.directories:
-            self.logger.debug(repr(directory))
+        for directory in self.directories:            
             try:
                 if directory.check():
                     self.logger.info(
@@ -2108,8 +2107,17 @@ class DirectoryConfig(object):
         self.mode = mode
 
     def __repr__(self):
-        return "DirectoryConfig({!r}, {!r}, {!r}, {!r})".format(
+        return "DirectoryConfig({!r}, {!r}, {!r}, 0o{:o})".format(
             self.name, self.path, self.create, self.mode
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, DirectoryConfig)
+            and self.name == other.name
+            and self.path == other.path
+            and self.create == other.create
+            and self.mode == other.mode
         )
 
     def check(self):
