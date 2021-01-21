@@ -1525,7 +1525,7 @@ class ServerOptions(Options):
         # must be called after realize() and after supervisor does setuid()
         for directory in self.directories:            
             try:
-                if directory.check():
+                if directory.verify_exists():
                     self.logger.info(
                         "created directory (%s) %s"
                         % (directory.name, directory.path)
@@ -2104,7 +2104,7 @@ class DirectoryConfig(object):
         self.name = name
         self.path = path
         self.create = create
-        self.mode = mode
+        self.mode = mode 
 
     def __repr__(self):
         return "DirectoryConfig({!r}, {!r}, {!r}, 0o{:o})".format(
@@ -2120,8 +2120,8 @@ class DirectoryConfig(object):
             and self.mode == other.mode
         )
 
-    def check(self):
-        """Check if the directory exists, and potentially try to
+    def verify_exists(self):
+        """Verify the directory exists, and potentially try to
         create it. Return True if directory was created."""        
         if os.path.exists(self.path):            
             if not os.path.isdir(self.path):             
