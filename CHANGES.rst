@@ -11,6 +11,9 @@
   ``syslog`` was supplied, as is supported by all other log filename
   options.  Patch by Franck Cuny.
 
+- The  ``supervisorctl signal`` command now allows a signal to be sent
+  when a process is in the ``STOPPING`` state.  Patch by Mike Gould.
+
 4.2.1 (2020-08-20)
 ------------------
 
