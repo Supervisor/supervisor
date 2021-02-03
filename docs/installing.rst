@@ -85,7 +85,8 @@ the system boots.
 
 .. note::
 
-    Distribution packages of Supervisor can lag considerably behind the
+    Due to the software release policy set by each of the Linux distributions,
+    distribution packages of Supervisor can lag considerably behind the
     official Supervisor packages released to PyPI.  For example, Ubuntu
     12.04 (released April 2012) offered a package based on Supervisor 3.0a8
     (released January 2010).
