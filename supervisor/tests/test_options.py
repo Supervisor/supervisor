@@ -3253,7 +3253,7 @@ class ServerOptionsTests(unittest.TestCase):
     def test_drop_privileges_nonroot_different_user(self):
         instance = self._makeOne()
         msg = instance.drop_privileges(42)
-        self.assertEqual(msg, "Can't drop privilege as nonroot user")
+        self.assertEqual(msg, "Could not set user id of effective user")
 
     def test_daemonize_notifies_poller_before_and_after_fork(self):
         instance = self._makeOne()

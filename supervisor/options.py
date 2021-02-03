@@ -1396,7 +1396,7 @@ class ServerOptions(Options):
         try:
             os.setuid(uid)
         except:
-            return 'Could not set effective user id'
+            return 'Could not set user id of effective user'
 
     def set_uid_or_exit(self):
         """Set the uid of the supervisord process.  Called during supervisord
