@@ -1372,11 +1372,6 @@ class ServerOptions(Options):
             # has "user=foo" (same user) in it.
             return
 
-        try:
-            os.setuid(uid)
-        except:
-            return 'Could not set user id of effective user'
-
         gid = pwrec[3]
         if hasattr(os, 'setgroups'):
             user = pwrec[0]
@@ -1397,6 +1392,11 @@ class ServerOptions(Options):
             os.setgid(gid)
         except OSError:
             return 'Could not set group id of effective user'
+
+        try:
+            os.setuid(uid)
+        except:
+            return 'Could not set user id of effective user'
 
     def set_uid_or_exit(self):
         """Set the uid of the supervisord process.  Called during supervisord
