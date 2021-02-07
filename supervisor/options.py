@@ -987,6 +987,10 @@ class ServerOptions(Options):
                 syslog = boolean(get(section, sy_key, False))
                 logfiles[sy_key] = syslog
 
+                prepend_ts_key = '%s_prepend_timestamp' % k
+                prepend_ts = boolean(get(section, prepend_ts_key, False))
+                logfiles[prepend_ts_key] = prepend_ts
+
                 # rewrite deprecated "syslog" magic logfile into the equivalent
                 # TODO remove this in a future version
                 if lf_val is Syslog:
@@ -1030,12 +1034,14 @@ class ServerOptions(Options):
                 startretries=startretries,
                 uid=uid,
                 stdout_logfile=logfiles['stdout_logfile'],
+                stdout_prepend_timestamp = logfiles['stdout_prepend_timestamp'],
                 stdout_capture_maxbytes = stdout_cmaxbytes,
                 stdout_events_enabled = stdout_events,
                 stdout_logfile_backups=logfiles['stdout_logfile_backups'],
                 stdout_logfile_maxbytes=logfiles['stdout_logfile_maxbytes'],
                 stdout_syslog=logfiles['stdout_syslog'],
                 stderr_logfile=logfiles['stderr_logfile'],
+                stderr_prepend_timestamp = logfiles['stderr_prepend_timestamp'],
                 stderr_capture_maxbytes = stderr_cmaxbytes,
                 stderr_events_enabled = stderr_events,
                 stderr_logfile_backups=logfiles['stderr_logfile_backups'],
@@ -1869,7 +1875,7 @@ class ProcessConfig(Config):
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
         'exitcodes', 'redirect_stderr' ]
-    optional_param_names = [ 'environment', 'serverurl' ]
+    optional_param_names = [ 'environment', 'serverurl', 'stdout_prepend_timestamp', 'stderr_prepend_timestamp' ]
 
     def __init__(self, options, **params):
         self.options = options
