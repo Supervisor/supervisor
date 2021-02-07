@@ -570,6 +570,25 @@ class POutputDispatcherTests(unittest.TestCase):
         dispatcher.close() # make sure we don't error if we try to close twice
         self.assertEqual(dispatcher.closed, True)
 
+    def test_stdout_prepend_timestamp(self):
+        from supervisor import loggers
+        from supervisor.loggers import getLogger
+
+        options = DummyOptions()
+        options.getLogger = getLogger # actually use real logger
+        options.loglevel = loggers.LevelsByName.TRAC
+
+        logfile = '/tmp/foo'
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile=logfile, stdout_prepend_timestamp=True)
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+        dispatcher.output_buffer = 'a'
+        dispatcher.record_output()
+
+        [x.flush() for x in dispatcher.childlog.handlers]
+        with open(logfile, 'rb') as f:
+            self.assertEqual(b'testing stdout prepend timestamp', f.read())
 
 class PInputDispatcherTests(unittest.TestCase):
     def _getTargetClass(self):
