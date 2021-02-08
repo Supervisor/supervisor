@@ -315,17 +315,11 @@ class PEventListenerDispatcher(PDispatcher):
         if logfile:
             maxbytes = getattr(process.config, '%s_logfile_maxbytes' % channel)
             backups = getattr(process.config, '%s_logfile_backups' % channel)
-            prepend_timestamp = getattr(process.config, '%s_prepend_timestamp' % channel)
-
-            formatter = '%(message)s'
-            if prepend_timestamp:
-                formatter = '%(asctime)s %(message)s'
-
             self.childlog = process.config.options.getLogger()
             loggers.handle_file(
                 self.childlog,
                 logfile,
-                formatter,
+                '%(message)s',
                 rotating=not not maxbytes, # optimization
                 maxbytes=maxbytes,
                 backups=backups,
@@ -341,6 +335,7 @@ class PEventListenerDispatcher(PDispatcher):
         if self.childlog is not None:
             for handler in self.childlog.handlers:
                 handler.reopen()
+
 
     def writable(self):
         return False
