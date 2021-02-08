@@ -604,6 +604,7 @@ class POutputDispatcherTests(unittest.TestCase):
             # check if the message is at the end of the log line
             self.assertEqual(message.encode(), content[-len(message):])
 
+        dispatcher.childlog.close()
         dispatcher.close()
 
     def test_stderr_prepend_timestamp(self):
@@ -622,8 +623,8 @@ class POutputDispatcherTests(unittest.TestCase):
         process = DummyProcess(config)
 
         dispatcher = self._makeOne(process, channel='stderr')
-        dispatcher.removelogs()
         dispatcher.output_buffer = message
+        dispatcher.removelogs()
         dispatcher.record_output()
 
         # flush out the log into log files
@@ -640,8 +641,8 @@ class POutputDispatcherTests(unittest.TestCase):
             # check if the message is at the end of the log line
             self.assertEqual(message.encode(), content[-len(message):])
 
+        dispatcher.childlog.close()
         dispatcher.close()
-        dispatcher.removelogs()
 
 class PInputDispatcherTests(unittest.TestCase):
     def _getTargetClass(self):
