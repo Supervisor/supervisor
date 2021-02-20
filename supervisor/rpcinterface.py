@@ -563,6 +563,7 @@ class SupervisorNamespaceRPCInterface:
             inuse = gconfig.name in self.supervisord.process_groups
             for pconfig in gconfig.process_configs:
                 d = {'autostart': pconfig.autostart,
+                     'directory': pconfig.directory,
                      'command': pconfig.command,
                      'exitcodes': pconfig.exitcodes,
                      'group': gconfig.name,
@@ -588,6 +589,7 @@ class SupervisorNamespaceRPCInterface:
                      'stderr_logfile_backups': pconfig.stderr_logfile_backups,
                      'stderr_logfile_maxbytes': pconfig.stderr_logfile_maxbytes,
                      'stderr_syslog': pconfig.stderr_syslog,
+                     'server_url': pconfig.server_url,
                     }
                 # no support for these types in xml-rpc
                 d.update((k, 'auto') for k, v in d.items() if v is Automatic)
