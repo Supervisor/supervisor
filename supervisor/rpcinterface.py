@@ -564,6 +564,7 @@ class SupervisorNamespaceRPCInterface:
             for pconfig in gconfig.process_configs:
                 d = {'autostart': pconfig.autostart,
                      'directory': pconfig.directory,
+                     'uid': pconfig.uid,
                      'command': pconfig.command,
                      'exitcodes': pconfig.exitcodes,
                      'group': gconfig.name,
