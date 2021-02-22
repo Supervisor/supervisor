@@ -333,7 +333,22 @@ class SupervisordTests(unittest.TestCase):
         supervisord = self._makeOne(options)
         self.assertEqual(supervisord.get_state(), SupervisorStates.RUNNING)
 
-    def test_diff_to_active_added_and_removed(self):
+    def test_diff_to_active_finds_groups_added(self):
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+
+        pconfig = DummyPConfig(options, 'process1', 'process1')
+        group1 = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
+
+        # the active configuration has no groups
+        # diffing should find that group1 has been added
+        supervisord.options.process_group_configs = [group1]
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, [group1])
+        self.assertEqual(changed, [])
+        self.assertEqual(removed, [])
+
+    def test_diff_to_active_finds_groups_removed(self):
         options = DummyOptions()
         supervisord = self._makeOne(options)
 
@@ -343,29 +358,17 @@ class SupervisordTests(unittest.TestCase):
         pconfig = DummyPConfig(options, 'process2', 'process2')
         group2 = DummyPGroupConfig(options, 'group2', pconfigs=[pconfig])
 
-        new = [group1, group2]
-        supervisord.options.process_group_configs = new
-        added, changed, removed = supervisord.diff_to_active()
-        self.assertEqual(added, new)
-        self.assertEqual(changed, [])
-        self.assertEqual(removed, [])
-
+        # set up supervisord with an active configuration of group1 and group2
+        supervisord.options.process_group_configs = [group1, group2]
         supervisord.add_process_group(group1)
         supervisord.add_process_group(group2)
 
-        pconfig = DummyPConfig(options, 'process3', 'process3')
-        new_group1 = DummyPGroupConfig(options, pconfigs=[pconfig])
-
-        pconfig = DummyPConfig(options, 'process4', 'process4')
-        new_group2 = DummyPGroupConfig(options, pconfigs=[pconfig])
-
-        new = [group2, new_group1, new_group2]
-
-        supervisord.options.process_group_configs = new
+        # diffing should find that group2 has been removed
+        supervisord.options.process_group_configs = [group1]
         added, changed, removed = supervisord.diff_to_active()
-        self.assertEqual(added, [new_group1, new_group2])
+        self.assertEqual(added, [])
         self.assertEqual(changed, [])
-        self.assertEqual(removed, [group1])
+        self.assertEqual(removed, [group2])
 
     def test_diff_to_active_changed(self):
         from supervisor.options import ProcessConfig, ProcessGroupConfig
@@ -575,7 +578,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(group, supervisord.process_groups['foo'])
         self.assertTrue(not result)
 
-    def test_add_process_group_event(self):
+    def test_add_process_group_emits_event(self):
         from supervisor import events
         L = []
         def callback(event):
