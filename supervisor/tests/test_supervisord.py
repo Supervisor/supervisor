@@ -344,20 +344,11 @@ class SupervisordTests(unittest.TestCase):
         group2 = DummyPGroupConfig(options, 'group2', pconfigs=[pconfig])
 
         new = [group1, group2]
-
-        added, changed, removed = supervisord.diff_to_active()
-        self.assertEqual(added, [])
-        self.assertEqual(changed, [])
-        self.assertEqual(removed, [])
-
-        added, changed, removed = supervisord.diff_to_active(new)
-        self.assertEqual(added, new)
-        self.assertEqual(changed, [])
-        self.assertEqual(removed, [])
-
         supervisord.options.process_group_configs = new
         added, changed, removed = supervisord.diff_to_active()
         self.assertEqual(added, new)
+        self.assertEqual(changed, [])
+        self.assertEqual(removed, [])
 
         supervisord.add_process_group(group1)
         supervisord.add_process_group(group2)
@@ -370,7 +361,8 @@ class SupervisordTests(unittest.TestCase):
 
         new = [group2, new_group1, new_group2]
 
-        added, changed, removed = supervisord.diff_to_active(new)
+        supervisord.options.process_group_configs = new
+        added, changed, removed = supervisord.diff_to_active()
         self.assertEqual(added, [new_group1, new_group2])
         self.assertEqual(changed, [])
         self.assertEqual(removed, [group1])
@@ -421,9 +413,10 @@ class SupervisordTests(unittest.TestCase):
         supervisord.add_process_group(group3)
         supervisord.add_process_group(group4)
 
-        added, changed, removed = supervisord.diff_to_active(new)
-
-        self.assertEqual([added, removed], [[], []])
+        supervisord.options.process_group_configs = new
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, [])
+        self.assertEqual(removed, [])
         self.assertEqual(changed, [group1])
 
         options = DummyOptions()
@@ -436,8 +429,10 @@ class SupervisordTests(unittest.TestCase):
 
         supervisord.add_process_group(make_gconfig('group1', [pconfig1]))
 
-        added, changed, removed = supervisord.diff_to_active(new)
-        self.assertEqual([added, removed], [[], []])
+        supervisord.options.process_group_configs = new
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, [])
+        self.assertEqual(removed, [])
         self.assertEqual(changed, [group1])
 
     def test_diff_to_active_changed_eventlistener(self):
@@ -498,9 +493,10 @@ class SupervisordTests(unittest.TestCase):
         supervisord.add_process_group(group3)
         supervisord.add_process_group(group4)
 
-        added, changed, removed = supervisord.diff_to_active(new)
-
-        self.assertEqual([added, removed], [[], []])
+        supervisord.options.process_group_configs = new
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, [])
+        self.assertEqual(removed, [])
         self.assertEqual(changed, [group1])
 
         # Test that changing an eventlistener's event is detected by diff_to_active
@@ -526,9 +522,10 @@ class SupervisordTests(unittest.TestCase):
         supervisord.add_process_group(group3)
         supervisord.add_process_group(group4)
 
-        added, changed, removed = supervisord.diff_to_active(new)
-
-        self.assertEqual([added, removed], [[], []])
+        supervisord.options.process_group_configs = new
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, [])
+        self.assertEqual(removed, [])
         self.assertEqual(changed, [group1])
 
         # Test that changing an eventlistener's result_handler is detected by diff_to_active
@@ -554,9 +551,10 @@ class SupervisordTests(unittest.TestCase):
         supervisord.add_process_group(group3)
         supervisord.add_process_group(group4)
 
-        added, changed, removed = supervisord.diff_to_active(new)
-
-        self.assertEqual([added, removed], [[], []])
+        supervisord.options.process_group_configs = new
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, [])
+        self.assertEqual(removed, [])
         self.assertEqual(changed, [group1])
 
     def test_add_process_group(self):

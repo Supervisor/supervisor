@@ -96,9 +96,8 @@ class Supervisor:
         finally:
             self.options.cleanup()
 
-    def diff_to_active(self, new=None):
-        if not new:
-            new = self.options.process_group_configs
+    def diff_to_active(self):
+        new = self.options.process_group_configs
         cur = [group.config for group in self.process_groups.values()]
 
         curdict = dict(zip([cfg.name for cfg in cur], cur))
