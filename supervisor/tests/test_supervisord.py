@@ -333,7 +333,7 @@ class SupervisordTests(unittest.TestCase):
         supervisord = self._makeOne(options)
         self.assertEqual(supervisord.get_state(), SupervisorStates.RUNNING)
 
-    def test_diff_add_remove(self):
+    def test_diff_to_active_added_and_removed(self):
         options = DummyOptions()
         supervisord = self._makeOne(options)
 
@@ -375,7 +375,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(changed, [])
         self.assertEqual(removed, [group1])
 
-    def test_diff_changed(self):
+    def test_diff_to_active_changed(self):
         from supervisor.options import ProcessConfig, ProcessGroupConfig
 
         options = DummyOptions()
@@ -440,7 +440,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual([added, removed], [[], []])
         self.assertEqual(changed, [group1])
 
-    def test_diff_changed_eventlistener(self):
+    def test_diff_to_active_changed_eventlistener(self):
         from supervisor.events import EventTypes
         from supervisor.options import EventListenerConfig, EventListenerPoolConfig
 
@@ -478,7 +478,7 @@ class SupervisordTests(unittest.TestCase):
         def make_gconfig(name, pconfigs, pool_events, result_handler='supervisor.dispatchers:default_handler'):
             return EventListenerPoolConfig(options, name, 25, pconfigs, 10, pool_events, result_handler)
 
-	    # Test that changing an event listener command causes the diff_to_activate
+	    # Test that changing an eventlistener's command is detected by diff_to_active
         pconfig = make_pconfig('process1', 'process1-new')
         econfig = make_econfig("TICK_60")
         group1 = make_gconfig('group1', [pconfig], econfig)
@@ -503,7 +503,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual([added, removed], [[], []])
         self.assertEqual(changed, [group1])
 
-        # Test that changing the event triggers diff_to_activate
+        # Test that changing an eventlistener's event is detected by diff_to_active
         options = DummyOptions()
         supervisord = self._makeOne(options)
 
@@ -531,7 +531,7 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual([added, removed], [[], []])
         self.assertEqual(changed, [group1])
 
-        # Test that changing the result_handler triggers diff_to_activate
+        # Test that changing an eventlistener's result_handler is detected by diff_to_active
         options = DummyOptions()
         supervisord = self._makeOne(options)
 
