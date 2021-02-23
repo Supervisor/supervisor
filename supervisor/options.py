@@ -406,7 +406,6 @@ class ServerOptions(Options):
     passwdfile = None
     nodaemon = None
     silent = None
-    environment = None
     httpservers = ()
     unlink_pidfile = False
     unlink_socketfiles = False
@@ -1583,9 +1582,6 @@ class ServerOptions(Options):
                 raise
             data = b''
         return data
-
-    def process_environment(self):
-        os.environ.update(self.environment or {})
 
     def chdir(self, dir):
         os.chdir(dir)

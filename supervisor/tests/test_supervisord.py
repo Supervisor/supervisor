@@ -132,7 +132,6 @@ class SupervisordTests(unittest.TestCase):
         options.first = True
         supervisord = self._makeOne(options)
         supervisord.main()
-        self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.fds_cleaned_up, False)
         self.assertEqual(options.rlimits_set, True)
         self.assertEqual(options.parse_criticals, ['setuid_called'])
@@ -142,7 +141,6 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(len(supervisord.process_groups), 1)
         self.assertEqual(supervisord.process_groups['foo'].config.options,
                          options)
-        self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.httpservers_opened, True)
         self.assertEqual(options.signals_set, True)
         self.assertEqual(options.daemonized, True)
@@ -158,7 +156,6 @@ class SupervisordTests(unittest.TestCase):
         options.first = False
         supervisord = self._makeOne(options)
         supervisord.main()
-        self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.fds_cleaned_up, True)
         self.assertFalse(hasattr(options, 'rlimits_set'))
         self.assertEqual(options.parse_criticals, ['setuid_called'])
@@ -168,7 +165,6 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(len(supervisord.process_groups), 1)
         self.assertEqual(supervisord.process_groups['foo'].config.options,
                          options)
-        self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.httpservers_opened, True)
         self.assertEqual(options.signals_set, True)
         self.assertEqual(options.daemonized, False)

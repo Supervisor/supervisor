@@ -84,7 +84,6 @@ class Supervisor:
         try:
             for config in self.options.process_group_configs:
                 self.add_process_group(config)
-            self.options.process_environment()
             self.options.openhttpservers(self)
             self.options.setsignals()
             if (not self.options.nodaemon) and self.options.first:

@@ -20,6 +20,19 @@ else:
 
 class EndToEndTests(BaseTestCase):
 
+    def test_issue_550(self):
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-550.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('success: print_env entered RUNNING state')
+
+        args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'tail -100000', 'print_env']
+        supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisorctl.kill, signal.SIGINT)
+        supervisorctl.expect_exact("THIS_SHOULD=BE_IN_CHILD_ENV")
+        supervisorctl.expect(pexpect.EOF)
+
     def test_issue_565(self):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-565.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]

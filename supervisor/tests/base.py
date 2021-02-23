@@ -77,7 +77,6 @@ class DummyOptions:
         self.setuid_msg = None
         self.privsdropped = None
         self.logs_reopened = False
-        self.environment_processed = False
         self.write_accept = None
         self.tempfile_name = '/foo/bar'
         self.removed = []
@@ -231,9 +230,6 @@ class DummyOptions:
 
     def reopenlogs(self):
         self.logs_reopened = True
-
-    def process_environment(self):
-        self.environment_processed = True
 
     def mktempfile(self, prefix, suffix, dir):
         return self.tempfile_name

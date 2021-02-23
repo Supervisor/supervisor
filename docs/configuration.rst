@@ -445,8 +445,8 @@ follows.
 ``environment``
 
   A list of key/value pairs in the form ``KEY="val",KEY2="val2"`` that
-  will be placed in the :program:`supervisord` process' environment
-  (and as a result in all of its child process' environments).  This
+  will be placed in the environment of all child processes.  This does
+  not change the environment of :program:`supervisord` itself.  This
   option can include the value ``%(here)s``, which expands to the
   directory in which the supervisord configuration file was found.
   Values containing non-alphanumeric characters should be quoted
