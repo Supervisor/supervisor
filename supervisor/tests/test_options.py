@@ -341,7 +341,8 @@ class ClientOptionsTests(unittest.TestCase):
         # should not raise configparser.DuplicateSectionError on py3
 
     def test_options_with_environment_expansions(self):
-        s = lstrip("""[supervisorctl]
+        s = lstrip("""
+        [supervisorctl]
         serverurl=http://localhost:%(ENV_SERVER_PORT)s
         username=%(ENV_CLIENT_USER)s
         password=%(ENV_CLIENT_PASS)s
@@ -454,11 +455,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(options.stdout.getvalue(), VERSION + '\n')
 
     def test_options(self):
-        s = lstrip("""[inet_http_server]
-        port=127.0.0.1:8999
-        username=chrism
-        password=foo
-
+        s = lstrip("""
         [supervisord]
         directory=%(tempdir)s
         backofflimit=10
@@ -477,6 +474,11 @@ class ServerOptionsTests(unittest.TestCase):
         minfds=2048
         minprocs=300
         environment=FAKE_ENV_VAR=/some/path
+
+        [inet_http_server]
+        port=127.0.0.1:8999
+        username=chrism
+        password=foo
 
         [program:cat1]
         command=/bin/cat
@@ -1844,11 +1846,6 @@ class ServerOptionsTests(unittest.TestCase):
 
     def test_options_with_environment_expansions(self):
         text = lstrip("""\
-        [inet_http_server]
-        port=*:%(ENV_HTSRV_PORT)s
-        username=%(ENV_HTSRV_USER)s
-        password=%(ENV_HTSRV_PASS)s
-
         [supervisord]
         logfile = %(ENV_HOME)s/supervisord.log
         logfile_maxbytes = %(ENV_SUPD_LOGFILE_MAXBYTES)s
@@ -1863,6 +1860,11 @@ class ServerOptionsTests(unittest.TestCase):
         childlogdir = %(ENV_HOME)s
         strip_ansi = %(ENV_SUPD_STRIP_ANSI)s
         environment = FAKE_ENV_VAR=/some/path
+
+        [inet_http_server]
+        port=*:%(ENV_HTSRV_PORT)s
+        username=%(ENV_HTSRV_USER)s
+        password=%(ENV_HTSRV_PASS)s
 
         [program:cat1]
         command=%(ENV_CAT1_COMMAND)s --logdir=%(ENV_CAT1_COMMAND_LOGDIR)s
@@ -1995,6 +1997,57 @@ class ServerOptionsTests(unittest.TestCase):
             os.path.join(here, 'supervisord.log'))
         self.assertEqual(instance.pidfile,
             os.path.join(here, 'supervisord.pid'))
+
+    def test_options_program_section_expands_env_from_supervisord_sect(self):
+        instance = self._makeOne()
+        text = lstrip('''
+        [supervisord]
+        environment=CMD=/bin/from/supervisord/section
+
+        [program:cmd]
+        command=%(ENV_CMD)s
+        ''')
+        here = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.configfile = supervisord_conf
+            instance.realize(args=[])
+        finally:
+            shutil.rmtree(here, ignore_errors=True)
+        options = instance.configroot.supervisord
+        group = options.process_group_configs[0]
+        self.assertEqual(group.name, 'cmd')
+        proc = group.process_configs[0]
+        self.assertEqual(proc.command,
+            os.path.join(here, '/bin/from/supervisord/section'))
+
+    def test_options_program_section_expands_env_from_program_sect(self):
+        instance = self._makeOne()
+        text = lstrip('''
+        [supervisord]
+        environment=CMD=/bin/from/supervisord/section
+
+        [program:cmd]
+        command=%(ENV_CMD)s
+        environment=CMD=/bin/from/program/section
+        ''')
+        here = tempfile.mkdtemp()
+        supervisord_conf = os.path.join(here, 'supervisord.conf')
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+        try:
+            instance.configfile = supervisord_conf
+            instance.realize(args=[])
+        finally:
+            shutil.rmtree(here, ignore_errors=True)
+        options = instance.configroot.supervisord
+        group = options.process_group_configs[0]
+        self.assertEqual(group.name, 'cmd')
+        proc = group.process_configs[0]
+        self.assertEqual(proc.command,
+            os.path.join(here, '/bin/from/program/section'))
 
     def test_options_program_section_expands_here(self):
         instance = self._makeOne()

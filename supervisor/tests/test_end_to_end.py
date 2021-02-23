@@ -26,6 +26,7 @@ class EndToEndTests(BaseTestCase):
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         supervisord.expect_exact('success: print_env entered RUNNING state')
+        supervisord.expect_exact('exited: print_env (exit status 0; expected)')
 
         args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'tail -100000', 'print_env']
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
@@ -141,6 +142,27 @@ class EndToEndTests(BaseTestCase):
         except pexpect.ExceptionPexpect:
             seen = False
         self.assertTrue(seen)
+
+    def test_issue_1170a(self):
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1170a.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact("set from [supervisord] section")
+
+    def test_issue_1170b(self):
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1170b.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact("set from [program] section")
+
+    def test_issue_1170c(self):
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1170c.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact("set from [eventlistener] section")
 
     def test_issue_1224(self):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1224.conf')

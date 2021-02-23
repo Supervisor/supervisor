@@ -14,6 +14,10 @@
   ``syslog`` was supplied, as is supported by all other log filename
   options.  Patch by Franck Cuny.
 
+- Fixed a bug where environment variables defined in ``environment=``
+  in the ``[supervisord]`` section or a ``[program:x]`` section could
+  not be used in ``%(ENV_x)s`` expansions.  Patch by MythRen.
+
 - The  ``supervisorctl signal`` command now allows a signal to be sent
   when a process is in the ``STOPPING`` state.  Patch by Mike Gould.
 
