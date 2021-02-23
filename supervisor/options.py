@@ -102,6 +102,7 @@ class Options:
         self.attr_priorities = {}
         self.require_configfile = require_configfile
         self.add(None, None, "h", "help", self.help)
+        self.add(None, None, "?", None, self.help)
         self.add("configfile", None, "c:", "configuration=")
 
         here = os.path.dirname(os.path.dirname(sys.argv[0]))

@@ -17,6 +17,9 @@
 - The  ``supervisorctl signal`` command now allows a signal to be sent
   when a process is in the ``STOPPING`` state.  Patch by Mike Gould.
 
+- ``supervisorctl`` and ``supervisord`` now print help when given ``-?``
+  in addition to the existing ``-h``/``--help``.
+
 4.2.1 (2020-08-20)
 ------------------
 

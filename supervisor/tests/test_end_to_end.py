@@ -206,6 +206,21 @@ class EndToEndTests(BaseTestCase):
                                  timeout=30)
             supervisorctl.expect('Unicode output may fail.', timeout=30)
 
+    def test_issue_1251(self):
+        args = ['-m', 'supervisor.supervisord', '-?']
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact("supervisord -- run a set of applications")
+        supervisord.expect_exact("-l/--logfile FILENAME -- use FILENAME as")
+        supervisord.expect(pexpect.EOF)
+
+        args = ['-m', 'supervisor.supervisorctl', '-?']
+        supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisorctl.kill, signal.SIGINT)
+        supervisorctl.expect_exact("supervisorctl -- control applications")
+        supervisorctl.expect_exact("-i/--interactive -- start an interactive")
+        supervisorctl.expect(pexpect.EOF)
+
     def test_issue_1298(self):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1298.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
