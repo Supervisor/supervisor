@@ -125,8 +125,8 @@ class SupervisordTests(unittest.TestCase):
 
     def test_main_first(self):
         options = DummyOptions()
-        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
-        gconfigs = [DummyPGroupConfig(options,'foo', pconfigs=[pconfig])]
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo', '/tmp')
+        gconfigs = [DummyPGroupConfig(options, 'foo', pconfigs=[pconfig])]
         options.process_group_configs = gconfigs
         options.test = True
         options.first = True
@@ -151,8 +151,8 @@ class SupervisordTests(unittest.TestCase):
 
     def test_main_notfirst(self):
         options = DummyOptions()
-        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
-        gconfigs = [DummyPGroupConfig(options,'foo', pconfigs=[pconfig])]
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo', '/tmp')
+        gconfigs = [DummyPGroupConfig(options, 'foo', pconfigs=[pconfig])]
         options.process_group_configs = gconfigs
         options.test = True
         options.first = False
@@ -178,7 +178,7 @@ class SupervisordTests(unittest.TestCase):
     def test_reap(self):
         options = DummyOptions()
         options.waitpid_return = 1, 1
-        pconfig = DummyPConfig(options, 'process', 'process', '/bin/process1')
+        pconfig = DummyPConfig(options, 'process', '/bin/foo', '/tmp')
         process = DummyProcess(pconfig)
         process.drained = False
         process.killing = True
@@ -199,7 +199,7 @@ class SupervisordTests(unittest.TestCase):
     def test_reap_more_than_once(self):
         options = DummyOptions()
         options.waitpid_return = 1, 1
-        pconfig = DummyPConfig(options, 'process', 'process', '/bin/process1')
+        pconfig = DummyPConfig(options, 'process', '/bin/foo', '/tmp')
         process = DummyProcess(pconfig)
         process.drained = False
         process.killing = True
@@ -214,7 +214,7 @@ class SupervisordTests(unittest.TestCase):
     def test_reap_unknown_pid(self):
         options = DummyOptions()
         options.waitpid_return = 2, 0 # pid, status
-        pconfig = DummyPConfig(options, 'process', 'process', '/bin/process1')
+        pconfig = DummyPConfig(options, 'process', '/bin/foo', '/tmp')
         process = DummyProcess(pconfig)
         process.drained = False
         process.killing = True
@@ -300,11 +300,11 @@ class SupervisordTests(unittest.TestCase):
     def test_handle_sigusr2(self):
         options = DummyOptions()
         options._signal = signal.SIGUSR2
-        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        pconfig1 = DummyPConfig(options, 'process1', '/bin/foo', '/tmp')
         process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
         process1.delay = time.time() - 1
         supervisord = self._makeOne(options)
-        pconfigs = [DummyPConfig(options, 'foo', 'foo', '/bin/foo')]
+        pconfigs = [DummyPConfig(options, 'foo', '/bin/foo', '/tmp')]
         options.process_group_configs = DummyPGroupConfig(
             options, 'foo',
             pconfigs=pconfigs)
@@ -337,7 +337,7 @@ class SupervisordTests(unittest.TestCase):
         options = DummyOptions()
         supervisord = self._makeOne(options)
 
-        pconfig = DummyPConfig(options, 'process1', 'process1')
+        pconfig = DummyPConfig(options, 'process1', '/bin/foo', '/tmp')
         group1 = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
 
         # the active configuration has no groups
@@ -352,10 +352,10 @@ class SupervisordTests(unittest.TestCase):
         options = DummyOptions()
         supervisord = self._makeOne(options)
 
-        pconfig = DummyPConfig(options, 'process1', 'process1')
+        pconfig = DummyPConfig(options, 'process1', '/bin/process1', '/tmp')
         group1 = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
 
-        pconfig = DummyPConfig(options, 'process2', 'process2')
+        pconfig = DummyPConfig(options, 'process2', '/bin/process2', '/tmp')
         group2 = DummyPGroupConfig(options, 'group2', pconfigs=[pconfig])
 
         # set up supervisord with an active configuration of group1 and group2
@@ -562,8 +562,8 @@ class SupervisordTests(unittest.TestCase):
 
     def test_add_process_group(self):
         options = DummyOptions()
-        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
-        gconfig = DummyPGroupConfig(options,'foo', pconfigs=[pconfig])
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo', '/tmp')
+        gconfig = DummyPGroupConfig(options, 'foo', pconfigs=[pconfig])
         options.process_group_configs = [gconfig]
         supervisord = self._makeOne(options)
 
@@ -585,8 +585,8 @@ class SupervisordTests(unittest.TestCase):
             L.append(1)
         events.subscribe(events.ProcessGroupAddedEvent, callback)
         options = DummyOptions()
-        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
-        gconfig = DummyPGroupConfig(options,'foo', pconfigs=[pconfig])
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo', '/tmp')
+        gconfig = DummyPGroupConfig(options, 'foo', pconfigs=[pconfig])
         options.process_group_configs = [gconfig]
         supervisord = self._makeOne(options)
 
@@ -598,7 +598,7 @@ class SupervisordTests(unittest.TestCase):
 
     def test_remove_process_group(self):
         options = DummyOptions()
-        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo', '/tmp')
         gconfig = DummyPGroupConfig(options, 'foo', pconfigs=[pconfig])
         supervisord = self._makeOne(options)
 
@@ -624,8 +624,8 @@ class SupervisordTests(unittest.TestCase):
             L.append(1)
         events.subscribe(events.ProcessGroupRemovedEvent, callback)
         options = DummyOptions()
-        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
-        gconfig = DummyPGroupConfig(options,'foo', pconfigs=[pconfig])
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo', '/tmp')
+        gconfig = DummyPGroupConfig(options, 'foo', pconfigs=[pconfig])
         options.process_group_configs = [gconfig]
         supervisord = self._makeOne(options)
 
