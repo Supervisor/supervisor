@@ -656,6 +656,11 @@ class ServerOptions(Options):
         environ_str = get('environment', '')
         environ_str = expand(environ_str, expansions, 'environment')
         section.environment = dict_of_key_value_pairs(environ_str)
+
+        # extend expansions for global from [supervisord] environment definition
+        for k, v in section.environment.items():
+            self.environ_expansions['ENV_%s' % k ] = v
+
         # Process rpcinterface plugins before groups to allow custom events to
         # be registered.
         section.rpcinterface_factories = self.get_plugins(
@@ -962,6 +967,10 @@ class ServerOptions(Options):
 
             environment = dict_of_key_value_pairs(
                 expand(environment_str, expansions, 'environment'))
+
+            # extend expansions for process from [program:x] environment definition
+            for k, v in environment.items():
+                expansions['ENV_%s' % k] = v
 
             directory = get(section, 'directory', None)
 
