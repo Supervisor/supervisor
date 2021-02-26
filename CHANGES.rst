@@ -1,5 +1,5 @@
-4.2.2.dev0 (Next Release)
--------------------------
+4.2.2 (2021-02-26)
+------------------
 
 - Fixed a bug where ``supervisord`` could crash if a subprocess exited
   immediately before trying to kill it.
