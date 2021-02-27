@@ -22,14 +22,6 @@ from datetime import date
 
 parent = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.abspath(parent))
-wd = os.getcwd()
-os.chdir(parent)
-os.system('%s setup.py test -q' % sys.executable)
-os.chdir(wd)
-
-for item in os.listdir(parent):
-    if item.endswith('.egg'):
-        sys.path.append(os.path.join(parent, item))
 
 version_txt = os.path.join(parent, 'supervisor/version.txt')
 supervisor_version = open(version_txt).read().strip()
