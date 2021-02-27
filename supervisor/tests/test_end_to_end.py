@@ -91,6 +91,15 @@ class EndToEndTests(BaseTestCase):
             seen = False
         self.assertTrue(seen)
 
+    def test_issue_733(self):
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-733.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('gave up: nonexistent entered FATAL state')
+        supervisord.expect_exact('received SIGTERM indicating exit request')
+        supervisord.expect(pexpect.EOF)
+
     def test_issue_835(self):
         filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-835.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
