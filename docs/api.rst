@@ -27,7 +27,9 @@ is as follows.
 
 You may call methods against :program:`supervisord` and its
 subprocesses by using the ``supervisor`` namespace.  An example is
-provided below.
+provided below. Please note that keyword arguments are not
+supported in Python's xmlrpc library and therefore cannot be 
+used e.g. in :ref:`startProcess`.
 
 .. code-block:: python
 
