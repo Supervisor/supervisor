@@ -18,16 +18,17 @@ class PidProxy:
     pid = None
 
     def __init__(self, args):
-        self.setsignals()
         try:
-            self.pidfile, cmdargs = args[1], args[2:]
-            self.command = os.path.abspath(cmdargs[0])
-            self.cmdargs = cmdargs
+            self.pidfile = args[1]
+            command_and_cmdargs = args[2:]
+            self.command = os.path.abspath(command_and_cmdargs[0])
+            self.cmdargs = command_and_cmdargs[1:]
         except (ValueError, IndexError):
             self.usage()
             sys.exit(1)
 
     def go(self):
+        self.setsignals()
         self.pid = os.spawnv(os.P_NOWAIT, self.command, self.cmdargs)
         while 1:
             time.sleep(5)
