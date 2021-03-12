@@ -1,9 +1,6 @@
 4.3.0.dev0 (Next Release)
 -------------------------
 
-- Fixed a bug where ``pidproxy`` would not pass arguments to the command
-  it runs.
-
 4.2.2 (2021-02-26)
 ------------------
 

@@ -13,5 +13,5 @@ class PidProxyTests(unittest.TestCase):
         args = ["pidproxy.py", "/path/to/pidfile", "./cmd", "-arg1", "-arg2"]
         pp = self._makeOne(args)
         self.assertEqual(pp.pidfile, "/path/to/pidfile")
-        self.assertEqual(pp.command, os.path.abspath("./cmd"))
-        self.assertEqual(pp.cmdargs, ["-arg1", "-arg2"])
+        self.assertEqual(pp.abscmd, os.path.abspath("./cmd"))
+        self.assertEqual(pp.cmdargs, ["./cmd", "-arg1", "-arg2"])

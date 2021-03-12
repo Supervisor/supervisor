@@ -279,6 +279,20 @@ class EndToEndTests(BaseTestCase):
         self.addCleanup(bash.kill, signal.SIGINT)
         bash.expect('spewage 2', timeout=30)
 
+    def test_issue_1481_pidproxy_cmd_with_no_args(self):
+        args = ['-m', 'supervisor.pidproxy', 'nonexistent-pidfile', "/bin/echo"]
+        pidproxy = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(pidproxy.kill, signal.SIGINT)
+        pidproxy.expect(pexpect.EOF)
+        self.assertEqual(pidproxy.before.strip(), "")
+
+    def test_issue_1481_pidproxy_cmd_with_args(self):
+        args = ['-m', 'supervisor.pidproxy', 'nonexistent-pidfile', "/bin/echo", "1", "2"]
+        pidproxy = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(pidproxy.kill, signal.SIGINT)
+        pidproxy.expect(pexpect.EOF)
+        self.assertEqual(pidproxy.before.strip(), "1 2")
+
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
 
