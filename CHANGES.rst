@@ -1,6 +1,12 @@
 4.3.0.dev0 (Next Release)
 -------------------------
 
+- The web interface will now return a 404 Not Found response if a log file
+  is missing.  Previously, it would return 410 Gone.  It was changed because
+  410 is intended to mean that the condition is likely to be permanent.  A
+  log file missing is usually temporary, e.g. a process that was never started
+  will not have a log file but will have one as soon as it is started.
+
 4.2.2 (2021-02-26)
 ------------------
 
