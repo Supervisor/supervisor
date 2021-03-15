@@ -184,3 +184,5 @@ with third party applications:
 `supervisor-alert <https://github.com/rahiel/supervisor-alert>`_
     Send event notifications over `Telegram <https://telegram.org>`_ or to an
     arbitrary command.
+`supervisor-discord <https://github.com/chaos-a/supervisor-discord>`_
+    Send event notifications to `Discord <https://discord.com>`_ via webhooks.
