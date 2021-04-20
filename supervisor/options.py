@@ -433,6 +433,10 @@ class ServerOptions(Options):
                  "z:", "logfile_backups=", integer, default=10)
         self.add("loglevel", "supervisord.loglevel", "e:", "loglevel=",
                  logging_level, default="info")
+        self.add("logformat", "supervisord.logformat", 
+                 default="%(asctime)s %(levelname)s %(message)s")        
+        self.add("logformatter", "supervisord.logformatter", 
+                 default="plaintext")
         self.add("pidfile", "supervisord.pidfile", "j:", "pidfile=",
                  existing_dirpath, default="supervisord.pid")
         self.add("identifier", "supervisord.identifier", "i:", "identifier=",
@@ -451,6 +455,7 @@ class ServerOptions(Options):
                  "", "profile_options=", profile_options, default=None)
         self.add("silent", "supervisord.silent",
                  "s", "silent", flag=1, default=0)
+
         self.pidhistory = {}
         self.process_group_configs = []
         self.parse_criticals = []
@@ -496,6 +501,12 @@ class ServerOptions(Options):
 
         if not self.loglevel:
             self.loglevel = section.loglevel
+
+        if not self.logformat:
+            self.logformat = section.logformat
+
+        if not self.logformatter:
+            self.logformatter = section.logformatter
 
         if self.logfile:
             logfile = self.logfile
@@ -643,6 +654,9 @@ class ServerOptions(Options):
         section.logfile_maxbytes = byte_size(get('logfile_maxbytes', '50MB'))
         section.logfile_backups = integer(get('logfile_backups', 10))
         section.loglevel = logging_level(get('loglevel', 'info'))
+        # Default to str.format style to avoid conflicting with environment variables expansion syntax.
+        section.logformat = get('logformat', '{asctime} {levelname} {message}')
+        section.logformatter = get('logformatter', 'plaintext')
         section.pidfile = existing_dirpath(get('pidfile', 'supervisord.pid'))
         section.identifier = get('identifier', 'supervisor')
         section.nodaemon = boolean(get('nodaemon', 'false'))
@@ -930,6 +944,10 @@ class ServerOptions(Options):
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
         stderr_events = boolean(get(section, 'stderr_events_enabled','false'))
         serverurl = get(section, 'serverurl', None)
+        loglevel = logging_level(get(section, 'loglevel', 'info'))
+        # Default to str.format style to avoid conflicting with environment variables expansion syntax.
+        logformat = get(section, 'logformat', '{asctime} {levelname} {message}')
+        logformatter = get(section, 'logformatter', 'plaintext')
         if serverurl and serverurl.strip().upper() == 'AUTO':
             serverurl = None
 
@@ -1057,7 +1075,11 @@ class ServerOptions(Options):
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
                 environment=environment,
-                serverurl=serverurl)
+                serverurl=serverurl,
+                loglevel=loglevel,
+                logformat=logformat,
+                logformatter=logformatter
+            )
 
             programs.append(pconfig)
 
@@ -1487,14 +1509,14 @@ class ServerOptions(Options):
 
     def make_logger(self):
         # must be called after realize() and after supervisor does setuid()
-        format = '%(asctime)s %(levelname)s %(message)s\n'
         self.logger = loggers.getLogger(self.loglevel)
         if self.nodaemon and not self.silent:
-            loggers.handle_stdout(self.logger, format)
+            loggers.handle_stdout(self.logger, self.logformat, self.logformatter)
         loggers.handle_file(
             self.logger,
             self.logfile,
-            format,
+            self.logformat,
+            self.logformatter,
             rotating=not not self.logfile_maxbytes,
             maxbytes=self.logfile_maxbytes,
             backups=self.logfile_backups,
@@ -1874,7 +1896,7 @@ class ProcessConfig(Config):
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
-        'exitcodes', 'redirect_stderr' ]
+        'exitcodes', 'redirect_stderr', 'loglevel', 'logformat', 'logformatter']
     optional_param_names = [ 'environment', 'serverurl' ]
 
     def __init__(self, options, **params):

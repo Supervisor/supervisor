@@ -12,11 +12,18 @@ import errno
 import sys
 import time
 import traceback
+import logging
+import json
+import re
 
 from supervisor.compat import syslog
 from supervisor.compat import long
 from supervisor.compat import is_text_stream
 from supervisor.compat import as_string
+from pythonjsonlogger import jsonlogger
+from string import Template
+from string import Formatter as StrFormatter
+
 
 class LevelsByName:
     CRIT = 50   # messages that probably require immediate user attention
@@ -44,21 +51,175 @@ def _levelNumbers():
     return bynumber
 
 LOG_LEVELS_BY_NUM = _levelNumbers()
+_str_formatter = StrFormatter()
+del StrFormatter
 
 def getLevelNumByDescription(description):
     num = getattr(LevelsByDescription, description, None)
     return num
 
+class PercentStyle(logging.PercentStyle):
+    validation_pattern = re.compile(r'%\(\w+\)[#0+ -]*(\*|\d+)?(\.(\*|\d+))?[diouxefgcrsa%]', re.I)
+
+    def validate(self):
+        """Validate the input format, ensure it matches the correct style"""
+        if not self.validation_pattern.search(self._fmt):
+            raise ValueError("Invalid format '%s' for '%s' style" % (self._fmt, self.default_format[0]))
+
+class StrFormatStyle(logging.StrFormatStyle):
+    fmt_spec = re.compile(r'^(.?[<>=^])?[+ -]?#?0?(\d+|{\w+})?[,_]?(\.(\d+|{\w+}))?[bcdefgnosx%]?$', re.I)
+    field_spec = re.compile(r'^(\d+|\w+)(\.\w+|\[[^]]+\])*$')
+
+    def _format(self, record):
+        return self._fmt.format(**record.__dict__)
+
+    def validate(self):
+        """Validate the input format, ensure it is the correct string formatting style"""
+        fields = set()
+        try:
+            for _, fieldname, spec, conversion in _str_formatter.parse(self._fmt):
+                if fieldname:
+                    if not self.field_spec.match(fieldname):
+                        raise ValueError('invalid field name/expression: %r' % fieldname)
+                    fields.add(fieldname)
+                if conversion and conversion not in 'rsa':
+                    raise ValueError('invalid conversion: %r' % conversion)
+                if spec and not self.fmt_spec.match(spec):
+                    raise ValueError('bad specifier: %r' % spec)
+        except ValueError as e:
+            raise ValueError('invalid format: %s' % e)
+        if not fields:
+            raise ValueError('invalid format: no fields')
+
+
+class StringTemplateStyle(logging.StringTemplateStyle):
+    def validate(self):
+        pattern = Template.pattern
+        fields = set()
+        for m in pattern.finditer(self._fmt):
+            d = m.groupdict()
+            if d['named']:
+                fields.add(d['named'])
+            elif d['braced']:
+                fields.add(d['braced'])
+            elif m.group(0) == '$':
+                raise ValueError('invalid format: bare \'$\' not allowed')
+        if not fields:
+            raise ValueError('invalid format: no fields')
+
+BASIC_FORMAT = "%(asctime)s %(levelname)s %(message)s"
+_STYLES = {
+    '%': (PercentStyle, BASIC_FORMAT),
+    '$': (StringTemplateStyle, '${asctim} ${levelname} ${message}'),
+    '{': (StrFormatStyle, '{asctim} {levelname} {message}')
+}
+
+class PlainTextFormatter(logging.Formatter):
+    def format(self, record):
+        record.message = record.getMessage().rstrip('\n')
+        if self.usesTime():
+            record.asctime = self.formatTime(record, self.datefmt)
+        return self.formatMessage(record)
+
+class CustomJsonFormatter(jsonlogger.JsonFormatter):
+    def __init__(self, *args, **kwargs):
+        """Constructor."""
+        super().__init__(*args, **kwargs)
+        reserved_attrs = ('level', 'levelname', 'msg', 'kw', 'dictrepr', 'created', 'msecs')
+        reserved_attrs_dict = dict(zip(reserved_attrs, reserved_attrs))
+        self._skip_fields.update(reserved_attrs_dict)
+
+    def parse(self):
+        """
+        Parses format string looking for substitutions
+        This method is responsible for returning a list of fields (as strings)
+        to include in all log messages.
+        """
+        if isinstance(self._style, logging.StringTemplateStyle):
+            formatter_style_pattern = re.compile(r'\$\{(.+?)\}', re.IGNORECASE)
+        elif isinstance(self._style, logging.StrFormatStyle):
+            formatter_style_pattern = re.compile(r'\{(.+?)\}', re.IGNORECASE)
+        # PercentStyle is parent class of StringTemplateStyle and StrFormatStyle so
+        # it needs to be checked last.
+        elif isinstance(self._style, logging.PercentStyle):
+            formatter_style_pattern = re.compile(r'%\((.+?)\)s', re.IGNORECASE)
+        else:
+            raise ValueError('Invalid format: %s' % self._fmt)
+        return formatter_style_pattern.findall(self._fmt)
+
+    def serialize_log_record(self, log_record):
+        """Returns the final representation of the log record."""
+        return "%s%s" % (self.prefix, self.jsonify_log_record(log_record))
+
+    def format(self, record):
+        """Formats a log record and serializes to json"""
+        message_dict = {}
+        if isinstance(record.msg, dict):
+            message_dict = record.msg
+            record.message = None
+        else:
+            message = record.getMessage()
+            try:
+                message_dict = json.loads(message)
+                record.message = None
+            except json.decoder.JSONDecodeError:
+                record.message = message.rstrip('\n')
+
+        # only format time if needed
+        if "asctime" in self._required_fields:
+            record.asctime = self.formatTime(record, self.datefmt)
+
+        try:
+            log_record = OrderedDict()
+        except NameError:
+            log_record = {}
+
+        self.add_fields(log_record, record, message_dict)
+        log_record = self.process_log_record(log_record)
+        return self.serialize_log_record(log_record)
+
+def _formatter_factory(name=None, fmt=None, style=None):
+    if name is None:
+        name = 'plaintext'
+
+    if fmt is None:
+        fmt = '%(asctime)s %(levelname)s %(message)s'
+
+    if style is None:
+        style = None
+        # determine the style based on the logging format.
+        for style in _STYLES:
+            _style = _STYLES[style][0](fmt)
+            try:
+                _style.validate()
+                break # exit the loop if fmt passes style validation
+            except ValueError:
+                style = None
+
+    if style is None:
+        raise ValueError('Invalid logging format: %s' % fmt)
+
+    if name == 'plaintext':
+        return PlainTextFormatter(fmt, style=style)
+    elif name == 'json':
+        return CustomJsonFormatter(fmt, style=style)
+    else:
+        raise ValueError('Invalid formatter name: %s' % name)
+
+BASIC_FORMATTER = _formatter_factory(name='plaintext', fmt=BASIC_FORMAT)
+
 class Handler:
-    fmt = '%(message)s'
     level = LevelsByName.INFO
 
     def __init__(self, stream=None):
         self.stream = stream
         self.closed = False
+        self.formatter = BASIC_FORMATTER
 
-    def setFormat(self, fmt):
-        self.fmt = fmt
+    def setFormatter(self, formatter):
+        if type(formatter) not in [PlainTextFormatter, CustomJsonFormatter]:
+            raise ValueError('Invalid formatter: %s (%s)' % (formatter, type(formatter)))
+        self.formatter = formatter
 
     def setLevel(self, level):
         self.level = level
@@ -87,17 +248,10 @@ class Handler:
             self.closed = True
 
     def emit(self, record):
+        raise NotImplementedError('emit must be implemented by Handler subclasses')
+
+    def write(self, msg):
         try:
-            binary = (self.fmt == '%(message)s' and
-                      isinstance(record.msg, bytes) and
-                      (not record.kw or record.kw == {'exc_info': None}))
-            binary_stream = not is_text_stream(self.stream)
-            if binary:
-                msg = record.msg
-            else:
-                msg = self.fmt % record.asdict()
-                if binary_stream:
-                    msg = msg.encode('utf-8')
             try:
                 self.stream.write(msg)
             except UnicodeError:
@@ -116,6 +270,8 @@ class Handler:
         del ei
 
 class StreamHandler(Handler):
+    terminator = '\n'
+
     def __init__(self, strm=None):
         Handler.__init__(self, strm)
 
@@ -125,6 +281,10 @@ class StreamHandler(Handler):
 
     def reopen(self):
         pass
+
+    def emit(self, record):
+        msg = self.formatter.format(record)
+        self.write(msg + self.terminator)
 
 class BoundIO:
     def __init__(self, maxbytes, buf=b''):
@@ -152,6 +312,7 @@ class BoundIO:
 class FileHandler(Handler):
     """File handler which supports reopening of logs.
     """
+    terminator = '\n'
 
     def __init__(self, filename, mode='ab'):
         Handler.__init__(self)
@@ -184,6 +345,15 @@ class FileHandler(Handler):
         except OSError as why:
             if why.args[0] != errno.ENOENT:
                 raise
+
+    def emit(self, record):
+        msg = self.formatter.format(record)
+        if 'b' in self.mode:
+            msg = bytes(msg, 'utf-8')
+            bytes_terminator = bytes(self.terminator, 'utf-8')
+            self.write(msg + bytes_terminator)
+        else:
+            self.write(msg + self.terminator)
 
 class RotatingFileHandler(FileHandler):
     def __init__(self, filename, mode='ab', maxBytes=512*1024*1024,
@@ -278,15 +448,18 @@ class RotatingFileHandler(FileHandler):
 class LogRecord:
     def __init__(self, level, msg, **kw):
         self.level = level
-        self.msg = msg
+        self.levelname = LOG_LEVELS_BY_NUM[level]
+        self.msg = msg if isinstance(msg, str) else msg.decode('utf-8')
         self.kw = kw
         self.dictrepr = None
+        self.created = time.time()
+        self.msecs = (self.created - int(self.created)) * 1000
 
     def asdict(self):
         if self.dictrepr is None:
-            now = time.time()
-            msecs = (now - long(now)) * 1000
-            part1 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
+            ct = self.created
+            msecs = (ct - long(ct)) * 1000
+            part1 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ct))
             asctime = '%s,%03d' % (part1, msecs)
             levelname = LOG_LEVELS_BY_NUM[self.level]
             msg = as_string(self.msg)
@@ -295,6 +468,9 @@ class LogRecord:
             self.dictrepr = {'message':msg, 'levelname':levelname,
                              'asctime':asctime}
         return self.dictrepr
+
+    def getMessage(self):
+        return self.msg
 
 class Logger:
     def __init__(self, level=None, handlers=None):
@@ -371,7 +547,7 @@ class SyslogHandler(Handler):
             message = params['message']
             for line in message.rstrip('\n').split('\n'):
                 params['message'] = line
-                msg = self.fmt % params
+                msg = self.fmt % params # BUG: this will break with the new foramtter.
                 try:
                     self._syslog(msg)
                 except UnicodeError:
@@ -384,30 +560,33 @@ def getLogger(level=None):
 
 _2MB = 1<<21
 
-def handle_boundIO(logger, fmt, maxbytes=_2MB):
+def handle_boundIO(logger, fmt, formatter=None, maxbytes=_2MB):
     """Attach a new BoundIO handler to an existing Logger"""
     io = BoundIO(maxbytes)
     handler = StreamHandler(io)
     handler.setLevel(logger.level)
-    handler.setFormat(fmt)
+    _formatter = _formatter_factory(name=formatter, fmt=fmt)
+    handler.setFormatter(_formatter)
     logger.addHandler(handler)
     logger.getvalue = io.getvalue
 
-def handle_stdout(logger, fmt):
+def handle_stdout(logger, fmt, formatter=None):
     """Attach a new StreamHandler with stdout handler to an existing Logger"""
     handler = StreamHandler(sys.stdout)
-    handler.setFormat(fmt)
+    _formatter = _formatter_factory(name=formatter, fmt=fmt)
+    handler.setFormatter(_formatter)
     handler.setLevel(logger.level)
     logger.addHandler(handler)
 
-def handle_syslog(logger, fmt):
+def handle_syslog(logger, fmt, formatter=None):
     """Attach a new Syslog handler to an existing Logger"""
     handler = SyslogHandler()
-    handler.setFormat(fmt)
+    _formatter = _formatter_factory(name=formatter, fmt=fmt)
+    handler.setFormatter(_formatter)
     handler.setLevel(logger.level)
     logger.addHandler(handler)
 
-def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
+def handle_file(logger, filename, fmt, formatter=None, rotating=False, maxbytes=0, backups=0):
     """Attach a new file handler to an existing Logger. If the filename
     is the magic name of 'syslog' then make it a syslog handler instead."""
     if filename == 'syslog': # TODO remove this
@@ -417,6 +596,8 @@ def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
             handler = FileHandler(filename)
         else:
             handler = RotatingFileHandler(filename, 'a', maxbytes, backups)
-    handler.setFormat(fmt)
+
+    _formatter = _formatter_factory(name=formatter, fmt=fmt)
+    handler.setFormatter(_formatter)
     handler.setLevel(logger.level)
     logger.addHandler(handler)
