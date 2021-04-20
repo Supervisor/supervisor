@@ -178,34 +178,37 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         log_record = self.process_log_record(log_record)
         return self.serialize_log_record(log_record)
 
-def _formatter_factory(name=None, fmt=None, style=None):
-    if name is None:
-        name = 'plaintext'
 
-    if fmt is None:
-        fmt = '%(asctime)s %(levelname)s %(message)s'
+class FormatterFacotry:
+    def get_formatter(self, name=None, fmt=None, style=None):
+        if name is None:
+            name = 'plaintext'
 
-    if style is None:
-        style = None
-        # determine the style based on the logging format.
-        for style in _STYLES:
-            _style = _STYLES[style][0](fmt)
-            try:
-                _style.validate()
-                break # exit the loop if fmt passes style validation
-            except ValueError:
-                style = None
+        if fmt is None:
+            fmt = '%(asctime)s %(levelname)s %(message)s'
 
-    if style is None:
-        raise ValueError('Invalid logging format: %s' % fmt)
+        if style is None:
+            style = None
+            # determine the style based on the logging format.
+            for style in _STYLES:
+                _style = _STYLES[style][0](fmt)
+                try:
+                    _style.validate()
+                    break # exit the loop if fmt passes style validation
+                except ValueError:
+                    style = None
 
-    if name == 'plaintext':
-        return PlainTextFormatter(fmt, style=style)
-    elif name == 'json':
-        return CustomJsonFormatter(fmt, style=style)
-    else:
-        raise ValueError('Invalid formatter name: %s' % name)
+        if style is None:
+            raise ValueError('Invalid logging format: %s' % fmt)
 
+        if name == 'plaintext':
+            return PlainTextFormatter(fmt, style=style)
+        elif name == 'json':
+            return CustomJsonFormatter(fmt, style=style)
+        else:
+            raise ValueError('Invalid formatter name: %s' % name)
+
+_formatter_factory = FormatterFacotry().get_formatter
 BASIC_FORMATTER = _formatter_factory(name='plaintext', fmt=BASIC_FORMAT)
 
 class Handler:
