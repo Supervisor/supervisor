@@ -520,6 +520,9 @@ class Logger:
             level = LevelsByName.INFO
         elif isinstance(level, str):
             level = getLevelNumByDescription(level)
+        elif isinstance(level, int):
+            levelname = LOG_LEVELS_BY_NUM[level]
+            level = getLevelNumByDescription(levelname)
         assert(isinstance(level, LevelsByName))
         self.level = level
 
