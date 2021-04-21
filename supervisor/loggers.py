@@ -115,7 +115,13 @@ _STYLES = {
 }
 
 class PlainTextFormatter(logging.Formatter):
+    def __init__(self, *args, **kwargs):
+        """Constructor."""
+        self.fields_with_default_value = kwargs.pop('fields_with_default_value', {})
+        super().__init__(*args, **kwargs)
+    
     def format(self, record):
+        record.__dict__.update(self.fields_with_default_value)
         record.message = record.getMessage().rstrip('\n')
         if self.usesTime():
             record.asctime = self.formatTime(record, self.datefmt)
@@ -124,6 +130,7 @@ class PlainTextFormatter(logging.Formatter):
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
     def __init__(self, *args, **kwargs):
         """Constructor."""
+        self.fields_with_default_value = kwargs.pop('fields_with_default_value', {})
         super().__init__(*args, **kwargs)
         reserved_attrs = ('level', 'levelname', 'msg', 'kw', 'dictrepr', 'created', 'msecs')
         reserved_attrs_dict = dict(zip(reserved_attrs, reserved_attrs))
@@ -153,6 +160,7 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
 
     def format(self, record):
         """Formats a log record and serializes to json"""
+        record.__dict__.update(self.fields_with_default_value)
         message_dict = {}
         if isinstance(record.msg, dict):
             message_dict = record.msg
@@ -187,26 +195,46 @@ class FormatterFacotry:
         if fmt is None:
             fmt = '%(asctime)s %(levelname)s %(message)s'
 
+        fmt, fields_with_default_value = self.get_fields_default_values(fmt)
+
         if style is None:
-            style = None
-            # determine the style based on the logging format.
-            for style in _STYLES:
-                _style = _STYLES[style][0](fmt)
-                try:
-                    _style.validate()
-                    break # exit the loop if fmt passes style validation
-                except ValueError:
-                    style = None
+            style = self.get_logformat_style(fmt)
+
+        if name == 'plaintext':
+            return PlainTextFormatter(fmt, style=style, fields_with_default_value=fields_with_default_value)
+        elif name == 'json':
+            return CustomJsonFormatter(fmt, style=style, fields_with_default_value=fields_with_default_value)
+        else:
+            raise ValueError('Invalid formatter name: %s' % name)
+
+    def get_logformat_style(self, fmt):
+        """Determine the string format style based on the logformat."""
+        style = None
+        for style in _STYLES:
+            _style = _STYLES[style][0](fmt)
+            try:
+                _style.validate()
+                break # exit the loop if fmt passes style validation
+            except ValueError:
+                style = None
 
         if style is None:
             raise ValueError('Invalid logging format: %s' % fmt)
 
-        if name == 'plaintext':
-            return PlainTextFormatter(fmt, style=style)
-        elif name == 'json':
-            return CustomJsonFormatter(fmt, style=style)
-        else:
-            raise ValueError('Invalid formatter name: %s' % name)
+        return style
+
+    def get_fields_default_values(self, fmt):
+        fields_with_default_value = {}
+        placeholder_pattern = re.compile(r'[\{\(](.+?)[\}\)]', re.IGNORECASE)
+        for placeholder in placeholder_pattern.findall(fmt):
+            kv = placeholder.split(':', 1)
+            if len(kv) == 2:
+                key, val = kv
+                fields_with_default_value[key] = val
+                # remove the default value from the format string
+                fmt = fmt.replace(placeholder, key)
+        return fmt, fields_with_default_value
+
 
 _formatter_factory = FormatterFacotry().get_formatter
 BASIC_FORMATTER = _formatter_factory(name='plaintext', fmt=BASIC_FORMAT)
