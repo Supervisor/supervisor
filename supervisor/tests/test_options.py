@@ -465,6 +465,8 @@ class ServerOptionsTests(unittest.TestCase):
         logfile_maxbytes=1000MB
         logfile_backups=5
         loglevel=error
+        logformat={message}
+        logformatter=plaintext
         pidfile=supervisord.pid
         nodaemon=true
         silent=true
@@ -492,6 +494,9 @@ class ServerOptionsTests(unittest.TestCase):
         startretries=10
         directory=/tmp
         umask=002
+        loglevel=error
+        logformat={message}
+        logformatter=plaintext
 
         [program:cat2]
         priority=2
@@ -540,6 +545,8 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(options.logfile_maxbytes, 1000 * 1024 * 1024)
         self.assertEqual(options.logfile_backups, 5)
         self.assertEqual(options.loglevel, 40)
+        self.assertEqual(options.logformat, '{message}')
+        self.assertEqual(options.logformatter, 'plaintext')
         self.assertEqual(options.pidfile, 'supervisord.pid')
         self.assertEqual(options.nodaemon, True)
         self.assertEqual(options.silent, True)
@@ -583,6 +590,9 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.exitcodes, [0])
         self.assertEqual(proc1.directory, '/tmp')
         self.assertEqual(proc1.umask, 2)
+        self.assertEqual(proc1.loglevel, 40)
+        self.assertEqual(proc1.logformat, '{message}')
+        self.assertEqual(proc1.logformatter, 'plaintext')
         self.assertEqual(proc1.environment, dict(FAKE_ENV_VAR='/some/path'))
 
         cat2 = options.process_group_configs[1]
@@ -605,6 +615,9 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc2.stdout_logfile_backups, 2)
         self.assertEqual(proc2.exitcodes, [0])
         self.assertEqual(proc2.directory, None)
+        self.assertEqual(proc2.loglevel, 40)
+        self.assertEqual(proc2.logformat, '{message}')
+        self.assertEqual(proc2.logformatter, 'plaintext')
 
         cat3 = options.process_group_configs[2]
         self.assertEqual(cat3.name, 'cat3')
