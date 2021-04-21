@@ -518,6 +518,9 @@ class Logger:
     def __init__(self, level=None, handlers=None):
         if level is None:
             level = LevelsByName.INFO
+        elif isinstance(level, str):
+            level = getLevelNumByDescription(level)
+        assert(isinstance(level, LevelsByName))
         self.level = level
 
         if handlers is None:
