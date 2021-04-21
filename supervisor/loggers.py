@@ -119,9 +119,14 @@ class PlainTextFormatter(logging.Formatter):
         """Constructor."""
         self.fields_with_default_value = kwargs.pop('fields_with_default_value', {})
         super().__init__(*args, **kwargs)
-    
+
     def format(self, record):
-        record.__dict__.update(self.fields_with_default_value)
+        # Add the fields with the default values first and then
+        # overwrite the default values with the existing LogReocrd fields.
+        _record = self.fields_with_default_value.copy()
+        _record.update(record.__dict__)
+        record.__dict__ = _record
+
         record.message = record.getMessage().rstrip('\n')
         if self.usesTime():
             record.asctime = self.formatTime(record, self.datefmt)
@@ -160,7 +165,13 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
 
     def format(self, record):
         """Formats a log record and serializes to json"""
-        record.__dict__.update(self.fields_with_default_value)
+        # Add the fields with the default values first and then
+        # overwrite the default values with the existing LogReocrd fields.
+        _record = self.fields_with_default_value.copy()
+        _record.update(record.__dict__)
+        record.__dict__ = _record
+
+        record.__dict__ = _record
         message_dict = {}
         if isinstance(record.msg, dict):
             message_dict = record.msg
