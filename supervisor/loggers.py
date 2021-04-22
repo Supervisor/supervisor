@@ -171,7 +171,6 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         _record.update(record.__dict__)
         record.__dict__ = _record
 
-        record.__dict__ = _record
         message_dict = {}
         if isinstance(record.msg, dict):
             message_dict = record.msg
