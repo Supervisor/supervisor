@@ -220,19 +220,15 @@ class FormatterFactory:
 
     def get_logformat_style(self, fmt):
         """Determine the string format style based on the logformat."""
-        style = None
         for style in _STYLES:
             _style = _STYLES[style][0](fmt)
             try:
                 _style.validate()
-                break # exit the loop if fmt passes style validation
+                return style # return style if fmt passes style validation
             except ValueError:
                 style = None
-
-        if style is None:
+        else:
             raise ValueError('Invalid logging format: %s' % fmt)
-
-        return style
 
     def get_fields_default_values(self, fmt):
         fields_with_default_value = {}
