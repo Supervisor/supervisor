@@ -198,7 +198,7 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         return self.serialize_log_record(log_record)
 
 
-class FormatterFacotry:
+class FormatterFactory:
     def get_formatter(self, name=None, fmt=None, style=None):
         if name is None:
             name = 'plaintext'
@@ -247,7 +247,7 @@ class FormatterFacotry:
         return fmt, fields_with_default_value
 
 
-_formatter_factory = FormatterFacotry().get_formatter
+_formatter_factory = FormatterFactory().get_formatter
 BASIC_FORMATTER = _formatter_factory(name='plaintext', fmt=BASIC_FORMAT)
 
 class Handler:
