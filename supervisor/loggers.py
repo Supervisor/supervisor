@@ -213,10 +213,9 @@ class FormatterFactory:
 
         if name == 'plaintext':
             return PlainTextFormatter(fmt, style=style, fields_with_default_value=fields_with_default_value)
-        elif name == 'json':
+        if name == 'json':
             return CustomJsonFormatter(fmt, style=style, fields_with_default_value=fields_with_default_value)
-        else:
-            raise ValueError('Invalid formatter name: %s' % name)
+        raise ValueError('Invalid formatter name: %s' % name)
 
     def get_logformat_style(self, fmt):
         """Determine the string format style based on the logformat."""
