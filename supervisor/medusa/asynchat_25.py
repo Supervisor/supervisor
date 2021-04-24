@@ -219,7 +219,8 @@ class async_chat (asyncore.dispatcher):
             try:
                 num_sent = self.send (self.ac_out_buffer[:obs])
                 if num_sent:
-                    self.ac_out_buffer = self.ac_out_buffer[num_sent:]
+                    real_send_num = num_sent if num_sent < obs else obs
+                    self.ac_out_buffer = self.ac_out_buffer[real_send_num:]
 
             except socket.error:
                 self.handle_error()
