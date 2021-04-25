@@ -1,3 +1,4 @@
+# -*- coding:utf8 -*-
 import os
 import stat
 import time

@@ -1,3 +1,4 @@
+# -*- coding:utf8 -*-
 #!/usr/bin/env python
 
 """supervisord -- run a set of applications as daemons.
@@ -32,6 +33,7 @@ Options:
 """
 
 import os
+import sys
 import time
 import signal
 
@@ -44,6 +46,9 @@ from supervisor.options import signame
 from supervisor import events
 from supervisor.states import SupervisorStates
 from supervisor.states import getProcessStateDescription
+
+reload(sys)
+sys.setdefaultencoding("utf8")
 
 class Supervisor:
     stopping = False # set after we detect that we are handling a stop request

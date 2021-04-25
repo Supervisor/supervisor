@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:meld="https://github.com/Supervisor/supervisor">
 <head>
-  <title>Supervisor Status</title>
+  <title>后台程序监控中心</title>
   <link href="stylesheets/supervisor.css" rel="stylesheet" type="text/css" />
   <link href="images/icon.png" rel="icon" type="image/png" />
 </head>
@@ -19,18 +19,19 @@
 
     <form meld:id="form" action="index.html" method="post">
       <ul id="buttons" class="clr">
-        <li class="action-button"><a href="index.html?action=refresh">Refresh</a></li>
-        <li class="action-button"><a href="index.html?action=restartall">Restart All</a></li>
-        <li class="action-button"><a href="index.html?action=stopall">Stop All</a></li>
+        <li class="action-button"><a href="index.html?action=refresh">刷新</a></li>
+        <li class="action-button"><a href="index.html?action=restartall">全部重启</a></li>
+        <li class="action-button"><a href="index.html?action=stopall">全部停止</a></li>
       </ul>
 
       <table cellspacing="0" meld:id="statustable">
         <thead>
         <tr>
-          <th class="state">State</th>
-          <th class="desc">Description</th>
-          <th class="name">Name</th>
-          <th class="action">Action</th>
+          <th class="state">状态</th>
+          <th class="desc">描述</th>
+          <th class="name">进程名</th>
+          <th class="comments">备注</th>
+          <th class="action">操作</th>
         </tr>
         </thead>
 
@@ -39,6 +40,7 @@
             <td meld:id="status_td" class="status"><span meld:id="status_text" class="statusnominal">nominal</span></td>
             <td meld:id="info_td"><span meld:id="info_text">Info</span></td>
             <td meld:id="name_td"><a href="#" meld:id="name_anchor" target="_blank">Name</a></td>
+            <td meld:id="comments_td"><span meld:id="comments_text">comments</span></td>
             <td meld:id="action_td" class="action">
               <ul>
                 <li meld:id="actionitem_td">

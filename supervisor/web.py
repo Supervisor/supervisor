@@ -1,4 +1,7 @@
+# -*- coding:utf8 -*-
+
 import os
+import sys
 import re
 import time
 import traceback
@@ -30,6 +33,9 @@ from supervisor.xmlrpc import Faults
 from supervisor.xmlrpc import RPCError
 
 from supervisor.rpcinterface import SupervisorNamespaceRPCInterface
+
+reload(sys)
+sys.setdefaultencoding("utf8")
 
 class DeferredWebProducer:
     """ A medusa producer that implements a deferred callback; requires
@@ -489,13 +495,18 @@ class StatusView(MeldView):
 
         processnames = []
         for group in supervisord.process_groups.values():
-            for gprocname in group.processes.keys():
-                processnames.append((group.config.name, gprocname))
+
+            # for gprocname in group.processes.keys():
+            #     processnames.append((group.config.name, gprocname))
+
+            datas = group.config.process_configs[0]
+            processnames.append((group.config.name, datas.name, datas.comments))
+
 
         processnames.sort()
 
         data = []
-        for groupname, processname in processnames:
+        for groupname, processname, comments in processnames:
             actions = self.actions_for_process(
                 supervisord.process_groups[groupname].processes[processname])
             sent_name = make_namespec(groupname, processname)
@@ -504,6 +515,7 @@ class StatusView(MeldView):
                 'status':info['statename'],
                 'name':processname,
                 'group':groupname,
+                'comments':comments,
                 'actions':actions,
                 'state':info['state'],
                 'description':info['description'],
@@ -528,6 +540,9 @@ class StatusView(MeldView):
 
                 info_text = tr_element.findmeld('info_text')
                 info_text.content(item['description'])
+
+                comments_text = tr_element.findmeld('comments_text')
+                comments_text.content(item['comments'])
 
                 anchor = tr_element.findmeld('name_anchor')
                 processname = make_namespec(item['group'], item['name'])
