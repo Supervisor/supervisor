@@ -198,7 +198,7 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
                 message_dict = json.loads(message)
                 record.message = None
             except json.decoder.JSONDecodeError:
-                record.message = message.rstrip('\n')
+                record.message = as_string(message).rstrip('\n')
 
         # only format time if needed
         if "asctime" in self._required_fields:
@@ -398,9 +398,6 @@ class FileHandler(Handler):
         try:
             msg = self.formatter.format(record)
             if 'b' in self.mode:
-                #msg = bytes(msg, 'utf-8')
-                #bytes_terminator = bytes(self.terminator, 'utf-8')
-                #self.stream.write(msg + bytes_terminator)
                 msg = as_bytes(msg + self.terminator)
                 self.stream.write(msg)
             else:
@@ -503,7 +500,7 @@ class LogRecord:
     def __init__(self, level, msg, **kw):
         self.level = level
         self.levelname = LOG_LEVELS_BY_NUM[level]
-        self.msg = as_string(msg)
+        self.msg = msg
         self.kw = kw
         self.dictrepr = None
         self.created = time.time()
@@ -524,7 +521,12 @@ class LogRecord:
         return self.dictrepr
 
     def getMessage(self):
-        return self.msg
+        try:
+            return as_string(self.msg) % self.kw
+        except ValueError as e:
+            # Skip string interpolation when string
+            # formatting charcaters are not escaped.
+            return as_string(self.msg)
 
 class Logger:
     def __init__(self, level=None, handlers=None):
