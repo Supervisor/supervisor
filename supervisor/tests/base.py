@@ -41,6 +41,9 @@ class DummyOptions:
         self.logger = self.getLogger()
         self.backofflimit = 10
         self.logfile = '/tmp/logfile'
+        self.loglevel = 20
+        self.logformat = '{message}'
+        self.logformatter = 'plaintext'
         self.nocleanup = False
         self.strip_ansi = False
         self.pidhistory = {}
@@ -90,7 +93,7 @@ class DummyOptions:
         self.changed_directory = False
         self.umaskset = None
         self.poller = DummyPoller(self)
-        self.silent = False
+        self.silent = False        
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()

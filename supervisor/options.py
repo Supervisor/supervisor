@@ -434,7 +434,7 @@ class ServerOptions(Options):
         self.add("loglevel", "supervisord.loglevel", "e:", "loglevel=",
                  logging_level, default="info")
         self.add("logformat", "supervisord.logformat", 
-                 default="%(asctime)s %(levelname)s %(message)s")        
+                 default="%(asctime)s %(levelname)s %(message)s\n")
         self.add("logformatter", "supervisord.logformatter", 
                  default="plaintext")
         self.add("pidfile", "supervisord.pidfile", "j:", "pidfile=",
@@ -504,6 +504,8 @@ class ServerOptions(Options):
 
         if not self.logformat:
             self.logformat = section.logformat
+        if not self.logformat.endswith('\n') and not self.logformat.endswith('\\n'):
+            self.logformat = self.logformat + '\n'
 
         if not self.logformatter:
             self.logformatter = section.logformatter
@@ -655,7 +657,7 @@ class ServerOptions(Options):
         section.logfile_backups = integer(get('logfile_backups', 10))
         section.loglevel = logging_level(get('loglevel', 'info'))
         # Default to str.format style to avoid conflicting with environment variables expansion syntax.
-        section.logformat = get('logformat', '{asctime} {levelname} {message}')
+        section.logformat = get('logformat', '{asctime} {levelname} {message}\n')
         section.logformatter = get('logformatter', 'plaintext')
         section.pidfile = existing_dirpath(get('pidfile', 'supervisord.pid'))
         section.identifier = get('identifier', 'supervisor')
@@ -946,7 +948,7 @@ class ServerOptions(Options):
         serverurl = get(section, 'serverurl', None)
         loglevel = logging_level(get(section, 'loglevel', 'info'))
         # Default to str.format style to avoid conflicting with environment variables expansion syntax.
-        logformat = get(section, 'logformat', '{asctime} {levelname} {message}')
+        logformat = get(section, 'logformat', '{message}')
         logformatter = get(section, 'logformatter', 'plaintext')
         if serverurl and serverurl.strip().upper() == 'AUTO':
             serverurl = None
