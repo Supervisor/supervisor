@@ -21,7 +21,7 @@ from supervisor.compat import long
 from supervisor.compat import is_text_stream
 from supervisor.compat import as_string
 from supervisor.compat import as_bytes
-from pythonjsonlogger import jsonlogger
+from supervisor.jsonformatter import JsonFormatter
 from string import Template
 from string import Formatter as StrFormatter
 from collections import OrderedDict
@@ -148,7 +148,7 @@ class PlainTextFormatter(logging.Formatter):
 
         return self.formatMessage(record) + self.fmt_terminator
 
-class CustomJsonFormatter(jsonlogger.JsonFormatter):
+class CustomJsonFormatter(JsonFormatter):
     def __init__(self, *args, **kwargs):
         """Constructor."""
         self.fields_with_default_value = kwargs.pop('fields_with_default_value', {})
@@ -521,11 +521,14 @@ class LogRecord:
         return self.dictrepr
 
     def getMessage(self):
-        try:
-            return as_string(self.msg) % self.kw
-        except ValueError as e:
-            # Skip string interpolation when string
-            # formatting charcaters are not escaped.
+        if self.kw:
+            try:
+                return as_string(self.msg) % self.kw
+            except ValueError as e:
+                # Skip string interpolation when string
+                # formatting charcaters are not escaped.
+                return as_string(self.msg)
+        else:
             return as_string(self.msg)
 
 class Logger:
