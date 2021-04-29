@@ -154,8 +154,7 @@ class CustomJsonFormatter(JsonFormatter):
         self.fields_with_default_value = kwargs.pop('fields_with_default_value', {})
         super().__init__(*args, **kwargs)
         reserved_attrs = ('level', 'levelname', 'msg', 'kw', 'dictrepr', 'created', 'msecs')
-        reserved_attrs_dict = dict(zip(reserved_attrs, reserved_attrs))
-        self._skip_fields.update(reserved_attrs_dict)
+        self._skip_fields.update((v, v) for v in reserved_attrs)
         self.fmt_terminator = '\n'
 
     def parse(self):
