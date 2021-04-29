@@ -3316,6 +3316,146 @@ class ServerOptionsTests(unittest.TestCase):
         instance.poller.before_daemonize.assert_called_once_with()
         instance.poller.after_daemonize.assert_called_once_with()
 
+    def test_options_with_environment_options(self):
+        f1 = f2 = f3 = None
+
+        try:
+            f1 = tempfile.NamedTemporaryFile(mode="w+", delete=False)
+            f1.write("""# skip comment
+   TEST_SECRET1 =   asdf
+""")
+            f1.flush()
+
+            f2 = tempfile.NamedTemporaryFile(mode="w+", delete=False)
+            f2.write("TEST_SECRET2=qwerty\n")
+            f2.flush()
+
+            f3 = tempfile.NamedTemporaryFile(mode="w+", delete=False)
+            f3.write("""#!/bin/bash
+echo "TEST_SECRET3=zxcv"
+""")
+            f3.flush()
+
+            f4 = tempfile.NamedTemporaryFile(mode="w+", delete=False)
+            f4.write("""#!/bin/bash
+echo "TEST_SECRET4=yuio"
+exit 64
+""")
+            f4.flush()
+
+            f5 = tempfile.NamedTemporaryFile(mode="w+", delete=False)
+            f5.write("TEST_SECRET2=qwerty\n")
+            f5.flush()
+            os.chmod(f5.name, 0o000)
+
+            s = lstrip("""
+            [supervisord]
+            environment_file=%s
+
+            [supervisorctl]
+            serverurl=http://localhost:9001
+
+            [program:test1]
+            command=/bin/sh
+
+            [program:test2]
+            command=/bin/bash
+            environment_file=%s
+
+            [program:test3]
+            command=/bin/echo
+            environment_loader=/bin/sh %s
+
+            [program:test4]
+            command=/bin/bash
+            environment_loader=/bin/sh %s
+
+            [program:test5]
+            command=/bin/ls
+            environment_file=%s
+            """ % (f1.name, f2.name, f3.name, f4.name, f5.name))
+
+            fp = StringIO(s)
+            instance = self._makeOne()
+            instance.configfile = fp
+            instance.realize(args=[])
+
+            options = instance.configroot.supervisord
+            self.assertEqual(options.environment_file, f1.name)
+            self.assertEqual(options.environment_loader, None)
+
+            test1, test2, test3, test4, test5 = options.process_group_configs
+            proc1, proc2, proc3, proc4, proc5 = \
+                test1.process_configs[0], test2.process_configs[0], test3.process_configs[0], \
+                test4.process_configs[0], test5.process_configs[0]
+
+            self.assertEqual(test1.name, 'test1')
+            self.assertEqual(len(test1.process_configs), 1)
+            self.assertEqual(test2.name, 'test2')
+            self.assertEqual(len(test2.process_configs), 1)
+            self.assertEqual(test3.name, 'test3')
+            self.assertEqual(len(test3.process_configs), 1)
+            self.assertEqual(test4.name, 'test4')
+            self.assertEqual(len(test4.process_configs), 1)
+            self.assertEqual(test5.name, 'test5')
+            self.assertEqual(len(test5.process_configs), 1)
+
+            self.assertEqual(proc1.name, 'test1')
+            self.assertEqual(proc1.command, '/bin/sh')
+            self.assertEqual(proc1.environment_file, f1.name)
+            self.assertEqual(proc1.environment_loader, '')
+
+            env = proc1.load_external_environment_definition()
+            self.assertEqual(env, {'TEST_SECRET1': 'asdf'})
+
+            self.assertEqual(proc2.name, 'test2')
+            self.assertEqual(proc2.command, '/bin/bash')
+            self.assertEqual(proc2.environment_file, f2.name)
+            self.assertEqual(proc2.environment_loader, '')
+
+            env = proc2.load_external_environment_definition()
+            self.assertEqual(env, {'TEST_SECRET2': 'qwerty'})
+
+            self.assertEqual(proc3.name, 'test3')
+            self.assertEqual(proc3.command, '/bin/echo')
+            self.assertEqual(proc3.environment_file, '')
+            self.assertEqual(proc3.environment_loader, '/bin/sh %s' % f3.name)
+
+            env = proc3.load_external_environment_definition()
+            self.assertEqual(env, {'TEST_SECRET3': 'zxcv'})
+
+            # validate that an error in the loader gets raised
+            self.assertEqual(proc4.name, 'test4')
+            self.assertEqual(proc4.command, '/bin/bash')
+            self.assertEqual(proc4.environment_file, '')
+            self.assertEqual(proc4.environment_loader, '/bin/sh %s' % f4.name)
+
+            from supervisor.options import ProcessException
+            with self.assertRaises(ProcessException):
+                proc4.load_external_environment_definition()
+
+            # validate that an error in the file reader gets raised
+            self.assertEqual(proc5.name, 'test5')
+            self.assertEqual(proc5.command, '/bin/ls')
+            self.assertEqual(proc5.environment_file, f5.name)
+            self.assertEqual(proc5.environment_loader, '')
+
+            with self.assertRaises(ProcessException):
+                proc5.load_external_environment_definition()
+
+        finally:
+            if f1:
+                os.unlink(f1.name)
+            if f2:
+                os.unlink(f2.name)
+            if f3:
+                os.unlink(f3.name)
+            if f4:
+                os.unlink(f4.name)
+            if f5:
+                os.unlink(f5.name)
+
+
 class ProcessConfigTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ProcessConfig

@@ -217,6 +217,10 @@ class Subprocess(object):
 
         try:
             filename, argv = self.get_execv_args()
+
+            # check the environment_file/environment_loader options before we fork to simplify child process management
+            extra_env = self.config.load_external_environment_definition()
+
         except ProcessException as what:
             self.record_spawnerr(what.args[0])
             self._assertInState(ProcessStates.STARTING)
@@ -260,7 +264,7 @@ class Subprocess(object):
             return self._spawn_as_parent(pid)
 
         else:
-            return self._spawn_as_child(filename, argv)
+            return self._spawn_as_child(filename, argv, extra_env=extra_env)
 
     def _spawn_as_parent(self, pid):
         # Parent
@@ -284,7 +288,7 @@ class Subprocess(object):
         for i in range(3, options.minfds):
             options.close_fd(i)
 
-    def _spawn_as_child(self, filename, argv):
+    def _spawn_as_child(self, filename, argv, extra_env=None):
         options = self.config.options
         try:
             # prevent child from receiving signals sent to the
@@ -321,6 +325,9 @@ class Subprocess(object):
                 env['SUPERVISOR_GROUP_NAME'] = self.group.config.name
             if self.config.environment is not None:
                 env.update(self.config.environment)
+
+            if extra_env:
+                env.update(extra_env)
 
             # change directory
             cwd = self.config.directory
