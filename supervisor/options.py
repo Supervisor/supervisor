@@ -1955,7 +1955,8 @@ class ProcessConfig(Config):
     def load_external_environment_definition(self):
         return self.load_external_environment_definition_for_config(self)
 
-    # this is separated out in order to make it easier to test
+    # NOTE - THIS IS BLOCKING CODE AND MUST ONLY BE CALLED IN TESTS OR IN CHILD PROCESSES, NOT THE
+    # MAIN SUPERVISORD THREAD OF EXECUTION
     @classmethod
     def load_external_environment_definition_for_config(cls, config):
         # lazily load extra env vars before we drop privileges so that this can be used to load a secrets file
@@ -1976,21 +1977,15 @@ class ProcessConfig(Config):
 
         elif config.environment_loader:
             try:
-                from subprocess import check_output, CalledProcessError
-                kwargs = dict(shell=True)
-                if sys.version_info.major >= 3:
-                    if sys.version_info.minor >= 7:
-                        kwargs['text'] = True
-                    else:
-                        pass  # we will decode the bytes returned after reading it for these versions of python
+                from subprocess import check_output, CalledProcessError, STDOUT as subprocess_STDOUT
 
-                envdata = check_output(config.environment_loader, **kwargs)
-
-                if sys.version_info.major >= 3 and sys.version_info.minor < 7:
-                    envdata = envdata.decode('utf8')
+                envdata = check_output(config.environment_loader, shell=True, stderr=subprocess_STDOUT)
+                envdata = as_string(envdata)
 
             except CalledProcessError as e:
-                raise ProcessException("environment_loader failure with %s: %d, %s" % (config.environment_loader, e.returncode, e.output))
+                raise ProcessException("environment_loader failure with %s: %d, %s" % \
+                    (config.environment_loader, e.returncode, as_string(e.output))
+                )
 
         if envdata:
             extra_env = {}

@@ -218,9 +218,6 @@ class Subprocess(object):
         try:
             filename, argv = self.get_execv_args()
 
-            # check the environment_file/environment_loader options before we fork to simplify child process management
-            extra_env = self.config.load_external_environment_definition()
-
         except ProcessException as what:
             self.record_spawnerr(what.args[0])
             self._assertInState(ProcessStates.STARTING)
@@ -264,7 +261,7 @@ class Subprocess(object):
             return self._spawn_as_parent(pid)
 
         else:
-            return self._spawn_as_child(filename, argv, extra_env=extra_env)
+            return self._spawn_as_child(filename, argv)
 
     def _spawn_as_parent(self, pid):
         # Parent
@@ -288,9 +285,17 @@ class Subprocess(object):
         for i in range(3, options.minfds):
             options.close_fd(i)
 
-    def _spawn_as_child(self, filename, argv, extra_env=None):
+    def _spawn_as_child(self, filename, argv):
         options = self.config.options
         try:
+            # check the environment_file/environment_loader options after forking in order to avoid blocking the
+            # main supervisord thread, but do it before we start to mix up the process signals/state
+            try:
+                extra_env = self.config.load_external_environment_definition()
+            except ProcessException as e:
+                self.record_spawnerr(e.args[0])
+                raise
+
             # prevent child from receiving signals sent to the
             # parent by calling os.setpgrp to create a new process
             # group for the child; this prevents, for instance,
