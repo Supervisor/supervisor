@@ -1978,10 +1978,16 @@ class ProcessConfig(Config):
             try:
                 from subprocess import check_output, CalledProcessError
                 kwargs = dict(shell=True)
-                if not PY2:
-                    kwargs['text'] = True
+                if sys.version_info.major >= 3:
+                    if sys.version_info.minor >= 7:
+                        kwargs['text'] = True
+                    else:
+                        pass  # we will decode the bytes returned after reading it for these versions of python
 
                 envdata = check_output(config.environment_loader, **kwargs)
+
+                if sys.version_info.major >= 3 and sys.version_info.minor < 7:
+                    envdata = envdata.decode('utf8')
 
             except CalledProcessError as e:
                 raise ProcessException("environment_loader failure with %s: %d, %s" % (config.environment_loader, e.returncode, e.output))
