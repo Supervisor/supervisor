@@ -194,8 +194,15 @@ class CustomJsonFormatter(JsonFormatter):
         else:
             message = record.getMessage()
             try:
-                message_dict = json.loads(message)
-                record.message = None
+                json_message = json.loads(message)
+                # The json parser accepts numbers as a valid json.
+                # But we want json objects only.
+                if isinstance(json_message, dict):
+                    message_dict = json_message
+                    record.message = None
+                else:
+                    del json_message
+                    record.message = as_string(message).rstrip('\n')
             except json.decoder.JSONDecodeError:
                 record.message = as_string(message).rstrip('\n')
 
