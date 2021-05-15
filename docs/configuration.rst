@@ -1532,8 +1532,8 @@ Adding ``rpcinterface:x`` settings in the configuration file is only
 useful for people who wish to extend supervisor with additional custom
 behavior.
 
-In the sample config file, there is a section which is named
-``[rpcinterface:supervisor]``.  By default it looks like the
+In the sample config file (see :ref:`create_config`), there is a section
+which is named ``[rpcinterface:supervisor]``.  By default it looks like the
 following.
 
 .. code-block:: ini
