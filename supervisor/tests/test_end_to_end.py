@@ -151,6 +151,15 @@ class EndToEndTests(BaseTestCase):
             seen = False
         self.assertTrue(seen)
 
+    def test_issue_986_command_string_with_double_percent(self):
+        """A percent sign can be used in a command= string without being
+        expanded if it is escaped by a second percent sign."""
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-986.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('dhcrelay -d -q -a %h:%p %P -i Vlan1000 192.168.0.1')
+
     def test_issue_1054(self):
         """When run on Python 3, the 'supervisorctl avail' command
         should work."""
@@ -320,7 +329,7 @@ class EndToEndTests(BaseTestCase):
         self.addCleanup(bash.kill, signal.SIGINT)
         bash.expect('spewage 2', timeout=30)
 
-    def test_issue_1481_pidproxy_cmd_with_no_args(self):
+    def test_issue_1418_pidproxy_cmd_with_no_args(self):
         """When pidproxy is given a command to run that has no arguments, it
         runs that command."""
         args = ['-m', 'supervisor.pidproxy', 'nonexistent-pidfile', "/bin/echo"]
@@ -329,7 +338,7 @@ class EndToEndTests(BaseTestCase):
         pidproxy.expect(pexpect.EOF)
         self.assertEqual(pidproxy.before.strip(), "")
 
-    def test_issue_1481_pidproxy_cmd_with_args(self):
+    def test_issue_1418_pidproxy_cmd_with_args(self):
         """When pidproxy is given a command to run that has arguments, it
         runs that command."""
         args = ['-m', 'supervisor.pidproxy', 'nonexistent-pidfile', "/bin/echo", "1", "2"]
@@ -337,6 +346,7 @@ class EndToEndTests(BaseTestCase):
         self.addCleanup(pidproxy.kill, signal.SIGINT)
         pidproxy.expect(pexpect.EOF)
         self.assertEqual(pidproxy.before.strip(), "1 2")
+
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
