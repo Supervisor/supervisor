@@ -2,8 +2,8 @@
 from __future__ import unicode_literals
 
 import os
-import sys
 import signal
+import sys
 import unittest
 import pkg_resources
 from supervisor.compat import xmlrpclib
@@ -19,6 +19,22 @@ else:
 
 
 class EndToEndTests(BaseTestCase):
+
+    def test_issue_291a_percent_signs_in_original_env_are_preserved(self):
+        """When an environment variable whose value contains a percent sign is
+        present in the environment before supervisord starts, the value is
+        passed to the child without the percent sign being mangled."""
+        key = "SUPERVISOR_TEST_1441B"
+        val = "foo_%s_%_%%_%%%_%2_bar"
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-291a.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        try:
+            os.environ[key] = val
+            supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+            self.addCleanup(supervisord.kill, signal.SIGINT)
+            supervisord.expect_exact(key + "=" + val)
+        finally:
+            del os.environ[key]
 
     def test_issue_550(self):
         """When an environment variable is set in the [supervisord] section,
