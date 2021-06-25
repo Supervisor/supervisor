@@ -679,7 +679,7 @@ class Subprocess(object):
 
         processname = as_string(self.config.name)
         if state == ProcessStates.STARTING:
-            if now - self.laststart > self.config.startsecs:
+            if now - self.laststart > self.config.startsecs and not self.config.runningregex:
                 # STARTING -> RUNNING if the proc has started
                 # successfully and it has stayed up for at least
                 # proc.config.startsecs,
@@ -691,6 +691,25 @@ class Subprocess(object):
                     'entered RUNNING state, process has stayed up for '
                     '> than %s seconds (startsecs)' % self.config.startsecs)
                 logger.info('success: %s %s' % (processname, msg))
+
+            if self.config.runningregex:
+                logfile = getattr(self.config, 'stdout_logfile')
+
+
+                from supervisor.options import readFile
+                str =  as_string(readFile(logfile, 0, 0))
+
+                if self.config.runningregex.match(str):
+                    # STARTING -> RUNNING if the proc has started
+                    # successfully and the runningregex is met
+                    self.delay = 0
+                    self.backoff = 0
+                    self._assertInState(ProcessStates.STARTING)
+                    self.change_state(ProcessStates.RUNNING)
+                    msg = (
+                            'entered RUNNING state, found runningregex in stdout')
+                    logger.info('success: %s %s' % (processname, msg))
+
 
         if state == ProcessStates.BACKOFF:
             if self.backoff > self.config.startretries:

@@ -932,6 +932,14 @@ class ServerOptions(Options):
         serverurl = get(section, 'serverurl', None)
         if serverurl and serverurl.strip().upper() == 'AUTO':
             serverurl = None
+        runningregex = get(section, 'runningregex', None)
+        if runningregex:
+            try:
+                runningregex = re.compile(runningregex)
+            except Exception as e:
+                raise ValueError(
+                    f"program section {section} has invalid runningregex value. Error {e}")
+
 
         # find uid from "user" option
         user = get(section, 'user', None)
@@ -1057,7 +1065,9 @@ class ServerOptions(Options):
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
                 environment=environment,
-                serverurl=serverurl)
+                serverurl=serverurl,
+                runningregex=runningregex
+            )
 
             programs.append(pconfig)
 
@@ -1875,7 +1885,7 @@ class ProcessConfig(Config):
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
         'exitcodes', 'redirect_stderr' ]
-    optional_param_names = [ 'environment', 'serverurl' ]
+    optional_param_names = [ 'environment', 'serverurl', 'runningregex' ]
 
     def __init__(self, options, **params):
         self.options = options
