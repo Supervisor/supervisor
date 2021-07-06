@@ -218,7 +218,8 @@ interface elements in clients.
 ``BACKOFF`` (30)
 
   The process entered the ``STARTING`` state but subsequently exited
-  too quickly to move to the ``RUNNING`` state.
+  too quickly (before the time defined in ``startsecs``) to move to
+  the ``RUNNING`` state.
 
 ``STOPPING`` (40)
 
@@ -254,8 +255,15 @@ automatically restarted by :program:`supervisord`.  It will switch
 between ``STARTING`` and ``BACKOFF`` states until it becomes evident
 that it cannot be started because the number of ``startretries`` has
 exceeded the maximum, at which point it will transition to the
-``FATAL`` state.  Each start retry will take progressively
-more time.
+``FATAL`` state.
+
+.. note::
+    Retries will take increasingly more time depending on the number of
+    subsequent attempts made, adding one second each time.
+
+    So if you set ``startretries=3``, :program:`supervisord` will wait one,
+    two and then three seconds between each restart attempt, for a total of
+    5 seconds.
 
 When a process is in the ``EXITED`` state, it will
 automatically restart:

@@ -1,5 +1,17 @@
-4.2.2.dev0 (Next Release)
+4.3.0.dev0 (Next Release)
 -------------------------
+
+- The web interface will now return a 404 Not Found response if a log file
+  is missing.  Previously, it would return 410 Gone.  It was changed because
+  410 is intended to mean that the condition is likely to be permanent.  A
+  log file missing is usually temporary, e.g. a process that was never started
+  will not have a log file but will have one as soon as it is started.
+
+4.2.2 (2021-02-26)
+------------------
+
+- Fixed a bug where ``supervisord`` could crash if a subprocess exited
+  immediately before trying to kill it.
 
 - Fixed a bug where the ``stdout_syslog`` and ``stderr_syslog`` options
   of a ``[program:x]`` section could not be used unless file logging for
@@ -11,8 +23,15 @@
   ``syslog`` was supplied, as is supported by all other log filename
   options.  Patch by Franck Cuny.
 
+- Fixed a bug where environment variables defined in ``environment=``
+  in the ``[supervisord]`` section or a ``[program:x]`` section could
+  not be used in ``%(ENV_x)s`` expansions.  Patch by MythRen.
+
 - The  ``supervisorctl signal`` command now allows a signal to be sent
   when a process is in the ``STOPPING`` state.  Patch by Mike Gould.
+
+- ``supervisorctl`` and ``supervisord`` now print help when given ``-?``
+  in addition to the existing ``-h``/``--help``.
 
 4.2.1 (2020-08-20)
 ------------------

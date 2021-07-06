@@ -101,6 +101,8 @@ the system boots.
     `Ubuntu Bug #1594740 <https://bugs.launchpad.net/ubuntu/+source/supervisor/+bug/1594740>`_
     for more information.
 
+.. _create_config:
+
 Creating a Configuration File
 -----------------------------
 

@@ -445,8 +445,8 @@ follows.
 ``environment``
 
   A list of key/value pairs in the form ``KEY="val",KEY2="val2"`` that
-  will be placed in the :program:`supervisord` process' environment
-  (and as a result in all of its child process' environments).  This
+  will be placed in the environment of all child processes.  This does
+  not change the environment of :program:`supervisord` itself.  This
   option can include the value ``%(here)s``, which expands to the
   directory in which the supervisord configuration file was found.
   Values containing non-alphanumeric characters should be quoted
@@ -752,8 +752,15 @@ where specified.
 
   The number of serial failure attempts that :program:`supervisord`
   will allow when attempting to start the program before giving up and
-  putting the process into an ``FATAL`` state.  See
-  :ref:`process_states` for explanation of the ``FATAL`` state.
+  putting the process into an ``FATAL`` state.
+
+  .. note::
+
+      After each failed restart, process will be put in ``BACKOFF`` state
+      and each retry attempt will take increasingly more time.
+
+      See :ref:`process_states` for explanation of the ``FATAL`` and
+      ``BACKOFF`` states.
 
   *Default*: 3
 
@@ -1525,8 +1532,8 @@ Adding ``rpcinterface:x`` settings in the configuration file is only
 useful for people who wish to extend supervisor with additional custom
 behavior.
 
-In the sample config file, there is a section which is named
-``[rpcinterface:supervisor]``.  By default it looks like the
+In the sample config file (see :ref:`create_config`), there is a section
+which is named ``[rpcinterface:supervisor]``.  By default it looks like the
 following.
 
 .. code-block:: ini

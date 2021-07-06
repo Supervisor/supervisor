@@ -187,7 +187,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         from supervisor import xmlrpc
         options = DummyOptions()
         options.existing = [options.logfile]
-        options.remove_error = 1
+        options.remove_exception = OSError(errno.EPERM,
+                                           os.strerror(errno.EPERM))
         supervisord = DummySupervisor(options)
         interface = self._makeOne(supervisord)
         self.assertRaises(xmlrpc.RPCError, interface.clearLog)
@@ -310,7 +311,6 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self._assertRPCError(xmlrpc.Faults.STILL_RUNNING,
                              interface.removeProcessGroup, 'group1')
 
-
     def test_startProcess_already_started(self):
         from supervisor import xmlrpc
         options = DummyOptions()
@@ -322,6 +322,22 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
             xmlrpc.Faults.ALREADY_STARTED,
             interface.startProcess, 'foo'
             )
+
+    def test_startProcess_unknown_state(self):
+        from supervisor import xmlrpc
+        from supervisor.states import ProcessStates
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', __file__, autostart=False)
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        supervisord.set_procattr('foo', 'pid', 10)
+        supervisord.set_procattr('foo', 'state', ProcessStates.UNKNOWN)
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(
+            xmlrpc.Faults.FAILED,
+            interface.startProcess, 'foo'
+            )
+        process = supervisord.process_groups['foo'].processes['foo']
+        self.assertEqual(process.spawned, False)
 
     def test_startProcess_bad_group_name(self):
         options = DummyOptions()
@@ -1999,7 +2015,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = PopulatedDummySupervisor(options, 'process1', pconfig1)
         supervisord.set_procattr('process1', 'pid', 42)
         supervisord.set_procattr('process1', 'killing', False)
-        supervisord.set_procattr('process1', 'write_error', errno.EPIPE)
+        supervisord.set_procattr('process1', 'write_exception',
+            OSError(errno.EPIPE, os.strerror(errno.EPIPE)))
         interface   = self._makeOne(supervisord)
         from supervisor import xmlrpc
         self._assertRPCError(xmlrpc.Faults.NO_FILE,
@@ -2012,7 +2029,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = PopulatedDummySupervisor(options, 'process1', pconfig1)
         supervisord.set_procattr('process1', 'pid', 42)
         supervisord.set_procattr('process1', 'killing', False)
-        supervisord.set_procattr('process1', 'write_error', errno.EINTR)
+        supervisord.set_procattr('process1', 'write_exception',
+            OSError(errno.EINTR, os.strerror(errno.EINTR)))
         interface   = self._makeOne(supervisord)
         self.assertRaises(OSError,
                           interface.sendProcessStdin,

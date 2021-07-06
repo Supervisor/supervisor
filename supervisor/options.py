@@ -102,6 +102,7 @@ class Options:
         self.attr_priorities = {}
         self.require_configfile = require_configfile
         self.add(None, None, "h", "help", self.help)
+        self.add(None, None, "?", None, self.help)
         self.add("configfile", None, "c:", "configuration=")
 
         here = os.path.dirname(os.path.dirname(sys.argv[0]))
@@ -405,7 +406,6 @@ class ServerOptions(Options):
     passwdfile = None
     nodaemon = None
     silent = None
-    environment = None
     httpservers = ()
     unlink_pidfile = False
     unlink_socketfiles = False
@@ -656,6 +656,11 @@ class ServerOptions(Options):
         environ_str = get('environment', '')
         environ_str = expand(environ_str, expansions, 'environment')
         section.environment = dict_of_key_value_pairs(environ_str)
+
+        # extend expansions for global from [supervisord] environment definition
+        for k, v in section.environment.items():
+            self.environ_expansions['ENV_%s' % k ] = v
+
         # Process rpcinterface plugins before groups to allow custom events to
         # be registered.
         section.rpcinterface_factories = self.get_plugins(
@@ -962,6 +967,10 @@ class ServerOptions(Options):
 
             environment = dict_of_key_value_pairs(
                 expand(environment_str, expansions, 'environment'))
+
+            # extend expansions for process from [program:x] environment definition
+            for k, v in environment.items():
+                expansions['ENV_%s' % k] = v
 
             directory = get(section, 'directory', None)
 
@@ -1588,9 +1597,6 @@ class ServerOptions(Options):
                 raise
             data = b''
         return data
-
-    def process_environment(self):
-        os.environ.update(self.environment or {})
 
     def chdir(self, dir):
         os.chdir(dir)

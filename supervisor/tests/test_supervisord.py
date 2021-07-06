@@ -125,14 +125,13 @@ class SupervisordTests(unittest.TestCase):
 
     def test_main_first(self):
         options = DummyOptions()
-        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
-        gconfigs = [DummyPGroupConfig(options,'foo', pconfigs=[pconfig])]
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo', '/tmp')
+        gconfigs = [DummyPGroupConfig(options, 'foo', pconfigs=[pconfig])]
         options.process_group_configs = gconfigs
         options.test = True
         options.first = True
         supervisord = self._makeOne(options)
         supervisord.main()
-        self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.fds_cleaned_up, False)
         self.assertEqual(options.rlimits_set, True)
         self.assertEqual(options.parse_criticals, ['setuid_called'])
@@ -142,7 +141,6 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(len(supervisord.process_groups), 1)
         self.assertEqual(supervisord.process_groups['foo'].config.options,
                          options)
-        self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.httpservers_opened, True)
         self.assertEqual(options.signals_set, True)
         self.assertEqual(options.daemonized, True)
@@ -151,14 +149,13 @@ class SupervisordTests(unittest.TestCase):
 
     def test_main_notfirst(self):
         options = DummyOptions()
-        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
-        gconfigs = [DummyPGroupConfig(options,'foo', pconfigs=[pconfig])]
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo', '/tmp')
+        gconfigs = [DummyPGroupConfig(options, 'foo', pconfigs=[pconfig])]
         options.process_group_configs = gconfigs
         options.test = True
         options.first = False
         supervisord = self._makeOne(options)
         supervisord.main()
-        self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.fds_cleaned_up, True)
         self.assertFalse(hasattr(options, 'rlimits_set'))
         self.assertEqual(options.parse_criticals, ['setuid_called'])
@@ -168,7 +165,6 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(len(supervisord.process_groups), 1)
         self.assertEqual(supervisord.process_groups['foo'].config.options,
                          options)
-        self.assertEqual(options.environment_processed, True)
         self.assertEqual(options.httpservers_opened, True)
         self.assertEqual(options.signals_set, True)
         self.assertEqual(options.daemonized, False)
@@ -178,7 +174,7 @@ class SupervisordTests(unittest.TestCase):
     def test_reap(self):
         options = DummyOptions()
         options.waitpid_return = 1, 1
-        pconfig = DummyPConfig(options, 'process', 'process', '/bin/process1')
+        pconfig = DummyPConfig(options, 'process', '/bin/foo', '/tmp')
         process = DummyProcess(pconfig)
         process.drained = False
         process.killing = True
@@ -199,7 +195,7 @@ class SupervisordTests(unittest.TestCase):
     def test_reap_more_than_once(self):
         options = DummyOptions()
         options.waitpid_return = 1, 1
-        pconfig = DummyPConfig(options, 'process', 'process', '/bin/process1')
+        pconfig = DummyPConfig(options, 'process', '/bin/foo', '/tmp')
         process = DummyProcess(pconfig)
         process.drained = False
         process.killing = True
@@ -214,7 +210,7 @@ class SupervisordTests(unittest.TestCase):
     def test_reap_unknown_pid(self):
         options = DummyOptions()
         options.waitpid_return = 2, 0 # pid, status
-        pconfig = DummyPConfig(options, 'process', 'process', '/bin/process1')
+        pconfig = DummyPConfig(options, 'process', '/bin/foo', '/tmp')
         process = DummyProcess(pconfig)
         process.drained = False
         process.killing = True
@@ -300,11 +296,11 @@ class SupervisordTests(unittest.TestCase):
     def test_handle_sigusr2(self):
         options = DummyOptions()
         options._signal = signal.SIGUSR2
-        pconfig1 = DummyPConfig(options, 'process1', 'process1','/bin/process1')
+        pconfig1 = DummyPConfig(options, 'process1', '/bin/foo', '/tmp')
         process1 = DummyProcess(pconfig1, state=ProcessStates.STOPPING)
         process1.delay = time.time() - 1
         supervisord = self._makeOne(options)
-        pconfigs = [DummyPConfig(options, 'foo', 'foo', '/bin/foo')]
+        pconfigs = [DummyPConfig(options, 'foo', '/bin/foo', '/tmp')]
         options.process_group_configs = DummyPGroupConfig(
             options, 'foo',
             pconfigs=pconfigs)
@@ -333,49 +329,44 @@ class SupervisordTests(unittest.TestCase):
         supervisord = self._makeOne(options)
         self.assertEqual(supervisord.get_state(), SupervisorStates.RUNNING)
 
-    def test_diff_add_remove(self):
+    def test_diff_to_active_finds_groups_added(self):
         options = DummyOptions()
         supervisord = self._makeOne(options)
 
-        pconfig = DummyPConfig(options, 'process1', 'process1')
+        pconfig = DummyPConfig(options, 'process1', '/bin/foo', '/tmp')
         group1 = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
 
-        pconfig = DummyPConfig(options, 'process2', 'process2')
+        # the active configuration has no groups
+        # diffing should find that group1 has been added
+        supervisord.options.process_group_configs = [group1]
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, [group1])
+        self.assertEqual(changed, [])
+        self.assertEqual(removed, [])
+
+    def test_diff_to_active_finds_groups_removed(self):
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+
+        pconfig = DummyPConfig(options, 'process1', '/bin/process1', '/tmp')
+        group1 = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
+
+        pconfig = DummyPConfig(options, 'process2', '/bin/process2', '/tmp')
         group2 = DummyPGroupConfig(options, 'group2', pconfigs=[pconfig])
 
-        new = [group1, group2]
-
-        added, changed, removed = supervisord.diff_to_active()
-        self.assertEqual(added, [])
-        self.assertEqual(changed, [])
-        self.assertEqual(removed, [])
-
-        added, changed, removed = supervisord.diff_to_active(new)
-        self.assertEqual(added, new)
-        self.assertEqual(changed, [])
-        self.assertEqual(removed, [])
-
-        supervisord.options.process_group_configs = new
-        added, changed, removed = supervisord.diff_to_active()
-        self.assertEqual(added, new)
-
+        # set up supervisord with an active configuration of group1 and group2
+        supervisord.options.process_group_configs = [group1, group2]
         supervisord.add_process_group(group1)
         supervisord.add_process_group(group2)
 
-        pconfig = DummyPConfig(options, 'process3', 'process3')
-        new_group1 = DummyPGroupConfig(options, pconfigs=[pconfig])
-
-        pconfig = DummyPConfig(options, 'process4', 'process4')
-        new_group2 = DummyPGroupConfig(options, pconfigs=[pconfig])
-
-        new = [group2, new_group1, new_group2]
-
-        added, changed, removed = supervisord.diff_to_active(new)
-        self.assertEqual(added, [new_group1, new_group2])
+        # diffing should find that group2 has been removed
+        supervisord.options.process_group_configs = [group1]
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, [])
         self.assertEqual(changed, [])
-        self.assertEqual(removed, [group1])
+        self.assertEqual(removed, [group2])
 
-    def test_diff_changed(self):
+    def test_diff_to_active_changed(self):
         from supervisor.options import ProcessConfig, ProcessGroupConfig
 
         options = DummyOptions()
@@ -421,9 +412,10 @@ class SupervisordTests(unittest.TestCase):
         supervisord.add_process_group(group3)
         supervisord.add_process_group(group4)
 
-        added, changed, removed = supervisord.diff_to_active(new)
-
-        self.assertEqual([added, removed], [[], []])
+        supervisord.options.process_group_configs = new
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, [])
+        self.assertEqual(removed, [])
         self.assertEqual(changed, [group1])
 
         options = DummyOptions()
@@ -436,11 +428,13 @@ class SupervisordTests(unittest.TestCase):
 
         supervisord.add_process_group(make_gconfig('group1', [pconfig1]))
 
-        added, changed, removed = supervisord.diff_to_active(new)
-        self.assertEqual([added, removed], [[], []])
+        supervisord.options.process_group_configs = new
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, [])
+        self.assertEqual(removed, [])
         self.assertEqual(changed, [group1])
 
-    def test_diff_changed_eventlistener(self):
+    def test_diff_to_active_changed_eventlistener(self):
         from supervisor.events import EventTypes
         from supervisor.options import EventListenerConfig, EventListenerPoolConfig
 
@@ -478,7 +472,7 @@ class SupervisordTests(unittest.TestCase):
         def make_gconfig(name, pconfigs, pool_events, result_handler='supervisor.dispatchers:default_handler'):
             return EventListenerPoolConfig(options, name, 25, pconfigs, 10, pool_events, result_handler)
 
-	    # Test that changing an event listener command causes the diff_to_activate
+	    # Test that changing an eventlistener's command is detected by diff_to_active
         pconfig = make_pconfig('process1', 'process1-new')
         econfig = make_econfig("TICK_60")
         group1 = make_gconfig('group1', [pconfig], econfig)
@@ -498,12 +492,13 @@ class SupervisordTests(unittest.TestCase):
         supervisord.add_process_group(group3)
         supervisord.add_process_group(group4)
 
-        added, changed, removed = supervisord.diff_to_active(new)
-
-        self.assertEqual([added, removed], [[], []])
+        supervisord.options.process_group_configs = new
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, [])
+        self.assertEqual(removed, [])
         self.assertEqual(changed, [group1])
 
-        # Test that changing the event triggers diff_to_activate
+        # Test that changing an eventlistener's event is detected by diff_to_active
         options = DummyOptions()
         supervisord = self._makeOne(options)
 
@@ -526,12 +521,13 @@ class SupervisordTests(unittest.TestCase):
         supervisord.add_process_group(group3)
         supervisord.add_process_group(group4)
 
-        added, changed, removed = supervisord.diff_to_active(new)
-
-        self.assertEqual([added, removed], [[], []])
+        supervisord.options.process_group_configs = new
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, [])
+        self.assertEqual(removed, [])
         self.assertEqual(changed, [group1])
 
-        # Test that changing the result_handler triggers diff_to_activate
+        # Test that changing an eventlistener's result_handler is detected by diff_to_active
         options = DummyOptions()
         supervisord = self._makeOne(options)
 
@@ -554,15 +550,16 @@ class SupervisordTests(unittest.TestCase):
         supervisord.add_process_group(group3)
         supervisord.add_process_group(group4)
 
-        added, changed, removed = supervisord.diff_to_active(new)
-
-        self.assertEqual([added, removed], [[], []])
+        supervisord.options.process_group_configs = new
+        added, changed, removed = supervisord.diff_to_active()
+        self.assertEqual(added, [])
+        self.assertEqual(removed, [])
         self.assertEqual(changed, [group1])
 
     def test_add_process_group(self):
         options = DummyOptions()
-        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
-        gconfig = DummyPGroupConfig(options,'foo', pconfigs=[pconfig])
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo', '/tmp')
+        gconfig = DummyPGroupConfig(options, 'foo', pconfigs=[pconfig])
         options.process_group_configs = [gconfig]
         supervisord = self._makeOne(options)
 
@@ -577,15 +574,15 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(group, supervisord.process_groups['foo'])
         self.assertTrue(not result)
 
-    def test_add_process_group_event(self):
+    def test_add_process_group_emits_event(self):
         from supervisor import events
         L = []
         def callback(event):
             L.append(1)
         events.subscribe(events.ProcessGroupAddedEvent, callback)
         options = DummyOptions()
-        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
-        gconfig = DummyPGroupConfig(options,'foo', pconfigs=[pconfig])
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo', '/tmp')
+        gconfig = DummyPGroupConfig(options, 'foo', pconfigs=[pconfig])
         options.process_group_configs = [gconfig]
         supervisord = self._makeOne(options)
 
@@ -597,7 +594,7 @@ class SupervisordTests(unittest.TestCase):
 
     def test_remove_process_group(self):
         options = DummyOptions()
-        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo', '/tmp')
         gconfig = DummyPGroupConfig(options, 'foo', pconfigs=[pconfig])
         supervisord = self._makeOne(options)
 
@@ -623,8 +620,8 @@ class SupervisordTests(unittest.TestCase):
             L.append(1)
         events.subscribe(events.ProcessGroupRemovedEvent, callback)
         options = DummyOptions()
-        pconfig = DummyPConfig(options, 'foo', 'foo', '/bin/foo')
-        gconfig = DummyPGroupConfig(options,'foo', pconfigs=[pconfig])
+        pconfig = DummyPConfig(options, 'foo', '/bin/foo', '/tmp')
+        gconfig = DummyPGroupConfig(options, 'foo', pconfigs=[pconfig])
         options.process_group_configs = [gconfig]
         supervisord = self._makeOne(options)
 

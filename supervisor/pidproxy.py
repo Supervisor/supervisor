@@ -1,7 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/env python -u
 
-""" An executable which proxies for a subprocess; upon a signal, it sends that
-signal to the process identified by a pidfile. """
+"""pidproxy -- run command and proxy signals to it via its pidfile.
+
+This executable runs a command and then monitors a pidfile.  When this
+executable receives a signal, it sends the same signal to the pid
+in the pidfile.
+
+Usage: %s <pidfile name> <command> [<cmdarg1> ...]
+"""
 
 import os
 import sys
@@ -10,18 +16,19 @@ import time
 
 class PidProxy:
     pid = None
+
     def __init__(self, args):
-        self.setsignals()
         try:
             self.pidfile, cmdargs = args[1], args[2:]
-            self.command = os.path.abspath(cmdargs[0])
+            self.abscmd = os.path.abspath(cmdargs[0])
             self.cmdargs = cmdargs
         except (ValueError, IndexError):
             self.usage()
             sys.exit(1)
 
     def go(self):
-        self.pid = os.spawnv(os.P_NOWAIT, self.command, self.cmdargs)
+        self.setsignals()
+        self.pid = os.spawnv(os.P_NOWAIT, self.abscmd, self.cmdargs)
         while 1:
             time.sleep(5)
             try:
@@ -32,7 +39,7 @@ class PidProxy:
                 break
 
     def usage(self):
-        print("pidproxy.py <pidfile name> <command> [<cmdarg1> ...]")
+        print(__doc__ % sys.argv[0])
 
     def setsignals(self):
         signal.signal(signal.SIGTERM, self.passtochild)
@@ -64,6 +71,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-

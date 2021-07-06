@@ -712,7 +712,8 @@ class PInputDispatcherTests(unittest.TestCase):
         dispatcher = self._makeOne(process)
         dispatcher.input_buffer = 'halloooo'
         import errno
-        options.write_error = errno.EPIPE
+        options.write_exception = OSError(errno.EPIPE,
+                                          os.strerror(errno.EPIPE))
         dispatcher.handle_write_event()
         self.assertEqual(dispatcher.input_buffer, b'')
         self.assertTrue(options.logger.data[0].startswith(
@@ -726,7 +727,8 @@ class PInputDispatcherTests(unittest.TestCase):
         dispatcher = self._makeOne(process)
         dispatcher.input_buffer = 'halloooo'
         import errno
-        options.write_error = errno.EBADF
+        options.write_exception = OSError(errno.EBADF,
+                                          os.strerror(errno.EBADF))
         self.assertRaises(OSError, dispatcher.handle_write_event)
 
     def test_handle_write_event_over_os_limit(self):
