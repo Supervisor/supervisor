@@ -935,7 +935,7 @@ class ServerOptions(Options):
         runningregex = get(section, 'runningregex', None)
         if runningregex:
             try:
-                runningregex = re.compile(runningregex)
+                runningregex = re.compile(r'.*'+ runningregex)
             except Exception as e:
                 raise ValueError(
                     f"program section {section} has invalid runningregex value. Error {e}")

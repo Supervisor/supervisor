@@ -5,6 +5,7 @@ import signal
 import shlex
 import time
 import traceback
+import re
 
 from supervisor.compat import maxint
 from supervisor.compat import as_bytes
@@ -698,6 +699,10 @@ class Subprocess(object):
 
                 from supervisor.options import readFile
                 str =  as_string(readFile(logfile, 0, 0))
+                
+                # delete ascii escape sequence and newlines with regular expression
+                ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]|\n')
+                str = ansi_escape.sub('', str)
 
                 if self.config.runningregex.match(str):
                     # STARTING -> RUNNING if the proc has started
