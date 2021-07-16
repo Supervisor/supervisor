@@ -22,6 +22,7 @@ from supervisor.states import STOPPED_STATES
 from supervisor.options import decode_wait_status
 from supervisor.options import signame
 from supervisor.options import ProcessException, BadCommand
+from supervisor.options import readFile
 
 from supervisor.dispatchers import EventListenerStates
 
@@ -195,6 +196,16 @@ class Subprocess(object):
 
         Return the process id.  If the fork() call fails, return None.
         """
+        # if runningregex is used, set the log_offset correctly
+        if self.config.runningregex is not None:
+            try:
+                logfile = getattr(self.config, 'stdout_logfile')
+                str =  as_string(readFile(logfile, self.log_offset, 0))
+                self.log_offset = len(str)
+            except:  # file does not exisst yet
+                self.log_offset = 0
+
+
         options = self.config.options
         processname = as_string(self.config.name)
 
@@ -695,10 +706,7 @@ class Subprocess(object):
 
             if self.config.runningregex:
                 logfile = getattr(self.config, 'stdout_logfile')
-
-
-                from supervisor.options import readFile
-                str =  as_string(readFile(logfile, 0, 0))
+                str =  as_string(readFile(logfile, self.log_offset, 0))
                 
                 # delete ascii escape sequence and newlines with regular expression
                 ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]|\n')
