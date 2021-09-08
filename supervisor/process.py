@@ -200,9 +200,10 @@ class Subprocess(object):
         if self.config.runningregex is not None:
             try:
                 logfile = getattr(self.config, 'stdout_logfile')
-                str =  as_string(readFile(logfile, self.log_offset, 0))
-                self.log_offset = len(str)
-            except:  # file does not exisst yet
+                with open(logfile, 'rb') as f:
+                    log_file_length = len(f.read())
+                self.log_offset = log_file_length
+            except FileNotFoundError:
                 self.log_offset = 0
 
 
@@ -706,21 +707,20 @@ class Subprocess(object):
 
             if self.config.runningregex:
                 logfile = getattr(self.config, 'stdout_logfile')
-                str =  as_string(readFile(logfile, self.log_offset, 0))
+                logfile_as_str =  as_string(readFile(logfile, self.log_offset, 0))
                 
                 # delete ascii escape sequence and newlines with regular expression
                 ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]|\n')
-                str = ansi_escape.sub('', str)
+                logfile_as_str = ansi_escape.sub('', logfile_as_str)
 
-                if self.config.runningregex.match(str):
-                    # STARTING -> RUNNING if the proc has started
-                    # successfully and the runningregex is met
+                # STARTING -> RUNNING if the process has started
+                # successfully and the runningregex is met
+                if self.config.runningregex.match(logfile_as_str):
                     self.delay = 0
                     self.backoff = 0
                     self._assertInState(ProcessStates.STARTING)
                     self.change_state(ProcessStates.RUNNING)
-                    msg = (
-                            'entered RUNNING state, found runningregex in stdout')
+                    msg = ('entered RUNNING state, found runningregex in stdout')
                     logger.info('success: %s %s' % (processname, msg))
 
 
