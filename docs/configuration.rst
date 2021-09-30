@@ -695,7 +695,7 @@ where specified.
 ``numprocs_start``
 
   An integer offset that is used to compute the number at which
-  ``numprocs`` starts.
+  ``process_num`` starts.
 
   *Default*: 0
 
