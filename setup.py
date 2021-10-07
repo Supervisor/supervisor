@@ -38,7 +38,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 try:
     README = open(os.path.join(here, 'README.rst')).read()
     CHANGES = open(os.path.join(here, 'CHANGES.rst')).read()
-except:
+except Exception:
     README = """\
 Supervisor is a client/server system that allows its users to
 control a number of processes on UNIX-like operating systems. """
