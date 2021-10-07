@@ -31,14 +31,16 @@ if py_version < (3, 3):
 testing_extras = tests_require + [
     'pytest',
     'pytest-cov',
-    ]
+]
 
 from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
 try:
-    README = open(os.path.join(here, 'README.rst')).read()
-    CHANGES = open(os.path.join(here, 'CHANGES.rst')).read()
-except:
+    with open(os.path.join(here, 'README.rst'), 'r') as f:
+        README = f.read()
+    with open(os.path.join(here, 'CHANGES.rst'), 'r') as f:
+        CHANGES = f.read()
+except Exception:
     README = """\
 Supervisor is a client/server system that allows its users to
 control a number of processes on UNIX-like operating systems. """
@@ -65,7 +67,8 @@ CLASSIFIERS = [
 ]
 
 version_txt = os.path.join(here, 'supervisor/version.txt')
-supervisor_version = open(version_txt).read().strip()
+with open(version_txt, 'r') as f:
+    supervisor_version = f.read().strip()
 
 dist = setup(
     name='supervisor',
@@ -81,7 +84,7 @@ dist = setup(
     install_requires=requires,
     extras_require={
         'testing': testing_extras,
-        },
+    },
     tests_require=tests_require,
     include_package_data=True,
     zip_safe=False,
