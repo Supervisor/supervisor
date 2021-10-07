@@ -31,7 +31,7 @@ if py_version < (3, 3):
 testing_extras = tests_require + [
     'pytest',
     'pytest-cov',
-    ]
+]
 
 from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
@@ -81,7 +81,7 @@ dist = setup(
     install_requires=requires,
     extras_require={
         'testing': testing_extras,
-        },
+    },
     tests_require=tests_require,
     include_package_data=True,
     zip_safe=False,
