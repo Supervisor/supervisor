@@ -1,6 +1,9 @@
 4.3.0.dev0 (Next Release)
 -------------------------
 
+- Added the ``setuptools`` package to the list of dependencies in
+  ``setup.py`` because it is a runtime dependency.  Patch by Louis Sautier.
+
 - The web interface will now return a 404 Not Found response if a log file
   is missing.  Previously, it would return 410 Gone.  It was changed because
   410 is intended to mean that the condition is likely to be permanent.  A
