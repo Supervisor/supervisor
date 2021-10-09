@@ -282,9 +282,6 @@ class SupervisorNamespaceRPCInterface:
         @return boolean result     Always true unless error
 
         """
-        ## check if the process is dependent upon any other process and if so make sure that one is in the RUNNING state
-        group, process = self._getGroupAndProcess(name)
-
         self._update('startProcess')
         group, process = self._getGroupAndProcess(name)
         if process is None:
