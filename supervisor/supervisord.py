@@ -44,6 +44,9 @@ from supervisor.options import signame
 from supervisor import events
 from supervisor.states import SupervisorStates
 from supervisor.states import getProcessStateDescription
+from supervisor.graphutils import Graph
+
+from supervisor.states import ProcessStates
 
 class Supervisor:
     stopping = False # set after we detect that we are handling a stop request
@@ -55,6 +58,8 @@ class Supervisor:
         self.options = options
         self.process_groups = {}
         self.ticks = {}
+        self.process_spawn_dict = dict()
+        self.process_started_dict = dict()
 
     def main(self):
         if not self.options.first:
@@ -84,6 +89,29 @@ class Supervisor:
         try:
             for config in self.options.process_group_configs:
                 self.add_process_group(config)
+            # add processes to directed graph, to check for dependency cycles
+            g = Graph(len(self.options.process_group_configs))
+            # replace depends_on string with actual process object
+            for config in (self.options.process_group_configs):
+                # check dependencies for all programs in group:
+                for conf in enumerate(config.process_configs):
+                    if config.process_configs[conf[0]].depends_on is not None:
+                        process_dict=dict({})
+                        # split to get all processes in case there are multiple dependencies
+                        dependent_processes = (config.process_configs[conf[0]].depends_on).split()
+                        for process in dependent_processes:
+                            # this can be of form group:process or simply process
+                            try:
+                                dependent_group, dependent_process=process.split(":")
+                            except:
+                                dependent_group=dependent_process=process
+                            g.addEdge(config.process_configs[conf[0]].name, dependent_process)
+                            process_dict[dependent_process] = self.process_groups[dependent_group].processes[dependent_process]
+                        config.process_configs[conf[0]].depends_on = process_dict
+            # check for cyclical process dependencies
+            if g.cyclic() == 1:
+                raise AttributeError('Process config contains dependeny cycle(s)! Check config files again!')
+
             self.options.openhttpservers(self)
             self.options.setsignals()
             if (not self.options.nodaemon) and self.options.first:
@@ -239,7 +267,10 @@ class Supervisor:
                         combined_map[fd].handle_error()
 
             for group in pgroups:
-                group.transition()
+                group.transition(self)
+
+            self._spawn_dependee_queue()
+            self._handle_spawn_timeout()
 
             self.reap()
             self.handle_signal()
@@ -315,6 +346,88 @@ class Supervisor:
 
     def get_state(self):
         return self.options.mood
+
+    def _spawn_dependee_queue(self):
+        """
+        Iterate over processes that are not started but added to
+        process_spawn_dict. Spawn all processes which are ready
+        (All dependees RUNNING or process without dependees)
+        """
+        if self.process_spawn_dict:
+            for process_name, process_object in list(self.process_spawn_dict.items()):
+                if process_object.config.depends_on is not None:
+                    if any([dependee.state is ProcessStates.FATAL for dependee in
+                            process_object.config.depends_on.values()]):
+                        self._set_fatal_state_and_empty_queue()
+                        break
+                    if all([dependee.state is ProcessStates.RUNNING for dependee in
+                            process_object.config.depends_on.values()]):
+                        self._spawn_process_from_process_dict(process_name, process_object)
+                else:
+                    self._spawn_process_from_process_dict(process_name, process_object)
+
+    def _spawn_process_from_process_dict(self, process_name, process_object):
+        self.process_started_dict[process_name] = process_object
+        del self.process_spawn_dict[process_name]
+        # only spawn if the process is not running yet (could be started in the meanwhile)
+        if (process_object.state is not ProcessStates.STARTING and
+            process_object.state is not ProcessStates.RUNNING):
+            process_object.spawn(self)
+        process_object.notify_timer = 5
+
+    def _set_fatal_state_and_empty_queue(self):
+        for process_name, process_object in self.process_spawn_dict.items():
+            process_object.record_spawnerr(
+                'Dependee process did not start - set FATAL state for {}'
+                .format(process_name))
+            process_object.change_state(ProcessStates.FATAL)
+        self.process_spawn_set = set()
+        self.process_spawn_dict = dict()
+
+    def _handle_spawn_timeout(self):
+        """
+        Log info message each 5 seconds if some process is waiting on a dependee
+        Timeout if a process needs longer than spawn_timeout (default=60 seconds)
+        to reach RUNNING
+        """
+        # check if any of the processes that was started did not make it and remove RUNNING ones.
+        if self.process_started_dict:
+            for process_name, process_object in list(self.process_started_dict.items()):
+                if process_object.state is ProcessStates.RUNNING:
+                    del self.process_started_dict[process_name]
+                # handle timeout error.
+                elif (time.time() - process_object.laststart) >= process_object.config.spawn_timeout:
+                    self._timeout_process(process_name, process_object)
+                # notify user about waiting
+                elif (time.time() - process_object.laststart) >= process_object.notify_timer:
+                    self._notfiy_user_about_waiting(process_name, process_object)
+
+    def _timeout_process(self, process_name, process_object):
+        msg = ("timeout: dependee process {} in {} did not reach RUNNING within {} seconds, dependees {} are not spawned"
+                .format(process_name,
+                        getProcessStateDescription(process_object.state),
+                        process_object.config.spawn_timeout,
+                        [process for process in self.process_spawn_dict.keys()]))
+        process_object.config.options.logger.warn(msg)
+        process_object.record_spawnerr(
+            'timeout: Process {} did not reach RUNNING state within {} seconds'
+            .format(process_name,
+                    process_object.config.spawn_timeout))
+        process_object.change_state(ProcessStates.FATAL)
+        for process_name, process_object in self.process_spawn_dict.items():
+            process_object.record_spawnerr(
+                'Dependee process did not start - set FATAL state for {}'
+                .format(process_name))
+            process_object.change_state(ProcessStates.FATAL)
+        self.process_spawn_dict = dict()
+        self.process_started_dict = dict()
+
+    def _notfiy_user_about_waiting(self, process_name, process_object):
+        process_object.notify_timer += 5
+        msg = ("waiting for dependee process {} in {} state to be RUNNING"
+                .format(process_name,
+                        getProcessStateDescription(process_object.state)))
+        process_object.config.options.logger.info(msg)
 
 def timeslice(period, when):
     return int(when - (when % period))

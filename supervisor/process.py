@@ -188,11 +188,29 @@ class Subprocess(object):
         self.spawnerr = msg
         self.config.options.logger.info("spawnerr: %s" % msg)
 
-    def spawn(self):
+    def queue_all_dependee_processes(self, supervisor):
+        if (self.config.name not in supervisor.process_spawn_dict.keys() and
+            self.config.name not in supervisor.process_started_dict.keys()):
+            supervisor.process_spawn_dict[self.config.name] = self
+        if self.config.depends_on is not None:
+            for dependee in self.config.depends_on.values():
+                if dependee.state is not ProcessStates.RUNNING and dependee.state is not ProcessStates.STARTING:
+                    if (dependee.config.name not in supervisor.process_spawn_dict.keys() and
+                        dependee.config.name not in supervisor.process_started_dict.keys()):
+                        supervisor.process_spawn_dict[dependee.config.name] = dependee
+                        dependee.queue_all_dependee_processes(supervisor)
+
+    def spawn(self, supervisor=None):
         """Start the subprocess.  It must not be running already.
 
         Return the process id.  If the fork() call fails, return None.
         """
+        if self.config.depends_on is not None:
+            if any([dependee.state is not ProcessStates.RUNNING for dependee in
+                    self.config.depends_on.values()]):
+                self.queue_all_dependee_processes(supervisor)
+                return
+
         options = self.config.options
         processname = as_string(self.config.name)
 
@@ -653,7 +671,7 @@ class Subprocess(object):
     def get_state(self):
         return self.state
 
-    def transition(self):
+    def transition(self, supervisor=None):
         now = time.time()
         state = self.state
 
@@ -665,22 +683,22 @@ class Subprocess(object):
             # dont start any processes if supervisor is shutting down
             if state == ProcessStates.EXITED:
                 if self.config.autorestart:
+                    # STOPPED -> STARTING
                     if self.config.autorestart is RestartUnconditionally:
                         # EXITED -> STARTING
-                        self.spawn()
+                        self.spawn(supervisor)
                     else: # autorestart is RestartWhenExitUnexpected
                         if self.exitstatus not in self.config.exitcodes:
                             # EXITED -> STARTING
-                            self.spawn()
+                            self.spawn(supervisor)
             elif state == ProcessStates.STOPPED and not self.laststart:
                 if self.config.autostart:
-                    # STOPPED -> STARTING
-                    self.spawn()
+                    self.spawn(supervisor)
             elif state == ProcessStates.BACKOFF:
                 if self.backoff <= self.config.startretries:
                     if now > self.delay:
                         # BACKOFF -> STARTING
-                        self.spawn()
+                        self.spawn(supervisor)
 
         processname = as_string(self.config.name)
         if state == ProcessStates.STARTING:
@@ -842,9 +860,9 @@ class ProcessGroupBase(object):
         pass
 
 class ProcessGroup(ProcessGroupBase):
-    def transition(self):
+    def transition(self, supervisor=None):
         for proc in self.processes.values():
-            proc.transition()
+            proc.transition(supervisor)
 
 class FastCGIProcessGroup(ProcessGroup):
 
