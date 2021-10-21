@@ -269,13 +269,23 @@ class StatusView(MeldView):
             'href': 'logtail/%s/stderr' % processname,
             'target': '_blank'
         }
+        if (process.config.custom_action_name is not None
+              and process.config.custom_action_href is not None):
+            custom_action = {
+                'name': process.config.custom_action_name,
+                'href': process.config.custom_action_href,
+                'target': '_blank'
+            }
+        else:
+            custom_action = None
         if state == ProcessStates.RUNNING:
-            actions = [restart, stop, clearlog, tailf_stdout, tailf_stderr]
+            actions = [restart, stop, clearlog, tailf_stdout, tailf_stderr,
+            custom_action]
         elif state in (ProcessStates.STOPPED, ProcessStates.EXITED,
                        ProcessStates.FATAL):
-            actions = [start, None, clearlog, tailf_stdout, tailf_stderr]
+            actions = [start, None, clearlog, tailf_stdout, tailf_stderr, None]
         else:
-            actions = [None, None, clearlog, tailf_stdout, tailf_stderr]
+            actions = [None, None, clearlog, tailf_stdout, tailf_stderr, None]
         return actions
 
     def css_class_for_state(self, state):
