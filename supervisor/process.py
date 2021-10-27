@@ -707,21 +707,29 @@ class Subprocess(object):
 
             if self.config.runningregex:
                 logfile = getattr(self.config, 'stdout_logfile')
-                logfile_as_str =  as_string(readFile(logfile, self.log_offset, 0))
-                
-                # delete ascii escape sequence and newlines with regular expression
-                ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]|\n')
-                logfile_as_str = ansi_escape.sub('', logfile_as_str)
+                try:
+                    logfile_as_str =  as_string(readFile(logfile, self.log_offset, 0))
+                    
+                    # delete ascii escape sequence and newlines with regular expression
+                    ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]|\n')
+                    logfile_as_str = ansi_escape.sub('', logfile_as_str)
 
-                # STARTING -> RUNNING if the process has started
-                # successfully and the runningregex is met
-                if self.config.runningregex.match(logfile_as_str):
-                    self.delay = 0
-                    self.backoff = 0
-                    self._assertInState(ProcessStates.STARTING)
-                    self.change_state(ProcessStates.RUNNING)
-                    msg = ('entered RUNNING state, found runningregex in stdout')
-                    logger.info('success: %s %s' % (processname, msg))
+                    # STARTING -> RUNNING if the process has started
+                    # successfully and the runningregex is met
+                    if self.config.runningregex.match(logfile_as_str):
+                        self.delay = 0
+                        self.backoff = 0
+                        self._assertInState(ProcessStates.STARTING)
+                        self.change_state(ProcessStates.RUNNING)
+                        msg = ('entered RUNNING state, found runningregex in stdout')
+                        logger.info('success: %s %s' % (processname, msg))
+                except ValueError:
+                    with open(logfile, 'w') as file:
+                        file.write("")
+                    logger.warn(
+                        'logfile {} did not exists. Created new logfile, '
+                        'runnngregex match will be checked again next '
+                        'iteration.'.format(logfile))
 
 
         if state == ProcessStates.BACKOFF:

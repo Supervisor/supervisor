@@ -939,7 +939,12 @@ class ServerOptions(Options):
             except Exception as e:
                 raise ValueError(
                     f"program section {section} has invalid runningregex value. Error {e}")
-
+            if "/dev/" in get(section, 'stdout_logfile'):
+                self.warnings.warn(
+                    '\033[93m runningregex is only supported for logfiles.'
+                    'It does not work with /dev/null or /dev/fd/1.'
+                    'Startsecs are used instead \033[0m')
+                runningregex = None
 
         # find uid from "user" option
         user = get(section, 'user', None)
