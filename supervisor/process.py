@@ -166,6 +166,8 @@ class Subprocess(object):
             return False
 
         event_class = self.event_map.get(new_state)
+        self.state = new_state
+        
         if event_class is not None:
             event = event_class(self, old_state, expected)
             events.notify(event)
@@ -174,8 +176,6 @@ class Subprocess(object):
             now = time.time()
             self.backoff += 1
             self.delay = now + self.backoff
-
-        self.state = new_state
 
     def _assertInState(self, *states):
         if self.state not in states:
