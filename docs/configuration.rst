@@ -817,8 +817,9 @@ where specified.
 
 ``stopsignal``
 
-  The signal used to kill the program when a stop is requested.  This
-  can be any of TERM, HUP, INT, QUIT, KILL, USR1, or USR2.
+  The signal used to kill the program when a stop is requested.  This can be
+  specified using the signal's name or its number.  It is normally one of:
+  ``TERM``, ``HUP``, ``INT``, ``QUIT``, ``KILL``, ``USR1``, or ``USR2``.
 
   *Default*: TERM
 
