@@ -165,17 +165,16 @@ class Subprocess(object):
             # exists for unit tests
             return False
 
-        event_class = self.event_map.get(new_state)
         self.state = new_state
-        
-        if event_class is not None:
-            event = event_class(self, old_state, expected)
-            events.notify(event)
-
         if new_state == ProcessStates.BACKOFF:
             now = time.time()
             self.backoff += 1
             self.delay = now + self.backoff
+
+        event_class = self.event_map.get(new_state)
+        if event_class is not None:
+            event = event_class(self, old_state, expected)
+            events.notify(event)
 
     def _assertInState(self, *states):
         if self.state not in states:

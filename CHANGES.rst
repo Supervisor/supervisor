@@ -1,6 +1,11 @@
 4.3.0.dev0 (Next Release)
 -------------------------
 
+- Fixed a race condition where an ``rpcinterface`` extension that subscribed
+  to events would not see the correct process state if it accessed the
+  the ``state`` attribute on a ``Subprocess`` instance immediately in the
+  the event callback.  Patch by Chao Wang.
+
 - Added the ``setuptools`` package to the list of dependencies in
   ``setup.py`` because it is a runtime dependency.  Patch by Louis Sautier.
 
