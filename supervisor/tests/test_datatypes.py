@@ -632,14 +632,24 @@ class InetAddressTests(unittest.TestCase):
         self.assertRaises(ValueError, self._callFUT, 'a')
 
     def test_default_host(self):
-        host, port = self._callFUT('*:8080')
+        host, port = self._callFUT('*:9001')
         self.assertEqual(host, '')
-        self.assertEqual(port, 8080)
+        self.assertEqual(port, 9001)
 
-    def test_boring(self):
-        host, port = self._callFUT('localhost:80')
+    def test_hostname_and_port(self):
+        host, port = self._callFUT('localhost:9001')
         self.assertEqual(host, 'localhost')
-        self.assertEqual(port, 80)
+        self.assertEqual(port, 9001)
+
+    def test_ipv4_address_and_port(self):
+        host, port = self._callFUT('127.0.0.1:9001')
+        self.assertEqual(host, '127.0.0.1')
+        self.assertEqual(port, 9001)
+
+    def test_ipv6_address_and_port(self):
+        host, port = self._callFUT('2001:db8:ff:55:0:0:0:138:9001')
+        self.assertEqual(host, '2001:db8:ff:55:0:0:0:138')
+        self.assertEqual(port, 9001)
 
 class SocketAddressTests(unittest.TestCase):
     def _getTargetClass(self):
