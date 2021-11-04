@@ -135,7 +135,7 @@ def inet_address(s):
     # returns (host, port) tuple
     host = ''
     if ":" in s:
-        host, s = s.split(":", 1)
+        host, s = s.rsplit(":", 1)
         if not s:
             raise ValueError("no port number specified in %r" % s)
         port = port_number(s)
