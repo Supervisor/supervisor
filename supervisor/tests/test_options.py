@@ -1844,6 +1844,20 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.parse_warnings, [])
         self.assertEqual(pconfigs[0].stderr_logfile, None)
 
+    def test_processes_from_section_accepts_number_for_stopsignal(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo
+        stopsignal = %d
+        """ % signal.SIGQUIT)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(instance.parse_warnings, [])
+        self.assertEqual(pconfigs[0].stopsignal, signal.SIGQUIT)
+
     def test_options_with_environment_expansions(self):
         text = lstrip("""\
         [supervisord]
