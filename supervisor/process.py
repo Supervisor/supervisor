@@ -205,7 +205,7 @@ class Subprocess(object):
 
         Return the process id.  If the fork() call fails, return None.
         """
-        if self.config.depends_on is not None:
+        if self.config.depends_on is not None and not supervisor.abort_queing :
             if any([dependee.state is not ProcessStates.RUNNING for dependee in
                     self.config.depends_on.values()]):
                 self.queue_all_dependee_processes(supervisor)
