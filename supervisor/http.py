@@ -524,9 +524,14 @@ class supervisor_af_inet_http_server(supervisor_http_server):
     def __init__(self, ip, port, logger_object):
         self.ip = ip
         self.port = port
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.prebind(sock, logger_object)
-        self.bind((ip, port))
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.prebind(sock, logger_object)
+            self.bind((ip, port))
+        except:
+            sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+            self.prebind(sock, logger_object)
+            self.bind((ip, port))
 
         if not ip:
             self.log_info('Computing default hostname', 'warning')
