@@ -1,5 +1,5 @@
-4.3.0.dev0 (Next Release)
--------------------------
+4.2.3 (2021-12-27)
+------------------
 
 - Fixed a race condition where an ``rpcinterface`` extension that subscribed
   to events would not see the correct process state if it accessed the
