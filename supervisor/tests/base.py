@@ -134,6 +134,9 @@ class DummyOptions:
     def make_logger(self):
         pass
 
+    def check_directories(self):
+        pass
+
     def clear_autochildlogdir(self):
         self.autochildlogdir_cleared = True
 

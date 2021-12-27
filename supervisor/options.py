@@ -313,10 +313,9 @@ class Options:
         """Process configuration data structure.
 
         This includes reading config file if necessary, setting defaults etc.
-        """
+        """        
         if self.configfile:
-            self.process_config_file(do_usage)
-
+            self.process_config_file(do_usage)        
         # Copy config options to attributes of self.  This only fills
         # in options that aren't already set from the command line.
         for name, confname in self.names_list:
@@ -484,7 +483,7 @@ class ServerOptions(Options):
     def realize(self, *arg, **kw):
         Options.realize(self, *arg, **kw)
         section = self.configroot.supervisord
-
+        
         # Additional checking of user option; set uid and gid
         if self.user is not None:
             try:
@@ -520,6 +519,7 @@ class ServerOptions(Options):
         self.serverurl = None
 
         self.server_configs = sconfigs = section.server_configs
+        self.directories = section.directories
 
         # we need to set a fallback serverurl that process.spawn can use
 
@@ -675,6 +675,7 @@ class ServerOptions(Options):
                 env.update(proc.environment)
                 proc.environment = env
         section.server_configs = self.server_configs_from_parser(parser)
+        section.directories = self.directories_from_parser(parser)        
         section.profile_options = None
         return section
 
@@ -1141,6 +1142,29 @@ class ServerOptions(Options):
 
         return configs
 
+    def directories_from_parser(self, parser):
+        """Read [directory:x] sections from parser."""
+        get = parser.saneget
+        directories = []
+        all_sections = parser.sections()
+        for section in all_sections:
+            if not section.startswith('directory:'):
+                continue
+            name = section.split(':', 1)[1]
+            path = get(section, "path", None)
+            if path is None:
+                raise ValueError('[%s] section requires a value for "path"')
+            path = normalize_path(path)
+            create = boolean(get(section, "create", "false"))
+            mode_str = get(section, "mode", "777")
+            try:               
+                mode = octal_type(mode_str)
+            except (TypeError, ValueError):
+                raise ValueError("Invalid mode value %s" % mode_str)
+            directory = DirectoryConfig(name, path, create, mode)
+            directories.append(directory)        
+        return directories
+
     def daemonize(self):
         self.poller.before_daemonize()
         self._daemonize()
@@ -1505,7 +1529,19 @@ class ServerOptions(Options):
             self.logger.warn(msg)
         for msg in self.parse_infos:
             self.logger.info(msg)
-
+    
+    def check_directories(self):
+        # must be called after realize() and after supervisor does setuid()
+        for directory in self.directories:            
+            try:
+                if directory.verify_exists():
+                    self.logger.info(
+                        "created directory (%s) %s"
+                        % (directory.name, directory.path)
+                    )
+            except ValueError as error:
+                self.usage(str(error))            
+                
     def make_http_servers(self, supervisord):
         from supervisor.http import make_http_servers
         return make_http_servers(self, supervisord)
@@ -2065,6 +2101,51 @@ class FastCGIGroupConfig(ProcessGroupConfig):
     def make_group(self):
         from supervisor.process import FastCGIProcessGroup
         return FastCGIProcessGroup(self)
+
+
+class DirectoryConfig(object):
+    """Configuration for a required directory."""
+
+    def __init__(self, name, path, create, mode):
+        self.name = name
+        self.path = path
+        self.create = create
+        self.mode = mode 
+
+    def __repr__(self):
+        return "DirectoryConfig({!r}, {!r}, {!r}, 0o{:o})".format(
+            self.name, self.path, self.create, self.mode
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, DirectoryConfig)
+            and self.name == other.name
+            and self.path == other.path
+            and self.create == other.create
+            and self.mode == other.mode
+        )
+
+    def verify_exists(self):
+        """Verify the directory exists, and potentially try to
+        create it. Return True if directory was created."""        
+        if os.path.exists(self.path):            
+            if not os.path.isdir(self.path):             
+                raise ValueError(
+                    "required directory (%s) %s is not a directory"
+                    % (self.name, self.path)
+                )
+        else:            
+            if self.create:                            
+                os.makedirs(self.path, self.mode)
+                return True
+            else:                
+                raise ValueError(
+                    "required directory (%s) %s does not exist"
+                    % (self.name, self.path)
+                )        
+        return False        
+
 
 def readFile(filename, offset, length):
     """ Read length bytes from the file named by filename starting at

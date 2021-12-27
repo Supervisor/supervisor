@@ -62,7 +62,7 @@ class Supervisor:
             # first request
             self.options.cleanup_fds()
 
-        self.options.set_uid_or_exit()
+        self.options.set_uid_or_exit()        
 
         if self.options.first:
             self.options.set_rlimits_or_exit()
@@ -70,6 +70,8 @@ class Supervisor:
         # this sets the options.logger object
         # delay logger instantiation until after setuid
         self.options.make_logger()
+
+        self.options.check_directories()
 
         if not self.options.nocleanup:
             # clean up old automatic logs
