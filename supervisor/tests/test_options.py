@@ -1153,6 +1153,16 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(len(recorder), 1)
         self.assertEqual(recorder[0], "option --bad not recognized")
 
+    def test_realize_prefers_identifier_from_args(self):
+        text = lstrip("""
+        [supervisord]
+        identifier=from_config_file
+        """)
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=['-i', 'from_args'])
+        self.assertEqual(instance.identifier, "from_args")
+
     def test_options_afunix(self):
         instance = self._makeOne()
         text = lstrip("""\

@@ -363,6 +363,62 @@ class EndToEndTests(BaseTestCase):
         pidproxy.expect(pexpect.EOF)
         self.assertEqual(pidproxy.before.strip(), "1 2")
 
+    def test_issue_1483a_identifier_default(self):
+        """When no identifier is supplied on the command line or in the config
+        file, the default is used."""
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1483a.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('supervisord started with pid')
+
+        from supervisor.compat import xmlrpclib
+        from supervisor.xmlrpc import SupervisorTransport
+        transport = SupervisorTransport('', '', 'unix:///tmp/issue-1483a.sock')
+        try:
+            server = xmlrpclib.ServerProxy('http://transport.ignores.host/RPC2', transport)
+            ident = server.supervisor.getIdentification()
+        finally:
+            transport.close()
+        self.assertEqual(ident, "supervisor")
+
+    def test_issue_1483b_identifier_from_config_file(self):
+        """When the identifier is supplied in the config file only, that
+        identifier is used instead of the default."""
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1483b.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('supervisord started with pid')
+
+        from supervisor.compat import xmlrpclib
+        from supervisor.xmlrpc import SupervisorTransport
+        transport = SupervisorTransport('', '', 'unix:///tmp/issue-1483b.sock')
+        try:
+            server = xmlrpclib.ServerProxy('http://transport.ignores.host/RPC2', transport)
+            ident = server.supervisor.getIdentification()
+        finally:
+            transport.close()
+        self.assertEqual(ident, "from_config_file")
+
+    def test_issue_1483c_identifier_from_command_line(self):
+        """When an identifier is supplied in both the config file and on the
+        command line, the one from the command line is used."""
+        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1483c.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename, '-i', 'from_command_line']
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('supervisord started with pid')
+
+        from supervisor.compat import xmlrpclib
+        from supervisor.xmlrpc import SupervisorTransport
+        transport = SupervisorTransport('', '', 'unix:///tmp/issue-1483c.sock')
+        try:
+            server = xmlrpclib.ServerProxy('http://transport.ignores.host/RPC2', transport)
+            ident = server.supervisor.getIdentification()
+        finally:
+            transport.close()
+        self.assertEqual(ident, "from_command_line")
 
 def test_suite():
     return unittest.findTestCases(sys.modules[__name__])
