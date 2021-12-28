@@ -1,9 +1,7 @@
 _NOW = 1151365354
 _TIMEFORMAT = '%b %d %I:%M %p'
 
-import errno
 import functools
-import os
 
 from supervisor.compat import Fault
 from supervisor.compat import as_bytes
@@ -235,7 +233,6 @@ class DummyOptions:
         return self.tempfile_name
 
     def remove(self, path):
-        import os
         if self.remove_exception is not None:
             raise self.remove_exception
         self.removed.append(path)

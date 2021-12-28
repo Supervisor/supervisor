@@ -1448,7 +1448,7 @@ class SubprocessTests(unittest.TestCase):
     def test_transition_backoff_to_starting_supervisor_stopping(self):
         from supervisor import events
         emitted_events = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        events.subscribe(events.ProcessStateEvent, lambda x: emitted_events.append(x))
         from supervisor.states import ProcessStates, SupervisorStates
         options = DummyOptions()
         options.mood = SupervisorStates.SHUTDOWN
@@ -1490,7 +1490,7 @@ class SubprocessTests(unittest.TestCase):
     def test_transition_backoff_to_starting_supervisor_running_notyet(self):
         from supervisor import events
         emitted_events = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        events.subscribe(events.ProcessStateEvent, lambda x: emitted_events.append(x))
         from supervisor.states import ProcessStates, SupervisorStates
         options = DummyOptions()
         options.mood = SupervisorStates.RUNNING
