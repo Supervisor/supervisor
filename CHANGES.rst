@@ -1,6 +1,10 @@
 4.3.0.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug where the ``--identifier`` command line argument was ignored.
+  It was broken since at least 3.0a7 (released in 2009) and probably earlier.
+  Patch by Julien Le Cléach.
+
 4.2.3 (2021-12-27)
 ------------------
 
