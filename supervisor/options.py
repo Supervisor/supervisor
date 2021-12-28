@@ -543,8 +543,6 @@ class ServerOptions(Options):
         # self.serverurl may still be None if no servers at all are
         # configured in the config file
 
-        self.identifier = section.identifier
-
     def process_config(self, do_usage=True):
         Options.process_config(self, do_usage=do_usage)
 
