@@ -1,6 +1,6 @@
 name: Run all tests
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   tests:
