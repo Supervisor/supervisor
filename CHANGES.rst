@@ -1,5 +1,5 @@
-4.3.0.dev0 (Next Release)
--------------------------
+4.2.4 (2021-12-30)
+------------------
 
 - Fixed a bug where the ``--identifier`` command line argument was ignored.
   It was broken since at least 3.0a7 (released in 2009) and probably earlier.
