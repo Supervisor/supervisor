@@ -1,6 +1,10 @@
 4.3.0.dev0 (Next Release)
 -------------------------
 
+- ``supervisorctl`` now reads extra files included via the ``[include]``
+  section in ``supervisord.conf`` like ``supervisord`` does.  This allows
+  the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
+  included files.  Patch by François Granade.
 
 4.2.4 (2021-12-30)
 ------------------

@@ -1208,6 +1208,10 @@ configuration.
 
   *Changed*: 3.3.0.  Added support for the ``host_node_name`` expansion.
 
+  *Changed*: 4.3.0.  Added support to :program:`supervisorctl` for reading
+  files specified in the ``[include]`` section.  In previous versions,
+  the ``[include]`` section was only supported by :program:`supervisord`.
+
 ``[include]`` Section Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
