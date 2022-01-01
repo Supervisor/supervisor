@@ -1683,8 +1683,6 @@ class ClientOptions(Options):
         if not self.args:
             self.interactive = 1
 
-        self.exit_on_error = 0 if self.interactive else 1
-
         format = '%(levelname)s: %(message)s\n'
         logger = loggers.getLogger()
         loggers.handle_stdout(logger, format)
