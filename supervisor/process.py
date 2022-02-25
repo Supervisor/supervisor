@@ -5,6 +5,7 @@ import signal
 import shlex
 import time
 import traceback
+import psutil
 
 from supervisor.compat import maxint
 from supervisor.compat import as_bytes
@@ -464,6 +465,11 @@ class Subprocess(object):
 
         try:
             try:
+                # make sure all child processes are properly stopped as well
+                parent = psutil.Process(abs(pid))
+                for child in parent.children(recursive=True):  # or parent.children() for recursive=False
+                    # kill child processes with same signal as parent
+                    options.kill(child.pid, sig)
                 options.kill(pid, sig)
             except OSError as exc:
                 if exc.errno == errno.ESRCH:
