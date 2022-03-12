@@ -15,6 +15,7 @@ from supervisor.datatypes import (
 
 from supervisor.options import readFile
 from supervisor.options import tailFile
+from supervisor.options import BadCommand
 from supervisor.options import NotExecutable
 from supervisor.options import NotFound
 from supervisor.options import NoPermission
@@ -293,7 +294,7 @@ class SupervisorNamespaceRPCInterface:
             filename, argv = process.get_execv_args()
         except NotFound as why:
             raise RPCError(Faults.NO_FILE, why.args[0])
-        except (NotExecutable, NoPermission) as why:
+        except (BadCommand, NotExecutable, NoPermission) as why:
             raise RPCError(Faults.NOT_EXECUTABLE, why.args[0])
 
         if process.get_state() in RUNNING_STATES:

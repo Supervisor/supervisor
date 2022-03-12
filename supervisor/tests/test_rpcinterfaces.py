@@ -369,6 +369,18 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         self._assertRPCError(xmlrpc.Faults.NO_FILE,
                              interface.startProcess, 'foo')
 
+    def test_startProcess_bad_command(self):
+        options = DummyOptions()
+        pconfig = DummyPConfig(options, 'foo', '/foo/bar', autostart=False)
+        from supervisor.options import BadCommand
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
+        process = supervisord.process_groups['foo'].processes['foo']
+        process.execv_arg_exception = BadCommand
+        interface = self._makeOne(supervisord)
+        from supervisor import xmlrpc
+        self._assertRPCError(xmlrpc.Faults.NOT_EXECUTABLE,
+                             interface.startProcess, 'foo')
+
     def test_startProcess_file_not_executable(self):
         options = DummyOptions()
         pconfig  = DummyPConfig(options, 'foo', '/foo/bar', autostart=False)
