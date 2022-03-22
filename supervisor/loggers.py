@@ -51,6 +51,7 @@ def getLevelNumByDescription(description):
 
 class Handler:
     fmt = '%(message)s'
+    datefmt = ""
     level = LevelsByName.INFO
 
     def __init__(self, stream=None):
@@ -59,6 +60,9 @@ class Handler:
 
     def setFormat(self, fmt):
         self.fmt = fmt
+
+    def setDateFormat(self, datefmt):
+        self.datefmt = datefmt
 
     def setLevel(self, level):
         self.level = level
@@ -95,7 +99,10 @@ class Handler:
             if binary:
                 msg = record.msg
             else:
-                msg = self.fmt % record.asdict()
+                if isinstance(self, FileHandler) and self.datefmt is not None:
+                    msg = self.fmt % record.asdict(self.datefmt)
+                else:
+                    msg = self.fmt % record.asdict()
                 if binary_stream:
                     msg = msg.encode('utf-8')
             try:
@@ -282,7 +289,7 @@ class LogRecord:
         self.kw = kw
         self.dictrepr = None
 
-    def asdict(self):
+    def asdict(self, datefmt=None):
         if self.dictrepr is None:
             now = time.time()
             msecs = (now - long(now)) * 1000
@@ -294,13 +301,16 @@ class LogRecord:
                 msg = msg % self.kw
             self.dictrepr = {'message':msg, 'levelname':levelname,
                              'asctime':asctime}
+            if datefmt:
+                self.dictrepr['custime'] = time.strftime(datefmt, time.localtime(now))
         return self.dictrepr
 
 class Logger:
-    def __init__(self, level=None, handlers=None):
+    def __init__(self, level=None, handlers=None, datefmt=None):
         if level is None:
             level = LevelsByName.INFO
         self.level = level
+        self.datefmt = datefmt
 
         if handlers is None:
             handlers = []
@@ -407,7 +417,7 @@ def handle_syslog(logger, fmt):
     handler.setLevel(logger.level)
     logger.addHandler(handler)
 
-def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
+def handle_file(logger, filename, fmt, datefmt=None, rotating=False, maxbytes=0, backups=0):
     """Attach a new file handler to an existing Logger. If the filename
     is the magic name of 'syslog' then make it a syslog handler instead."""
     if filename == 'syslog': # TODO remove this
@@ -417,6 +427,8 @@ def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
             handler = FileHandler(filename)
         else:
             handler = RotatingFileHandler(filename, 'a', maxbytes, backups)
+    if datefmt:
+        handler.setDateFormat(datefmt)
     handler.setFormat(fmt)
     handler.setLevel(logger.level)
     logger.addHandler(handler)

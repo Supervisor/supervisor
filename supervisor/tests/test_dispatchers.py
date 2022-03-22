@@ -607,6 +607,44 @@ class POutputDispatcherTests(unittest.TestCase):
         dispatcher.childlog.close()
         dispatcher.close()
 
+    def test_stdout_prepend_timestamp_format(self):
+        import time
+        from supervisor import loggers
+        from supervisor.loggers import getLogger
+
+        options = DummyOptions()
+        options.getLogger = getLogger  # actually use real logger
+        options.loglevel = loggers.LevelsByName.TRAC
+
+        logfile = '/tmp/foo'
+        message = "testing prepand"
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stdout_logfile=logfile, stdout_prepend_timestamp=True,
+                              stdout_prepend_timestamp_format="%H:%M:%S")
+        process = DummyProcess(config)
+
+        dispatcher = self._makeOne(process)
+        dispatcher.removelogs()
+        dispatcher.output_buffer = message
+        dispatcher.record_output()
+
+        # flush out the log into log files
+        [x.flush() for x in dispatcher.childlog.handlers]
+
+        # logger will prefix the stdout log with the timestamp down to milliseconds
+        # but not feasible to test to that resolution
+        timestamp_prefix = time.strftime("%H:%M:%S")
+
+        with open(logfile, 'rb') as f:
+            content = f.read()
+            # check if the timestamp is prepended to the log
+            self.assertEqual(timestamp_prefix.encode(), content[0:len(timestamp_prefix)])
+            # check if the message is at the end of the log line
+            self.assertEqual(message.encode(), content[-len(message):])
+
+        dispatcher.childlog.close()
+        dispatcher.close()
+
     def test_stderr_prepend_timestamp(self):
         import time
         from supervisor import loggers
@@ -643,6 +681,47 @@ class POutputDispatcherTests(unittest.TestCase):
 
         dispatcher.childlog.close()
         dispatcher.close()
+
+    def test_stderr_prepend_timestamp_format(self):
+        import time
+        from supervisor import loggers
+        from supervisor.loggers import getLogger
+
+        options = DummyOptions()
+        options.getLogger = getLogger  # actually use real logger
+        options.loglevel = loggers.LevelsByName.TRAC
+
+        logfile = '/tmp/foo'
+        message = "testing prepand"
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                              stderr_logfile=logfile, stderr_prepend_timestamp=True,
+                              stderr_prepend_timestamp_format="%H:%M:%S")
+        process = DummyProcess(config)
+
+        dispatcher = self._makeOne(process, channel='stderr')
+        dispatcher.output_buffer = message
+        dispatcher.removelogs()
+        dispatcher.record_output()
+
+        # flush out the log into log files
+        [x.flush() for x in dispatcher.childlog.handlers]
+
+        # logger will prefix the stdout log with the timestamp down to milliseconds
+        # but not feasible to test to that resolution
+        timestamp_prefix = time.strftime("%H:%M:%S")
+
+        with open(logfile, 'rb') as f:
+            content = f.read()
+            # check if the timestamp is prepended to the log
+            self.assertEqual(timestamp_prefix.encode(), content[0:len(timestamp_prefix)])
+            # check if the message is at the end of the log line
+            self.assertEqual(message.encode(), content[-len(message):])
+
+        dispatcher.childlog.close()
+        dispatcher.close()
+
+
+
 
 class PInputDispatcherTests(unittest.TestCase):
     def _getTargetClass(self):

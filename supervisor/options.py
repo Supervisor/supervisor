@@ -1000,6 +1000,10 @@ class ServerOptions(Options):
                 prepend_ts = boolean(get(section, prepend_ts_key, False))
                 logfiles[prepend_ts_key] = prepend_ts
 
+                prepend_ts_fmt_key = '%s_prepend_timestamp_format' % k
+                prepend_ts_fmt = get(section, prepend_ts_fmt_key, "%%Y-%%m-%%d %%H:%%M:%%S")
+                logfiles[prepend_ts_fmt_key] = prepend_ts_fmt
+
                 # rewrite deprecated "syslog" magic logfile into the equivalent
                 # TODO remove this in a future version
                 if lf_val is Syslog:
@@ -1044,6 +1048,7 @@ class ServerOptions(Options):
                 uid=uid,
                 stdout_logfile=logfiles['stdout_logfile'],
                 stdout_prepend_timestamp = logfiles['stdout_prepend_timestamp'],
+                stdout_prepend_timestamp_format = logfiles['stdout_prepend_timestamp_format'],
                 stdout_capture_maxbytes = stdout_cmaxbytes,
                 stdout_events_enabled = stdout_events,
                 stdout_logfile_backups=logfiles['stdout_logfile_backups'],
@@ -1051,6 +1056,7 @@ class ServerOptions(Options):
                 stdout_syslog=logfiles['stdout_syslog'],
                 stderr_logfile=logfiles['stderr_logfile'],
                 stderr_prepend_timestamp = logfiles['stderr_prepend_timestamp'],
+                stderr_prepend_timestamp_format = logfiles['stderr_prepend_timestamp_format'],
                 stderr_capture_maxbytes = stderr_cmaxbytes,
                 stderr_events_enabled = stderr_events,
                 stderr_logfile_backups=logfiles['stderr_logfile_backups'],
@@ -1881,7 +1887,8 @@ class ProcessConfig(Config):
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
         'exitcodes', 'redirect_stderr' ]
-    optional_param_names = [ 'environment', 'serverurl', 'stdout_prepend_timestamp', 'stderr_prepend_timestamp' ]
+    optional_param_names = ['environment', 'serverurl', 'stdout_prepend_timestamp', 'stdout_prepend_timestamp_format',
+                            'stderr_prepend_timestamp', 'stderr_prepend_timestamp_format']
 
     def __init__(self, options, **params):
         self.options = options
