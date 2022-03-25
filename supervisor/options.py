@@ -942,6 +942,7 @@ class ServerOptions(Options):
         serverurl = get(section, 'serverurl', None)
         if serverurl and serverurl.strip().upper() == 'AUTO':
             serverurl = None
+        disable_force_shutdown  = get(section, 'disable_force_shutdown', False)
 
         # find uid from "user" option
         user = get(section, 'user', None)

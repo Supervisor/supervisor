@@ -467,10 +467,14 @@ class Subprocess(object):
             try:
                 # make sure all child processes are properly stopped as well
                 parent = psutil.Process(abs(pid))
-                for child in parent.children(recursive=True):  # or parent.children() for recursive=False
-                    # kill child processes with same signal as parent
+                children = parent.children(recursive=True)
+                for child in reversed(children):
+                    # kill all child processes with same signal as parent
                     options.kill(child.pid, sig)
+                    self.kill_process_after_timeout_is_reached(child.pid)
                 options.kill(pid, sig)
+                self.kill_process_after_timeout_is_reached(pid)
+
             except OSError as exc:
                 if exc.errno == errno.ESRCH:
                     msg = ("unable to signal %s (pid %s), it probably just exited "
@@ -491,6 +495,17 @@ class Subprocess(object):
             return msg
 
         return None
+
+    def kill_process_after_timeout_is_reached(self, pid, timeout=30):
+        start_time = time.time()
+        while time.time() < start_time + timeout:
+            if psutil.pid_exists(pid):
+                time.sleep(1)
+            else:
+                return
+        if not self.config.disable_force_shutdown:
+            # Send SIGKILL if process does not terminate succesfully
+            self.config.options.kill(pid, signal.SIGKILL)
 
     def signal(self, sig):
         """Send a signal to the subprocess, without intending to kill it.
