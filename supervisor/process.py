@@ -569,9 +569,9 @@ class Subprocess(object):
             self._assertInState(ProcessStates.STOPPING)
             self.change_state(ProcessStates.STOPPED)
             if exit_expected:
-               self.config.options.logger.info(msg)
+                self.config.options.logger.info(msg)
             else:
-               self.config.options.logger.warn(msg)
+                self.config.options.logger.warn(msg)
 
 
         elif too_quickly:
