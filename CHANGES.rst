@@ -1,6 +1,10 @@
 4.3.0.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug where the XML-RPC method ``supervisor.startProcess()`` would
+  return 500 Internal Server Error instead of an XML-RPC fault response
+  if the command could not be parsed.  Patch by Julien Le Cléach.
+
 - ``supervisorctl`` now reads extra files included via the ``[include]``
   section in ``supervisord.conf`` like ``supervisord`` does.  This allows
   the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
