@@ -6,6 +6,10 @@
   the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
   included files.  Patch by François Granade.
 
+- If ``supervisord`` searches the default paths for its config file (no
+  ``-c`` flag given), it will now print a message showing the path of the
+  config file that it loaded.  Patch by Alexander Tuna.
+
 4.2.4 (2021-12-30)
 ------------------
 
