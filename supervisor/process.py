@@ -568,6 +568,11 @@ class Subprocess(object):
             msg = "stopped: %s (%s)" % (processname, msg)
             self._assertInState(ProcessStates.STOPPING)
             self.change_state(ProcessStates.STOPPED)
+            if exit_expected:
+               self.config.options.logger.info(msg)
+            else:
+               self.config.options.logger.warn(msg)
+
 
         elif too_quickly:
             # the program did not stay up long enough to make it to RUNNING
@@ -577,6 +582,7 @@ class Subprocess(object):
             msg = "exited: %s (%s)" % (processname, msg + "; not expected")
             self._assertInState(ProcessStates.STARTING)
             self.change_state(ProcessStates.BACKOFF)
+            self.config.options.logger.warn(msg)
 
         else:
             # this finish was not the result of a stop request, the
@@ -598,13 +604,13 @@ class Subprocess(object):
                 # expected exit code
                 msg = "exited: %s (%s)" % (processname, msg + "; expected")
                 self.change_state(ProcessStates.EXITED, expected=True)
+                self.config.options.logger.info(msg)
             else:
                 # unexpected exit code
                 self.spawnerr = 'Bad exit code %s' % es
                 msg = "exited: %s (%s)" % (processname, msg + "; not expected")
                 self.change_state(ProcessStates.EXITED, expected=False)
-
-        self.config.options.logger.info(msg)
+                self.config.options.logger.warn(msg)
 
         self.pid = 0
         self.config.options.close_parent_pipes(self.pipes)
