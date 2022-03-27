@@ -2,6 +2,10 @@
 -------------------------
 
 
+- The return value of the XML-RPC method ``supervisor.getAllConfigInfo()``
+  now includes the ``directory``, ``uid``, and ``serverurl`` of the
+  program.  Patch by Yellmean.
+
 4.2.4 (2021-12-30)
 ------------------
 
