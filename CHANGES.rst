@@ -10,6 +10,10 @@
   ``-c`` flag given), it will now print a message showing the path of the
   config file that it loaded.  Patch by Alexander Tuna.
 
+- The return value of the XML-RPC method ``supervisor.getAllConfigInfo()``
+  now includes the ``directory``, ``uid``, and ``serverurl`` of the
+  program.  Patch by Yellmean.
+
 4.2.4 (2021-12-30)
 ------------------
 
