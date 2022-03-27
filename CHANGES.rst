@@ -1,6 +1,12 @@
 4.3.0.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug where the XML-RPC method ``supervisor.startProcess()`` would
+  return 500 Internal Server Error instead of an XML-RPC fault response
+  if the command could not be parsed.  Patch by Julien Le Cléach.
+
+- Fixed a bug on Python 2.7 where a ``UnicodeDecodeError`` may have occurred
+  when using the web interface.  Patch by Vinay Sajip.
 
 - The return value of the XML-RPC method ``supervisor.getAllConfigInfo()``
   now includes the ``directory``, ``uid``, and ``serverurl`` of the
