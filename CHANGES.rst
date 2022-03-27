@@ -13,13 +13,17 @@
   the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
   included files.  Patch by François Granade.
 
+- The return value of the XML-RPC method ``supervisor.getAllConfigInfo()``
+  now includes the ``directory``, ``uid``, and ``serverurl`` of the
+  program.  Patch by Yellmean.
+
 - If ``supervisord`` searches the default paths for its config file (no
   ``-c`` flag given), it will now print a message showing the path of the
   config file that it loaded.  Patch by Alexander Tuna.
 
-- The return value of the XML-RPC method ``supervisor.getAllConfigInfo()``
-  now includes the ``directory``, ``uid``, and ``serverurl`` of the
-  program.  Patch by Yellmean.
+- If a subprocess exits with a unexpected exit code (one not listed in
+  ``exitcodes=`` in a ``[program:x]`` section) then the exit will now be logged
+  at the ``WARN`` level instead of ``INFO``.  Patch by Precy Lee.
 
 4.2.4 (2021-12-30)
 ------------------
