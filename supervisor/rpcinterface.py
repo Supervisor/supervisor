@@ -411,7 +411,7 @@ class SupervisorNamespaceRPCInterface:
         if process.get_state() not in RUNNING_STATES:
             raise RPCError(Faults.NOT_RUNNING, name)
 
-        msg = process.stop()
+        msg = process.stop(self.supervisord)
         if msg is not None:
             raise RPCError(Faults.FAILED, msg)
 

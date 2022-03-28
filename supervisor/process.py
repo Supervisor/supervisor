@@ -377,11 +377,11 @@ class Subprocess(object):
             if self.delay > 0 and test_time < (self.delay - self.backoff):
                 self.delay = test_time + self.backoff
 
-    def stop(self):
+    def stop(self, supervisor):
         """ Administrative stop """
         self.administrative_stop = True
         self.laststopreport = 0
-        return self.kill(self.config.stopsignal)
+        return self.kill(self.config.stopsignal, supervisor)
 
     def stop_report(self):
         """ Log a 'waiting for x to stop' message with throttling. """
@@ -402,7 +402,7 @@ class Subprocess(object):
         self._assertInState(ProcessStates.BACKOFF)
         self.change_state(ProcessStates.FATAL)
 
-    def kill(self, sig):
+    def kill(self, sig, supervisor):
         """Send a signal to the subprocess with the intention to kill
         it (to make it exit).  This may or may not actually kill it.
 
@@ -471,9 +471,12 @@ class Subprocess(object):
                 for child in reversed(children):
                     # kill all child processes with same signal as parent
                     options.kill(child.pid, sig)
-                    self.kill_process_after_timeout_is_reached(child.pid)
+                    # add to list but only if not disabled
+                    if not self.config.disable_force_shutdown and sig is not signal.SIGKILL:
+                        supervisor.terminated_processes.append((child.pid, time.time()))
                 options.kill(pid, sig)
-                self.kill_process_after_timeout_is_reached(pid)
+                if not self.config.disable_force_shutdown and sig is not signal.SIGKILL:
+                        supervisor.terminated_processes.append((pid, time.time()))
 
             except OSError as exc:
                 if exc.errno == errno.ESRCH:
@@ -495,17 +498,6 @@ class Subprocess(object):
             return msg
 
         return None
-
-    def kill_process_after_timeout_is_reached(self, pid, timeout=30):
-        start_time = time.time()
-        while time.time() < start_time + timeout:
-            if psutil.pid_exists(pid):
-                time.sleep(1)
-            else:
-                return
-        if not self.config.disable_force_shutdown:
-            # Send SIGKILL if process does not terminate succesfully
-            self.config.options.kill(pid, signal.SIGKILL)
 
     def signal(self, sig):
         """Send a signal to the subprocess, without intending to kill it.
@@ -736,7 +728,7 @@ class Subprocess(object):
                 self.config.options.logger.warn(
                     'killing \'%s\' (%s) with SIGKILL' % (processname,
                                                           self.pid))
-                self.kill(signal.SIGKILL)
+                self.kill(signal.SIGKILL, supervisor)
 
 class FastCGISubprocess(Subprocess):
     """Extends Subprocess class to handle FastCGI subprocesses"""
@@ -831,7 +823,7 @@ class ProcessGroupBase(object):
         for process in self.processes.values():
             process.reopenlogs()
 
-    def stop_all(self):
+    def stop_all(self, supervisor):
         processes = list(self.processes.values())
         processes.sort()
         processes.reverse() # stop in desc priority order
@@ -840,10 +832,10 @@ class ProcessGroupBase(object):
             state = proc.get_state()
             if state == ProcessStates.RUNNING:
                 # RUNNING -> STOPPING
-                proc.stop()
+                proc.stop(supervisor)
             elif state == ProcessStates.STARTING:
                 # STARTING -> STOPPING
-                proc.stop()
+                proc.stop(supervisor)
             elif state == ProcessStates.BACKOFF:
                 # BACKOFF -> FATAL
                 proc.give_up()
