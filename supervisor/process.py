@@ -204,6 +204,10 @@ class Subprocess(object):
         """Start the subprocess.  It must not be running already.
 
         Return the process id.  If the fork() call fails, return None.
+        Parameters:
+            supervisor : supervisord instance. This parameter is required
+            to keep track of all dependent processes in
+            supervisor.process_spawn_dict
         """
         if self.config.depends_on is not None and not supervisor.abort_queing :
             if any([dependee.state is not ProcessStates.RUNNING for dependee in
@@ -672,6 +676,12 @@ class Subprocess(object):
         return self.state
 
     def transition(self, supervisor=None):
+        """
+        Parameters:
+            supervisor : supervisord instance. This parameter is required
+            to keep track of all dependent processes in
+            supervisor.process_spawn_dict
+        """
         now = time.time()
         state = self.state
 
@@ -753,9 +763,13 @@ class FastCGISubprocess(Subprocess):
                                       '%s:%s' % (self.group, dir(self.group)))
         self.fcgi_sock = self.group.socket_manager.get_socket()
 
-    def spawn(self):
+    def spawn(self, supervisor=None):
         """
         Overrides Subprocess.spawn() so we can hook in before it happens
+        Parameters:
+            supervisor : This parameter has no effect and is only for
+            not breaking the tests. This would be needed for the depends_on
+            feature which is not available for FastCGI subprocesses.
         """
         self.before_spawn()
         pid = Subprocess.spawn(self)
@@ -861,6 +875,12 @@ class ProcessGroupBase(object):
 
 class ProcessGroup(ProcessGroupBase):
     def transition(self, supervisor=None):
+        """
+        Parameters:
+            supervisor : supervisord instance. This parameter is required
+            to keep track of all dependent processes in
+            supervisor.process_spawn_dict
+        """
         for proc in self.processes.values():
             proc.transition(supervisor)
 
@@ -897,11 +917,17 @@ class EventListenerPool(ProcessGroupBase):
             # rebuffer the event
             self._acceptEvent(event.event, head=True)
 
-    def transition(self):
+    def transition(self, supervisor=None):
+        """
+        Parameters:
+            supervisor : This parameter has no effect and is only for
+            not breaking the tests. This would be needed for the depends_on
+            feature which is not available for EventListenerPool.
+        """
         processes = self.processes.values()
         dispatch_capable = False
         for process in processes:
-            process.transition()
+            process.transition(supervisor)
             # this is redundant, we do it in _dispatchEvent too, but we
             # want to reduce function call overhead
             if process.state == ProcessStates.RUNNING:
