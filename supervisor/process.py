@@ -377,7 +377,7 @@ class Subprocess(object):
             if self.delay > 0 and test_time < (self.delay - self.backoff):
                 self.delay = test_time + self.backoff
 
-    def stop(self, supervisor):
+    def stop(self, supervisor=None):
         """ Administrative stop """
         self.administrative_stop = True
         self.laststopreport = 0
@@ -402,12 +402,18 @@ class Subprocess(object):
         self._assertInState(ProcessStates.BACKOFF)
         self.change_state(ProcessStates.FATAL)
 
-    def kill(self, sig, supervisor):
+    def kill(self, sig, supervisor=None):
         """Send a signal to the subprocess with the intention to kill
         it (to make it exit).  This may or may not actually kill it.
 
         Return None if the signal was sent, or an error message string
         if an error occurred or if the subprocess is not running.
+        Parameters:
+            sig: signal to kill the process
+            supervsior: supervisor instance to keep track of signaled
+            processes. This is needed to check if a process properly
+            terminated. If no supervisor instance is given, this will
+            not be checked.
         """
         now = time.time()
         options = self.config.options
@@ -471,11 +477,11 @@ class Subprocess(object):
                 for child in reversed(children):
                     # kill all child processes with same signal as parent
                     options.kill(child.pid, sig)
-                    # add to list but only if not disabled
-                    if not self.config.disable_force_shutdown and sig is not signal.SIGKILL:
+                    # add to list but only if not disabled and supervisor instance provided
+                    if not self.config.disable_force_shutdown and sig is not signal.SIGKILL and supervisor is not None:
                         supervisor.terminated_processes.append((child.pid, time.time()))
                 options.kill(pid, sig)
-                if not self.config.disable_force_shutdown and sig is not signal.SIGKILL:
+                if not self.config.disable_force_shutdown and sig is not signal.SIGKILL and supervisor is not None:
                         supervisor.terminated_processes.append((pid, time.time()))
 
             except OSError as exc:
@@ -666,7 +672,7 @@ class Subprocess(object):
     def get_state(self):
         return self.state
 
-    def transition(self):
+    def transition(self, supervisor=None):
         now = time.time()
         state = self.state
 
@@ -823,7 +829,7 @@ class ProcessGroupBase(object):
         for process in self.processes.values():
             process.reopenlogs()
 
-    def stop_all(self, supervisor):
+    def stop_all(self, supervisor=None):
         processes = list(self.processes.values())
         processes.sort()
         processes.reverse() # stop in desc priority order
