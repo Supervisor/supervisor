@@ -475,11 +475,17 @@ class Subprocess(object):
                 parent = psutil.Process(abs(pid))
                 children = parent.children(recursive=True)
                 for child in reversed(children):
-                    # kill all child processes with same signal as parent
-                    options.kill(child.pid, sig)
-                    # add to list but only if not disabled and supervisor instance provided
-                    if not self.config.disable_force_shutdown and sig is not signal.SIGKILL and supervisor is not None:
-                        supervisor.terminated_processes.append((child.pid, time.time()))
+                    try:
+                        # kill all child processes with same signal as parent
+                        options.kill(child.pid, sig)
+                        # add to list but only if not disabled
+                        if not self.config.disable_force_shutdown and sig is not signal.SIGKILL:
+                            supervisor.terminated_processes.append((child.pid, time.time()))
+                    except PermissionError:
+                        msg = ("No permission to signal child process with name '%s' and pid %i of parent process '%s' with pid %i. "
+                              % (child.name(), child.pid, parent.name(), parent.pid)
+                              + "Will continue with sending %s to parent process" % (sig.name))
+                        options.logger.warn(msg)
                 options.kill(pid, sig)
                 if not self.config.disable_force_shutdown and sig is not signal.SIGKILL and supervisor is not None:
                         supervisor.terminated_processes.append((pid, time.time()))
