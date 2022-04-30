@@ -1442,9 +1442,9 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
                 "section [inet_http_server] has no port value")
 
     def test_cleanup_afunix_unlink(self):
-        fn = tempfile.mktemp()
-        with open(fn, 'w') as f:
-            f.write('foo')
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            fn = f.name
+            f.write(b'foo')
         instance = self._makeOne()
         instance.unlink_socketfiles = True
         class Server:
@@ -1456,10 +1456,10 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         self.assertFalse(os.path.exists(fn))
 
     def test_cleanup_afunix_nounlink(self):
-        fn = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            fn = f.name
+            f.write(b'foo')
         try:
-            with open(fn, 'w') as f:
-                f.write('foo')
             instance = self._makeOne()
             class Server:
                 pass
@@ -1477,10 +1477,10 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
 
     def test_cleanup_afunix_ignores_oserror_enoent(self):
         notfound = os.path.join(os.path.dirname(__file__), 'notfound')
-        socketname = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            socketname = f.name
+            f.write(b'foo')
         try:
-            with open(socketname, 'w') as f:
-                f.write('foo')
             instance = self._makeOne()
             instance.unlink_socketfiles = True
             class Server:
@@ -1499,10 +1499,10 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
                 pass
 
     def test_cleanup_removes_pidfile(self):
-        pidfile = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            pidfile = f.name
+            f.write(b'2')
         try:
-            with open(pidfile, 'w') as f:
-                f.write('2')
             instance = self._makeOne()
             instance.pidfile = pidfile
             instance.logger = DummyLogger()
@@ -1523,10 +1523,9 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         instance.cleanup() # shouldn't raise
 
     def test_cleanup_does_not_remove_pidfile_from_another_supervisord(self):
-        pidfile = tempfile.mktemp()
-
-        with open(pidfile, 'w') as f:
-            f.write('1234')
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            pidfile = f.name
+            f.write(b'1234')
 
         try:
             instance = self._makeOne()
@@ -1544,10 +1543,10 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
                 pass
 
     def test_cleanup_closes_poller(self):
-        pidfile = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            pidfile = f.name
+            f.write(b'2')
         try:
-            with open(pidfile, 'w') as f:
-                f.write('2')
             instance = self._makeOne()
             instance.pidfile = pidfile
 
@@ -1648,7 +1647,8 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         self.assertEqual(logger.data[0], 'supervisord logreopen')
 
     def test_write_pidfile_ok(self):
-        fn = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            fn = f.name
         try:
             instance = self._makeOne()
             instance.logger = DummyLogger()

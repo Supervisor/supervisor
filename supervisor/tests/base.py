@@ -593,8 +593,8 @@ def makeExecutable(file, substitutions=None):
     for key in substitutions.keys():
         data = data.replace('<<%s>>' % key.upper(), substitutions[key])
 
-    tmpnam = tempfile.mktemp(prefix=last)
-    with open(tmpnam, 'w') as f:
+    with tempfile.NamedTemporaryFile(prefix=last, delete=False) as f:
+        tmpnam = f.name
         f.write(data)
     os.chmod(tmpnam, 0o755)
     return tmpnam
