@@ -354,21 +354,25 @@ class Supervisor:
         process_spawn_dict. Spawn all processes which are ready
         (All dependees RUNNING or process without dependees)
         """
-        if self.process_spawn_dict:
-            for process_name, process_object in list(self.process_spawn_dict.items()):
-                if process_object.config.depends_on is not None:
-                    if self._any_dependee_failed(process_object):
-                        self._empty_queue()
-                        break
-                    if self._all_dependees_running(process_object):
-                        self._spawn_process_from_process_dict(process_name, process_object)
-                else:
+        for process_name, process_object in list(self.process_spawn_dict.items()):
+            if process_object.config.depends_on is not None:
+                failed_depending_processes = self._get_failed_depending_processes(process_object)
+                if failed_depending_processes:
+                    self._remove_failed_process_and_dependency_from_queue(process_object, failed_depending_processes)
+                    break
+                if self._all_dependees_running(process_object):
                     self._spawn_process_from_process_dict(process_name, process_object)
+            else:
+                self._spawn_process_from_process_dict(process_name, process_object)
 
-    def _any_dependee_failed(self, process_object):
-        return any([dependee.state is ProcessStates.BACKOFF or dependee.state
-                    is ProcessStates.FATAL for dependee in
-                    process_object.config.depends_on.values()])
+    def _get_failed_depending_processes(self, process_object):
+        """ Return all processes in the dependency chain which have failed.
+        """
+        failed_depending_processes = dict()
+        for dependee in process_object.config.depends_on.values():
+            if dependee.state is ProcessStates.BACKOFF or dependee.state is ProcessStates.FATAL:
+                failed_depending_processes[dependee.config.name] = dependee
+        return failed_depending_processes
 
     def _all_dependees_running(self, process_object):
         return all([dependee.state is ProcessStates.RUNNING for dependee in
@@ -383,9 +387,31 @@ class Supervisor:
             process_object.spawn(self)
         process_object.notify_timer = 5
 
-    def _empty_queue(self):
-        self.process_spawn_set = set()
-        self.process_spawn_dict = dict()
+    def _remove_processes_from_queue(self, processes):
+        for process_name in processes:
+            self.process_spawn_dict.pop(process_name, None)
+
+    def _remove_failed_process_and_dependency_from_queue(self, process_object, failed_depending_processes):
+        not_startable_processes = []
+        for failed_process_name, failed_process in failed_depending_processes.items():
+            not_startable_processes.append(failed_process_name)
+            # get all processes which can not be spawned any longer because any dependency failed
+            for process_name, process_object in self.process_spawn_dict.items():
+                if self.g.connected(process_name, failed_process_name):
+                    not_startable_processes.append(process_name)
+                    if process_object.config.autostart:
+                        process_object.config.autostart=False
+                        msg = ("Disabling the autostart of process {}, "
+                               "because a dependent process failed to start".format(process_name))
+                        process_object.config.options.logger.warn(msg)
+                    msg = ("Trying to start process {}. "
+                           "Any of the dependent processe(s) failed to start. "
+                           "Please fix all processe(s) in FATAL state or restart these manually, "
+                           "otherwise process {} can not be started"
+                           .format(process_name,
+                                   process_name))
+                    process_object.config.options.logger.warn(msg)
+        self._remove_processes_from_queue(not_startable_processes)
 
     def _handle_spawn_timeout(self):
         """
@@ -413,11 +439,10 @@ class Supervisor:
 
     def _timeout_process(self, process_name, process_object):
         msg = ("timeout: dependee process {} in {} did not reach RUNNING within"
-                " {} seconds, checking now if dependees {} can be spawned"
+                " {} seconds."
                 .format(process_name,
                         getProcessStateDescription(process_object.state),
-                        process_object.config.spawn_timeout,
-                        [process for process in self.process_spawn_dict.keys()]))
+                        process_object.config.spawn_timeout))
         process_object.config.options.logger.warn(msg)
         process_object.stop()
         # keep track of the process that timed out - will be set to FATAL in
