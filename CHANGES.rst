@@ -8,6 +8,8 @@
 - Fixed a bug on Python 2.7 where a ``UnicodeDecodeError`` may have occurred
   when using the web interface.  Patch by Vinay Sajip.
 
+- Removed use of URL parsing functions deprecated in Python 3.8.
+
 - ``supervisorctl`` now reads extra files included via the ``[include]``
   section in ``supervisord.conf`` like ``supervisord`` does.  This allows
   the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
