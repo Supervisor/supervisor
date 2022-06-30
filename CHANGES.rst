@@ -8,6 +8,8 @@
 - Fixed a bug on Python 2.7 where a ``UnicodeDecodeError`` may have occurred
   when using the web interface.  Patch by Vinay Sajip.
 
+- Removed use of URL parsing functions deprecated in Python 3.8.
+
 - The return value of the XML-RPC method ``supervisor.getAllConfigInfo()``
   now includes the ``directory``, ``uid``, and ``serverurl`` of the
   program.  Patch by Yellmean.
