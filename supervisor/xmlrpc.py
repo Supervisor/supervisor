@@ -5,11 +5,11 @@ import sys
 import time
 import traceback
 import types
+import urllib.parse
 from xml.etree.ElementTree import iterparse
 
 from supervisor.compat import xmlrpclib
 from supervisor.compat import StringIO
-from supervisor.compat import urllib
 from supervisor.compat import as_bytes
 from supervisor.compat import as_string
 from supervisor.compat import encodestring
@@ -486,14 +486,12 @@ class SupervisorTransport(xmlrpclib.Transport):
         self.verbose = False
         self.serverurl = serverurl
         if serverurl.startswith('http://'):
-            type, uri = urllib.splittype(serverurl)
-            host, path = urllib.splithost(uri)
-            host, port = urllib.splitport(host)
-            if port is None:
+            srv_url = urllib.parse.urlparse(serverurl)
+            if srv_url.port is None:
                 port = 80
             else:
-                port = int(port)
-            def get_connection(host=host, port=port):
+                port = int(srv_url.port)
+            def get_connection(host=srv_url.hostname, port=port):
                 return httplib.HTTPConnection(host, port)
             self._get_connection = get_connection
         elif serverurl.startswith('unix://'):
