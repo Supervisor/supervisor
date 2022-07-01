@@ -605,7 +605,7 @@ class TopLevelFunctionTests(unittest.TestCase):
                 if socketfile is not None:
                     os.unlink(socketfile)
         finally:
-            from asyncore import socket_map
+            from supervisor.medusa.asyncore_25 import socket_map
             socket_map.clear()
         return servers
 

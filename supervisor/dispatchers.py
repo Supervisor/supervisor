@@ -1,4 +1,5 @@
 import errno
+from supervisor.medusa.asynchat_25 import find_prefix_at_end
 from supervisor.medusa.asyncore_25 import compact_traceback
 
 from supervisor.compat import as_string
@@ -9,12 +10,6 @@ from supervisor.events import ProcessLogStdoutEvent
 from supervisor.states import EventListenerStates
 from supervisor.states import getEventListenerStateDescription
 from supervisor import loggers
-
-def find_prefix_at_end(haystack, needle):
-    l = len(needle) - 1
-    while l and not haystack.endswith(needle[:l]):
-        l -= 1
-    return l
 
 class PDispatcher:
     """ Asyncore dispatcher for mainloop, representing a process channel

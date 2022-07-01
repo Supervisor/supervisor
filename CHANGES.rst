@@ -8,7 +8,10 @@
 - Fixed a bug on Python 2.7 where a ``UnicodeDecodeError`` may have occurred
   when using the web interface.  Patch by Vinay Sajip.
 
-- Removed use of URL parsing functions deprecated in Python 3.8.
+- Removed use of ``urllib.parse`` functions ``splithost``, ``splitport``, and
+  ``splittype`` deprecated in Python 3.8.
+
+- Removed use of ``asynchat`` and ``asyncore`` deprecated in Python 3.10.
 
 - The return value of the XML-RPC method ``supervisor.getAllConfigInfo()``
   now includes the ``directory``, ``uid``, and ``serverurl`` of the
