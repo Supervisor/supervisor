@@ -1287,6 +1287,16 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         out = plugin.ctl.stdout.getvalue()
         self.assertTrue("Shut the remote supervisord down" in out)
 
+    def test_shutdown_with_arg_shows_error(self):
+        plugin = self._makeOne()
+        options = plugin.ctl.options
+        result = plugin.do_shutdown('bad')
+        self.assertEqual(result, None)
+        self.assertEqual(options._server.supervisor._shutdown, False)
+        val = plugin.ctl.stdout.getvalue()
+        self.assertTrue(val.startswith('Error: shutdown accepts no arguments'), val)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitExitStatuses.GENERIC)
+
     def test_shutdown(self):
         plugin = self._makeOne()
         options = plugin.ctl.options
