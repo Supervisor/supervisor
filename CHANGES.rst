@@ -21,6 +21,9 @@
   ``exitcodes=`` in a ``[program:x]`` section) then the exit will now be logged
   at the ``WARN`` level instead of ``INFO``.  Patch by Precy Lee.
 
+- ``supervisorctl shutdown`` now shows an error message if an argument is
+  given.
+
 4.2.4 (2021-12-30)
 ------------------
 
