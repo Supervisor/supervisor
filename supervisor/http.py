@@ -739,7 +739,7 @@ class logtail_handler:
         if logfile is None or not os.path.exists(logfile):
             # we return 404 because no logfile is a temporary condition.
             # if the process has never been started, no logfile will exist
-            # on disk.  a logfile of None is also a temporay condition,
+            # on disk.  a logfile of None is also a temporary condition,
             # since the config file can be reloaded.
             request.error(404) # not found
             return
