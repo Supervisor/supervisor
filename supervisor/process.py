@@ -168,7 +168,8 @@ class Subprocess(object):
         self.state = new_state
         if new_state == ProcessStates.BACKOFF:
             now = time.time()
-            self.backoff += 1
+            if self.backoff < self.config.maxbackoff:
+                self.backoff += 1
             self.delay = now + self.backoff
 
         event_class = self.event_map.get(new_state)
