@@ -1725,7 +1725,7 @@
 
 - Processes which started successfully after failing to start
   initially are no longer reported in BACKOFF state once they are
-  started successfully (thanks to Damjan from Macdonia for the bug
+  started successfully (thanks to Damjan from Macedonia for the bug
   report).
 
 - Add new 'maintail' command to supervisorctl shell, which allows
