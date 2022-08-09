@@ -1400,7 +1400,7 @@
   supervisorctl.  To start a group, use ``start groupname:*``.  To start
   multiple groups, use ``start groupname1:* groupname2:*``.  Equivalent
   commands work for "stop" and "restart". You can mix and match short
-  processnames, fullly-specified group:process names, and groupsplats on the
+  processnames, fully-specified group:process names, and groupsplats on the
   same line for any of these commands.
 
 - Added ``directory`` option to process config.  If you set this
