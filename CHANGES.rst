@@ -1391,7 +1391,7 @@
   supervisorctl.  To start a group, use ``start groupname:*``.  To start
   multiple groups, use ``start groupname1:* groupname2:*``.  Equivalent
   commands work for "stop" and "restart". You can mix and match short
-  processnames, fullly-specified group:process names, and groupsplats on the
+  processnames, fully-specified group:process names, and groupsplats on the
   same line for any of these commands.
 
 - Added ``directory`` option to process config.  If you set this
@@ -1447,7 +1447,7 @@
   supervisor will fail to start.
 
 - The Python string expression ``%(here)s`` (referring to the directory in
-  which the the configuration file was found) can be used within the
+  which the configuration file was found) can be used within the
   following sections/options within the config file::
 
       unix_http_server:file
@@ -1601,7 +1601,7 @@
   channel.  The keys "log_stderr" and "log_stdout" have been
   removed.
 
-- ``[program:x]`` config file sections now represent "homgeneous process
+- ``[program:x]`` config file sections now represent "homogeneous process
   groups" instead of single processes.  A "numprocs" key in the section
   represents the number of processes that are in the group.  A "process_name"
   key in the section allows composition of the each process' name within the
@@ -1716,7 +1716,7 @@
 
 - Processes which started successfully after failing to start
   initially are no longer reported in BACKOFF state once they are
-  started successfully (thanks to Damjan from Macdonia for the bug
+  started successfully (thanks to Damjan from Macedonia for the bug
   report).
 
 - Add new 'maintail' command to supervisorctl shell, which allows
