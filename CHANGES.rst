@@ -1456,7 +1456,7 @@
   supervisor will fail to start.
 
 - The Python string expression ``%(here)s`` (referring to the directory in
-  which the the configuration file was found) can be used within the
+  which the configuration file was found) can be used within the
   following sections/options within the config file::
 
       unix_http_server:file
