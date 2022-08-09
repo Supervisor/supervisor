@@ -783,7 +783,7 @@ class SubprocessTests(unittest.TestCase):
         # Sleep for 2 seconds
         time.sleep(2)
 
-        # This iteration of stop_report() should actaully trigger the report
+        # This iteration of stop_report() should actually trigger the report
         instance.stop_report()
 
         self.assertEqual(len(options.logger.data), 1)
@@ -1579,7 +1579,7 @@ class SubprocessTests(unittest.TestCase):
         # Sleep for (startsecs + 1)
         time.sleep(test_startsecs + 1)
 
-        # This iteration of transition() should actaully trigger the state
+        # This iteration of transition() should actually trigger the state
         # transition to RUNNING
         process.transition()
 
@@ -1625,7 +1625,7 @@ class SubprocessTests(unittest.TestCase):
         # Ensure process.delay has rolled backward
         self.assertTrue(process.delay < future_time)
 
-        # This iteration of transition() should actaully trigger the state
+        # This iteration of transition() should actually trigger the state
         # transition to STARTING
         process.transition()
 
