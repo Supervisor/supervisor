@@ -375,7 +375,7 @@ including "process state change", "process communication", and
 these event types.
 
 In the below list, we indicate that some event types have a "body"
-which is a a *token set*.  A token set consists of a set of charaters
+which is a a *token set*.  A token set consists of a set of characters
 with space-separated tokens.  Each token represents a key-value pair.
 The key and value are separated by a colon.  For example:
 
