@@ -511,7 +511,7 @@ class _MeldElementInterface:
         parent = self.parent
         i = self.deparent()
         if i is not None:
-            # reduce function call overhead by not calliing self.insert
+            # reduce function call overhead by not calling self.insert
             node = Replace(text, structure)
             parent._children.insert(i, node)
             node.parent = parent
