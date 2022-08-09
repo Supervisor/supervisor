@@ -1610,7 +1610,7 @@
   channel.  The keys "log_stderr" and "log_stdout" have been
   removed.
 
-- ``[program:x]`` config file sections now represent "homgeneous process
+- ``[program:x]`` config file sections now represent "homogeneous process
   groups" instead of single processes.  A "numprocs" key in the section
   represents the number of processes that are in the group.  A "process_name"
   key in the section allows composition of the each process' name within the
