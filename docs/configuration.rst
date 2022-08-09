@@ -291,7 +291,7 @@ follows.
   activity log.  One of ``critical``, ``error``, ``warn``, ``info``,
   ``debug``, ``trace``, or ``blather``.  Note that at log level
   ``debug``, the supervisord log file will record the stderr/stdout
-  output of its child processes and extended info info about process
+  output of its child processes and extended info about process
   state changes, which is useful for debugging a process which isn't
   starting properly.  See also: :ref:`activity_log_levels`.
 

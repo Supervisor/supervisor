@@ -16,7 +16,7 @@ Version 0.5.5:
   method.
 * [Patch #855695] Bugfix for filesys.msdos_date
 * [Patch from Jason Sibre] Improve performance of xmlrpc_handler
-  by avoiding string concatentation
+  by avoiding string concatenation
 * [Patch from Jason Sibre] Add interface to http_request for multiple
   headers with the same name.
 
