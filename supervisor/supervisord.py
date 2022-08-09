@@ -282,7 +282,7 @@ class Supervisor:
                 del self.options.pidhistory[pid]
             if not once:
                 # keep reaping until no more kids to reap, but don't recurse
-                # infintely
+                # infinitely
                 self.reap(once=False, recursionguard=recursionguard+1)
 
     def handle_signal(self):
