@@ -2081,7 +2081,11 @@ class FastCGIGroupConfig(ProcessGroupConfig):
 
 def readFile(filename, offset, length):
     """ Read length bytes from the file named by filename starting at
-    offset """
+    offset
+
+    Filter control characters x0-x1f except for tab, cr and lf. They would
+    cause problems when marshalling later on.
+    """
 
     absoffset = abs(offset)
     abslength = abs(length)
@@ -2110,6 +2114,9 @@ def readFile(filename, offset, length):
                     data = f.read(length)
     except (OSError, IOError):
         raise ValueError('FAILED')
+
+    # Filter most control characters except tab, cr and lf.
+    data = ''.join(ch for ch in data if (ch >= ' ' or ch in '\n\r\t'))
 
     return data
 
