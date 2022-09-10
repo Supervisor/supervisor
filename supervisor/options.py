@@ -1326,11 +1326,7 @@ class ServerOptions(Options):
     def cleanup_fds(self):
         # try to close any leaked file descriptors (for reload)
         start = 5
-        for x in range(start, self.minfds):
-            try:
-                os.close(x)
-            except OSError:
-                pass
+        os.closerange(start, self.minfds)
 
     def kill(self, pid, signal):
         os.kill(pid, signal)

@@ -1561,21 +1561,15 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
             except OSError:
                 pass
 
-    def test_cleanup_fds_closes_5_upto_minfds_ignores_oserror(self):
+    @patch('os.closerange', Mock())
+    def test_cleanup_fds_closes_5_upto_minfds(self):
         instance = self._makeOne()
         instance.minfds = 10
 
-        closed = []
-        def close(fd):
-            if fd == 7:
-                raise OSError
-            closed.append(fd)
-
-        @patch('os.close', close)
         def f():
             instance.cleanup_fds()
         f()
-        self.assertEqual(closed, [5,6,8,9])
+        os.closerange.assert_called_with(5, 10)
 
     def test_close_httpservers(self):
         instance = self._makeOne()
