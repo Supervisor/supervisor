@@ -390,6 +390,7 @@ class SupervisordTests(unittest.TestCase):
                 'stopasgroup': False,
                 'killasgroup': False,
                 'exitcodes': (0,), 'environment': None, 'serverurl': None,
+                'loglevel': 'info', 'logformat': '{message}', 'logformatter': 'plaintext'
             }
             result.update(params)
             return ProcessConfig(options, **result)
@@ -459,6 +460,7 @@ class SupervisordTests(unittest.TestCase):
                 'stopasgroup': False,
                 'killasgroup': False,
                 'exitcodes': (0,), 'environment': None, 'serverurl': None,
+                'loglevel': 'info', 'logformat': '{message}', 'logformatter': 'plaintext'
             }
             result.update(params)
             return EventListenerConfig(options, **result)
@@ -840,4 +842,3 @@ def test_suite():
 
 if __name__ == '__main__':
     unittest.main(defaultTest='test_suite')
-

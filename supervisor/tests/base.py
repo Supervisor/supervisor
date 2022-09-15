@@ -39,6 +39,9 @@ class DummyOptions:
         self.logger = self.getLogger()
         self.backofflimit = 10
         self.logfile = '/tmp/logfile'
+        self.loglevel = 20
+        self.logformat = '{message}'
+        self.logformatter = 'plaintext'
         self.nocleanup = False
         self.strip_ansi = False
         self.pidhistory = {}
@@ -88,7 +91,7 @@ class DummyOptions:
         self.changed_directory = False
         self.umaskset = None
         self.poller = DummyPoller(self)
-        self.silent = False
+        self.silent = False        
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -517,7 +520,8 @@ class DummyPConfig:
                  stderr_syslog=False,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
-                 exitcodes=(0,), environment=None, serverurl=None):
+                 exitcodes=(0,), environment=None, serverurl=None,
+                 loglevel='info', logformat='{message}', logformatter='plaintext'):
         self.options = options
         self.name = name
         self.command = command
@@ -553,6 +557,9 @@ class DummyPConfig:
         self.umask = umask
         self.autochildlogs_created = False
         self.serverurl = serverurl
+        self.loglevel = loglevel
+        self.logformat = logformat
+        self.logformatter = logformatter
 
     def get_path(self):
         return ["/bin", "/usr/bin", "/usr/local/bin"]

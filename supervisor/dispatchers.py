@@ -121,15 +121,19 @@ class POutputDispatcher(PDispatcher):
         maxbytes = getattr(config, '%s_logfile_maxbytes' % channel)
         backups = getattr(config, '%s_logfile_backups' % channel)
         to_syslog = getattr(config, '%s_syslog' % channel)
+        loglevel = getattr(config, 'loglevel')
+        logformat = getattr(config, 'logformat')
+        logformatter = getattr(config, 'logformatter')
 
         if logfile or to_syslog:
-            self.normallog = config.options.getLogger()
+            self.normallog = config.options.getLogger(loglevel)
 
         if logfile:
             loggers.handle_file(
                 self.normallog,
                 filename=logfile,
-                fmt='%(message)s',
+                fmt=logformat,
+                formatter=logformatter,
                 rotating=not not maxbytes, # optimization
                 maxbytes=maxbytes,
                 backups=backups
