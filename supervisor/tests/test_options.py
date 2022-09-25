@@ -611,6 +611,7 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         logfile=supervisord.log
         logfile_maxbytes=1000MB
         logfile_backups=5
+        logfile_compression=copy
         loglevel=error
         pidfile=supervisord.pid
         nodaemon=true
@@ -648,6 +649,7 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         stdout_logfile_maxbytes = 1024
         stdout_logfile_backups = 2
         stdout_logfile = /tmp/cat2.log
+        stdout_logfile_compression=copy
 
         [program:cat3]
         priority=3
@@ -3409,6 +3411,8 @@ class ProcessConfigTests(unittest.TestCase):
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes'):
             defaults[name] = 10
+        for name in ('stdout_logfile_compression', 'stderr_logfile_compression'):
+            defaults[name] = 'copy'
         defaults.update(kw)
         return self._getTargetClass()(*arg, **defaults)
 
@@ -3507,6 +3511,8 @@ class EventListenerConfigTests(unittest.TestCase):
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes'):
             defaults[name] = 10
+        for name in ('stdout_logfile_compression', 'stderr_logfile_compression'):
+            defaults[name] = 'copy'
         defaults.update(kw)
         return self._getTargetClass()(*arg, **defaults)
 
@@ -3555,6 +3561,8 @@ class FastCGIProcessConfigTests(unittest.TestCase):
         for name in ('stdout_logfile_backups', 'stdout_logfile_maxbytes',
                      'stderr_logfile_backups', 'stderr_logfile_maxbytes'):
             defaults[name] = 10
+        for name in ('stdout_logfile_compression', 'stderr_logfile_compression'):
+            defaults[name] = 'copy'
         defaults.update(kw)
         return self._getTargetClass()(*arg, **defaults)
 

@@ -585,6 +585,7 @@ class SupervisorNamespaceRPCInterface:
                      'stdout_events_enabled': pconfig.stdout_events_enabled,
                      'stdout_logfile': pconfig.stdout_logfile,
                      'stdout_logfile_backups': pconfig.stdout_logfile_backups,
+                     'stdout_logfile_compression': pconfig.stdout_logfile_compression,
                      'stdout_logfile_maxbytes': pconfig.stdout_logfile_maxbytes,
                      'stdout_syslog': pconfig.stdout_syslog,
                      'stopsignal': int(pconfig.stopsignal), # enum on py3
@@ -593,6 +594,7 @@ class SupervisorNamespaceRPCInterface:
                      'stderr_events_enabled': pconfig.stderr_events_enabled,
                      'stderr_logfile': pconfig.stderr_logfile,
                      'stderr_logfile_backups': pconfig.stderr_logfile_backups,
+                     'stderr_logfile_compression': pconfig.stderr_logfile_compression,
                      'stderr_logfile_maxbytes': pconfig.stderr_logfile_maxbytes,
                      'stderr_syslog': pconfig.stderr_syslog,
                      'serverurl': pconfig.serverurl,

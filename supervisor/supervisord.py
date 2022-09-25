@@ -16,6 +16,9 @@ Options:
 -l/--logfile FILENAME -- use FILENAME as logfile path
 -y/--logfile_maxbytes BYTES -- use BYTES to limit the max size of logfile
 -z/--logfile_backups NUM -- number of backups to keep when max bytes reached
+--logfile_compression COMP -- compress logfile backups with COMP algorithm;
+                              supported values are 'copy' (default), 'gzip',
+                              'bzip2' and 'xz'
 -e/--loglevel LEVEL -- use LEVEL as log level (debug,info,warn,error,critical)
 -j/--pidfile FILENAME -- write a pid file for the daemon process to FILENAME
 -i/--identifier STR -- identifier used for this instance of supervisord
