@@ -4,9 +4,12 @@ Compressor implementations which used on logging file rotation.
 
 import bz2
 import gzip
-import lzma
 import os
 
+try:
+    import lzma
+except ImportError:
+    from backports import lzma
 
 class Compressor:
     def compress(self, src, tgt):

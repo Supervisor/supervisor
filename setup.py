@@ -27,6 +27,7 @@ requires = ["setuptools"]
 tests_require = []
 if py_version < (3, 3):
     tests_require.append('mock<4.0.0.dev0')
+    requires.append('backports.lzma')
 
 testing_extras = tests_require + [
     'pytest',

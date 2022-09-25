@@ -25,7 +25,7 @@ jobs:
       run: python -c 'import sys; print("TOXENV=py%d%d" % (sys.version_info.major, sys.version_info.minor))' | tee -a $GITHUB_ENV
 
     - name: Install dependencies
-      run: pip install virtualenv tox
+      run: pip install virtualenv tox backports.lzma
 
     - name: Run the unit tests
       run: tox
@@ -49,7 +49,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: pip install virtualenv tox
+      run: pip install virtualenv tox backports.lzma
 
     - name: Set TOXENV based on Python version
       run: python -c 'import sys; e="cover" if sys.version_info.major == 2 else "cover3"; print("TOXENV=%s" % e)' | tee -a $GITHUB_ENV
