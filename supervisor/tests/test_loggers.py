@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import errno
+import gzip
 import sys
 import unittest
 import tempfile
@@ -291,6 +292,68 @@ class RotatingFileHandlerTests(FileHandlerTests):
 
         with open(self.filename+'.2', 'rb') as f:
             self.assertEqual(f.read(), b'a' * 12)
+
+    def test_emit_does_rollover_with_compression(self):
+        handler = self._makeOne(self.filename, maxBytes=10, backupCount=2, compression="gzip")
+        record_a = self._makeLogRecord(b'a' * 4)
+        record_b = self._makeLogRecord(b'b' * 4)
+
+        handler.emit(record_a)  # 4 bytes
+        self.assertFalse(os.path.exists(self.filename + '.1.gz'))
+        self.assertFalse(os.path.exists(self.filename + '.2.gz'))
+        self.assertFalse(os.path.exists(self.filename + '.3.gz'))
+
+        handler.emit(record_b)  # 8 bytes
+        self.assertFalse(os.path.exists(self.filename + '.1.gz'))
+        self.assertFalse(os.path.exists(self.filename + '.2.gz'))
+        self.assertFalse(os.path.exists(self.filename + '.3.gz'))
+
+        handler.emit(record_a)  # 12 bytes, do rollover
+        self.assertTrue(os.path.exists(self.filename + '.1.gz'))
+        self.assertFalse(os.path.exists(self.filename + '.2.gz'))
+        self.assertFalse(os.path.exists(self.filename + '.3.gz'))
+
+        handler.emit(record_b)  # 16 bytes
+        self.assertTrue(os.path.exists(self.filename + '.1.gz'))
+        self.assertFalse(os.path.exists(self.filename + '.2.gz'))
+        self.assertFalse(os.path.exists(self.filename + '.3.gz'))
+
+        handler.emit(record_a)  # 20 bytes
+        self.assertTrue(os.path.exists(self.filename + '.1.gz'))
+        self.assertFalse(os.path.exists(self.filename + '.2.gz'))
+        self.assertFalse(os.path.exists(self.filename + '.3.gz'))
+
+        handler.emit(record_b)  # 24 bytes, do rollover
+        self.assertTrue(os.path.exists(self.filename + '.1.gz'))
+        self.assertTrue(os.path.exists(self.filename + '.2.gz'))
+        self.assertFalse(os.path.exists(self.filename + '.3.gz'))
+
+        handler.emit(record_a)  # 28 bytes
+        self.assertTrue(os.path.exists(self.filename + '.1.gz'))
+        self.assertTrue(os.path.exists(self.filename + '.2.gz'))
+        self.assertFalse(os.path.exists(self.filename + '.3.gz'))
+
+        handler.emit(record_b)  # 32 bytes
+        self.assertTrue(os.path.exists(self.filename + '.1.gz'))
+        self.assertTrue(os.path.exists(self.filename + '.2.gz'))
+        self.assertFalse(os.path.exists(self.filename + '.3.gz'))
+
+        handler.emit(record_a)  # 36 bytes, do rollover with truncating
+        self.assertTrue(os.path.exists(self.filename + '.1.gz'))
+        self.assertTrue(os.path.exists(self.filename + '.2.gz'))
+        self.assertFalse(os.path.exists(self.filename + '.3.gz'))
+
+        handler.emit(record_b)  # 40 bytes
+        handler.close()
+
+        with open(self.filename, 'rb') as f:
+            self.assertEqual(f.read(), b'b' * 4)
+
+        with gzip.open(self.filename+'.1.gz', 'rb') as f:
+            self.assertEqual(f.read(), b'a' * 4 + b'b' * 4 + b'a' * 4)
+
+        with gzip.open(self.filename+'.2.gz', 'rb') as f:
+            self.assertEqual(f.read(), b'b' * 4 + b'a' * 4 + b'b' * 4)
 
     def test_current_logfile_removed(self):
         handler = self._makeOne(self.filename, maxBytes=6, backupCount=1)
