@@ -1670,7 +1670,7 @@ class ClientOptions(Options):
                  "interactive", flag=1, default=0)
         self.add("prompt", "supervisorctl.prompt", default="supervisor")
         self.add("serverurl", "supervisorctl.serverurl", "s:", "serverurl=",
-                 url, default="http://localhost:9001")
+                 url, default="unix:///tmp/supervisor.sock")
         self.add("username", "supervisorctl.username", "u:", "username=")
         self.add("password", "supervisorctl.password", "p:", "password=")
         self.add("history", "supervisorctl.history_file", "r:", "history_file=")
