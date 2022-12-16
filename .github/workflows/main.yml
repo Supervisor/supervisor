@@ -69,7 +69,7 @@ jobs:
         python-version: "3.8"
 
     - name: Install dependencies
-      run: pip install virtualenv tox
+      run: pip install virtualenv tox>=4.0.0
 
     - name: Build the docs
       run: TOXENV=docs tox
