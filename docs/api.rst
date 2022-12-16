@@ -321,6 +321,8 @@ Process Control
         same elements as the struct returned by ``getProcessInfo``. If the process
         table is empty, an empty array is returned.
 
+    .. automethod:: getAllConfigInfo
+
     .. automethod:: startProcess
 
     .. automethod:: startAllProcesses
