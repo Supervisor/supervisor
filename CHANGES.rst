@@ -24,6 +24,9 @@
 - ``supervisorctl shutdown`` now shows an error message if an argument is
   given.
 
+- File descriptors are now closed using the faster ``os.closerange()`` instead
+  of calling ``os.close()`` in a loop.  Patch by tyong920.
+
 4.2.4 (2021-12-30)
 ------------------
 
