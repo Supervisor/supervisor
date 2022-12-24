@@ -1641,8 +1641,10 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         self.assertEqual(logger.data[0], 'supervisord logreopen')
 
     def test_write_pidfile_ok(self):
-        with tempfile.NamedTemporaryFile(delete=False) as f:
+        with tempfile.NamedTemporaryFile(delete=True) as f:
             fn = f.name
+        self.assertFalse(os.path.exists(fn))
+
         try:
             instance = self._makeOne()
             instance.logger = DummyLogger()
