@@ -1,6 +1,18 @@
 4.3.0.dev0 (Next Release)
 -------------------------
 
+- ``supervisorctl`` now reads extra files included via the ``[include]``
+  section in ``supervisord.conf`` like ``supervisord`` does.  This allows
+  the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
+  included files.  Patch by François Granade.
+
+- If ``supervisord`` searches the default paths for its config file (no
+  ``-c`` flag given), it will now print a message showing the path of the
+  config file that it loaded.  Patch by Alexander Tuna.
+
+4.2.5 (2022-12-23)
+------------------
+
 - Fixed a bug where the XML-RPC method ``supervisor.startProcess()`` would
   return 500 Internal Server Error instead of an XML-RPC fault response
   if the command could not be parsed.  Patch by Julien Le Cléach.
@@ -13,18 +25,9 @@
 
 - Removed use of ``asynchat`` and ``asyncore`` deprecated in Python 3.10.
 
-- ``supervisorctl`` now reads extra files included via the ``[include]``
-  section in ``supervisord.conf`` like ``supervisord`` does.  This allows
-  the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
-  included files.  Patch by François Granade.
-
 - The return value of the XML-RPC method ``supervisor.getAllConfigInfo()``
   now includes the ``directory``, ``uid``, and ``serverurl`` of the
   program.  Patch by Yellmean.
-
-- If ``supervisord`` searches the default paths for its config file (no
-  ``-c`` flag given), it will now print a message showing the path of the
-  config file that it loaded.  Patch by Alexander Tuna.
 
 - If a subprocess exits with a unexpected exit code (one not listed in
   ``exitcodes=`` in a ``[program:x]`` section) then the exit will now be logged
