@@ -1,5 +1,5 @@
-4.3.0.dev0 (Next Release)
--------------------------
+4.2.5 (2022-12-23)
+------------------
 
 - Fixed a bug where the XML-RPC method ``supervisor.startProcess()`` would
   return 500 Internal Server Error instead of an XML-RPC fault response
