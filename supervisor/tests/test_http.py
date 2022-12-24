@@ -620,8 +620,10 @@ class TopLevelFunctionTests(unittest.TestCase):
             self.assertEqual(exc.args[0], 'Cannot determine socket type 999')
 
     def test_make_http_servers_noauth(self):
-        with tempfile.NamedTemporaryFile(delete=False) as f:
+        with tempfile.NamedTemporaryFile(delete=True) as f:
             socketfile = f.name
+        self.assertFalse(os.path.exists(socketfile))
+
         inet = {'family':socket.AF_INET, 'host':'localhost', 'port':17735,
                 'username':None, 'password':None, 'section':'inet_http_server'}
         unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':0o700,
@@ -648,8 +650,10 @@ class TopLevelFunctionTests(unittest.TestCase):
         self.assertEqual([x.IDENT for x in server.handlers], idents)
 
     def test_make_http_servers_withauth(self):
-        with tempfile.NamedTemporaryFile(delete=False) as f:
+        with tempfile.NamedTemporaryFile(delete=True) as f:
             socketfile = f.name
+        self.assertFalse(os.path.exists(socketfile))
+
         inet = {'family':socket.AF_INET, 'host':'localhost', 'port':17736,
                 'username':'username', 'password':'password',
                 'section':'inet_http_server'}
