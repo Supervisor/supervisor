@@ -132,10 +132,3 @@ class TestEventListenerProtocol(unittest.TestCase):
         listener.send(msg, stdout)
         expected = '%s%s\n%s' % (begin, len(msg), msg)
         self.assertEqual(stdout.getvalue(), expected)
-
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')

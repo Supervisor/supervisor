@@ -917,4 +917,3 @@ class DummyConnection:
 
     def close(self):
         self.closed = True
-

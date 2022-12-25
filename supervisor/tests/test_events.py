@@ -508,10 +508,3 @@ class TestUtilityFunctions(unittest.TestCase):
             self.assertTrue(events.EventTypes.FOO is FooEvent)
         finally:
             del events.EventTypes.FOO
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
-

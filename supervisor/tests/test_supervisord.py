@@ -834,10 +834,3 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(supervisord.ticks[3600], 3600)
         self.assertEqual(len(L), 6)
         self.assertEqual(L[-1].__class__, events.Tick3600Event)
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
-

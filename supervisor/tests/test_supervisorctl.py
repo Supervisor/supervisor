@@ -2067,10 +2067,3 @@ class DummyPlugin:
 
     def do_help(self, arg):
         self.helped = True
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
-

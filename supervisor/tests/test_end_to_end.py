@@ -419,9 +419,3 @@ class EndToEndTests(BaseTestCase):
         finally:
             transport.close()
         self.assertEqual(ident, "from_command_line")
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')

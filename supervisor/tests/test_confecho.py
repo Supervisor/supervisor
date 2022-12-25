@@ -12,10 +12,3 @@ class TopLevelFunctionTests(unittest.TestCase):
 
         output = sio.getvalue()
         self.assertTrue("[supervisord]" in output)
-
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
