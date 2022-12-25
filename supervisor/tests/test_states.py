@@ -50,10 +50,3 @@ class TopLevelEventListenerStateTests(unittest.TestCase):
     def test_getEventListenerStateDescription_returns_None_when_not_found(self):
         self.assertEqual(states.getEventListenerStateDescription(3.14159),
             None)
-    
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')

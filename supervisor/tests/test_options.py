@@ -3858,9 +3858,3 @@ class UtilFunctionsTests(unittest.TestCase):
         self.assertEqual(s('process'), ('process', 'process'))
         self.assertEqual(s('group:'), ('group', None))
         self.assertEqual(s('group:*'), ('group', None))
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')

@@ -1785,12 +1785,3 @@ def normalize_xml(s):
     s = re.sub(r"(?s)\s+<", "<", s)
     s = re.sub(r"(?s)>\s+", ">", s)
     return s
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-def main():
-    unittest.main(defaultTest='test_suite')
-
-if __name__ == '__main__':
-    main()
