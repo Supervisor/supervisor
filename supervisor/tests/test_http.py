@@ -1,7 +1,6 @@
 import base64
 import os
 import stat
-import sys
 import socket
 import tempfile
 import unittest

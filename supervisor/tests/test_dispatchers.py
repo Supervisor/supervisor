@@ -1,6 +1,5 @@
 import unittest
 import os
-import sys
 
 from supervisor.compat import as_bytes
 

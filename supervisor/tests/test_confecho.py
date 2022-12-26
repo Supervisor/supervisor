@@ -1,6 +1,5 @@
 """Test suite for supervisor.confecho"""
 
-import sys
 import unittest
 from supervisor.compat import StringIO
 from supervisor import confecho
