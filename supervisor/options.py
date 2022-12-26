@@ -128,7 +128,6 @@ class Options:
         for path in self.searchpaths:
             if os.path.exists(path):
                 config = path
-                self.stdout.write("Chose default config file: %s\n" % config)
                 break
         if config is None and self.require_configfile:
             self.usage('No config file found at default paths (%s); '
