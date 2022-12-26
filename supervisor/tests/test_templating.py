@@ -6,7 +6,6 @@
 
 import unittest
 import re
-import sys
 
 _SIMPLE_XML = r"""<?xml version="1.0"?>
 <root xmlns:meld="https://github.com/Supervisor/supervisor">

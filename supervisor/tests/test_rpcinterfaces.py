@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import unittest
-import sys
 import operator
 import os
 import time

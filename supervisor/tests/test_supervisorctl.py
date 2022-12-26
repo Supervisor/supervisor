@@ -1,4 +1,3 @@
-import sys
 import unittest
 from supervisor import xmlrpc
 from supervisor.compat import StringIO

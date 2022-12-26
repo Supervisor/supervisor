@@ -1,6 +1,5 @@
 """Test suite for supervisor.states"""
 
-import sys
 import unittest
 from supervisor import states
 
