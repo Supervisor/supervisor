@@ -78,6 +78,9 @@ dist = setup(
     version=supervisor_version,
     license='BSD-derived (http://www.repoze.org/LICENSE.txt)',
     url='http://supervisord.org/',
+    project_urls={
+        'Changelog': 'http://supervisord.org/changes.html',
+    },
     description="A system for controlling process state under UNIX",
     long_description=README + '\n\n' + CHANGES,
     classifiers=CLASSIFIERS,
@@ -87,7 +90,7 @@ dist = setup(
     install_requires=requires,
     extras_require={
         'testing': testing_extras,
-        },
+    },
     tests_require=tests_require,
     include_package_data=True,
     zip_safe=False,
