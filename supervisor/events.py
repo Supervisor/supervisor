@@ -174,6 +174,15 @@ class ProcessGroupEvent(Event):
 class ProcessGroupAddedEvent(ProcessGroupEvent):
     pass
 
+class AddProcessGroupFailedEvent(ProcessGroupEvent):
+    def __init__(self, group, err = None):
+        super().__init__(group)
+        self.err = err
+
+    def payload(self):
+        payload = super().payload()
+        return payload+'error:%s\n' % self.err
+
 class ProcessGroupRemovedEvent(ProcessGroupEvent):
     pass
 
