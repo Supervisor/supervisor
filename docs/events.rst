@@ -93,9 +93,9 @@ follows.
 
    An advanced feature, specifying an alternate "result handler" for a
    pool, can be specified via the ``result_handler`` parameter of an
-   ``[eventlistener:x]`` section in the form of a `pkg_resources
-   <http://peak.telecommunity.com/DevCenter/PkgResources>`_ "entry
-   point" string.  The default result handler is
+   ``[eventlistener:x]`` section in the form of an `entry point object reference
+   <https://packaging.python.org/en/latest/specifications/entry-points/#data-model>`_
+   string.  The default result handler is
    ``supervisord.dispatchers:default_handler``.  Creating an alternate
    result handler is not currently documented.
 
@@ -897,4 +897,3 @@ Indicates that a process group has been removed from Supervisor's configuration.
 .. code-block:: text
 
    groupname:cat
-
