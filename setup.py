@@ -24,7 +24,7 @@ elif (3, 0) < py_version < (3, 4):
 
 requires = [
     "importlib-metadata; python_version < '3.8'",
-    "importlib-resources; python_version < '3.9'",
+    "importlib-resources; python_version < '3.7'",
 ]
 tests_require = []
 if py_version < (3, 3):
