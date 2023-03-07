@@ -1480,9 +1480,9 @@ sections do not have.
 
 ``result_handler``
 
-  A `pkg_resources entry point string
-  <http://peak.telecommunity.com/DevCenter/PkgResources>`_ that
-  resolves to a Python callable.  The default value is
+  An `entry point object reference
+  <https://packaging.python.org/en/latest/specifications/entry-points/#data-model>`_
+  string that resolves to a Python callable.  The default value is
   ``supervisor.dispatchers:default_handler``.  Specifying an alternate
   result handler is a very uncommon thing to need to do, and as a
   result, how to create one is not documented.
@@ -1583,7 +1583,7 @@ And a section in the config file meant to configure it.
 
 ``supervisor.rpcinterface_factory``
 
-  ``pkg_resources`` "entry point" dotted name to your RPC interface's
+  ``entry point object reference`` dotted name to your RPC interface's
   factory function.
 
   *Default*: N/A

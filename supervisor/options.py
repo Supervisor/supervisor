@@ -10,7 +10,6 @@ import pwd
 import grp
 import resource
 import stat
-import pkg_resources
 import glob
 import platform
 import warnings
@@ -54,6 +53,12 @@ from supervisor import loggers
 from supervisor import states
 from supervisor import xmlrpc
 from supervisor import poller
+
+if sys.version_info >= (3, 8):
+    from importlib.metadata import EntryPoint
+else:
+    from importlib_metadata import EntryPoint
+
 
 def _read_version_txt():
     mydir = os.path.abspath(os.path.dirname(__file__))
@@ -374,7 +379,7 @@ class Options:
                                  (section, factory_key))
             try:
                 factory = self.import_spec(factory_spec)
-            except ImportError:
+            except (AttributeError, ImportError):
                 raise ValueError('%s cannot be resolved within [%s]' % (
                     factory_spec, section))
 
@@ -387,13 +392,7 @@ class Options:
         return factories
 
     def import_spec(self, spec):
-        ep = pkg_resources.EntryPoint.parse("x=" + spec)
-        if hasattr(ep, 'resolve'):
-            # this is available on setuptools >= 10.2
-            return ep.resolve()
-        else:
-            # this causes a DeprecationWarning on setuptools >= 11.3
-            return ep.load(False)
+        return EntryPoint(None, spec, None).load()
 
 
 class ServerOptions(Options):
@@ -748,7 +747,7 @@ class ServerOptions(Options):
                                        'supervisor.dispatchers:default_handler')
             try:
                 result_handler = self.import_spec(result_handler)
-            except ImportError:
+            except (AttributeError, ImportError):
                 raise ValueError('%s cannot be resolved within [%s]' % (
                     result_handler, section))
 
