@@ -2606,7 +2606,26 @@ class ServerOptionsTests(unittest.TestCase):
         gconfig1 = gconfigs[0]
         self.assertEqual(gconfig1.result_handler, dummy_handler)
 
-    def test_event_listener_pool_result_handler_unimportable(self):
+    def test_event_listener_pool_result_handler_unimportable_ImportError(self):
+        text = lstrip("""\
+        [eventlistener:cat]
+        events=PROCESS_COMMUNICATION
+        command = /bin/cat
+        result_handler = thisishopefullynotanimportablepackage:nonexistent
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        try:
+            instance.process_groups_from_parser(config)
+            self.fail('nothing raised')
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                'thisishopefullynotanimportablepackage:nonexistent cannot be '
+                'resolved within [eventlistener:cat]')
+
+    def test_event_listener_pool_result_handler_unimportable_AttributeError(self):
         text = lstrip("""\
         [eventlistener:cat]
         events=PROCESS_COMMUNICATION

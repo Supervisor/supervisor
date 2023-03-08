@@ -21,6 +21,7 @@ from supervisor.compat import as_bytes, as_string
 from supervisor.compat import xmlrpclib
 from supervisor.compat import StringIO
 from supervisor.compat import basestring
+from supervisor.compat import importlib_metadata
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -53,12 +54,6 @@ from supervisor import loggers
 from supervisor import states
 from supervisor import xmlrpc
 from supervisor import poller
-
-if sys.version_info >= (3, 8):
-    from importlib.metadata import EntryPoint
-else:
-    from importlib_metadata import EntryPoint
-
 
 def _read_version_txt():
     mydir = os.path.abspath(os.path.dirname(__file__))
@@ -392,7 +387,8 @@ class Options:
         return factories
 
     def import_spec(self, spec):
-        return EntryPoint(None, spec, None).load()
+        """On failure, raises either AttributeError or ImportError"""
+        return importlib_metadata.EntryPoint(None, spec, None).load()
 
 
 class ServerOptions(Options):
