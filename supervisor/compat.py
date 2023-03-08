@@ -149,3 +149,25 @@ try: # pragma: no cover
     from html.parser import HTMLParser
 except ImportError: # pragma: no cover
     from HTMLParser import HTMLParser
+
+try: # pragma: no cover
+    import importlib.metadata as importlib_metadata
+except ImportError: # pragma: no cover
+    # fall back to PyPI backport if not in stdlib
+    import importlib_metadata
+
+try: # pragma: no cover
+    from importlib import resources as importlib_resources
+except ImportError: # pragma: no cover
+    # fall back to PyPI backport if not in stdlib
+    import importlib_resources
+
+if hasattr(importlib_resources, "files"):
+    def resource_file(package, path): # pragma: no cover
+        return str(importlib_resources.files(package).joinpath(path))
+
+else: # pragma: no cover
+    # fall back to deprecated .path if .files is not available
+    def resource_file(package, path): # pragma: no cover
+        with importlib_resources.path(package, '__init__.py') as p:
+            return str(p.parent.joinpath(path))

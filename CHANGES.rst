@@ -1,6 +1,16 @@
 4.3.0.dev0 (Next Release)
 -------------------------
 
+- The installation requirements have changed because Setuptools 67.5.0
+  deprecated the use of ``pkg_resources``, which Supervisor used to load
+  its plugins.  The ``setuptools`` package is no longer a runtime dependency
+  of Supervisor.  On Python < 3.8 where ``importlib.metadata`` is not 
+  available in stdlib, Supervisor now requires the PyPI package
+  ``importlib-metadata``.  Additionally, on Python < 3.7 where 
+  ``importlib.resources`` is not available in stdlib, Supervisor now requires
+  the PyPI package ``importlib-resources``.  These new dependencies have been
+  added as conditional requirements in ``setup.py``.  Patch by Ofek Lev.
+
 - ``supervisorctl`` now reads extra files included via the ``[include]``
   section in ``supervisord.conf`` like ``supervisord`` does.  This allows
   the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
