@@ -157,7 +157,7 @@ except ImportError: # pragma: no cover
     import importlib_metadata
 
 try: # pragma: no cover
-    from importlib import resources as importlib_resources
+    import importlib.resources as importlib_resources
 except ImportError: # pragma: no cover
     # fall back to PyPI backport if not in stdlib
     import importlib_resources
