@@ -19,7 +19,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: pip install virtualenv tox
+      run: pip install virtualenv tox backports.lzma
 
     - name: Set variable for TOXENV based on Python version
       id: toxenv
@@ -47,7 +47,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: pip install virtualenv tox
+      run: pip install virtualenv tox backports.lzma
 
     - name: Set variable for TOXENV based on Python version
       id: toxenv

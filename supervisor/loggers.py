@@ -9,10 +9,13 @@ idiosyncratic and a bit slow for our purposes (we don't use threads).
 
 import os
 import errno
+import glob
+import re
 import sys
 import time
 import traceback
 
+from supervisor.compressors import *
 from supervisor.compat import syslog
 from supervisor.compat import long
 from supervisor.compat import is_text_stream
@@ -48,6 +51,32 @@ LOG_LEVELS_BY_NUM = _levelNumbers()
 def getLevelNumByDescription(description):
     num = getattr(LevelsByDescription, description, None)
     return num
+
+
+def compression_factory(name, compressionLevel=9):
+    classDict = {
+        "copy": CopyCompressor(),
+        "gzip": GzCompressor(compressionLevel=compressionLevel),
+        "bzip2": Bzip2Compressor(compressionLevel=compressionLevel),
+        "xz": LzmaCompressor(compressionLevel=compressionLevel),
+    }
+    if name in classDict:
+        return classDict[name]
+    else:
+        return classDict["copy"]
+
+
+def atoi(text):
+    return int(text) if text.isdigit() else text
+
+
+def human_keys(text):
+    """
+    Human list sorter for sort():
+    list.sort(key=human_keys)
+    """
+    return [atoi(c) for c in re.split(r'(\d+)', text)]
+
 
 class Handler:
     fmt = '%(message)s'
@@ -187,7 +216,7 @@ class FileHandler(Handler):
 
 class RotatingFileHandler(FileHandler):
     def __init__(self, filename, mode='ab', maxBytes=512*1024*1024,
-                 backupCount=10):
+                 backupCount=10, compression="copy"):
         """
         Open the specified file and use it as the stream for logging.
 
@@ -215,6 +244,7 @@ class RotatingFileHandler(FileHandler):
         self.backupCount = backupCount
         self.counter = 0
         self.every = 10
+        self.compressor = compression_factory(compression)
 
     def emit(self, record):
         """
@@ -237,6 +267,22 @@ class RotatingFileHandler(FileHandler):
     def _exists(self, fn): # pragma: no cover
         # this is here to service stubbing in unit tests
         return os.path.exists(fn)
+
+    def process(self, sfn, dfn):
+        if self._exists(dfn):
+            try:
+                self._remove(dfn)
+            except OSError as why:
+                # catch race condition (destination already deleted)
+                if why.args[0] != errno.ENOENT:
+                    raise
+        try:
+            self.compressor.compress(sfn, dfn)
+        except OSError as why:
+            # catch exceptional condition (source deleted)
+            # E.g. cleanup script removes active log.
+            if why.args[0] != errno.ENOENT:
+                raise
 
     def removeAndRename(self, sfn, dfn):
         if self._exists(dfn):
@@ -265,14 +311,34 @@ class RotatingFileHandler(FileHandler):
             return
 
         self.stream.close()
+
         if self.backupCount > 0:
-            for i in range(self.backupCount - 1, 0, -1):
-                sfn = "%s.%d" % (self.baseFilename, i)
-                dfn = "%s.%d" % (self.baseFilename, i + 1)
-                if os.path.exists(sfn):
-                    self.removeAndRename(sfn, dfn)
-            dfn = self.baseFilename + ".1"
-            self.removeAndRename(self.baseFilename, dfn)
+            # Get all rollover files
+            pattern = "%s%s" % (self.baseFilename, ".*")
+            logsFileList = glob.glob(pattern)
+            logsFileList.sort(key=human_keys)
+            while len(logsFileList) > 0:
+                entry = logsFileList.pop()
+                if len(logsFileList) + 1 >= self.backupCount:
+                    # Remove redundant files
+                    self._remove(entry)
+                else:
+                    # Shift names of left ones
+                    filenameParts = entry.split(".")
+                    last_part = filenameParts.pop()
+                    if last_part.isdigit():
+                        # We got plain file
+                        dfn = "%s.%d" % (self.baseFilename, int(last_part) + 1)
+                    else:
+                        # Otherwise try next part
+                        ext = last_part
+                        last_part = filenameParts.pop()
+                        dfn = "%s.%d.%s" % (self.baseFilename, int(last_part) + 1, ext)
+                    self._rename(entry, dfn)
+            # Now we ready process baseFilename
+            dfn = "%s.%d" % (self.baseFilename, 1)
+            self.process(self.baseFilename, dfn)
+
         self.stream = open(self.baseFilename, 'wb')
 
 class LogRecord:
@@ -407,7 +473,7 @@ def handle_syslog(logger, fmt):
     handler.setLevel(logger.level)
     logger.addHandler(handler)
 
-def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
+def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0, compression="copy"):
     """Attach a new file handler to an existing Logger. If the filename
     is the magic name of 'syslog' then make it a syslog handler instead."""
     if filename == 'syslog': # TODO remove this
@@ -416,7 +482,7 @@ def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
         if rotating is False:
             handler = FileHandler(filename)
         else:
-            handler = RotatingFileHandler(filename, 'a', maxbytes, backups)
+            handler = RotatingFileHandler(filename, 'a', maxbytes, backups, compression=compression)
     handler.setFormat(fmt)
     handler.setLevel(logger.level)
     logger.addHandler(handler)

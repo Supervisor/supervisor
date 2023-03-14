@@ -118,6 +118,12 @@ value in the configuration file.
    Number of backup copies of the supervisord activity log to keep
    around.  Each logfile will be of size ``logfile_maxbytes``.
 
+--logfile_compression=COMPRESSION
+
+   Compress backup copies of supervisord activity log with COMPRESSION
+   algorithm. Supported values are ``copy`` (default), ``gzip``,
+   ``bzip2`` and ``xz``.
+
 -e LEVEL, --loglevel=LEVEL
 
    The logging level at which supervisor should write to the activity

@@ -468,6 +468,8 @@ class ServerOptions(Options):
                  default=50 * 1024 * 1024) # 50MB
         self.add("logfile_backups", "supervisord.logfile_backups",
                  "z:", "logfile_backups=", integer, default=10)
+        self.add("logfile_compression", "supervisord.logfile_compression", "",
+                 "logfile_compression=", str, default="copy")
         self.add("loglevel", "supervisord.loglevel", "e:", "loglevel=",
                  logging_level, default="info")
         self.add("pidfile", "supervisord.pidfile", "j:", "pidfile=",
@@ -646,6 +648,7 @@ class ServerOptions(Options):
         section.logfile = existing_dirpath(get('logfile', 'supervisord.log'))
         section.logfile_maxbytes = byte_size(get('logfile_maxbytes', '50MB'))
         section.logfile_backups = integer(get('logfile_backups', 10))
+        section.logfile_compression = get('logfile_compression', 'copy')
         section.loglevel = logging_level(get('loglevel', 'info'))
         section.pidfile = existing_dirpath(get('pidfile', 'supervisord.pid'))
         section.identifier = get('identifier', 'supervisor')
@@ -996,6 +999,10 @@ class ServerOptions(Options):
                 maxbytes = byte_size(get(section, mb_key, '50MB'))
                 logfiles[mb_key] = maxbytes
 
+                co_key = '%s_logfile_compression' % k
+                compression = get(section, co_key, 'copy')
+                logfiles[co_key] = compression
+
                 sy_key = '%s_syslog' % k
                 syslog = boolean(get(section, sy_key, False))
                 logfiles[sy_key] = syslog
@@ -1047,12 +1054,14 @@ class ServerOptions(Options):
                 stdout_events_enabled = stdout_events,
                 stdout_logfile_backups=logfiles['stdout_logfile_backups'],
                 stdout_logfile_maxbytes=logfiles['stdout_logfile_maxbytes'],
+                stdout_logfile_compression=logfiles['stdout_logfile_compression'],
                 stdout_syslog=logfiles['stdout_syslog'],
                 stderr_logfile=logfiles['stderr_logfile'],
                 stderr_capture_maxbytes = stderr_cmaxbytes,
                 stderr_events_enabled = stderr_events,
                 stderr_logfile_backups=logfiles['stderr_logfile_backups'],
                 stderr_logfile_maxbytes=logfiles['stderr_logfile_maxbytes'],
+                stderr_logfile_compression=logfiles['stderr_logfile_compression'],
                 stderr_syslog=logfiles['stderr_syslog'],
                 stopsignal=stopsignal,
                 stopwaitsecs=stopwaitsecs,
@@ -1498,6 +1507,7 @@ class ServerOptions(Options):
             rotating=not not self.logfile_maxbytes,
             maxbytes=self.logfile_maxbytes,
             backups=self.logfile_backups,
+            compression=self.logfile_compression,
         )
         self._log_parsing_messages(self.logger)
 
@@ -1873,8 +1883,10 @@ class ProcessConfig(Config):
         'stdout_logfile', 'stdout_capture_maxbytes',
         'stdout_events_enabled', 'stdout_syslog',
         'stdout_logfile_backups', 'stdout_logfile_maxbytes',
+        'stdout_logfile_compression',
         'stderr_logfile', 'stderr_capture_maxbytes',
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
+        'stderr_logfile_compression',
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
         'exitcodes', 'redirect_stderr' ]

@@ -285,6 +285,17 @@ follows.
 
   *Introduced*: 3.0
 
+``logfile_compression``
+
+  Compress backup logfiles with supplied algorithm. Supported values are
+  copy (default), gzip, bzip2 and xz.
+
+  *Default*:  copy
+
+  *Required*:  No.
+
+  *Introduced*: 4.3.0
+
 ``loglevel``
 
   The logging level, dictating what is written to the supervisord
@@ -961,6 +972,17 @@ where specified.
 
   *Introduced*: 3.0, replaces 2.0's ``logfile_backups``
 
+``stdout_logfile_compression``
+
+  Compress backup logfiles with supplied algorithm. Supported values are
+  copy (default), gzip, bzip2 and xz.
+
+  *Default*:  copy
+
+  *Required*:  No.
+
+  *Introduced*: 4.3.0
+
 ``stdout_capture_maxbytes``
 
   Max number of bytes written to capture FIFO when process is in
@@ -1043,6 +1065,17 @@ where specified.
   *Required*:  No.
 
   *Introduced*: 3.0
+
+``stderr_logfile_compression``
+
+  Compress backup logfiles with supplied algorithm. Supported values are
+  copy (default), gzip, bzip2 and xz.
+
+  *Default*:  copy
+
+  *Required*:  No.
+
+  *Introduced*: 4.3.0
 
 ``stderr_capture_maxbytes``
 
@@ -1165,11 +1198,13 @@ where specified.
    stdout_logfile=/a/path
    stdout_logfile_maxbytes=1MB
    stdout_logfile_backups=10
+   stdout_logfile_compression=gzip
    stdout_capture_maxbytes=1MB
    stdout_events_enabled=false
    stderr_logfile=/a/path
    stderr_logfile_maxbytes=1MB
    stderr_logfile_backups=10
+   stderr_logfile_compression=gzip
    stderr_capture_maxbytes=1MB
    stderr_events_enabled=false
    environment=A="1",B="2"
@@ -1434,10 +1469,12 @@ above constraints and additions.
    stdout_logfile=/a/path
    stdout_logfile_maxbytes=1MB
    stdout_logfile_backups=10
+   stdout_logfile_compression=gzip
    stdout_events_enabled=false
    stderr_logfile=/a/path
    stderr_logfile_maxbytes=1MB
    stderr_logfile_backups=10
+   stderr_logfile_compression=gzip
    stderr_events_enabled=false
    environment=A="1",B="2"
    serverurl=AUTO
@@ -1516,10 +1553,12 @@ above constraints and additions.
    stdout_logfile=/a/path
    stdout_logfile_maxbytes=1MB
    stdout_logfile_backups=10
+   stdout_logfile_compression=gzip
    stdout_events_enabled=false
    stderr_logfile=/a/path
    stderr_logfile_maxbytes=1MB
    stderr_logfile_backups=10
+   stderr_logfile_compression=gzip
    stderr_events_enabled=false
    environment=A="1",B="2"
    serverurl=AUTO

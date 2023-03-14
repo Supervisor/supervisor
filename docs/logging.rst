@@ -109,6 +109,10 @@ respectively.  If ``logfile_maxbytes`` is 0, the logfile is never
 rotated (and thus backups are never made).  If ``logfile_backups`` is
 0, no backups will be kept.
 
+Backup files may be compressed by setting the ``logfile_compression``
+parameter. Supported values are ``copy`` (default, do not any compression),
+``gzip``, ``bzip2`` and ``xz`` compression formats.
+
 Child Process Logs
 ------------------
 
@@ -136,10 +140,11 @@ The configuration keys that influence child process logging in
 ``[program:x]`` and ``[fcgi-program:x]`` sections are these:
 
 ``redirect_stderr``, ``stdout_logfile``, ``stdout_logfile_maxbytes``,
-``stdout_logfile_backups``, ``stdout_capture_maxbytes``, ``stdout_syslog``,
+``stdout_logfile_backups``, ``stdout_logfile_compression``,
+``stdout_capture_maxbytes``, ``stdout_syslog``,
 ``stderr_logfile``, ``stderr_logfile_maxbytes``,
-``stderr_logfile_backups``, ``stderr_capture_maxbytes``, and
-``stderr_syslog``.
+``stderr_logfile_backups``, ``stderr_logfile_compression=gzip``,
+``stderr_capture_maxbytes``, and ``stderr_syslog``.
 
 ``[eventlistener:x]`` sections may not specify
 ``redirect_stderr``, ``stdout_capture_maxbytes``, or
