@@ -50,8 +50,8 @@ instances running on different servers.
     with a REST API, event monitoring, and configuration management.
 
 `Polyvisor <https://github.com/poly-laboratory/poly-visor>`_
-    Web-based dashboard written in Python using `flask <http://flask.pocoo.org>` web server.
-    Frontend based on `Svelte <https://svelte.dev/>` result in lightweighted packages. Communicate via supervisor's event-listener.
+    Web-based dashboard written in Python using `flask <http://flask.pocoo.org>`_ web server.
+    Frontend based on `Svelte <https://svelte.dev/>`_ result in lightweighted packages. Communicate via supervisor's event-listener.
     Providing system resource management via visualized charts & easy to config processes configs via web interface.
 
 Third Party Plugins and Libraries for Supervisor
