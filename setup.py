@@ -27,8 +27,6 @@ requires = [
     "importlib-resources; python_version < '3.7'",
 ]
 tests_require = []
-if py_version < (3, 3):
-    tests_require.append('mock<4.0.0.dev0')
 
 testing_extras = tests_require + [
     'pytest',
