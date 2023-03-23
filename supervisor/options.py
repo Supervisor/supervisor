@@ -21,7 +21,7 @@ from supervisor.compat import as_bytes, as_string
 from supervisor.compat import xmlrpclib
 from supervisor.compat import StringIO
 from supervisor.compat import basestring
-from supervisor.compat import importlib_metadata
+from supervisor.compat import import_spec
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -391,7 +391,7 @@ class Options:
 
     def import_spec(self, spec):
         """On failure, raises either AttributeError or ImportError"""
-        return importlib_metadata.EntryPoint(None, spec, None).load()
+        return import_spec(spec)
 
     def read_include_config(self, fp, parser, expansions):
         if parser.has_section('include'):
