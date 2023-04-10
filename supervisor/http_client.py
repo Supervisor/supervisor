@@ -1,4 +1,4 @@
-# this code based on Daniel Krech's RDFLib HTTP client code (see rdflib.net)
+# this code based on Daniel Krech's RDFLib HTTP client code (see rdflib.dev)
 
 import sys
 import socket
