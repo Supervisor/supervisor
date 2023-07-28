@@ -358,6 +358,7 @@ class dispatcher:
 
     def close(self):
         self.del_channel()
+        self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
 
     # cheap inheritance, used to pass all other attribute
