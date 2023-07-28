@@ -60,7 +60,7 @@ class SupervisorNamespaceRPCInterface:
     def getAPIVersion(self):
         """ Return the version of the RPC API used by supervisord
 
-        @return string version version id
+        @return string version id
         """
         self._update('getAPIVersion')
         return API_VERSION
@@ -70,7 +70,7 @@ class SupervisorNamespaceRPCInterface:
     def getSupervisorVersion(self):
         """ Return the version of the supervisor package in use by supervisord
 
-        @return string version version id
+        @return string version id
         """
         self._update('getSupervisorVersion')
         return VERSION

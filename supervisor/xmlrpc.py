@@ -9,7 +9,7 @@ from xml.etree.ElementTree import iterparse
 
 from supervisor.compat import xmlrpclib
 from supervisor.compat import StringIO
-from supervisor.compat import urllib
+from supervisor.compat import urlparse
 from supervisor.compat import as_bytes
 from supervisor.compat import as_string
 from supervisor.compat import encodestring
@@ -486,13 +486,10 @@ class SupervisorTransport(xmlrpclib.Transport):
         self.verbose = False
         self.serverurl = serverurl
         if serverurl.startswith('http://'):
-            type, uri = urllib.splittype(serverurl)
-            host, path = urllib.splithost(uri)
-            host, port = urllib.splitport(host)
+            parsed = urlparse.urlparse(serverurl)
+            host, port = parsed.hostname, parsed.port
             if port is None:
                 port = 80
-            else:
-                port = int(port)
             def get_connection(host=host, port=port):
                 return httplib.HTTPConnection(host, port)
             self._get_connection = get_connection
@@ -601,5 +598,3 @@ def gettags(comment):
     tags.append((tag_lineno, tag, datatype, name, '\n'.join(tag_text)))
 
     return tags
-
-

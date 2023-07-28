@@ -248,7 +248,7 @@ per the following directed graph.
    Subprocess State Transition Graph
 
 A process is in the ``STOPPED`` state if it has been stopped
-adminstratively or if it has never been started.
+administratively or if it has never been started.
 
 When an autorestarting process is in the ``BACKOFF`` state, it will be
 automatically restarted by :program:`supervisord`.  It will switch

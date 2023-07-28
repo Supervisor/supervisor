@@ -1,6 +1,17 @@
 4.3.0.dev0 (Next Release)
 -------------------------
 
+- On Python 3.8 and later, ``setuptools`` is no longer a runtime
+  dependency.  Patch by Ofek Lev.
+
+- ``supervisorctl`` now reads extra files included via the ``[include]``
+  section in ``supervisord.conf`` like ``supervisord`` does.  This allows
+  the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
+  included files.  Patch by François Granade.
+
+4.2.5 (2022-12-23)
+------------------
+
 - Fixed a bug where the XML-RPC method ``supervisor.startProcess()`` would
   return 500 Internal Server Error instead of an XML-RPC fault response
   if the command could not be parsed.  Patch by Julien Le Cléach.
@@ -8,22 +19,24 @@
 - Fixed a bug on Python 2.7 where a ``UnicodeDecodeError`` may have occurred
   when using the web interface.  Patch by Vinay Sajip.
 
-- ``supervisorctl`` now reads extra files included via the ``[include]``
-  section in ``supervisord.conf`` like ``supervisord`` does.  This allows
-  the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
-  included files.  Patch by François Granade.
+- Removed use of ``urllib.parse`` functions ``splithost``, ``splitport``, and
+  ``splittype`` deprecated in Python 3.8.
+
+- Removed use of ``asynchat`` and ``asyncore`` deprecated in Python 3.10.
 
 - The return value of the XML-RPC method ``supervisor.getAllConfigInfo()``
   now includes the ``directory``, ``uid``, and ``serverurl`` of the
   program.  Patch by Yellmean.
 
-- If ``supervisord`` searches the default paths for its config file (no
-  ``-c`` flag given), it will now print a message showing the path of the
-  config file that it loaded.  Patch by Alexander Tuna.
-
 - If a subprocess exits with a unexpected exit code (one not listed in
   ``exitcodes=`` in a ``[program:x]`` section) then the exit will now be logged
   at the ``WARN`` level instead of ``INFO``.  Patch by Precy Lee.
+
+- ``supervisorctl shutdown`` now shows an error message if an argument is
+  given.
+
+- File descriptors are now closed using the faster ``os.closerange()`` instead
+  of calling ``os.close()`` in a loop.  Patch by tyong920.
 
 4.2.4 (2021-12-30)
 ------------------
@@ -1392,7 +1405,7 @@
   supervisorctl.  To start a group, use ``start groupname:*``.  To start
   multiple groups, use ``start groupname1:* groupname2:*``.  Equivalent
   commands work for "stop" and "restart". You can mix and match short
-  processnames, fullly-specified group:process names, and groupsplats on the
+  processnames, fully-specified group:process names, and groupsplats on the
   same line for any of these commands.
 
 - Added ``directory`` option to process config.  If you set this
@@ -1448,7 +1461,7 @@
   supervisor will fail to start.
 
 - The Python string expression ``%(here)s`` (referring to the directory in
-  which the the configuration file was found) can be used within the
+  which the configuration file was found) can be used within the
   following sections/options within the config file::
 
       unix_http_server:file
@@ -1602,7 +1615,7 @@
   channel.  The keys "log_stderr" and "log_stdout" have been
   removed.
 
-- ``[program:x]`` config file sections now represent "homgeneous process
+- ``[program:x]`` config file sections now represent "homogeneous process
   groups" instead of single processes.  A "numprocs" key in the section
   represents the number of processes that are in the group.  A "process_name"
   key in the section allows composition of the each process' name within the
@@ -1717,7 +1730,7 @@
 
 - Processes which started successfully after failing to start
   initially are no longer reported in BACKOFF state once they are
-  started successfully (thanks to Damjan from Macdonia for the bug
+  started successfully (thanks to Damjan from Macedonia for the bug
   report).
 
 - Add new 'maintail' command to supervisorctl shell, which allows

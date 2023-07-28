@@ -1,7 +1,5 @@
 """Test suite for supervisor.socket_manager"""
 
-import gc
-import sys
 import os
 import unittest
 import socket
@@ -51,7 +49,6 @@ class ProxyTest(unittest.TestCase):
         proxy = self._makeOne(Subject(), on_delete=self.setOnDeleteCalled)
         self.assertEqual(5, proxy.getValue())
         proxy = None
-        gc_collect()
         self.assertTrue(self.on_deleteCalled)
 
 class ReferenceCounterTest(unittest.TestCase):
@@ -93,9 +90,6 @@ class ReferenceCounterTest(unittest.TestCase):
         self.assertRaises(Exception, ctr.decrement)
 
 class SocketManagerTest(unittest.TestCase):
-
-    def tearDown(self):
-        gc_collect()
 
     def _getTargetClass(self):
         from supervisor.socket_manager import SocketManager
@@ -160,12 +154,10 @@ class SocketManagerTest(unittest.TestCase):
         self.assertTrue(sock_manager.is_prepared())
         self.assertFalse(sock_manager.socket.close_called)
         sock = None
-        gc_collect()
         # Socket not actually closed yet b/c ref ct is 1
         self.assertTrue(sock_manager.is_prepared())
         self.assertFalse(sock_manager.socket.close_called)
         sock2 = None
-        gc_collect()
         # Socket closed
         self.assertFalse(sock_manager.is_prepared())
         self.assertTrue(sock_manager.socket.close_called)
@@ -178,7 +170,6 @@ class SocketManagerTest(unittest.TestCase):
         self.assertNotEqual(sock_id, sock3_id)
         # Drop ref ct to zero
         del sock3
-        gc_collect()
         # Now assert that socket is closed
         self.assertFalse(sock_manager.is_prepared())
         self.assertTrue(sock_manager.socket.close_called)
@@ -193,7 +184,6 @@ class SocketManagerTest(unittest.TestCase):
         self.assertEqual('Creating socket %s' % repr(conf), logger.data[0])
         # socket close
         del sock
-        gc_collect()
         self.assertEqual(len(logger.data), 2)
         self.assertEqual('Closing socket %s' % repr(conf), logger.data[1])
 
@@ -242,15 +232,3 @@ class SocketManagerTest(unittest.TestCase):
             self.fail()
         except Exception as e:
             self.assertEqual(e.args[0], 'Socket has not been prepared')
-
-def gc_collect():
-    if __pypy__ is not None:
-        gc.collect()
-        gc.collect()
-        gc.collect()
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')

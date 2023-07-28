@@ -1,4 +1,3 @@
-import sys
 import unittest
 from supervisor import xmlrpc
 from supervisor.compat import StringIO
@@ -1287,6 +1286,16 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         out = plugin.ctl.stdout.getvalue()
         self.assertTrue("Shut the remote supervisord down" in out)
 
+    def test_shutdown_with_arg_shows_error(self):
+        plugin = self._makeOne()
+        options = plugin.ctl.options
+        result = plugin.do_shutdown('bad')
+        self.assertEqual(result, None)
+        self.assertEqual(options._server.supervisor._shutdown, False)
+        val = plugin.ctl.stdout.getvalue()
+        self.assertTrue(val.startswith('Error: shutdown accepts no arguments'), val)
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitExitStatuses.GENERIC)
+
     def test_shutdown(self):
         plugin = self._makeOne()
         options = plugin.ctl.options
@@ -2057,10 +2066,3 @@ class DummyPlugin:
 
     def do_help(self, arg):
         self.helped = True
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
-

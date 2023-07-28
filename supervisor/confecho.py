@@ -1,7 +1,8 @@
-import pkg_resources
 import sys
 from supervisor.compat import as_string
+from supervisor.compat import resource_filename
+
 
 def main(out=sys.stdout):
-    config = pkg_resources.resource_string(__name__, 'skel/sample.conf')
-    out.write(as_string(config))
+    with open(resource_filename(__package__, 'skel/sample.conf'), 'r') as f:
+        out.write(as_string(f.read()))

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import unittest
-import sys
 import operator
 import os
 import time
@@ -2392,14 +2391,6 @@ class Test_make_main_rpcinterface(unittest.TestCase):
             )
 
 
-
 class DummyRPCInterface:
     def hello(self):
         return 'Hello!'
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
-

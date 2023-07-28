@@ -1,7 +1,6 @@
 import base64
 import os
 import stat
-import sys
 import socket
 import tempfile
 import unittest
@@ -169,8 +168,8 @@ class TailFProducerTests(unittest.TestCase):
 
     def test_handle_more_follow_file_gone(self):
         request = DummyRequest('/logtail/foo', None, None, None)
-        filename = tempfile.mktemp()
-        with open(filename, 'wb') as f:
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            filename = f.name
             f.write(b'a' * 80)
         try:
             producer = self._makeOne(request, f.name, 80)
@@ -605,7 +604,7 @@ class TopLevelFunctionTests(unittest.TestCase):
                 if socketfile is not None:
                     os.unlink(socketfile)
         finally:
-            from asyncore import socket_map
+            from supervisor.medusa.asyncore_25 import socket_map
             socket_map.clear()
         return servers
 
@@ -620,7 +619,10 @@ class TopLevelFunctionTests(unittest.TestCase):
             self.assertEqual(exc.args[0], 'Cannot determine socket type 999')
 
     def test_make_http_servers_noauth(self):
-        socketfile = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=True) as f:
+            socketfile = f.name
+        self.assertFalse(os.path.exists(socketfile))
+
         inet = {'family':socket.AF_INET, 'host':'localhost', 'port':17735,
                 'username':None, 'password':None, 'section':'inet_http_server'}
         unix = {'family':socket.AF_UNIX, 'file':socketfile, 'chmod':0o700,
@@ -647,7 +649,10 @@ class TopLevelFunctionTests(unittest.TestCase):
         self.assertEqual([x.IDENT for x in server.handlers], idents)
 
     def test_make_http_servers_withauth(self):
-        socketfile = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=True) as f:
+            socketfile = f.name
+        self.assertFalse(os.path.exists(socketfile))
+
         inet = {'family':socket.AF_INET, 'host':'localhost', 'port':17736,
                 'username':'username', 'password':'password',
                 'section':'inet_http_server'}
@@ -678,9 +683,3 @@ class DummyProducer:
             return self.data.pop(0)
         else:
             return b''
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')

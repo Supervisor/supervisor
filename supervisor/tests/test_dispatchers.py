@@ -1,6 +1,5 @@
 import unittest
 import os
-import sys
 
 from supervisor.compat import as_bytes
 
@@ -1227,9 +1226,3 @@ class stripEscapeTests(unittest.TestCase):
     def test_noansi(self):
         noansi = b'Hello world... this is longer than a token!'
         self.assertEqual(self._callFUT(noansi), noansi)
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')

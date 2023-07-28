@@ -19,7 +19,7 @@ class ProcessOrGroupName(unittest.TestCase):
         name = " foo\t"
         self.assertEqual(self._callFUT(name), "foo")
 
-    def test_disallows_inner_spaces_for_eventlister_protocol(self):
+    def test_disallows_inner_spaces_for_eventlistener_protocol(self):
         name = "foo bar"
         self.assertRaises(ValueError, self._callFUT, name)
 

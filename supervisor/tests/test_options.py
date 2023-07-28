@@ -1442,9 +1442,9 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
                 "section [inet_http_server] has no port value")
 
     def test_cleanup_afunix_unlink(self):
-        fn = tempfile.mktemp()
-        with open(fn, 'w') as f:
-            f.write('foo')
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            fn = f.name
+            f.write(b'foo')
         instance = self._makeOne()
         instance.unlink_socketfiles = True
         class Server:
@@ -1456,10 +1456,10 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         self.assertFalse(os.path.exists(fn))
 
     def test_cleanup_afunix_nounlink(self):
-        fn = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            fn = f.name
+            f.write(b'foo')
         try:
-            with open(fn, 'w') as f:
-                f.write('foo')
             instance = self._makeOne()
             class Server:
                 pass
@@ -1477,10 +1477,10 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
 
     def test_cleanup_afunix_ignores_oserror_enoent(self):
         notfound = os.path.join(os.path.dirname(__file__), 'notfound')
-        socketname = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            socketname = f.name
+            f.write(b'foo')
         try:
-            with open(socketname, 'w') as f:
-                f.write('foo')
             instance = self._makeOne()
             instance.unlink_socketfiles = True
             class Server:
@@ -1499,10 +1499,10 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
                 pass
 
     def test_cleanup_removes_pidfile(self):
-        pidfile = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            pidfile = f.name
+            f.write(b'2')
         try:
-            with open(pidfile, 'w') as f:
-                f.write('2')
             instance = self._makeOne()
             instance.pidfile = pidfile
             instance.logger = DummyLogger()
@@ -1523,10 +1523,9 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         instance.cleanup() # shouldn't raise
 
     def test_cleanup_does_not_remove_pidfile_from_another_supervisord(self):
-        pidfile = tempfile.mktemp()
-
-        with open(pidfile, 'w') as f:
-            f.write('1234')
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            pidfile = f.name
+            f.write(b'1234')
 
         try:
             instance = self._makeOne()
@@ -1544,10 +1543,10 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
                 pass
 
     def test_cleanup_closes_poller(self):
-        pidfile = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            pidfile = f.name
+            f.write(b'2')
         try:
-            with open(pidfile, 'w') as f:
-                f.write('2')
             instance = self._makeOne()
             instance.pidfile = pidfile
 
@@ -1562,21 +1561,15 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
             except OSError:
                 pass
 
-    def test_cleanup_fds_closes_5_upto_minfds_ignores_oserror(self):
+    @patch('os.closerange', Mock())
+    def test_cleanup_fds_closes_5_upto_minfds(self):
         instance = self._makeOne()
         instance.minfds = 10
 
-        closed = []
-        def close(fd):
-            if fd == 7:
-                raise OSError
-            closed.append(fd)
-
-        @patch('os.close', close)
         def f():
             instance.cleanup_fds()
         f()
-        self.assertEqual(closed, [5,6,8,9])
+        os.closerange.assert_called_with(5, 10)
 
     def test_close_httpservers(self):
         instance = self._makeOne()
@@ -1648,7 +1641,10 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         self.assertEqual(logger.data[0], 'supervisord logreopen')
 
     def test_write_pidfile_ok(self):
-        fn = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=True) as f:
+            fn = f.name
+        self.assertFalse(os.path.exists(fn))
+
         try:
             instance = self._makeOne()
             instance.logger = DummyLogger()
@@ -2664,7 +2660,26 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         gconfig1 = gconfigs[0]
         self.assertEqual(gconfig1.result_handler, dummy_handler)
 
-    def test_event_listener_pool_result_handler_unimportable(self):
+    def test_event_listener_pool_result_handler_unimportable_ImportError(self):
+        text = lstrip("""\
+        [eventlistener:cat]
+        events=PROCESS_COMMUNICATION
+        command = /bin/cat
+        result_handler = thisishopefullynotanimportablepackage:nonexistent
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        try:
+            instance.process_groups_from_parser(config)
+            self.fail('nothing raised')
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                'thisishopefullynotanimportablepackage:nonexistent cannot be '
+                'resolved within [eventlistener:cat]')
+
+    def test_event_listener_pool_result_handler_unimportable_AttributeError(self):
         text = lstrip("""\
         [eventlistener:cat]
         events=PROCESS_COMMUNICATION
@@ -3862,9 +3877,3 @@ class UtilFunctionsTests(unittest.TestCase):
         self.assertEqual(s('process'), ('process', 'process'))
         self.assertEqual(s('group:'), ('group', None))
         self.assertEqual(s('group:*'), ('group', None))
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
