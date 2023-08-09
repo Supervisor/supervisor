@@ -297,7 +297,7 @@ Process Control
 
         .. describe:: stderr_logfile
 
-            Absolute path and filename to the STDOUT logfile
+            Absolute path and filename to the STDERR logfile
 
         .. describe:: spawnerr
 
