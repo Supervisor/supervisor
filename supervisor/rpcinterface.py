@@ -58,9 +58,10 @@ class SupervisorNamespaceRPCInterface:
     # RPC API methods
 
     def getAPIVersion(self):
-        """ Return the version of the RPC API used by supervisord
+        """Return the version of the RPC API used by supervisord.
 
-        @return string version id
+        :returns: The RPC API version id.
+        :rtype: str
         """
         self._update('getAPIVersion')
         return API_VERSION
@@ -68,25 +69,29 @@ class SupervisorNamespaceRPCInterface:
     getVersion = getAPIVersion # b/w compatibility with releases before 3.0
 
     def getSupervisorVersion(self):
-        """ Return the version of the supervisor package in use by supervisord
+        """Return the version of the supervisor package in use by supervisord.
 
-        @return string version id
+        :returns: The supervisor package version id.
+        :rtype: str
         """
         self._update('getSupervisorVersion')
         return VERSION
 
     def getIdentification(self):
-        """ Return identifying string of supervisord
+        """Return identifying string of supervisord.
 
-        @return string identifier identifying string
+        :returns: The identifying string.
+        :rtype: str
         """
         self._update('getIdentification')
         return self.supervisord.options.identifier
 
     def getState(self):
-        """ Return current state of supervisord as a struct
+        """Return current state of supervisord as a dict.
 
-        @return struct A struct with keys int statecode, string statename
+        :returns: A dict with keys ``'statecode'`` with a value in type ``int``,
+                  ``'statename'`` with a value in type ``str``
+        :rtype: dict
         """
         self._update('getState')
 
@@ -99,19 +104,21 @@ class SupervisorNamespaceRPCInterface:
         return data
 
     def getPID(self):
-        """ Return the PID of supervisord
+        """Return the PID of supervisord.
 
-        @return int PID
+        :returns: The process id.
+        :rtype: int
         """
         self._update('getPID')
         return self.supervisord.options.get_pid()
 
     def readLog(self, offset, length):
-        """ Read length bytes from the main log starting at offset
+        """Read ``length`` bytes from the main log starting at ``offset``.
 
-        @param int offset         offset to start reading from.
-        @param int length         number of bytes to read from the log.
-        @return string result     Bytes of log
+        :param int offset: The offset to start reading from.
+        :param int length: The number of bytes to read from the log.
+        :returns: Log in a string.
+        :rtype: str
         """
         self._update('readLog')
 
@@ -129,9 +136,10 @@ class SupervisorNamespaceRPCInterface:
     readMainLog = readLog # b/w compatibility with releases before 2.1
 
     def clearLog(self):
-        """ Clear the main log.
+        """Clear the main log.
 
-        @return boolean result always returns True unless error
+        :returns: Always returns ``True`` unless error.
+        :rtype: bool
         """
         self._update('clearLog')
 
@@ -152,18 +160,20 @@ class SupervisorNamespaceRPCInterface:
         return True
 
     def shutdown(self):
-        """ Shut down the supervisor process
+        """Shut down the supervisord process.
 
-        @return boolean result always returns True unless error
+        :returns: Always returns ``True`` unless error.
+        :rtype: bool
         """
         self._update('shutdown')
         self.supervisord.options.mood = SupervisorStates.SHUTDOWN
         return True
 
     def restart(self):
-        """ Restart the supervisor process
+        """Restart the supervisord process.
 
-        @return boolean result  always return True unless error
+        :returns: Always returns ``True`` unless error.
+        :rtype: bool
         """
         self._update('restart')
 
@@ -171,20 +181,19 @@ class SupervisorNamespaceRPCInterface:
         return True
 
     def reloadConfig(self):
-        """
-        Reload the configuration.
+        """Reload the configuration.
 
         The result contains three arrays containing names of process
         groups:
 
-        * `added` gives the process groups that have been added
+        * `added` gives the process groups that have been added.
         * `changed` gives the process groups whose contents have
-          changed
+          changed.
         * `removed` gives the process groups that are no longer
-          in the configuration
+          in the configuration.
 
-        @return array result  [[added, changed, removed]]
-
+        :returns: Results as ``[[added, changed, removed]]``.
+        :rtype: list
         """
         self._update('reloadConfig')
         try:
@@ -200,10 +209,11 @@ class SupervisorNamespaceRPCInterface:
         return [[added, changed, removed]] # cannot return len > 1, apparently
 
     def addProcessGroup(self, name):
-        """ Update the config for a running process from config file.
+        """Update the config for a running process from config file.
 
-        @param string name         name of process group to add
-        @return boolean result     true if successful
+        :param str name: Name of the process group to add.
+        :returns: ``True`` if successful.
+        :rtype: bool
         """
         self._update('addProcessGroup')
 
@@ -216,10 +226,11 @@ class SupervisorNamespaceRPCInterface:
         raise RPCError(Faults.BAD_NAME, name)
 
     def removeProcessGroup(self, name):
-        """ Remove a stopped process from the active configuration.
+        """Remove a stopped process from the active configuration.
 
-        @param string name         name of process group to remove
-        @return boolean result     Indicates whether the removal was successful
+        :param str name: Name of the process group to remove.
+        :returns: Indicates whether the removal was successful.
+        :rtype: bool
         """
         self._update('removeProcessGroup')
         if name not in self.supervisord.process_groups:
@@ -275,11 +286,12 @@ class SupervisorNamespaceRPCInterface:
         return group, process
 
     def startProcess(self, name, wait=True):
-        """ Start a process
+        """Start a process.
 
-        @param string name Process name (or ``group:name``, or ``group:*``)
-        @param boolean wait Wait for process to be fully started
-        @return boolean result     Always true unless error
+        :param str name: Process name (or ``group:name``, or ``group:*``).
+        :param bool wait: Wait for process to be fully started.
+        :returns: Always returns ``True`` unless error.
+        :rtype: bool
 
         """
         self._update('startProcess')
@@ -353,11 +365,12 @@ class SupervisorNamespaceRPCInterface:
         return True
 
     def startProcessGroup(self, name, wait=True):
-        """ Start all processes in the group named 'name'
+        """Start all processes in the group named ``name``.
 
-        @param string name     The group name
-        @param boolean wait    Wait for each process to be fully started
-        @return array result   An array of process status info structs
+        :param str name: The group name.
+        :param bool wait: Wait for each process to be fully started.
+        :returns: A list of process status info dict.
+        :rtype: list
         """
         self._update('startProcessGroup')
 
@@ -378,10 +391,11 @@ class SupervisorNamespaceRPCInterface:
         return startall # deferred
 
     def startAllProcesses(self, wait=True):
-        """ Start all processes listed in the configuration file
+        """Start all processes listed in the configuration file.
 
-        @param boolean wait    Wait for each process to be fully started
-        @return array result   An array of process status info structs
+        :param bool wait: Wait for each process to be fully started.
+        :returns: A list of process status info dict.
+        :rtype: list
         """
         self._update('startAllProcesses')
 
@@ -394,11 +408,12 @@ class SupervisorNamespaceRPCInterface:
         return startall # deferred
 
     def stopProcess(self, name, wait=True):
-        """ Stop a process named by name
+        """Stop a process named by ``name``.
 
-        @param string name  The name of the process to stop (or 'group:name')
-        @param boolean wait        Wait for the process to be fully stopped
-        @return boolean result     Always return True unless error
+        :param str name: The name of the process to stop (or ``group:name``).
+        :param bool wait: Wait for the process to be fully stopped.
+        :returns: Always returns ``True`` unless error.
+        :rtype: bool
         """
         self._update('stopProcess')
 
@@ -445,11 +460,12 @@ class SupervisorNamespaceRPCInterface:
         return True
 
     def stopProcessGroup(self, name, wait=True):
-        """ Stop all processes in the process group named 'name'
+        """Stop all processes in the process group named ``name``.
 
-        @param string name     The group name
-        @param boolean wait    Wait for each process to be fully stopped
-        @return array result   An array of process status info structs
+        :param str name: The group name.
+        :param bool wait: Wait for each process to be fully stopped.
+        :returns: A list of process status info dict.
+        :rtype: list
         """
         self._update('stopProcessGroup')
 
@@ -470,10 +486,11 @@ class SupervisorNamespaceRPCInterface:
         return killall # deferred
 
     def stopAllProcesses(self, wait=True):
-        """ Stop all processes in the process list
+        """Stop all processes in the process list.
 
-        @param  boolean wait   Wait for each process to be fully stopped
-        @return array result   An array of process status info structs
+        :param bool wait: Wait for each process to be fully stopped.
+        :returns: A list of process status info dict.
+        :rtype: list
         """
         self._update('stopAllProcesses')
 
@@ -487,11 +504,11 @@ class SupervisorNamespaceRPCInterface:
         return killall # deferred
 
     def signalProcess(self, name, signal):
-        """ Send an arbitrary UNIX signal to the process named by name
+        """Send an arbitrary UNIX signal to the process named by ``name``.
 
-        @param string name    Name of the process to signal (or 'group:name')
-        @param string signal  Signal to send, as name ('HUP') or number ('1')
-        @return boolean
+        :param str name: Name of the process to signal (or ``group:name``).
+        :param str signal: Signal to send, name (``'HUP'``) or number (``'1'``).
+        :rtype: bool
         """
 
         self._update('signalProcess')
@@ -518,11 +535,11 @@ class SupervisorNamespaceRPCInterface:
         return True
 
     def signalProcessGroup(self, name, signal):
-        """ Send a signal to all processes in the group named 'name'
+        """Send a signal to all processes in the group named ``name``.
 
-        @param string name    The group name
-        @param string signal  Signal to send, as name ('HUP') or number ('1')
-        @return array
+        :param str name: The group name.
+        :param str signal: Signal to send, name (``'HUP'``) or number (``'1'``).
+        :rtype: list
         """
 
         group = self.supervisord.process_groups.get(name)
@@ -543,10 +560,11 @@ class SupervisorNamespaceRPCInterface:
         return result
 
     def signalAllProcesses(self, signal):
-        """ Send a signal to all processes in the process list
+        """Send a signal to all processes in the process list.
 
-        @param string signal  Signal to send, as name ('HUP') or number ('1')
-        @return array         An array of process status info structs
+        :param str signal: Signal to send, name (``'HUP'``) or number (``'1'``).
+        :returns: A list of process status info dict.
+        :rtype: list
         """
         processes = self._getAllProcesses()
         signalall = make_allfunc(processes, isSignallable, self.signalProcess,
@@ -556,10 +574,11 @@ class SupervisorNamespaceRPCInterface:
         return result
 
     def getAllConfigInfo(self):
-        """ Get info about all available process configurations. Each struct
+        """Get info about all available process configurations. Each dict
         represents a single process (i.e. groups get flattened).
 
-        @return array result  An array of process config info structs
+        :returns: A list of process config info dict.
+        :rtype: list
         """
         self._update('getAllConfigInfo')
 
@@ -637,10 +656,11 @@ class SupervisorNamespaceRPCInterface:
         return desc
 
     def getProcessInfo(self, name):
-        """ Get info about a process named name
+        """Get info about a process named ``name``.
 
-        @param string name The name of the process (or 'group:name')
-        @return struct result     A structure containing data about the process
+        :param str name: The name of the process (or ``group:name``).
+        :returns: A dict containing data about the process.
+        :rtype: dict
         """
         self._update('getProcessInfo')
 
@@ -687,9 +707,10 @@ class SupervisorNamespaceRPCInterface:
         return time.time()
 
     def getAllProcessInfo(self):
-        """ Get info about all processes
+        """Get info about all processes.
 
-        @return array result  An array of process status results
+        :returns: A list of process status results.
+        :rtype: list
         """
         self._update('getAllProcessInfo')
 
@@ -719,12 +740,14 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(getattr(Faults, why))
 
     def readProcessStdoutLog(self, name, offset, length):
-        """ Read length bytes from name's stdout log starting at offset
+        """Read ``length`` bytes from ``name``'s stdout log, starting 
+        at ``offset``.
 
-        @param string name        the name of the process (or 'group:name')
-        @param int offset         offset to start reading from.
-        @param int length         number of bytes to read from the log.
-        @return string result     Bytes of log
+        :param str name: The name of the process (or ``group:name``).
+        :param int offset: The offset to start reading from.
+        :param int length: The number of bytes to read from the log.
+        :returns: Log in a string.
+        :rtype: str
         """
         self._update('readProcessStdoutLog')
         return self._readProcessLog(name, offset, length, 'stdout')
@@ -732,12 +755,14 @@ class SupervisorNamespaceRPCInterface:
     readProcessLog = readProcessStdoutLog # b/c alias
 
     def readProcessStderrLog(self, name, offset, length):
-        """ Read length bytes from name's stderr log starting at offset
+        """Read ``length`` bytes from ``name``'s stderr log, starting
+        at ``offset``.
 
-        @param string name        the name of the process (or 'group:name')
-        @param int offset         offset to start reading from.
-        @param int length         number of bytes to read from the log.
-        @return string result     Bytes of log
+        :param str name: The name of the process (or ``group:name``).
+        :param int offset: The offset to start reading from.
+        :param int length: The number of bytes to read from the log.
+        :returns: Log in a string.
+        :rtype: str
         """
         self._update('readProcessStderrLog')
         return self._readProcessLog(name, offset, length, 'stderr')
@@ -757,22 +782,23 @@ class SupervisorNamespaceRPCInterface:
 
     def tailProcessStdoutLog(self, name, offset, length):
         """
-        Provides a more efficient way to tail the (stdout) log than
-        readProcessStdoutLog().  Use readProcessStdoutLog() to read
-        chunks and tailProcessStdoutLog() to tail.
+        Provides a more efficient way to tail the stdout log than
+        ``readProcessStdoutLog()``.  Use ``readProcessStdoutLog()``
+        to read chunks and ``tailProcessStdoutLog()`` to tail.
 
-        Requests (length) bytes from the (name)'s log, starting at
-        (offset).  If the total log size is greater than (offset +
-        length), the overflow flag is set and the (offset) is
+        Requests ``length`` bytes from ``name``'s log, starting at
+        ``offset``.  If the total log size is greater than ``(offset +
+        length)``, the ``overflow`` flag is set and ``offset`` is
         automatically increased to position the buffer at the end of
-        the log.  If less than (length) bytes are available, the
-        maximum number of available bytes will be returned.  (offset)
-        returned is always the last offset in the log +1.
+        the log.  If less than ``length`` bytes are available, the
+        maximum number of available bytes will be returned.  ``offset``
+        returned is always the last offset in the log plus 1.
 
-        @param string name         the name of the process (or 'group:name')
-        @param int offset          offset to start reading from
-        @param int length          maximum number of bytes to return
-        @return array result       [string bytes, int offset, bool overflow]
+        :param str name: The name of the process (or ``group:name``).
+        :param int offset: The offset to start reading from.
+        :param int length: The maximum number of bytes to return.
+        :returns: The stdout log, offset, and overflow.
+        :rtype: [str, int, bool]
         """
         self._update('tailProcessStdoutLog')
         return self._tailProcessLog(name, offset, length, 'stdout')
@@ -781,32 +807,34 @@ class SupervisorNamespaceRPCInterface:
 
     def tailProcessStderrLog(self, name, offset, length):
         """
-        Provides a more efficient way to tail the (stderr) log than
-        readProcessStderrLog().  Use readProcessStderrLog() to read
-        chunks and tailProcessStderrLog() to tail.
+        Provides a more efficient way to tail the stderr log than
+        ``readProcessStderrLog()``.  Use ``readProcessStderrLog()``
+        to read chunks and ``tailProcessStderrLog()`` to tail.
 
-        Requests (length) bytes from the (name)'s log, starting at
-        (offset).  If the total log size is greater than (offset +
-        length), the overflow flag is set and the (offset) is
+        Requests ``length`` bytes from ``name``'s log, starting at
+        ``offset``.  If the total log size is greater than ``(offset +
+        length)``, the ``overflow`` flag is set and ``offset`` is
         automatically increased to position the buffer at the end of
-        the log.  If less than (length) bytes are available, the
-        maximum number of available bytes will be returned.  (offset)
-        returned is always the last offset in the log +1.
+        the log.  If less than ``length`` bytes are available, the
+        maximum number of available bytes will be returned.  ``offset``
+        returned is always the last offset in the log plus 1.
 
-        @param string name         the name of the process (or 'group:name')
-        @param int offset          offset to start reading from
-        @param int length          maximum number of bytes to return
-        @return array result       [string bytes, int offset, bool overflow]
+        :param str name: The name of the process (or ``group:name``).
+        :param int offset: The offset to start reading from.
+        :param int length: The maximum number of bytes to return.
+        :returns: The stderr log, offset, and overflow.
+        :rtype: [str, int, bool]
         """
         self._update('tailProcessStderrLog')
         return self._tailProcessLog(name, offset, length, 'stderr')
 
     def clearProcessLogs(self, name):
-        """ Clear the stdout and stderr logs for the named process and
+        """Clear the stdout and stderr logs for the named process and
         reopen them.
 
-        @param string name   The name of the process (or 'group:name')
-        @return boolean result      Always True unless error
+        :param str name: The name of the process (or``group:name``).
+        :returns: Always returns ``True`` unless error.
+        :rtype: bool
         """
         self._update('clearProcessLogs')
 
@@ -826,9 +854,10 @@ class SupervisorNamespaceRPCInterface:
     clearProcessLog = clearProcessLogs # b/c alias
 
     def clearAllProcessLogs(self):
-        """ Clear all process log files
+        """Clear all process log files.
 
-        @return array result   An array of process status info structs
+        :returns: A list of process status info dict.
+        :rtype: list
         """
         self._update('clearAllProcessLogs')
         results  = []
@@ -871,17 +900,18 @@ class SupervisorNamespaceRPCInterface:
         return clearall # deferred
 
     def sendProcessStdin(self, name, chars):
-        """ Send a string of chars to the stdin of the process name.
+        """Send a string ``chars`` to the stdin of the process ``name``.
         If non-7-bit data is sent (unicode), it is encoded to utf-8
-        before being sent to the process' stdin.  If chars is not a
-        string or is not unicode, raise INCORRECT_PARAMETERS.  If the
-        process is not running, raise NOT_RUNNING.  If the process'
+        before being sent to the process' stdin.  If ``chars`` is not a
+        string or is not unicode, raise ``INCORRECT_PARAMETERS``.  If the
+        process is not running, raise ``NOT_RUNNING``.  If the process'
         stdin cannot accept input (e.g. it was closed by the child
-        process), raise NO_FILE.
+        process), raise ``NO_FILE``.
 
-        @param string name        The process name to send to (or 'group:name')
-        @param string chars       The character data to send to the process
-        @return boolean result    Always return True unless error
+        :param str name: The process name to send to (or ``group:name``).
+        :param str chars: The character data to send to the process.
+        :returns: Always returns ``True`` unless error.
+        :rtype: bool
         """
         self._update('sendProcessStdin')
 
@@ -909,12 +939,13 @@ class SupervisorNamespaceRPCInterface:
         return True
 
     def sendRemoteCommEvent(self, type, data):
-        """ Send an event that will be received by event listener
-        subprocesses subscribing to the RemoteCommunicationEvent.
+        """Send an event that will be received by event listener
+        subprocesses subscribing to the ``RemoteCommunicationEvent``.
 
-        @param  string  type  String for the "type" key in the event header
-        @param  string  data  Data for the event body
-        @return boolean       Always return True unless error
+        :param str type: String for the "type" key in the event header.
+        :param str data: Data for the event body.
+        :returns: Always returns ``True`` unless error.
+        :rtype: bool
         """
         if isinstance(type, unicode):
             type = type.encode('utf-8')
@@ -932,8 +963,8 @@ def _total_seconds(timedelta):
                 timedelta.microseconds) / 10**6
 
 def make_allfunc(processes, predicate, func, **extra_kwargs):
-    """ Return a closure representing a function that calls a
-    function for every process, and returns a result """
+    """Return a closure representing a function that calls a
+    function for every process, and returns a result."""
 
     callbacks = []
     results = []
