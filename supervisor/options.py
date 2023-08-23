@@ -1992,29 +1992,37 @@ class ProcessConfig(Config):
 
             for line in envdata.splitlines():
                 line = line.strip()
-                if line.startswith('#'):  # ignore comments
+                if not line or line.startswith('#'):  # ignore comments and empty lines
                     continue
 
-                key, val = [s.strip() for s in line.split("=", 1)]
-                if key:
-                    # for compatibility with .env files and the npm dotenv library, if the value is quoted let's
-                    # unquote it. Also, double quoted strings get embedded '\\n' chars expanded to real newlines.
-                    # Don't strip whitespace inside quoted values.
-                    if val.startswith("\""):
-                        val = val.strip("\"")
+                line_parts = line.split("=", 1) # ignore malformed lines
+                if len(line_parts) != 2:
+                    continue
 
-                        # expand embedded '\n' chars into actual newlines
-                        val.replace("\\n", "\n")
+                key, val = [s.strip() for s in line_parts]
+                if not key or not val:
+                    continue
 
-                    elif val.startswith("'"):
-                        val = val.strip("'")
-                    elif val.startswith("`"):
-                        val = val.strip("`")
+                # for compatibility with .env files and the npm dotenv library, if the value is quoted let's
+                # unquote it. Also, double quoted strings get embedded '\\n' chars expanded to real newlines.
+                # Don't strip whitespace inside quoted values.
+                if val.startswith("\""):
+                    val = val.strip("\"")
 
-                    extra_env[key.upper()] = val
+                    # expand embedded '\n' chars into actual newlines
+                    val.replace("\\n", "\n")
+
+                elif val.startswith("'"):
+                    val = val.strip("'")
+                elif val.startswith("`"):
+                    val = val.strip("`")
+
+                extra_env[key.upper()] = val
 
             if extra_env:
+                print(f"updating process env with: {extra_env}")
                 env.update(extra_env)
+
 
         return env
 
