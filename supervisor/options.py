@@ -1995,8 +1995,22 @@ class ProcessConfig(Config):
                 if line.startswith('#'):  # ignore comments
                     continue
 
-                key, val = [s.strip() for s in line.split('=', 1)]
+                key, val = [s.strip() for s in line.split("=", 1)]
                 if key:
+                    # for compatibility with .env files and the npm dotenv library, if the value is quoted let's
+                    # unquote it. Also, double quoted strings get embedded '\\n' chars expanded to real newlines.
+                    # Don't strip whitespace inside quoted values.
+                    if val.startswith("\""):
+                        val = val.strip("\"")
+
+                        # expand embedded '\n' chars into actual newlines
+                        val.replace("\\n", "\n")
+
+                    elif val.startswith("'"):
+                        val = val.strip("'")
+                    elif val.startswith("`"):
+                        val = val.strip("`")
+
                     extra_env[key.upper()] = val
 
             if extra_env:
