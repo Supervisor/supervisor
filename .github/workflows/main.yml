@@ -3,7 +3,9 @@ name: Run all tests
 on: [push, pull_request]
 
 env:
-  PIP_DISABLE_PIP_VERSION_CHECK: 1
+  PIP: "env PIP_DISABLE_PIP_VERSION_CHECK=1
+            PYTHONWARNINGS=ignore:DEPRECATION
+            pip --no-cache-dir"
 
 jobs:
   tests_py27:
@@ -16,7 +18,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Install dependencies
-      run: pip install virtualenv tox
+      run: $PIP install virtualenv tox
 
     - name: Run the unit tests
       run: TOXENV=py27 tox
@@ -34,7 +36,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Install dependencies
-      run: pip install virtualenv tox
+      run: $PIP install virtualenv tox
 
     - name: Run the unit tests
       run: TOXENV=py34 tox
@@ -58,7 +60,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: pip install virtualenv tox
+      run: $PIP install virtualenv tox
 
     - name: Set variable for TOXENV based on Python version
       id: toxenv
@@ -80,7 +82,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Install dependencies
-      run: pip install virtualenv tox
+      run: $PIP install virtualenv tox
 
     - name: Run unit test coverage
       run: TOXENV=cover tox
@@ -101,7 +103,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: pip install virtualenv tox
+      run: $PIP install virtualenv tox
 
     - name: Run unit test coverage
       run: TOXENV=cover3 tox
@@ -118,7 +120,7 @@ jobs:
         python-version: "3.8"
 
     - name: Install dependencies
-      run: pip install virtualenv tox>=4.0.0
+      run: $PIP install virtualenv tox>=4.0.0
 
     - name: Build the docs
       run: TOXENV=docs tox
