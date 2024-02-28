@@ -1043,6 +1043,8 @@ class ServerOptions(Options):
                 autorestart=autorestart,
                 startsecs=startsecs,
                 startretries=startretries,
+                maxbackoff=maxbackoff,
+                backoffincrement=backoffincrement,
                 uid=uid,
                 stdout_logfile=logfiles['stdout_logfile'],
                 stdout_capture_maxbytes = stdout_cmaxbytes,
