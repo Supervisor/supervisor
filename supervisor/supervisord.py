@@ -34,6 +34,7 @@ Options:
 import os
 import time
 import signal
+import psutil
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -55,6 +56,7 @@ class Supervisor:
         self.options = options
         self.process_groups = {}
         self.ticks = {}
+        self.terminated_processes = []
 
     def main(self):
         if not self.options.first:
@@ -156,7 +158,7 @@ class Supervisor:
     def ordered_stop_groups_phase_1(self):
         if self.stop_groups:
             # stop the last group (the one with the "highest" priority)
-            self.stop_groups[-1].stop_all()
+            self.stop_groups[-1].stop_all(supervisor=self)
 
     def ordered_stop_groups_phase_2(self):
         # after phase 1 we've transitioned and reaped, let's see if we
@@ -196,9 +198,12 @@ class Supervisor:
                 self.ordered_stop_groups_phase_1()
 
                 if not self.shutdown_report():
-                    # if there are no unstopped processes (we're done
-                    # killing everything), it's OK to shutdown or reload
-                    raise asyncore.ExitNow
+                    # make sure all processes are properly terminated
+                    self.kill_process_after_reaching_timeout()
+                    if not self.terminated_processes:
+                        # if there are no unstopped processes (we're done
+                        # killing everything), it's OK to shutdown or reload
+                        raise asyncore.ExitNow
 
             for fd, dispatcher in combined_map.items():
                 if dispatcher.readable():
@@ -255,6 +260,7 @@ class Supervisor:
             for group in pgroups:
                 group.transition()
 
+            self.kill_process_after_reaching_timeout()
             self.reap()
             self.handle_signal()
             self.tick()
@@ -329,6 +335,23 @@ class Supervisor:
 
     def get_state(self):
         return self.options.mood
+
+    def kill_process_after_reaching_timeout(self, timeout=60):
+        """
+        Iterate over list of previously terminated processes and check if they
+        are still alive. Send SIGKILL to all processes which are not not
+        properly shutdown before the timeout is reached.
+        """
+        if self.terminated_processes:
+            current_time = time.time()
+            for pid, terminate_time in self.terminated_processes:
+                if psutil.pid_exists(pid):
+                    if current_time - terminate_time > timeout:
+                        # Send SIGKILL if process does not terminate succesfully
+                        os.kill(pid, signal.SIGKILL)
+                        self.terminated_processes.remove((pid, terminate_time))
+                else:
+                    self.terminated_processes.remove((pid, terminate_time))
 
 def timeslice(period, when):
     return int(when - (when % period))
