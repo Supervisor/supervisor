@@ -20,7 +20,7 @@ from supervisor.tests.base import DummySocketConfig
 from supervisor.tests.base import DummyProcessGroup
 from supervisor.tests.base import DummyFCGIProcessGroup
 
-from supervisor.process import Subprocess
+from supervisor.process import Subprocess, ProcessStates
 from supervisor.options import BadCommand
 
 class SubprocessTests(unittest.TestCase):
@@ -1798,6 +1798,18 @@ class FastCGISubprocessTests(unittest.TestCase):
         self.assertTrue(instance.fcgi_sock is None)
         instance.before_spawn()
         self.assertFalse(instance.fcgi_sock is None)
+
+    def test_before_spawn_failure_sets_fatal_state(self):
+        options = DummyOptions()
+        config = DummyPConfig(options, 'good', '/good/filename', uid=1)
+        instance = self._makeOne(config)
+        instance.group = Mock()
+        socket_manager = Mock()
+        instance.group.attach_mock(socket_manager, 'socket_manager')
+        socket_manager.attach_mock(Mock(side_effect=Exception), 'get_socket')
+        self.assertEqual(instance.state,  ProcessStates.STOPPED)
+        instance.spawn()
+        self.assertEqual(instance.state, ProcessStates.FATAL)
 
     def test_after_finish_removes_socket_ref(self):
         options = DummyOptions()
