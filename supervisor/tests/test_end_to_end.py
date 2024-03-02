@@ -426,3 +426,32 @@ class EndToEndTests(BaseTestCase):
         echo_supervisord_conf = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(echo_supervisord_conf.kill, signal.SIGKILL)
         echo_supervisord_conf.expect_exact('Sample supervisor config file')
+
+    def test_issue_1596_asyncore_close_does_not_crash(self):
+        """If the socket is already closed when socket.shutdown(socket.SHUT_RDWR)
+        is called in the close() method of an asyncore dispatcher, an exception
+        will be raised (at least with Python 3.11.7 on macOS 14.2.1).  If it is
+        not caught in that method, supervisord will crash."""
+        filename = resource_filename(__package__, 'fixtures/issue-1596.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('supervisord started with pid')
+
+        from supervisor.compat import xmlrpclib
+        from supervisor.xmlrpc import SupervisorTransport
+
+        socket_url = 'unix:///tmp/issue-1596.sock'
+        dummy_url = 'http://transport.ignores.host/RPC2'
+
+        # supervisord will crash after close() if it has the bug
+        t1 = SupervisorTransport('', '', socket_url)
+        s1 = xmlrpclib.ServerProxy(dummy_url, t1)
+        s1.system.listMethods()
+        t1.close()
+
+        # this call will only succeed if supervisord did not crash
+        t2 = SupervisorTransport('', '', socket_url)
+        s2 = xmlrpclib.ServerProxy(dummy_url, t2)
+        s2.system.listMethods()
+        t2.close()

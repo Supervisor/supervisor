@@ -358,8 +358,16 @@ class dispatcher:
 
     def close(self):
         self.del_channel()
-        self.socket.shutdown(socket.SHUT_RDWR)
-        self.socket.close()
+
+        try:
+            self.socket.shutdown(socket.SHUT_RDWR)
+        except socket.error:
+            # must swallow exception from already-closed socket
+            # (at least with Python 3.11.7 on macOS 14.2.1)
+            pass
+
+        # does not raise if called on already-closed socket
+        self.socket.close()  
 
     # cheap inheritance, used to pass all other attribute
     # references to the underlying socket object.
