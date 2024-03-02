@@ -513,6 +513,8 @@ class DummyPConfig:
                  stdout_syslog=False,
                  stderr_logfile=None, stderr_capture_maxbytes=0,
                  stderr_events_enabled=False,
+                 stdout_prepend_timestamp=False, stderr_prepend_timestamp=False,
+                 stdout_prepend_timestamp_format=None, stderr_prepend_timestamp_format=None,
                  stderr_logfile_backups=0, stderr_logfile_maxbytes=0,
                  stderr_syslog=False,
                  redirect_stderr=False,
@@ -540,6 +542,10 @@ class DummyPConfig:
         self.stderr_logfile_maxbytes = stderr_logfile_maxbytes
         self.stderr_syslog = stderr_syslog
         self.redirect_stderr = redirect_stderr
+        self.stdout_prepend_timestamp = stdout_prepend_timestamp
+        self.stdout_prepend_timestamp_format = stdout_prepend_timestamp_format
+        self.stderr_prepend_timestamp = stderr_prepend_timestamp
+        self.stderr_prepend_timestamp_format = stderr_prepend_timestamp_format
         if stopsignal is None:
             import signal
             stopsignal = signal.SIGTERM
