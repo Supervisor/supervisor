@@ -55,6 +55,9 @@ from supervisor import states
 from supervisor import xmlrpc
 from supervisor import poller
 
+# ESRF's  addition for group IDs from sssd
+from supervisor.grouplist import grouplist
+
 def _read_version_txt():
     mydir = os.path.abspath(os.path.dirname(__file__))
     version_txt = os.path.join(mydir, 'version.txt')
@@ -1387,8 +1390,10 @@ class ServerOptions(Options):
         gid = pwrec[3]
         if hasattr(os, 'setgroups'):
             user = pwrec[0]
-            groups = [grprec[2] for grprec in grp.getgrall() if user in
-                      grprec[3]]
+            # groups = [grprec[2] for grprec in grp.getgrall() if user in
+                      # grprec[3]]
+            # ESRF's  addition for group IDs from sssd
+            groups = list(grouplist(user))
 
             # always put our primary gid first in this list, otherwise we can
             # lose group info since sometimes the first group in the setgroups
