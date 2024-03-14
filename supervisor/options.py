@@ -971,7 +971,17 @@ class ServerOptions(Options):
 
             environment = dict_of_key_value_pairs(
                 expand(environment_str, expansions, 'environment'))
-
+            
+            envfile = get(section, "envfile", None)
+            if envfile is not None:
+                pass
+                with open(envfile) as r:
+                    _env = {}
+                    for line in r.readlines():
+                        k, v = line.strip().split('=', maxsplit=1)
+                        _env[k] = v
+                environment.update(_env)
+                
             # extend expansions for process from [program:x] environment definition
             for k, v in environment.items():
                 expansions['ENV_%s' % k] = v
