@@ -1387,8 +1387,10 @@ class ServerOptions(Options):
         gid = pwrec[3]
         if hasattr(os, 'setgroups'):
             user = pwrec[0]
-            groups = [grprec[2] for grprec in grp.getgrall() if user in
-                      grprec[3]]
+            # ESRF addition to creating processes with all GIDs.
+            # groups = [grprec[2] for grprec in grp.getgrall() if user in
+            #          grprec[3]]
+            groups = os.getgrouplist(user, pwrec[3])
 
             # always put our primary gid first in this list, otherwise we can
             # lose group info since sometimes the first group in the setgroups
