@@ -657,13 +657,13 @@ class ServerOptions(Options):
         section.nocleanup = boolean(get('nocleanup', 'false'))
         section.strip_ansi = boolean(get('strip_ansi', 'false'))
 
-        environ_str = get('environment', '')
-        environ_str = expand(environ_str, expansions, 'environment')
-        section.environment = dict_of_key_value_pairs(environ_str)
-
         # extend expansions for global from [supervisord] environment definition
         for k, v in section.environment.items():
             self.environ_expansions['ENV_%s' % k ] = v
+
+        environ_str = get('environment', '')
+        environ_str = expand(environ_str, expansions, 'environment')
+        section.environment = dict_of_key_value_pairs(environ_str)
 
         # Process rpcinterface plugins before groups to allow custom events to
         # be registered.
@@ -969,12 +969,12 @@ class ServerOptions(Options):
             expansions.update({'process_num': process_num, 'numprocs': numprocs})
             expansions.update(self.environ_expansions)
 
-            environment = dict_of_key_value_pairs(
-                expand(environment_str, expansions, 'environment'))
-
             # extend expansions for process from [program:x] environment definition
             for k, v in environment.items():
                 expansions['ENV_%s' % k] = v
+                
+            environment = dict_of_key_value_pairs(
+                expand(environment_str, expansions, 'environment'))
 
             directory = get(section, 'directory', None)
 
