@@ -431,10 +431,10 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
         supervisord.set_procattr('foo', 'state', ProcessStates.STOPPED)
         process = supervisord.process_groups['foo'].processes['foo']
-        def spawn():
+        def spawn(supervisor=None):
             process.spawned = True
             process.state = ProcessStates.STARTING
-        def transition():
+        def transition(supervisor=None):
             process.spawnerr = 'abc'
         process.spawn = spawn
         process.transition = transition
@@ -449,7 +449,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = PopulatedDummySupervisor(options, 'foo', pconfig)
         supervisord.set_procattr('foo', 'state', ProcessStates.STOPPED)
         process = supervisord.process_groups['foo'].processes['foo']
-        def spawn():
+        def spawn(supervisor=None):
             process.spawned = True
             process.state = ProcessStates.STARTING
         process.spawn = spawn
@@ -480,7 +480,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.set_procattr('foo', 'state', ProcessStates.STOPPED)
         interface = self._makeOne(supervisord)
         process = supervisord.process_groups['foo'].processes['foo']
-        def spawn():
+        def spawn(supervisor=None):
             process.spawned = True
             process.state = ProcessStates.STARTING
         process.spawn = spawn
