@@ -32,6 +32,13 @@ jobs:
     strategy:
       fail-fast: false
 
+    env:
+      # Run actions/checkout@v3
+      # /__e/node20/bin/node: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.25' not found (required by /__e/node20/bin/node)
+      #
+      # https://github.blog/changelog/2024-03-07-github-actions-all-actions-will-run-on-node20-instead-of-node16-by-default/
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+
     steps:
     - uses: actions/checkout@v3
 
