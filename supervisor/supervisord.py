@@ -225,7 +225,7 @@ class Supervisor:
                 else:
                     # if the fd is not in combined_map, we should unregister it. otherwise,
                     # it will be polled every time, which may cause 100% cpu usage
-                    self.options.logger.warn('unexpected read event from fd %r' % fd)
+                    self.options.logger.blather('unexpected read event from fd %r' % fd)
                     try:
                         self.options.poller.unregister_readable(fd)
                     except:
@@ -246,7 +246,7 @@ class Supervisor:
                     except:
                         combined_map[fd].handle_error()
                 else:
-                    self.options.logger.warn('unexpected write event from fd %r' % fd)
+                    self.options.logger.blather('unexpected write event from fd %r' % fd)
                     try:
                         self.options.poller.unregister_writable(fd)
                     except:
