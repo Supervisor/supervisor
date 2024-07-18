@@ -660,7 +660,7 @@ Body Description
 
 .. code-block:: text
 
-   processname:name groupname:name pid:pid
+   processname:name groupname:name pid:pid channel:stdout
    data
 
 ``PROCESS_LOG_STDERR`` Event Type
@@ -680,7 +680,7 @@ Body Description
 
 .. code-block:: text
 
-   processname:name groupname:name pid:pid
+   processname:name groupname:name pid:pid channel:stderr
    data
 
 ``PROCESS_COMMUNICATION`` Event Type
