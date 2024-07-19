@@ -839,7 +839,7 @@ class ServerOptions(Options):
             if getattr(self, name) is None:
                 self.usage(message)
 
-        print(f"Before setting defaults - minfds: {self.minfds}, minprocs: {self.minprocs}")
+        print("Before setting defaults - minfds: {}, minprocs: {}".format(self.minfds, self.minprocs))
 
         if self.minfds is None:
             self.minfds = 1024
