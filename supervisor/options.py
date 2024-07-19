@@ -846,7 +846,7 @@ class ServerOptions(Options):
         if self.minprocs is None:
             self.minprocs = 200
 
-        print(f"After setting defaults - minfds: {self.minfds}, minprocs: {self.minprocs}")
+        print("After setting defaults - minfds: %s, minprocs: %s" % (self.minfds, self.minprocs))
 
 
 
