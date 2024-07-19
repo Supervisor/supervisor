@@ -442,8 +442,8 @@ class Options:
                 # if this is called from an RPC method, raise an error
                 raise ValueError(msg)
         if hasattr(self, 'minfds') and hasattr(self, 'minprocs'):
-            print(f"Debug: minfds = {self.minfds}")
-            print(f"Debug: minprocs = {self.minprocs}")
+            print("Debug: minfds = {}".format(self.minfds))
+            print("Debug: minprocs = {}".format(self.minprocs))
     # Previous version
     #    def process_config_file(self, do_usage):
     #        # Process config file
@@ -1930,8 +1930,9 @@ class ServerOptions(Options):
         usage() if any rlimits could not be set."""
         limits = []
         if hasattr(self, 'minfds') and hasattr(self, 'minprocs'):
-            print(f"Debug: minfds = {self.minfds}")
-            print(f"Debug: minprocs = {self.minprocs}")
+            print("Debug: minfds = {}".format(self.minfds))
+            print("Debug: minprocs = {}".format(self.minprocs))
+
         
         if hasattr(resource, "RLIMIT_NOFILE"):
             if self.minfds is None:
