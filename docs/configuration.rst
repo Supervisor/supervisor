@@ -464,6 +464,42 @@ follows.
 
   *Introduced*: 3.0
 
+``environment_file``
+
+  An absolute path to a file that contains a ``KEY=VAL`` entry on each line.
+  Lines that begin with a '#' character are ignored. Leading and trailing
+  whitespace are stripped off. Each valid ``KEY=VAL`` line will be placed
+  in the environment of all child processes. The VAL entries must not be quoted,
+  and interpolation is not supported for these values. The file must be readable
+  by supervisord, and may be only readable by the user supervisord runs as since
+  these values are loaded before any privileges are dropped for child processes.
+  All other behaviors of the ``environment`` values are followed. When this is
+  set in the supervisord section, it will be applied to all program sections unless
+  they explicitly set either ``environment_file`` or ``environment_loader``. Only one of
+  the program setting or the supervisord setting for environment_file is processed.
+
+  *Default*: no value
+
+  *Required*:  No.
+
+  *Introduced*: 4.2.3
+
+``environment_loader``
+
+  A shell command or an absolute path to a program that will be run by supervisord before launching
+  the child processes, and the stdout will be captured and parsed according to the rules for
+  ``environment_file``.  Only one of ``environment_file`` or ``environment_loader`` should be set, and
+  ``environment_file`` takes precedence. When this is set in the supervisord section,
+  it will be applied to all program sections unless they explicitly set either
+  ``environment_file`` or ``environment_loader``. Only one of the program setting or the
+  supervisord setting for environment_loader is processed.
+
+  *Default*: no value
+
+  *Required*:  No.
+
+  *Introduced*: 4.2.3
+
 ``identifier``
 
   The identifier string for this supervisor process, used by the RPC
@@ -1099,6 +1135,37 @@ where specified.
   *Required*:  No.
 
   *Introduced*: 3.0
+
+``environment_file``
+
+  An absolute path to a file that contains a ``KEY=VAL`` entry on each line.
+  Lines that begin with a '#' character are ignored. Leading and trailing
+  whitespace between the values are stripped off. Each valid ``KEY=VAL`` line will be placed
+  in the environment of all child processes. The VAL entries must not be quoted,
+  and interpolation is not supported for these values. The file must be readable
+  by supervisord, and may be only readable by the user supervisord runs as since
+  these values are loaded before any privileges are dropped for child processes.
+  All other behaviors of the ``environment`` values are followed.
+
+  *Default*: no value
+
+  *Required*:  No.
+
+  *Introduced*: 4.2.3
+
+``environment_loader``
+
+  A shell command or an absolute path to a program that will be by supervisord before launching
+  a child process, and the stdout will be captured and parsed according to the rules for
+  ``environment_file``. The program must be executable by supervisord. Only one of
+  ``environment_file`` or ``environment_loader`` should be set, and ``environment_file`` takes precedence.
+
+  *Default*: no values
+
+  *Required*:  No.
+
+  *Introduced*: 4.2.3
+
 
 ``directory``
 
