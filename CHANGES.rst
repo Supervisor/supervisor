@@ -10,6 +10,9 @@
   on a port that one of our HTTP servers is configured to use.``
   if an HTTP request was made during restart.  Patch by Julien Le Cléach.
 
+- Fixed a unit test that failed only on Python 3.13.  Only test code was
+  changed; no changes to ``supervisord`` itself.  Patch by Colin Watson.
+
 - On Python 3.8 and later, ``setuptools`` is no longer a runtime
   dependency.  Patch by Ofek Lev.
 
