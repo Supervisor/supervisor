@@ -36,7 +36,7 @@ if py_version < (3, 8):
             " dependency because pkg_resources is used to load plugins"
             )
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 here = os.path.abspath(os.path.dirname(__file__))
 try:
     with open(os.path.join(here, 'README.rst'), 'r') as f:
@@ -93,7 +93,13 @@ dist = setup(
     classifiers=CLASSIFIERS,
     author="Chris McDonough",
     author_email="chrism@plope.com",
-    packages=find_packages(),
+    packages=find_namespace_packages(exclude=["docs","supervisor.tests","supervisor.tests.*"]),
+    package_dir={"": "."},
+    package_data={
+        "supervisor": ["version.txt"],
+        "supervisor.ui": ["**/*"],
+        "supervisor.skel": ["*"]
+    },
     install_requires=[],
     extras_require={
         'test': ['pytest', 'pytest-cov']
