@@ -28,22 +28,49 @@ jobs:
 
   tests_py34:
     runs-on: ubuntu-20.04
-    container: python:3.4
     strategy:
       fail-fast: false
 
-    env:
-      # Run actions/checkout@v3
-      # /__e/node20/bin/node: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.25' not found (required by /__e/node20/bin/node)
-      #
-      # https://github.blog/changelog/2024-03-07-github-actions-all-actions-will-run-on-node20-instead-of-node16-by-default/
-      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
-
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+
+    - name: Build OpenSSL 1.0.2 (required by Python 3.4)
+      run: |
+        sudo apt-get install build-essential zlib1g-dev 
+
+        cd $RUNNER_TEMP
+        wget https://github.com/openssl/openssl/releases/download/OpenSSL_1_0_2u/openssl-1.0.2u.tar.gz
+        tar -xf openssl-1.0.2u.tar.gz
+        cd openssl-1.0.2u
+        ./config --prefix=/usr/local/ssl --openssldir=/usr/local/ssl shared zlib-dynamic
+        make
+        sudo make install
+
+        echo CFLAGS="-I/usr/local/ssl/include $CFLAGS" >> $GITHUB_ENV 
+        echo LDFLAGS="-L/usr/local/ssl/lib $LDFLAGS" >> $GITHUB_ENV
+        echo LD_LIBRARY_PATH="/usr/local/ssl/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+
+        sudo ln -s /usr/local/ssl/lib/libssl.so.1.0.0 /usr/lib/libssl.so.1.0.0
+        sudo ln -s /usr/local/ssl/lib/libcrypto.so.1.0.0 /usr/lib/libcrypto.so.1.0.0
+        sudo ldconfig
+
+    - name: Build Python 3.4
+      run: |
+        sudo apt-get install build-essential libncurses5-dev libgdbm-dev libnss3-dev libreadline-dev zlib1g-dev 
+
+        cd $RUNNER_TEMP
+        wget -O cpython-3.4.10.zip https://github.com/python/cpython/archive/refs/tags/v3.4.10.zip
+        unzip cpython-3.4.10.zip
+        cd cpython-3.4.10
+        ./configure
+        make
+        sudo make install
+
+        python3.4 --version
+        python3.4 -c 'import ssl'
 
     - name: Install dependencies
-      run: $PIP install virtualenv tox
+      run: $PIP install virtualenv==20.4.7 tox==3.28.0
 
     - name: Run the unit tests
       run: TOXENV=py34 tox
