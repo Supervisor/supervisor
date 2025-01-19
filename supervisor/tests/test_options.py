@@ -1692,7 +1692,7 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         instance = self._makeOne()
         text = lstrip("""\
         [program:foo]
-        command = /bin/cat
+        command = /bin/cat /%(user)s/.vimrc
         priority = 1
         autostart = false
         autorestart = false
@@ -1719,7 +1719,7 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         self.assertEqual(len(pconfigs), 2)
         pconfig = pconfigs[0]
         self.assertEqual(pconfig.name, 'bar_foo_00')
-        self.assertEqual(pconfig.command, '/bin/cat')
+        self.assertEqual(pconfig.command, '/bin/cat /root/.vimrc')
         self.assertEqual(pconfig.autostart, False)
         self.assertEqual(pconfig.autorestart, False)
         self.assertEqual(pconfig.startsecs, 100)
@@ -1753,13 +1753,21 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
 
     def test_processes_from_section_process_num_expansion(self):
         instance = self._makeOne()
+        nums = (0, 1)
+        for num in nums:
+            log_dir = '/tmp/foo_{0}/foo_{0}_stdout'.format(num)
+            if not os.path.exists(log_dir):
+                parent = os.path.dirname(log_dir)
+                if not os.path.exists(parent):
+                    os.mkdir(parent)
+                os.mkdir(log_dir)
         text = lstrip("""\
         [program:foo]
         process_name = foo_%(process_num)d
-        command = /bin/foo --num=%(process_num)d
+        command = /bin/foo --num=%(process_num)d --dir=%(directory)s
         directory = /tmp/foo_%(process_num)d
         stderr_logfile = /tmp/foo_%(process_num)d_stderr
-        stdout_logfile = /tmp/foo_%(process_num)d_stdout
+        stdout_logfile = %(directory)s/foo_%(process_num)d_stdout
         environment = NUM=%(process_num)d
         numprocs = 2
         """)
@@ -1768,14 +1776,15 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         config.read_string(text)
         pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
         self.assertEqual(len(pconfigs), 2)
-        for num in (0, 1):
+        for num in nums:
             self.assertEqual(pconfigs[num].name, 'foo_%d' % num)
-            self.assertEqual(pconfigs[num].command, "/bin/foo --num=%d" % num)
+            self.assertEqual(pconfigs[num].command,
+                "/bin/foo --num=%d --dir=/tmp/foo_%d" % (num, num))
             self.assertEqual(pconfigs[num].directory, '/tmp/foo_%d' % num)
             self.assertEqual(pconfigs[num].stderr_logfile,
                 '/tmp/foo_%d_stderr' % num)
             self.assertEqual(pconfigs[num].stdout_logfile,
-                '/tmp/foo_%d_stdout' % num)
+                '/tmp/foo_%d/foo_%d_stdout' % (num, num))
             self.assertEqual(pconfigs[num].environment, {'NUM': '%d' % num})
 
     def test_processes_from_section_numprocs_expansion(self):
