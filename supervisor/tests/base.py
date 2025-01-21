@@ -434,7 +434,7 @@ class DummyProcess(object):
     def get_state(self):
         return self.state
 
-    def stop(self):
+    def stop(self, supervisor=None):
         self.stop_called = True
         self.killing = False
         from supervisor.process import ProcessStates
@@ -443,7 +443,7 @@ class DummyProcess(object):
     def stop_report(self):
         self.stop_report_called = True
 
-    def kill(self, signal):
+    def kill(self, signal, supervisor=None):
         self.killed_with = signal
 
     def signal(self, signal):
@@ -517,7 +517,7 @@ class DummyPConfig:
                  stderr_syslog=False,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
-                 exitcodes=(0,), environment=None, serverurl=None):
+                 exitcodes=(0,), environment=None, serverurl=None, disable_force_shutdown=False):
         self.options = options
         self.name = name
         self.command = command
@@ -553,6 +553,7 @@ class DummyPConfig:
         self.umask = umask
         self.autochildlogs_created = False
         self.serverurl = serverurl
+        self.disable_force_shutdown = disable_force_shutdown
 
     def get_path(self):
         return ["/bin", "/usr/bin", "/usr/local/bin"]
@@ -1049,7 +1050,7 @@ class DummyProcessGroup(object):
     def before_remove(self):
         self.before_remove_called = True
 
-    def stop_all(self):
+    def stop_all(self, supervisor=None):
         self.all_stopped = True
 
     def get_unstopped_processes(self):
