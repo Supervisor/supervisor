@@ -34,7 +34,7 @@ testing_extras = tests_require + [
     'pytest-cov',
     ]
 
-from setuptools import setup, find_packages
+from setuptools import setup
 here = os.path.abspath(os.path.dirname(__file__))
 try:
     with open(os.path.join(here, 'README.rst'), 'r') as f:
@@ -91,15 +91,24 @@ dist = setup(
     classifiers=CLASSIFIERS,
     author="Chris McDonough",
     author_email="chrism@plope.com",
-    packages=find_packages(),
+    packages=[
+        'supervisor',
+        'supervisor.medusa',
+        'supervisor.scripts',
+        'supervisor.skel',
+        'supervisor.tests',
+        'supervisor.tests.fixtures',
+        'supervisor.tests.fixtures.example',
+        'supervisor.ui',
+        'supervisor.ui.images',
+        'supervisor.ui.stylesheets',
+    ],
     install_requires=requires,
     extras_require={
         'testing': testing_extras,
     },
-    tests_require=tests_require,
     include_package_data=True,
     zip_safe=False,
-    test_suite="supervisor.tests",
     entry_points={
         'console_scripts': [
             'supervisord = supervisor.supervisord:main',
