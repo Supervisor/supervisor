@@ -517,7 +517,8 @@ class DummyPConfig:
                  stderr_syslog=False,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
-                 exitcodes=(0,), environment=None, serverurl=None):
+                 exitcodes=(0,), environment=None, environment_file=None, environment_loader=None,
+                 serverurl=None):
         self.options = options
         self.name = name
         self.command = command
@@ -549,6 +550,8 @@ class DummyPConfig:
         self.killasgroup = killasgroup
         self.exitcodes = exitcodes
         self.environment = environment
+        self.environment_file = environment_file
+        self.environment_loader = environment_loader
         self.directory = directory
         self.umask = umask
         self.autochildlogs_created = False
@@ -578,6 +581,10 @@ class DummyPConfig:
         if stdin_fd is not None:
             dispatchers[stdin_fd] = DummyDispatcher(writable=True)
         return dispatchers, pipes
+
+    def load_external_environment_definition(self):
+        from supervisor.options import ProcessConfig
+        return ProcessConfig.load_external_environment_definition_for_config(self)
 
 def makeExecutable(file, substitutions=None):
     import os
