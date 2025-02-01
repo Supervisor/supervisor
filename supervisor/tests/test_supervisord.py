@@ -834,3 +834,19 @@ class SupervisordTests(unittest.TestCase):
         self.assertEqual(supervisord.ticks[3600], 3600)
         self.assertEqual(len(L), 6)
         self.assertEqual(L[-1].__class__, events.Tick3600Event)
+
+    def test_add_failing_process_group_wont_crush(self):
+        options = DummyOptions()
+        supervisord = self._makeOne(options)
+
+        pconfig = DummyPConfig(options, 'process1', '/bin/foo', '/tmp')
+        group = DummyPGroupConfig(options, 'group1', pconfigs=[pconfig])
+        def throw():
+            raise Exception()
+        group.make_group = throw
+
+        # set up supervisord with an active configuration of group1 and group2
+        supervisord.options.process_group_configs = [group]
+        self.assertFalse(supervisord.add_process_group(group))
+        self.assertTrue(not supervisord.process_groups)
+        self.assertTrue(str(options.logger.data[0]).startswith('Unable to add group'))
