@@ -21,6 +21,9 @@
   the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
   included files.  Patch by François Granade.
 
+- Parsing ``environment=`` has been improved to allow escaped quotes
+  inside quotes and quoted empty values. Patch by Stefan Friesel.
+
 4.2.5 (2022-12-23)
 ------------------
 
