@@ -801,7 +801,7 @@ class logtail_handler:
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <title>进程 %s 的日志</title>
+  <title>Process %s Log</title>
   <style>
     body {
       font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -902,9 +902,9 @@ class logtail_handler:
 <body>
   <div class="log-container">
     <div class="log-header">
-      <h1>进程 %s 的日志</h1>
+      <h1>Log for Process %s</h1>
       <div class="log-controls">
-        <a href="%s"><button type="button">刷新</button></a>
+        <a href="%s"><button type="button">Refresh</button></a>
       </div>
     </div>
     
@@ -915,7 +915,7 @@ class logtail_handler:
     </div>
     
     <div class="log-footer">
-      <a href="/index.html">返回首页</a>
+      <a href="/index.html">Return to Home</a>
       <div>Supervisor %s</div>
     </div>
   </div>

@@ -228,7 +228,7 @@ class TailView(MeldView):
                         tail = 'ERROR: unexpected rpc fault [%d] %s' % (
                             e.code, e.text)
 
-        title_text = '进程日志' if processname is None else '进程 %s 的日志' % processname
+        title_text = 'Process Log' if processname is None else 'Log for Process %s' % processname
         refresh_url = ''
         if processname is not None:
             refresh_url = 'tail.html?processname=%s&limit=%s' % (
@@ -254,19 +254,19 @@ class StatusView(MeldView):
         if state == ProcessStates.RUNNING:
             actions.extend([
                 {
-                    'name': '重启',
+                    'name': 'restart',
             'href': 'index.html?processname=%s&amp;action=restart' % processname,
                 },
                 {
-                    'name': '停止',
+                    'name': 'stop',
             'href': 'index.html?processname=%s&amp;action=stop' % processname,
                 },
                 {
-                    'name': '清除日志',
+                    'name': 'clearlog',
             'href': 'index.html?processname=%s&amp;action=clearlog' % processname,
                 },
                 {
-                    'name': '查看输出',
+                    'name': 'view output',
             'href': 'logtail/%s' % processname,
             'target': '_blank'
         }
@@ -274,15 +274,15 @@ class StatusView(MeldView):
         elif state in (ProcessStates.STOPPED, ProcessStates.EXITED, ProcessStates.FATAL):
             actions.extend([
                 {
-                    'name': '启动',
+                    'name': 'start',
                     'href': 'index.html?processname=%s&amp;action=start' % processname,
                 },
                 {
-                    'name': '清除日志',
+                    'name': 'clearlog',
                     'href': 'index.html?processname=%s&amp;action=clearlog' % processname,
                 },
                 {
-                    'name': '查看输出',
+                    'name': 'view output',
                     'href': 'logtail/%s' % processname,
             'target': '_blank'
         }
@@ -290,11 +290,11 @@ class StatusView(MeldView):
         else:
             actions.extend([
                 {
-                    'name': '清除日志',
+                    'name': 'clearlog',
                     'href': 'index.html?processname=%s&amp;action=clearlog' % processname,
                 },
                 {
-                    'name': '查看输出',
+                    'name': 'view output',
                     'href': 'logtail/%s' % processname,
                     'target': '_blank'
                 }
@@ -520,38 +520,36 @@ class StatusView(MeldView):
               SupervisorNamespaceRPCInterface(supervisord))]
             )
 
-        # 按组和独立进程组织
-        groups = {}  # 组名 -> 组下的进程名列表
-        ungrouped = []  # 未分组的进程列表
+        # Organize by groups and standalone processes
+        groups = {}  # group name -> process list
+        ungrouped = []  # ungrouped process list
         
-        # 首先构建所有组名的集合
+        # First build a set of all group names
         group_names = set()
         for process_group in supervisord.process_groups.values():
-            # 检查是否是真实的组（有多个进程）
+            # Check if it's a real group (has multiple processes)
             processes = process_group.processes
             if len(processes) > 1:
-                # 可能是一个组
+                # It's a group
                 group_names.add(process_group.config.name)
         
-        # 现在判断进程是否属于组并分类
+        # Now determine if the process belongs to a group and categorize
         for process_group in supervisord.process_groups.values():
             group_name = process_group.config.name
             
             if group_name in group_names and len(process_group.processes) > 1:
-                # 这是一个组
+                # This is a group
                 if group_name not in groups:
                     groups[group_name] = []
                 
                 for process in process_group.processes.values():
                     groups[group_name].append((group_name, process.config.name))
             else:
-                # 未分组的独立进程
+                # Standalone process (not in a group)
                 for process in process_group.processes.values():
                     ungrouped.append((group_name, process.config.name))
         
-        # 对所有组排序
-        sorted_groups = sorted(groups.items())
-        # 排序未分组进程
+        # Sort ungrouped processes
         ungrouped.sort()
 
         root = self.clone()
@@ -560,32 +558,32 @@ class StatusView(MeldView):
             statusarea.attrib['class'] = 'status_msg'
             statusarea.content(message)
 
-        if not (sorted_groups or ungrouped):
+        if not (sorted(groups.items()) or ungrouped):
             table = root.findmeld('statustable')
-            table.replace('暂无进程')
+            table.replace('No processes')
         else:
             content_div = root.findmeld('content')
             process_groups = root.findmeld('process_groups')
             template_group = process_groups.findmeld('template_group')
             
-            # 移除模板组
+            # Remove template group
             template_group.deparent()
             
-            # 处理未分组进程（如果有）
+            # Handle ungrouped processes (if any)
             if ungrouped:
                 group_div = template_group.clone()
                 group_title = group_div.findmeld('group_title')
-                group_title.content('独立进程')
+                group_title.content('Standalone Processes')
                 
-                # 隐藏组操作按钮 - 添加错误处理
+                # Hide group action buttons - add error handling
                 group_actions = group_div.findmeld('group_actions')
-                if group_actions is not None:  # 确保元素存在
+                if group_actions is not None:  # Ensure element exists
                     group_actions.attrib['style'] = 'display: none;'
                 
                 table = group_div.findmeld('statustable')
                 template_row = table.findmeld('tr')
                 
-                # 移除模板行
+                # Remove template row
                 template_row.deparent()
                 
                 for i, (groupname, processname) in enumerate(ungrouped):
@@ -593,13 +591,13 @@ class StatusView(MeldView):
                 
                 process_groups.append(group_div)
             
-            # 处理每个分组
-            for group_name, processes in sorted_groups:
+            # Handle each group
+            for group_name, processes in sorted(groups.items()):
                 group_div = template_group.clone()
                 group_title = group_div.findmeld('group_title')
-                group_title.content('分组: ' + group_name)
+                group_title.content('Group: ' + group_name)
                 
-                # 恢复组操作按钮设置，并添加错误处理
+                # Restore group action buttons and add error handling
                 group_stop = group_div.findmeld('group_stop_anchor')
                 if group_stop is not None:
                     group_stop.attributes(href='index.html?action=stopgroup&amp;processname=' + group_name)
@@ -611,7 +609,7 @@ class StatusView(MeldView):
                 table = group_div.findmeld('statustable')
                 template_row = table.findmeld('tr')
                 
-                # 移除模板行
+                # Remove template row
                 template_row.deparent()
                 
                 for i, (groupname, processname) in enumerate(processes):
@@ -649,7 +647,7 @@ class StatusView(MeldView):
         actionitem_td = row.findmeld('actionitem_td')
         template_action = actionitem_td.findmeld('actionitem')
         
-        # 移除模板操作项
+        # Remove template action items
         template_action.deparent()
         
         for action in actions:
@@ -664,15 +662,15 @@ class StatusView(MeldView):
         table.append(row)
 
     def start_group(self, group_name):
-        """启动整个组的所有进程"""
+        """Start all processes in the group"""
         supervisord = self.context.supervisord
         rpcinterface = SupervisorNamespaceRPCInterface(supervisord)
         
-        # 先停止所有进程，然后再启动
+        # First stop all processes, then start them again
         try:
             stop_callback = rpcinterface.stopProcessGroup(group_name)
         except RPCError as e:
-            msg = '无法启动组 %s: [%d] %s' % (group_name, e.code, e.text)
+            msg = 'Cannot start group %s: [%d] %s' % (group_name, e.code, e.text)
             def startgrperr():
                 return msg
             startgrperr.delay = 0.05
@@ -682,16 +680,16 @@ class StatusView(MeldView):
             if stop_callback() is NOT_DONE_YET:
                 return NOT_DONE_YET
             
-            # 停止完成，现在启动
+            # Stop completed, now start
             try:
                 start_callback = rpcinterface.startProcessGroup(group_name)
             except RPCError as e:
-                return '组 %s 已停止，但无法重新启动: [%d] %s' % (group_name, e.code, e.text)
+                return 'Group %s stopped, but cannot restart: [%d] %s' % (group_name, e.code, e.text)
             
             def start_group_cont():
                 if start_callback() is NOT_DONE_YET:
                     return NOT_DONE_YET
-                return '组 %s 的所有进程已重启' % group_name
+                return 'All processes in group %s restarted' % group_name
             
             start_group_cont.delay = 0.05
             return start_group_cont()
@@ -700,14 +698,14 @@ class StatusView(MeldView):
         return start_group_cont
     
     def stop_group(self, group_name):
-        """停止整个组的所有进程"""
+        """Stop all processes in the group"""
         supervisord = self.context.supervisord
         rpcinterface = SupervisorNamespaceRPCInterface(supervisord)
         
         try:
             callback = rpcinterface.stopProcessGroup(group_name)
         except RPCError as e:
-            msg = '无法停止组 %s: [%d] %s' % (group_name, e.code, e.text)
+            msg = 'Cannot stop group %s: [%d] %s' % (group_name, e.code, e.text)
             def stopgrperr():
                 return msg
             stopgrperr.delay = 0.05
@@ -716,27 +714,27 @@ class StatusView(MeldView):
         def stopgroup():
             if callback() is NOT_DONE_YET:
                 return NOT_DONE_YET
-            return '组 %s 的所有进程已停止' % group_name
+            return 'All processes in group %s stopped' % group_name
         stopgroup.delay = 0.05
         return stopgroup
     
     def restart_group(self, group_name):
-        """重启整个组的所有进程"""
+        """Restart all processes in the group"""
         supervisord = self.context.supervisord
         
-        # 创建正确的RPC接口
+        # Create the correct RPC interface
         main = ('supervisor', SupervisorNamespaceRPCInterface(supervisord))
         system = ('system', SystemNamespaceRPCInterface([main]))
         rpcinterface = RootRPCInterface([main, system])
         
-        # 使用multicall一次性执行停止和启动操作
+        # Use multicall to execute stop and start operations in one call
         try:
             callback = rpcinterface.system.multicall([
                 {'methodName': 'supervisor.stopProcessGroup', 'params': [group_name]},
                 {'methodName': 'supervisor.startProcessGroup', 'params': [group_name]}
             ])
         except RPCError as e:
-            msg = '无法重启组 %s: [%d] %s' % (group_name, e.code, e.text)
+            msg = 'Cannot restart group %s: [%d] %s' % (group_name, e.code, e.text)
             def restartgrperr():
                 return msg
             restartgrperr.delay = 0.05
@@ -747,15 +745,15 @@ class StatusView(MeldView):
             if result is NOT_DONE_YET:
                 return NOT_DONE_YET
             
-            # 检查结果
+            # Check result
             stop_result, start_result = result
             if isinstance(stop_result, dict) and 'faultString' in stop_result:
-                return '组 %s 重启失败: %s' % (group_name, stop_result['faultString'])
+                return 'Group %s restart failed: %s' % (group_name, stop_result['faultString'])
             
             if isinstance(start_result, dict) and 'faultString' in start_result:
-                return '组 %s 已停止，但无法重新启动: %s' % (group_name, start_result['faultString'])
+                return 'Group %s stopped, but cannot restart: %s' % (group_name, start_result['faultString'])
             
-            return '组 %s 的所有进程已重启' % group_name
+            return 'All processes in group %s restarted' % group_name
         
         restart_result.delay = 0.05
         return restart_result

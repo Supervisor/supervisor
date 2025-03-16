@@ -4,14 +4,14 @@
       xmlns:meld="https://github.com/Supervisor/supervisor">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <title>Supervisor 状态</title>
+  <title>Supervisor Status</title>
   <link href="stylesheets/supervisor.css" rel="stylesheet" type="text/css" />
   <link href="images/icon.png" rel="icon" type="image/png" />
 </head>
 <body>
 <div id="wrapper">
   <div id="header">
-    <img alt="Supervisor 状态" src="images/supervisor.gif" />
+    <img alt="Supervisor Status" src="images/supervisor.gif" />
   </div>
 
   <div meld:id="content">
@@ -19,46 +19,46 @@
 
     <form action="index.html" method="post">
       <ul id="buttons" class="clr">
-        <li><a href="index.html?action=refresh">刷新</a></li>
-        <li><a href="index.html?action=restartall">全部重启</a></li>
-        <li><a href="index.html?action=stopall">全部停止</a></li>
+        <li><a href="index.html?action=refresh">Refresh</a></li>
+        <li><a href="index.html?action=restartall">Restart All</a></li>
+        <li><a href="index.html?action=stopall">Stop All</a></li>
       </ul>
 
       <div meld:id="process_groups">
         <div class="process-group" meld:id="template_group">
           <div class="group-header">
             <div class="title-with-actions">
-              <h2 class="group-title" meld:id="group_title">分组名称</h2>
+              <h2 class="group-title" meld:id="group_title">Group Name</h2>
               <div class="group-actions" meld:id="group_actions">
                 <ul>
-                  <li><a href="#" meld:id="group_restart_anchor">重启组</a></li>
-                  <li><a href="#" meld:id="group_stop_anchor">停止组</a></li>
+                  <li><a href="#" meld:id="group_restart_anchor">Restart Group</a></li>
+                  <li><a href="#" meld:id="group_stop_anchor">Stop Group</a></li>
                 </ul>
               </div>
             </div>
           </div>
           <table cellspacing="0" meld:id="statustable">
             <tr>
-              <th class="state">状态</th>
-              <th class="desc">描述</th>
-              <th class="name">名称</th>
-              <th class="action">操作</th>
+              <th class="state">State</th>
+              <th class="desc">Description</th>
+              <th class="name">Name</th>
+              <th class="action">Action</th>
             </tr>
 
             <tr meld:id="tr" class="">
               <td class="status">
-                <span meld:id="status_text" class="statusnominal">正常</span>
+                <span meld:id="status_text" class="statusnominal">Normal</span>
               </td>
               <td>
-                <span meld:id="info_text">信息</span>
+                <span meld:id="info_text">Info</span>
               </td>
               <td>
-                <a href="#" meld:id="name_anchor">名称</a>
+                <a href="#" meld:id="name_anchor">Name</a>
               </td>
               <td class="action">
                 <ul meld:id="actionitem_td">
                   <li meld:id="actionitem">
-                    <a href="#" meld:id="actionitem_anchor">操作</a>
+                    <a href="#" meld:id="actionitem_anchor">Action</a>
                   </li>
                 </ul>
               </td>

@@ -4,7 +4,7 @@
       xmlns:meld="https://github.com/Supervisor/supervisor">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <title meld:id="title">进程日志</title>
+  <title meld:id="title">Process Log</title>
   <link href="stylesheets/supervisor.css" rel="stylesheet" type="text/css" />
   <link href="images/icon.png" rel="icon" type="image/png" />
   <style>
@@ -132,18 +132,18 @@
 
 <div class="log-container">
   <div class="log-header">
-    <h1 meld:id="header_title">进程日志</h1>
+    <h1 meld:id="header_title">Process Log</h1>
     <div class="log-controls">
-      <button id="auto-scroll-btn" type="button">自动滚动</button>
-      <button id="copy-logs-btn" type="button">复制日志</button>
+      <button id="auto-scroll-btn" type="button">Auto Scroll</button>
+      <button id="copy-logs-btn" type="button">Copy Logs</button>
       <a href="tail.html?processname=thisprocess" meld:id="refresh_anchor">
-        <button type="button">刷新</button>
+        <button type="button">Refresh</button>
       </a>
     </div>
   </div>
   
   <div class="log-search">
-    <input type="text" id="log-search-input" placeholder="搜索日志..." />
+    <input type="text" id="log-search-input" placeholder="Search logs..." />
   </div>
   
   <div class="log-content">
@@ -151,8 +151,8 @@
   </div>
   
   <div class="log-footer">
-    <span id="log-stats">行数: 0</span>
-    <a href="index.html">返回首页</a>
+    <span id="log-stats">Lines: 0</span>
+    <a href="index.html">Return to Home</a>
   </div>
 </div>
 
@@ -189,7 +189,7 @@
     // 更新行数统计
     const logStats = document.getElementById('log-stats');
     const lineCount = pre.querySelectorAll('code').length;
-    logStats.textContent = `行数: ${lineCount}`;
+    logStats.textContent = `Lines: ${lineCount}`;
     
     // 自动滚动
     let autoScroll = true;
@@ -205,7 +205,7 @@
     const autoScrollBtn = document.getElementById('auto-scroll-btn');
     autoScrollBtn.addEventListener('click', function() {
       autoScroll = !autoScroll;
-      this.textContent = autoScroll ? '关闭自动滚动' : '自动滚动';
+      this.textContent = autoScroll ? 'Turn Off Auto Scroll' : 'Auto Scroll';
       if(autoScroll) {
         scrollToBottom();
       }
@@ -220,7 +220,7 @@
       
       navigator.clipboard.writeText(logText).then(function() {
         const originalText = copyLogsBtn.textContent;
-        copyLogsBtn.textContent = '已复制!';
+        copyLogsBtn.textContent = 'Copied!';
         setTimeout(() => {
           copyLogsBtn.textContent = originalText;
         }, 2000);
