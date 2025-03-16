@@ -204,7 +204,8 @@ class TailView(MeldView):
     def render(self):
         supervisord = self.context.supervisord
         form = self.context.form
-
+        root = self.clone()
+        
         if not 'processname' in form:
             tail = 'No process name found'
             processname = None
@@ -233,198 +234,16 @@ class TailView(MeldView):
             refresh_url = 'tail.html?processname=%s&limit=%s' % (
                     urllib.quote(processname), urllib.quote(str(abs(limit)))
                     )
-            
-        # 使用自定义 HTML 模板
-        html = '''<!DOCTYPE html>
-<html>
-<head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <title>%s</title>
-  <style>
-    body {
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f5f5f5;
-      color: #333;
-    }
-    
-    .log-container {
-      max-width: 1200px;
-      margin: 20px auto;
-      background: #fff;
-      border-radius: 6px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      overflow: hidden;
-    }
-    
-    .log-header {
-      background: #2c3e50;
-      color: white;
-      padding: 15px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .log-header h1 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 500;
-    }
-    
-    .log-controls {
-      display: flex;
-      gap: 10px;
-    }
-    
-    .log-controls button {
-      background: #3498db;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 8px 12px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: background 0.2s;
-    }
-    
-    .log-controls button:hover {
-      background: #2980b9;
-    }
-    
-    .log-search {
-      display: flex;
-      padding: 10px;
-      background: #f8f9fa;
-      border-bottom: 1px solid #e9ecef;
-    }
-    
-    .log-search input {
-      flex: 1;
-      padding: 8px 12px;
-      border: 1px solid #ced4da;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    
-    .log-content {
-      position: relative;
-      overflow: auto;
-      max-height: 70vh;
-      background: #282c34;
-      color: #abb2bf;
-      padding: 0;
-      margin: 0;
-    }
-    
-    .log-content pre {
-      margin: 0;
-      padding: 15px;
-      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-      font-size: 13px;
-      line-height: 1.5;
-      tab-size: 4;
-      white-space: pre-wrap;
-    }
-    
-    .log-footer {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 20px;
-      background: #f8f9fa;
-      border-top: 1px solid #e9ecef;
-    }
-    
-    .log-footer a {
-      color: #3498db;
-      text-decoration: none;
-    }
-    
-    .log-footer a:hover {
-      text-decoration: underline;
-    }
-  </style>
-</head>
-<body>
-  <div class="log-container">
-    <div class="log-header">
-      <h1>%s</h1>
-      <div class="log-controls">
-        <button id="toggle-wrap-btn">自动换行</button>
-        <button id="copy-logs-btn">复制日志</button>
-        <a href="%s"><button type="button">刷新</button></a>
-      </div>
-    </div>
-    
-    <div class="log-search">
-      <input type="text" id="log-search-input" placeholder="搜索日志..." />
-    </div>
-    
-    <div class="log-content">
-      <pre id="log-pre">%s</pre>
-    </div>
-    
-    <div class="log-footer">
-      <span id="log-stats">行数: 0</span>
-      <a href="index.html">返回首页</a>
-    </div>
-  </div>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // 计算行数
-      const pre = document.getElementById('log-pre');
-      const logText = pre.textContent;
-      const lines = logText.split('\\n').filter(line => line.trim());
-      document.getElementById('log-stats').textContent = `行数: ${lines.length}`;
-      
-      // 复制日志
-      document.getElementById('copy-logs-btn').addEventListener('click', function() {
-        navigator.clipboard.writeText(pre.textContent).then(function() {
-          const btn = document.getElementById('copy-logs-btn');
-          const originalText = btn.textContent;
-          btn.textContent = '已复制!';
-          setTimeout(() => {
-            btn.textContent = originalText;
-          }, 2000);
-        });
-      });
-      
-      // 自动换行
-      const toggleWrapBtn = document.getElementById('toggle-wrap-btn');
-      toggleWrapBtn.addEventListener('click', function() {
-        if (pre.style.whiteSpace === 'pre-wrap' || pre.style.whiteSpace === '') {
-          pre.style.whiteSpace = 'pre';
-          this.textContent = '开启自动换行';
-        } else {
-          pre.style.whiteSpace = 'pre-wrap';
-          this.textContent = '关闭自动换行';
-        }
-      });
-      
-      // 搜索功能
-      document.getElementById('log-search-input').addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        const logContent = pre.innerHTML;
         
-        if(searchTerm) {
-          // 使用简单的高亮实现
-          const regex = new RegExp(searchTerm, 'gi');
-          pre.innerHTML = logContent.replace(regex, match => 
-            `<span style="background-color:yellow;color:black">${match}</span>`
-          );
-        } else {
-          pre.innerHTML = logText;
-        }
-      });
-    });
-  </script>
-</body>
-</html>
-''' % (title_text, title_text, refresh_url, tail.replace('<', '&lt;').replace('>', '&gt;'))
-
-        return html
+        # 设置模板中的值
+        root.findmeld('title').content(title_text)
+        root.findmeld('header_title').content(title_text)
+        refresh_anchor = root.findmeld('refresh_anchor')
+        refresh_anchor.attributes(href=refresh_url)
+        tailbody = root.findmeld('tailbody')
+        tailbody.content(tail)
+        
+        return root.write_xhtmlstring()
 
 class StatusView(MeldView):
     def actions_for_process(self, process):
