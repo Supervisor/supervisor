@@ -3,15 +3,19 @@
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:meld="https://github.com/Supervisor/supervisor">
 <head>
-  <title>Supervisor Status</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supervisor 状态监控</title>
   <link href="stylesheets/supervisor.css" rel="stylesheet" type="text/css" />
   <link href="images/icon.png" rel="icon" type="image/png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
 <div id="wrapper">
 
   <div id="header">
-    <img src="images/supervisor.gif" alt="Supervisor status" />
+    <img src="images/supervisor.gif" alt="Supervisor 状态" />
+    <h1 style="margin-left: 15px;">服务监控平台</h1>
   </div>
 
   <div meld:id="content">
@@ -19,30 +23,35 @@
 
     <form meld:id="form" action="index.html" method="post">
       <ul id="buttons" class="clr">
-        <li class="action-button"><a href="index.html?action=refresh">Refresh</a></li>
-        <li class="action-button"><a href="index.html?action=restartall">Restart All</a></li>
-        <li class="action-button"><a href="index.html?action=stopall">Stop All</a></li>
+        <li class="action-button"><a href="index.html?action=refresh"><i class="fas fa-sync-alt"></i> 刷新</a></li>
+        <li class="action-button"><a href="index.html?action=restartall"><i class="fas fa-redo"></i> 全部重启</a></li>
+        <li class="action-button"><a href="index.html?action=stopall"><i class="fas fa-stop-circle"></i> 全部停止</a></li>
       </ul>
 
-      <table cellspacing="0" meld:id="statustable">
+      <div id="process-groups" meld:id="process-groups">
+        <!-- 分组容器将在这里由Python代码动态生成 -->
+      </div>
+
+      <!-- 旧表格结构，将被隐藏和在web.py中修改 -->
+      <table cellspacing="0" meld:id="statustable" style="display:none;">
         <thead>
         <tr>
-          <th class="state">State</th>
-          <th class="desc">Description</th>
-          <th class="name">Name</th>
-          <th class="action">Action</th>
+          <th class="state">状态</th>
+          <th class="desc">描述</th>
+          <th class="name">名称</th>
+          <th class="action">操作</th>
         </tr>
         </thead>
 
         <tbody meld:id="tbody">
           <tr meld:id="tr" class="">
-            <td meld:id="status_td" class="status"><span meld:id="status_text" class="statusnominal">nominal</span></td>
-            <td meld:id="info_td"><span meld:id="info_text">Info</span></td>
-            <td meld:id="name_td"><a href="#" meld:id="name_anchor" target="_blank">Name</a></td>
+            <td meld:id="status_td" class="status"><span meld:id="status_text" class="statusnominal">正常</span></td>
+            <td meld:id="info_td"><span meld:id="info_text">信息</span></td>
+            <td meld:id="name_td"><a href="#" meld:id="name_anchor" target="_blank">名称</a></td>
             <td meld:id="action_td" class="action">
               <ul>
                 <li meld:id="actionitem_td">
-                  <a href="#" name="#" meld:id="actionitem_anchor">Action</a>
+                  <a href="#" name="#" meld:id="actionitem_anchor">操作</a>
                 </li>
               </ul>
             </td>
@@ -62,8 +71,30 @@
     <a href="http://supervisord.org">Supervisor</a> <span meld:id="supervisor_version">#</span>
   </div>
   <div class="right">
-    &amp;copy; 2006-<span meld:id="copyright_date">#</span> <strong><a href="http://agendaless.com/">Agendaless Consulting and Contributors</a></strong>
+    &copy; 2006-<span meld:id="copyright_date">#</span> <strong><a href="http://agendaless.com/">Agendaless Consulting and Contributors</a></strong>
   </div>
 </div>
+
+<script>
+// 折叠/展开功能
+document.addEventListener('DOMContentLoaded', function() {
+  var groupHeaders = document.querySelectorAll('.group-header');
+  
+  groupHeaders.forEach(function(header) {
+    header.addEventListener('click', function() {
+      var groupContent = this.nextElementSibling;
+      if(groupContent.style.display === 'none') {
+        groupContent.style.display = 'block';
+        this.querySelector('.group-icon').classList.remove('fa-angle-right');
+        this.querySelector('.group-icon').classList.add('fa-angle-down');
+      } else {
+        groupContent.style.display = 'none';
+        this.querySelector('.group-icon').classList.remove('fa-angle-down');
+        this.querySelector('.group-icon').classList.add('fa-angle-right');
+      }
+    });
+  });
+});
+</script>
 </body>
 </html>

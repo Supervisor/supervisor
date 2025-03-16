@@ -327,6 +327,40 @@ class StatusView(MeldView):
                     return 'All restarted at %s' % time.ctime()
                 restartall.delay = 0.05
                 return restartall
+                
+            elif action == 'startProcessGroup':
+                try:
+                    callback = rpcinterface.supervisor.startProcessGroup(namespec)
+                except RPCError as e:
+                    msg = 'unexpected rpc fault [%d] %s' % (e.code, e.text)
+                    def startgrperr():
+                        return msg
+                    startgrperr.delay = 0.05
+                    return startgrperr
+                
+                def startgroup():
+                    if callback() is NOT_DONE_YET:
+                        return NOT_DONE_YET
+                    return '组 %s 的所有进程已启动' % namespec
+                startgroup.delay = 0.05
+                return startgroup
+                
+            elif action == 'stopProcessGroup':
+                try:
+                    callback = rpcinterface.supervisor.stopProcessGroup(namespec)
+                except RPCError as e:
+                    msg = 'unexpected rpc fault [%d] %s' % (e.code, e.text)
+                    def stopgrperr():
+                        return msg
+                    stopgrperr.delay = 0.05
+                    return stopgrperr
+                
+                def stopgroup():
+                    if callback() is NOT_DONE_YET:
+                        return NOT_DONE_YET
+                    return '组 %s 的所有进程已停止' % namespec
+                stopgroup.delay = 0.05
+                return stopgroup
 
             elif namespec:
                 def wrong():
@@ -488,27 +522,26 @@ class StatusView(MeldView):
               SupervisorNamespaceRPCInterface(supervisord))]
             )
 
-        processnames = []
-        for group in supervisord.process_groups.values():
-            for gprocname in group.processes.keys():
-                processnames.append((group.config.name, gprocname))
-
-        processnames.sort()
-
-        data = []
-        for groupname, processname in processnames:
-            actions = self.actions_for_process(
-                supervisord.process_groups[groupname].processes[processname])
-            sent_name = make_namespec(groupname, processname)
-            info = rpcinterface.supervisor.getProcessInfo(sent_name)
-            data.append({
-                'status':info['statename'],
-                'name':processname,
-                'group':groupname,
-                'actions':actions,
-                'state':info['state'],
-                'description':info['description'],
+        # 按组收集进程
+        groups = {}
+        for groupname, group in supervisord.process_groups.items():
+            groups[groupname] = []
+            for process_name in group.processes.keys():
+                sent_name = make_namespec(groupname, process_name)
+                info = rpcinterface.supervisor.getProcessInfo(sent_name)
+                process = group.processes[process_name]
+                actions = self.actions_for_process(process)
+                groups[groupname].append({
+                    'status': info['statename'],
+                    'name': process_name,
+                    'group': groupname,
+                    'actions': actions,
+                    'state': info['state'],
+                    'description': info['description'],
                 })
+        
+        # 按照组名称排序
+        sorted_groups = sorted(groups.items())
 
         root = self.clone()
 
@@ -517,44 +550,182 @@ class StatusView(MeldView):
             statusarea.attrib['class'] = 'status_msg'
             statusarea.content(message)
 
-        if data:
-            iterator = root.findmeld('tr').repeat(data)
-            shaded_tr = False
-
-            for tr_element, item in iterator:
-                status_text = tr_element.findmeld('status_text')
-                status_text.content(item['status'].lower())
-                status_text.attrib['class'] = self.css_class_for_state(
-                    item['state'])
-
-                info_text = tr_element.findmeld('info_text')
-                info_text.content(item['description'])
-
-                anchor = tr_element.findmeld('name_anchor')
-                processname = make_namespec(item['group'], item['name'])
-                anchor.attributes(href='tail.html?processname=%s' %
-                                  urllib.quote(processname))
-                anchor.content(processname)
-
-                actions = item['actions']
-                actionitem_td = tr_element.findmeld('actionitem_td')
-
-                for li_element, actionitem in actionitem_td.repeat(actions):
-                    anchor = li_element.findmeld('actionitem_anchor')
-                    if actionitem is None:
-                        anchor.attrib['class'] = 'hidden'
-                    else:
-                        anchor.attributes(href=actionitem['href'],
-                                          name=actionitem['name'])
-                        anchor.content(actionitem['name'])
-                        if actionitem['target']:
-                            anchor.attributes(target=actionitem['target'])
-                if shaded_tr:
-                    tr_element.attrib['class'] = 'shade'
-                shaded_tr = not shaded_tr
+        # 处理分组显示
+        if sorted_groups:
+            process_groups_div = root.findmeld('process-groups')
+            
+            for groupname, processes in sorted_groups:
+                # 计算组的整体状态
+                running_count = sum(1 for p in processes if p['state'] == ProcessStates.RUNNING)
+                error_count = sum(1 for p in processes if p['state'] in (ProcessStates.FATAL, ProcessStates.BACKOFF))
+                total_count = len(processes)
+                
+                # 创建组容器
+                group_div = templating.Element('div')
+                group_div.attrib['class'] = 'process-group'
+                
+                # 创建组标题栏
+                header_div = templating.Element('div')
+                header_div.attrib['class'] = 'group-header'
+                
+                # 添加折叠图标
+                icon = templating.Element('i')
+                icon.attrib['class'] = 'fas fa-angle-down group-icon'
+                header_div.append(icon)
+                
+                # 添加组名称
+                group_name = templating.Element('div')
+                group_name.attrib['class'] = 'group-name'
+                group_name.content(groupname)
+                header_div.append(group_name)
+                
+                # 添加组状态摘要
+                summary_div = templating.Element('div')
+                summary_div.attrib['class'] = 'group-summary'
+                
+                # 状态标签
+                status_span = templating.Element('div')
+                if error_count > 0:
+                    status_class = 'group-status error'
+                    status_text = '%d/%d 错误' % (error_count, total_count)
+                elif running_count == total_count:
+                    status_class = 'group-status running'
+                    status_text = '全部运行 (%d)' % total_count
+                elif running_count == 0:
+                    status_class = 'group-status'
+                    status_text = '全部停止 (%d)' % total_count
+                else:
+                    status_class = 'group-status partial'
+                    status_text = '%d/%d 运行中' % (running_count, total_count)
+                
+                status_span.attrib['class'] = status_class
+                status_span.content(status_text)
+                summary_div.append(status_span)
+                
+                # 组操作按钮
+                actions_div = templating.Element('div')
+                actions_div.attrib['class'] = 'group-actions'
+                
+                # 启动全部按钮
+                start_a = templating.Element('a')
+                start_a.attrib['href'] = 'index.html?action=startProcessGroup&amp;processname=%s' % urllib.quote(groupname)
+                start_a.content('启动全部')
+                actions_div.append(start_a)
+                
+                # 停止全部按钮
+                stop_a = templating.Element('a')
+                stop_a.attrib['href'] = 'index.html?action=stopProcessGroup&amp;processname=%s' % urllib.quote(groupname)
+                stop_a.content('停止全部')
+                actions_div.append(stop_a)
+                
+                summary_div.append(actions_div)
+                header_div.append(summary_div)
+                
+                group_div.append(header_div)
+                
+                # 创建组内容区域
+                content_div = templating.Element('div')
+                content_div.attrib['class'] = 'group-content'
+                
+                # 创建进程表格
+                table = templating.Element('table')
+                
+                # 表头
+                thead = templating.Element('thead')
+                tr = templating.Element('tr')
+                
+                th_state = templating.Element('th')
+                th_state.attrib['class'] = 'state'
+                th_state.content('状态')
+                tr.append(th_state)
+                
+                th_desc = templating.Element('th')
+                th_desc.attrib['class'] = 'desc'
+                th_desc.content('描述')
+                tr.append(th_desc)
+                
+                th_name = templating.Element('th')
+                th_name.attrib['class'] = 'name'
+                th_name.content('名称')
+                tr.append(th_name)
+                
+                th_action = templating.Element('th')
+                th_action.attrib['class'] = 'action'
+                th_action.content('操作')
+                tr.append(th_action)
+                
+                thead.append(tr)
+                table.append(thead)
+                
+                # 表内容
+                tbody = templating.Element('tbody')
+                
+                for i, process in enumerate(processes):
+                    tr = templating.Element('tr')
+                    if i % 2:
+                        tr.attrib['class'] = 'shade'
+                    
+                    # 状态列
+                    td_status = templating.Element('td')
+                    td_status.attrib['class'] = 'status'
+                    
+                    status_span = templating.Element('span')
+                    status_span.attrib['class'] = self.css_class_for_state(process['state'])
+                    status_span.content(process['status'].lower())
+                    td_status.append(status_span)
+                    tr.append(td_status)
+                    
+                    # 描述列
+                    td_info = templating.Element('td')
+                    info_span = templating.Element('span')
+                    info_span.content(process['description'])
+                    td_info.append(info_span)
+                    tr.append(td_info)
+                    
+                    # 名称列
+                    td_name = templating.Element('td')
+                    name_a = templating.Element('a')
+                    processname = make_namespec(process['group'], process['name'])
+                    name_a.attrib['href'] = 'tail.html?processname=%s' % urllib.quote(processname)
+                    name_a.attrib['target'] = '_blank'
+                    name_a.content(processname)
+                    td_name.append(name_a)
+                    tr.append(td_name)
+                    
+                    # 操作列
+                    td_action = templating.Element('td')
+                    td_action.attrib['class'] = 'action'
+                    ul = templating.Element('ul')
+                    
+                    for action in process['actions']:
+                        li = templating.Element('li')
+                        if action is None:
+                            li.attrib['class'] = 'hidden'
+                            a = templating.Element('a')
+                            a.attrib['href'] = '#'
+                            li.append(a)
+                        else:
+                            a = templating.Element('a')
+                            a.attrib['href'] = action['href']
+                            a.content(action['name'])
+                            if action['target']:
+                                a.attrib['target'] = action['target']
+                            li.append(a)
+                        ul.append(li)
+                    
+                    td_action.append(ul)
+                    tr.append(td_action)
+                    
+                    tbody.append(tr)
+                
+                table.append(tbody)
+                content_div.append(table)
+                group_div.append(content_div)
+                
+                process_groups_div.append(group_div)
         else:
-            table = root.findmeld('statustable')
-            table.replace('No programs to manage')
+            process_groups_div = root.findmeld('process-groups')
+            process_groups_div.content('没有程序可以管理')
 
         root.findmeld('supervisor_version').content(VERSION)
         copyright_year = str(datetime.date.today().year)
