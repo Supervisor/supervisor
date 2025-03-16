@@ -778,11 +778,11 @@ class logtail_handler:
             return
 
         # 获取请求的 format 参数，决定返回 HTML 还是纯文本
-        is_html = True
+        is_html = False
         if query:
             import cgi
             parsed_query = cgi.parse_qs(query)
-            is_html = parsed_query.get('format', ['html'])[0] != 'plain'
+            is_html = parsed_query.get('format', ['plain'])[0] == 'html'
 
         if is_html:
             # 返回美化的 HTML 页面
@@ -909,7 +909,7 @@ class logtail_handler:
     </div>
     
     <div class="log-content">
-      <pre id="log-pre">''' % (full_process_name, full_process_name, request.uri)
+      <pre id="log-pre">''' % (full_process_name, full_process_name, request.args[0])
 
             html_foot = '''</pre>
     </div>
@@ -930,11 +930,13 @@ class logtail_handler:
             
         else:
             # 原始的纯文本响应
+            # 设置内容类型和必要的头部
+            request['Content-Type'] = 'text/plain;charset=utf-8'
             mtime = os.stat(logfile)[stat.ST_MTIME]
             request['Last-Modified'] = http_date.build_http_date(mtime)
-            request['Content-Type'] = 'text/plain;charset=utf-8'
             request['X-Accel-Buffering'] = 'no'
-            
+
+            # 直接推送日志内容
             request.push(tail_f_producer(request, logfile, 1024, is_html=False))
             request.done()
 
