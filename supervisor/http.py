@@ -6,6 +6,7 @@ import socket
 import errno
 import weakref
 import traceback
+import supervisor.options
 
 try:
     import pwd
@@ -635,10 +636,11 @@ class supervisor_af_unix_http_server(supervisor_http_server):
             return True
 
 class tail_f_producer:
-    def __init__(self, request, filename, head):
+    def __init__(self, request, filename, head, is_html=False):
         self.request = weakref.ref(request)
         self.filename = filename
         self.delay = 0.1
+        self.is_html = is_html
 
         self._open()
         sz = self._fsize()
@@ -658,13 +660,44 @@ class tail_f_producer:
         bytes_added = newsz - self.sz
         if bytes_added < 0:
             self.sz = 0
-            return "==> File truncated <==\n"
+            return "==> File truncated <==\n" if not self.is_html else "<span class='log-warn'>==> File truncated &lt;==</span>\n"
         if bytes_added > 0:
             self.file.seek(-bytes_added, 2)
-            bytes = self.file.read(bytes_added)
+            data = self.file.read(bytes_added)
             self.sz = newsz
-            return bytes
+            
+            if self.is_html and data:
+                # HTML 转义，防止破坏 HTML 结构
+                data = data.replace(b'&', b'&amp;').replace(b'<', b'&lt;').replace(b'>', b'&gt;')
+                # 高亮日志级别
+                data = self._highlight_log_levels(data)
+            
+            return data
         return NOT_DONE_YET
+
+    def _highlight_log_levels(self, data):
+        """高亮显示不同级别的日志"""
+        import re
+        
+        # 将字节数据转换为字符串以便使用正则表达式
+        if isinstance(data, bytes):
+            data_str = data.decode('utf-8', errors='replace')
+        else:
+            data_str = data
+        
+        # 定义日志级别的正则表达式和对应的 CSS 类
+        patterns = [
+            (r'\b(ERROR|CRITICAL|FATAL)\b', 'log-error'),
+            (r'\b(WARN|WARNING)\b', 'log-warn'),
+            (r'\b(INFO|NOTICE)\b', 'log-info'),
+            (r'\b(DEBUG|TRACE)\b', 'log-debug')
+        ]
+        
+        # 为每个匹配项添加 span 标签
+        for pattern, css_class in patterns:
+            data_str = re.sub(pattern, r'<span class="%s">\1</span>' % css_class, data_str)
+            
+        return data_str.encode('utf-8')
 
     def _open(self):
         self.file = open(self.filename, 'rb')
@@ -680,7 +713,7 @@ class tail_f_producer:
         except (OSError, ValueError):
             # file was unlinked
             return
-
+            
         if self.ino != ino: # log rotation occurred
             self._close()
             self._open()
@@ -744,18 +777,166 @@ class logtail_handler:
             request.error(404) # not found
             return
 
-        mtime = os.stat(logfile)[stat.ST_MTIME]
-        request['Last-Modified'] = http_date.build_http_date(mtime)
-        request['Content-Type'] = 'text/plain;charset=utf-8'
-        # the lack of a Content-Length header makes the outputter
-        # send a 'Transfer-Encoding: chunked' response
-        request['X-Accel-Buffering'] = 'no'
-        # tell reverse proxy server (e.g., nginx) to disable proxy buffering
-        # (see also http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering)
+        # 获取请求的 format 参数，决定返回 HTML 还是纯文本
+        is_html = True
+        if query:
+            import cgi
+            parsed_query = cgi.parse_qs(query)
+            is_html = parsed_query.get('format', ['html'])[0] != 'plain'
 
-        request.push(tail_f_producer(request, logfile, 1024))
+        if is_html:
+            # 返回美化的 HTML 页面
+            mtime = os.stat(logfile)[stat.ST_MTIME]
+            request['Last-Modified'] = http_date.build_http_date(mtime)
+            request['Content-Type'] = 'text/html;charset=utf-8'
+            request['X-Accel-Buffering'] = 'no'
 
-        request.done()
+            # 创建进程的完整名称
+            full_process_name = process_name
+            if group_name != process_name:
+                full_process_name = "%s:%s" % (group_name, process_name)
+
+            # 构建 HTML 头部
+            html_head = '''<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>进程 %s 的日志</title>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    
+    .log-container {
+      max-width: 1200px;
+      margin: 20px auto;
+      background: #fff;
+      border-radius: 6px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .log-header {
+      background: #2c3e50;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .log-header h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 500;
+    }
+    
+    .log-controls {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .log-controls a button {
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    
+    .log-controls a button:hover {
+      background: #2980b9;
+    }
+    
+    .log-content {
+      position: relative;
+      overflow: auto;
+      max-height: 70vh;
+      background: #282c34;
+      color: #abb2bf;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .log-content pre {
+      margin: 0;
+      padding: 15px;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      tab-size: 4;
+      white-space: pre-wrap;
+    }
+    
+    .log-footer {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: #f8f9fa;
+      border-top: 1px solid #e9ecef;
+    }
+    
+    .log-footer a {
+      color: #3498db;
+      text-decoration: none;
+    }
+    
+    .log-footer a:hover {
+      text-decoration: underline;
+    }
+    
+    /* 高亮特定日志级别 */
+    .log-error { color: #e06c75; }
+    .log-warn { color: #e5c07b; }
+    .log-info { color: #61afef; }
+    .log-debug { color: #98c379; }
+  </style>
+</head>
+<body>
+  <div class="log-container">
+    <div class="log-header">
+      <h1>进程 %s 的日志</h1>
+      <div class="log-controls">
+        <a href="%s"><button type="button">刷新</button></a>
+      </div>
+    </div>
+    
+    <div class="log-content">
+      <pre id="log-pre">''' % (full_process_name, full_process_name, request.uri)
+
+            html_foot = '''</pre>
+    </div>
+    
+    <div class="log-footer">
+      <a href="/index.html">返回首页</a>
+      <div>Supervisor %s</div>
+    </div>
+  </div>
+</body>
+</html>''' % (supervisor.options.VERSION)
+
+            # 发送带有美化页面的响应
+            request.push(html_head)
+            request.push(tail_f_producer(request, logfile, 1024, is_html=True))
+            request.push(html_foot)
+            request.done()
+            
+        else:
+            # 原始的纯文本响应
+            mtime = os.stat(logfile)[stat.ST_MTIME]
+            request['Last-Modified'] = http_date.build_http_date(mtime)
+            request['Content-Type'] = 'text/plain;charset=utf-8'
+            request['X-Accel-Buffering'] = 'no'
+            
+            request.push(tail_f_producer(request, logfile, 1024, is_html=False))
+            request.done()
 
 class mainlogtail_handler:
     IDENT = 'Main Logtail HTTP Request Handler'

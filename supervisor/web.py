@@ -176,6 +176,17 @@ class MeldView:
 
         response = self.context.response
         headers = response['headers']
+        
+        # 处理直接返回的 HTML 字符串
+        if isinstance(body, str) or isinstance(body, unicode):
+            headers['Content-Type'] = self.content_type
+            headers['Pragma'] = 'no-cache'
+            headers['Cache-Control'] = 'no-cache'
+            headers['Expires'] = http_date.build_http_date(0)
+            response['body'] = as_bytes(body)
+            return response
+        
+        # 原有的处理逻辑
         headers['Content-Type'] = self.content_type
         headers['Pragma'] = 'no-cache'
         headers['Cache-Control'] = 'no-cache'
@@ -216,67 +227,259 @@ class TailView(MeldView):
                         tail = 'ERROR: unexpected rpc fault [%d] %s' % (
                             e.code, e.text)
 
-        root = self.clone()
-
-        title = root.findmeld('title')
-        title.content('Supervisor tail of process %s' % processname)
-        tailbody = root.findmeld('tailbody')
-        tailbody.content(tail)
-
-        refresh_anchor = root.findmeld('refresh_anchor')
+        title_text = '进程日志' if processname is None else '进程 %s 的日志' % processname
+        refresh_url = ''
         if processname is not None:
-            refresh_anchor.attributes(
-                href='tail.html?processname=%s&limit=%s' % (
+            refresh_url = 'tail.html?processname=%s&limit=%s' % (
                     urllib.quote(processname), urllib.quote(str(abs(limit)))
                     )
-            )
-        else:
-            refresh_anchor.deparent()
+            
+        # 使用自定义 HTML 模板
+        html = '''<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>%s</title>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    
+    .log-container {
+      max-width: 1200px;
+      margin: 20px auto;
+      background: #fff;
+      border-radius: 6px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .log-header {
+      background: #2c3e50;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .log-header h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 500;
+    }
+    
+    .log-controls {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .log-controls button {
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    
+    .log-controls button:hover {
+      background: #2980b9;
+    }
+    
+    .log-search {
+      display: flex;
+      padding: 10px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
+    }
+    
+    .log-search input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .log-content {
+      position: relative;
+      overflow: auto;
+      max-height: 70vh;
+      background: #282c34;
+      color: #abb2bf;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .log-content pre {
+      margin: 0;
+      padding: 15px;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      tab-size: 4;
+      white-space: pre-wrap;
+    }
+    
+    .log-footer {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: #f8f9fa;
+      border-top: 1px solid #e9ecef;
+    }
+    
+    .log-footer a {
+      color: #3498db;
+      text-decoration: none;
+    }
+    
+    .log-footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="log-container">
+    <div class="log-header">
+      <h1>%s</h1>
+      <div class="log-controls">
+        <button id="toggle-wrap-btn">自动换行</button>
+        <button id="copy-logs-btn">复制日志</button>
+        <a href="%s"><button type="button">刷新</button></a>
+      </div>
+    </div>
+    
+    <div class="log-search">
+      <input type="text" id="log-search-input" placeholder="搜索日志..." />
+    </div>
+    
+    <div class="log-content">
+      <pre id="log-pre">%s</pre>
+    </div>
+    
+    <div class="log-footer">
+      <span id="log-stats">行数: 0</span>
+      <a href="index.html">返回首页</a>
+    </div>
+  </div>
 
-        return as_string(root.write_xhtmlstring())
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // 计算行数
+      const pre = document.getElementById('log-pre');
+      const logText = pre.textContent;
+      const lines = logText.split('\\n').filter(line => line.trim());
+      document.getElementById('log-stats').textContent = `行数: ${lines.length}`;
+      
+      // 复制日志
+      document.getElementById('copy-logs-btn').addEventListener('click', function() {
+        navigator.clipboard.writeText(pre.textContent).then(function() {
+          const btn = document.getElementById('copy-logs-btn');
+          const originalText = btn.textContent;
+          btn.textContent = '已复制!';
+          setTimeout(() => {
+            btn.textContent = originalText;
+          }, 2000);
+        });
+      });
+      
+      // 自动换行
+      const toggleWrapBtn = document.getElementById('toggle-wrap-btn');
+      toggleWrapBtn.addEventListener('click', function() {
+        if (pre.style.whiteSpace === 'pre-wrap' || pre.style.whiteSpace === '') {
+          pre.style.whiteSpace = 'pre';
+          this.textContent = '开启自动换行';
+        } else {
+          pre.style.whiteSpace = 'pre-wrap';
+          this.textContent = '关闭自动换行';
+        }
+      });
+      
+      // 搜索功能
+      document.getElementById('log-search-input').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const logContent = pre.innerHTML;
+        
+        if(searchTerm) {
+          // 使用简单的高亮实现
+          const regex = new RegExp(searchTerm, 'gi');
+          pre.innerHTML = logContent.replace(regex, match => 
+            `<span style="background-color:yellow;color:black">${match}</span>`
+          );
+        } else {
+          pre.innerHTML = logText;
+        }
+      });
+    });
+  </script>
+</body>
+</html>
+''' % (title_text, title_text, refresh_url, tail.replace('<', '&lt;').replace('>', '&gt;'))
+
+        return html
 
 class StatusView(MeldView):
     def actions_for_process(self, process):
-        state = process.get_state()
-        processname = urllib.quote(make_namespec(process.group.config.name,
-                                                 process.config.name))
-        start = {
-            'name': 'Start',
-            'href': 'index.html?processname=%s&amp;action=start' % processname,
-            'target': None,
-        }
-        restart = {
-            'name': 'Restart',
+        state = process['state']
+        processname = urllib.quote(make_namespec(process['group'], process['name']))
+        actions = []
+        
+        if state == ProcessStates.RUNNING:
+            actions.extend([
+                {
+                    'name': '重启',
             'href': 'index.html?processname=%s&amp;action=restart' % processname,
-            'target': None,
-        }
-        stop = {
-            'name': 'Stop',
+                },
+                {
+                    'name': '停止',
             'href': 'index.html?processname=%s&amp;action=stop' % processname,
-            'target': None,
-        }
-        clearlog = {
-            'name': 'Clear Log',
+                },
+                {
+                    'name': '清除日志',
             'href': 'index.html?processname=%s&amp;action=clearlog' % processname,
-            'target': None,
-        }
-        tailf_stdout = {
-            'name': 'Tail -f Stdout',
+                },
+                {
+                    'name': '查看输出',
             'href': 'logtail/%s' % processname,
             'target': '_blank'
         }
-        tailf_stderr = {
-            'name': 'Tail -f Stderr',
-            'href': 'logtail/%s/stderr' % processname,
+            ])
+        elif state in (ProcessStates.STOPPED, ProcessStates.EXITED, ProcessStates.FATAL):
+            actions.extend([
+                {
+                    'name': '启动',
+                    'href': 'index.html?processname=%s&amp;action=start' % processname,
+                },
+                {
+                    'name': '清除日志',
+                    'href': 'index.html?processname=%s&amp;action=clearlog' % processname,
+                },
+                {
+                    'name': '查看输出',
+                    'href': 'logtail/%s' % processname,
             'target': '_blank'
         }
-        if state == ProcessStates.RUNNING:
-            actions = [restart, stop, clearlog, tailf_stdout, tailf_stderr]
-        elif state in (ProcessStates.STOPPED, ProcessStates.EXITED,
-                       ProcessStates.FATAL):
-            actions = [start, None, clearlog, tailf_stdout, tailf_stderr]
+            ])
         else:
-            actions = [None, None, clearlog, tailf_stdout, tailf_stderr]
+            actions.extend([
+                {
+                    'name': '清除日志',
+                    'href': 'index.html?processname=%s&amp;action=clearlog' % processname,
+                },
+                {
+                    'name': '查看输出',
+                    'href': 'logtail/%s' % processname,
+                    'target': '_blank'
+                }
+            ])
         return actions
 
     def css_class_for_state(self, state):
@@ -284,6 +487,8 @@ class StatusView(MeldView):
             return 'statusrunning'
         elif state in (ProcessStates.FATAL, ProcessStates.BACKOFF):
             return 'statuserror'
+        elif state == ProcessStates.STOPPED:
+            return 'statusstopped'
         else:
             return 'statusnominal'
 
@@ -328,39 +533,15 @@ class StatusView(MeldView):
                 restartall.delay = 0.05
                 return restartall
                 
-            elif action == 'startProcessGroup':
-                try:
-                    callback = rpcinterface.supervisor.startProcessGroup(namespec)
-                except RPCError as e:
-                    msg = 'unexpected rpc fault [%d] %s' % (e.code, e.text)
-                    def startgrperr():
-                        return msg
-                    startgrperr.delay = 0.05
-                    return startgrperr
-                
-                def startgroup():
-                    if callback() is NOT_DONE_YET:
-                        return NOT_DONE_YET
-                    return '组 %s 的所有进程已启动' % namespec
-                startgroup.delay = 0.05
-                return startgroup
-                
-            elif action == 'stopProcessGroup':
-                try:
-                    callback = rpcinterface.supervisor.stopProcessGroup(namespec)
-                except RPCError as e:
-                    msg = 'unexpected rpc fault [%d] %s' % (e.code, e.text)
-                    def stopgrperr():
-                        return msg
-                    stopgrperr.delay = 0.05
-                    return stopgrperr
-                
-                def stopgroup():
-                    if callback() is NOT_DONE_YET:
-                        return NOT_DONE_YET
-                    return '组 %s 的所有进程已停止' % namespec
-                stopgroup.delay = 0.05
-                return stopgroup
+            elif action == 'startgroup':
+                # 启动整个组
+                return self.start_group(namespec)
+            elif action == 'stopgroup':
+                # 停止整个组
+                return self.stop_group(namespec)
+            elif action == 'restartgroup':
+                # 重启整个组
+                return self.restart_group(namespec)
 
             elif namespec:
                 def wrong():
@@ -505,15 +686,13 @@ class StatusView(MeldView):
             if not self.callback:
                 self.callback = self.make_callback(processname, action)
                 return NOT_DONE_YET
-
             else:
-                message =  self.callback()
+                message = self.callback()
                 if message is NOT_DONE_YET:
                     return NOT_DONE_YET
                 if message is not None:
                     server_url = form['SERVER_URL']
-                    location = server_url + "/" + '?message=%s' % urllib.quote(
-                        message)
+                    location = server_url + "/" + '?message=%s' % urllib.quote(message)
                     response['headers']['Location'] = location
 
         supervisord = self.context.supervisord
@@ -522,216 +701,245 @@ class StatusView(MeldView):
               SupervisorNamespaceRPCInterface(supervisord))]
             )
 
-        # 按组收集进程
-        groups = {}
-        for groupname, group in supervisord.process_groups.items():
-            groups[groupname] = []
-            for process_name in group.processes.keys():
-                sent_name = make_namespec(groupname, process_name)
-                info = rpcinterface.supervisor.getProcessInfo(sent_name)
-                process = group.processes[process_name]
-                actions = self.actions_for_process(process)
-                groups[groupname].append({
-                    'status': info['statename'],
-                    'name': process_name,
-                    'group': groupname,
-                    'actions': actions,
-                    'state': info['state'],
-                    'description': info['description'],
-                })
+        # 按组和独立进程组织
+        groups = {}  # 组名 -> 组下的进程名列表
+        ungrouped = []  # 未分组的进程列表
         
-        # 按照组名称排序
+        # 首先构建所有组名的集合
+        group_names = set()
+        for process_group in supervisord.process_groups.values():
+            # 检查是否是真实的组（有多个进程）
+            processes = process_group.processes
+            if len(processes) > 1:
+                # 可能是一个组
+                group_names.add(process_group.config.name)
+        
+        # 现在判断进程是否属于组并分类
+        for process_group in supervisord.process_groups.values():
+            group_name = process_group.config.name
+            
+            if group_name in group_names and len(process_group.processes) > 1:
+                # 这是一个组
+                if group_name not in groups:
+                    groups[group_name] = []
+                
+                for process in process_group.processes.values():
+                    groups[group_name].append((group_name, process.config.name))
+            else:
+                # 未分组的独立进程
+                for process in process_group.processes.values():
+                    ungrouped.append((group_name, process.config.name))
+        
+        # 对所有组排序
         sorted_groups = sorted(groups.items())
+        # 排序未分组进程
+        ungrouped.sort()
 
         root = self.clone()
-
         if message is not None:
             statusarea = root.findmeld('statusmessage')
             statusarea.attrib['class'] = 'status_msg'
             statusarea.content(message)
 
-        # 处理分组显示
-        if sorted_groups:
-            process_groups_div = root.findmeld('process-groups')
-            
-            for groupname, processes in sorted_groups:
-                # 计算组的整体状态
-                running_count = sum(1 for p in processes if p['state'] == ProcessStates.RUNNING)
-                error_count = sum(1 for p in processes if p['state'] in (ProcessStates.FATAL, ProcessStates.BACKOFF))
-                total_count = len(processes)
-                
-                # 创建组容器
-                group_div = templating.Element('div')
-                group_div.attrib['class'] = 'process-group'
-                
-                # 创建组标题栏
-                header_div = templating.Element('div')
-                header_div.attrib['class'] = 'group-header'
-                
-                # 添加折叠图标
-                icon = templating.Element('i')
-                icon.attrib['class'] = 'fas fa-angle-down group-icon'
-                header_div.append(icon)
-                
-                # 添加组名称
-                group_name = templating.Element('div')
-                group_name.attrib['class'] = 'group-name'
-                group_name.content(groupname)
-                header_div.append(group_name)
-                
-                # 添加组状态摘要
-                summary_div = templating.Element('div')
-                summary_div.attrib['class'] = 'group-summary'
-                
-                # 状态标签
-                status_span = templating.Element('div')
-                if error_count > 0:
-                    status_class = 'group-status error'
-                    status_text = '%d/%d 错误' % (error_count, total_count)
-                elif running_count == total_count:
-                    status_class = 'group-status running'
-                    status_text = '全部运行 (%d)' % total_count
-                elif running_count == 0:
-                    status_class = 'group-status'
-                    status_text = '全部停止 (%d)' % total_count
-                else:
-                    status_class = 'group-status partial'
-                    status_text = '%d/%d 运行中' % (running_count, total_count)
-                
-                status_span.attrib['class'] = status_class
-                status_span.content(status_text)
-                summary_div.append(status_span)
-                
-                # 组操作按钮
-                actions_div = templating.Element('div')
-                actions_div.attrib['class'] = 'group-actions'
-                
-                # 启动全部按钮
-                start_a = templating.Element('a')
-                start_a.attrib['href'] = 'index.html?action=startProcessGroup&amp;processname=%s' % urllib.quote(groupname)
-                start_a.content('启动全部')
-                actions_div.append(start_a)
-                
-                # 停止全部按钮
-                stop_a = templating.Element('a')
-                stop_a.attrib['href'] = 'index.html?action=stopProcessGroup&amp;processname=%s' % urllib.quote(groupname)
-                stop_a.content('停止全部')
-                actions_div.append(stop_a)
-                
-                summary_div.append(actions_div)
-                header_div.append(summary_div)
-                
-                group_div.append(header_div)
-                
-                # 创建组内容区域
-                content_div = templating.Element('div')
-                content_div.attrib['class'] = 'group-content'
-                
-                # 创建进程表格
-                table = templating.Element('table')
-                
-                # 表头
-                thead = templating.Element('thead')
-                tr = templating.Element('tr')
-                
-                th_state = templating.Element('th')
-                th_state.attrib['class'] = 'state'
-                th_state.content('状态')
-                tr.append(th_state)
-                
-                th_desc = templating.Element('th')
-                th_desc.attrib['class'] = 'desc'
-                th_desc.content('描述')
-                tr.append(th_desc)
-                
-                th_name = templating.Element('th')
-                th_name.attrib['class'] = 'name'
-                th_name.content('名称')
-                tr.append(th_name)
-                
-                th_action = templating.Element('th')
-                th_action.attrib['class'] = 'action'
-                th_action.content('操作')
-                tr.append(th_action)
-                
-                thead.append(tr)
-                table.append(thead)
-                
-                # 表内容
-                tbody = templating.Element('tbody')
-                
-                for i, process in enumerate(processes):
-                    tr = templating.Element('tr')
-                    if i % 2:
-                        tr.attrib['class'] = 'shade'
-                    
-                    # 状态列
-                    td_status = templating.Element('td')
-                    td_status.attrib['class'] = 'status'
-                    
-                    status_span = templating.Element('span')
-                    status_span.attrib['class'] = self.css_class_for_state(process['state'])
-                    status_span.content(process['status'].lower())
-                    td_status.append(status_span)
-                    tr.append(td_status)
-                    
-                    # 描述列
-                    td_info = templating.Element('td')
-                    info_span = templating.Element('span')
-                    info_span.content(process['description'])
-                    td_info.append(info_span)
-                    tr.append(td_info)
-                    
-                    # 名称列
-                    td_name = templating.Element('td')
-                    name_a = templating.Element('a')
-                    processname = make_namespec(process['group'], process['name'])
-                    name_a.attrib['href'] = 'tail.html?processname=%s' % urllib.quote(processname)
-                    name_a.attrib['target'] = '_blank'
-                    name_a.content(processname)
-                    td_name.append(name_a)
-                    tr.append(td_name)
-                    
-                    # 操作列
-                    td_action = templating.Element('td')
-                    td_action.attrib['class'] = 'action'
-                    ul = templating.Element('ul')
-                    
-                    for action in process['actions']:
-                        li = templating.Element('li')
-                        if action is None:
-                            li.attrib['class'] = 'hidden'
-                            a = templating.Element('a')
-                            a.attrib['href'] = '#'
-                            li.append(a)
-                        else:
-                            a = templating.Element('a')
-                            a.attrib['href'] = action['href']
-                            a.content(action['name'])
-                            if action['target']:
-                                a.attrib['target'] = action['target']
-                            li.append(a)
-                        ul.append(li)
-                    
-                    td_action.append(ul)
-                    tr.append(td_action)
-                    
-                    tbody.append(tr)
-                
-                table.append(tbody)
-                content_div.append(table)
-                group_div.append(content_div)
-                
-                process_groups_div.append(group_div)
+        if not (sorted_groups or ungrouped):
+            table = root.findmeld('statustable')
+            table.replace('暂无进程')
         else:
-            process_groups_div = root.findmeld('process-groups')
-            process_groups_div.content('没有程序可以管理')
+            content_div = root.findmeld('content')
+            process_groups = root.findmeld('process_groups')
+            template_group = process_groups.findmeld('template_group')
+            
+            # 移除模板组
+            template_group.deparent()
+            
+            # 处理未分组进程（如果有）
+            if ungrouped:
+                group_div = template_group.clone()
+                group_title = group_div.findmeld('group_title')
+                group_title.content('独立进程')
+                
+                # 隐藏组操作按钮 - 添加错误处理
+                group_actions = group_div.findmeld('group_actions')
+                if group_actions is not None:  # 确保元素存在
+                    group_actions.attrib['style'] = 'display: none;'
+                
+                table = group_div.findmeld('statustable')
+                template_row = table.findmeld('tr')
+                
+                # 移除模板行
+                template_row.deparent()
+                
+                for i, (groupname, processname) in enumerate(ungrouped):
+                    self._render_row(table, template_row, i, groupname, processname, rpcinterface)
+                
+                process_groups.append(group_div)
+            
+            # 处理每个分组
+            for group_name, processes in sorted_groups:
+                group_div = template_group.clone()
+                group_title = group_div.findmeld('group_title')
+                group_title.content('分组: ' + group_name)
+                
+                # 恢复组操作按钮设置，并添加错误处理
+                group_stop = group_div.findmeld('group_stop_anchor')
+                if group_stop is not None:
+                    group_stop.attributes(href='index.html?action=stopgroup&amp;processname=' + group_name)
+                
+                group_restart = group_div.findmeld('group_restart_anchor')
+                if group_restart is not None:
+                    group_restart.attributes(href='index.html?action=restartgroup&amp;processname=' + group_name)
+                
+                table = group_div.findmeld('statustable')
+                template_row = table.findmeld('tr')
+                
+                # 移除模板行
+                template_row.deparent()
+                
+                for i, (groupname, processname) in enumerate(processes):
+                    self._render_row(table, template_row, i, groupname, processname, rpcinterface)
+                
+                process_groups.append(group_div)
 
         root.findmeld('supervisor_version').content(VERSION)
         copyright_year = str(datetime.date.today().year)
         root.findmeld('copyright_date').content(copyright_year)
 
         return as_string(root.write_xhtmlstring())
+
+    def _render_row(self, table, template_row, i, groupname, processname, rpcinterface):
+        row = template_row.clone()
+        sent_name = make_namespec(groupname, processname)
+        info = rpcinterface.supervisor.getProcessInfo(sent_name)
+        actions = self.actions_for_process(info)
+
+        status_text = row.findmeld('status_text')
+        info_text = row.findmeld('info_text')
+        name_anchor = row.findmeld('name_anchor')
+
+        if i % 2:
+            row.attrib['class'] = 'shade'
+        else:
+            row.attrib['class'] = ''
+            
+        status_text.content(info['statename'])
+        status_text.attrib['class'] = self.css_class_for_state(info['state'])
+        info_text.content(info['description'])
+        name_anchor.attributes(href='tail.html?processname=%s' % urllib.quote(sent_name))
+        name_anchor.content(sent_name)
+
+        actionitem_td = row.findmeld('actionitem_td')
+        template_action = actionitem_td.findmeld('actionitem')
+        
+        # 移除模板操作项
+        template_action.deparent()
+        
+        for action in actions:
+            action_item = template_action.clone()
+            action_anchor = action_item.findmeld('actionitem_anchor')
+            action_anchor.attributes(href=action['href'])
+            if 'target' in action:
+                action_anchor.attributes(target=action['target'])
+            action_anchor.content(action['name'])
+            actionitem_td.append(action_item)
+        
+        table.append(row)
+
+    def start_group(self, group_name):
+        """启动整个组的所有进程"""
+        supervisord = self.context.supervisord
+        rpcinterface = SupervisorNamespaceRPCInterface(supervisord)
+        
+        # 先停止所有进程，然后再启动
+        try:
+            stop_callback = rpcinterface.stopProcessGroup(group_name)
+        except RPCError as e:
+            msg = '无法启动组 %s: [%d] %s' % (group_name, e.code, e.text)
+            def startgrperr():
+                return msg
+            startgrperr.delay = 0.05
+            return startgrperr
+        
+        def start_group_cont():
+            if stop_callback() is NOT_DONE_YET:
+                return NOT_DONE_YET
+            
+            # 停止完成，现在启动
+            try:
+                start_callback = rpcinterface.startProcessGroup(group_name)
+            except RPCError as e:
+                return '组 %s 已停止，但无法重新启动: [%d] %s' % (group_name, e.code, e.text)
+            
+            def start_group_cont():
+                if start_callback() is NOT_DONE_YET:
+                    return NOT_DONE_YET
+                return '组 %s 的所有进程已重启' % group_name
+            
+            start_group_cont.delay = 0.05
+            return start_group_cont()
+        
+        start_group_cont.delay = 0.05
+        return start_group_cont
+    
+    def stop_group(self, group_name):
+        """停止整个组的所有进程"""
+        supervisord = self.context.supervisord
+        rpcinterface = SupervisorNamespaceRPCInterface(supervisord)
+        
+        try:
+            callback = rpcinterface.stopProcessGroup(group_name)
+        except RPCError as e:
+            msg = '无法停止组 %s: [%d] %s' % (group_name, e.code, e.text)
+            def stopgrperr():
+                return msg
+            stopgrperr.delay = 0.05
+            return stopgrperr
+        
+        def stopgroup():
+            if callback() is NOT_DONE_YET:
+                return NOT_DONE_YET
+            return '组 %s 的所有进程已停止' % group_name
+        stopgroup.delay = 0.05
+        return stopgroup
+    
+    def restart_group(self, group_name):
+        """重启整个组的所有进程"""
+        supervisord = self.context.supervisord
+        
+        # 创建正确的RPC接口
+        main = ('supervisor', SupervisorNamespaceRPCInterface(supervisord))
+        system = ('system', SystemNamespaceRPCInterface([main]))
+        rpcinterface = RootRPCInterface([main, system])
+        
+        # 使用multicall一次性执行停止和启动操作
+        try:
+            callback = rpcinterface.system.multicall([
+                {'methodName': 'supervisor.stopProcessGroup', 'params': [group_name]},
+                {'methodName': 'supervisor.startProcessGroup', 'params': [group_name]}
+            ])
+        except RPCError as e:
+            msg = '无法重启组 %s: [%d] %s' % (group_name, e.code, e.text)
+            def restartgrperr():
+                return msg
+            restartgrperr.delay = 0.05
+            return restartgrperr
+        
+        def restart_result():
+            result = callback()
+            if result is NOT_DONE_YET:
+                return NOT_DONE_YET
+            
+            # 检查结果
+            stop_result, start_result = result
+            if isinstance(stop_result, dict) and 'faultString' in stop_result:
+                return '组 %s 重启失败: %s' % (group_name, stop_result['faultString'])
+            
+            if isinstance(start_result, dict) and 'faultString' in start_result:
+                return '组 %s 已停止，但无法重新启动: %s' % (group_name, start_result['faultString'])
+            
+            return '组 %s 的所有进程已重启' % group_name
+        
+        restart_result.delay = 0.05
+        return restart_result
 
 class OKView:
     delay = 0

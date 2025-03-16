@@ -3,25 +3,252 @@
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:meld="https://github.com/Supervisor/supervisor">
 <head>
-  <title meld:id="title">Supervisor Status</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title meld:id="title">进程日志</title>
+  <link href="stylesheets/supervisor.css" rel="stylesheet" type="text/css" />
+  <link href="images/icon.png" rel="icon" type="image/png" />
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    
+    .log-container {
+      max-width: 1200px;
+      margin: 20px auto;
+      background: #fff;
+      border-radius: 6px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .log-header {
+      background: #2c3e50;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .log-header h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 500;
+    }
+    
+    .log-controls {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .log-controls button {
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    
+    .log-controls button:hover {
+      background: #2980b9;
+    }
+    
+    .log-search {
+      display: flex;
+      padding: 10px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
+    }
+    
+    .log-search input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .log-content {
+      position: relative;
+      overflow: auto;
+      max-height: 70vh;
+      background: #282c34;
+      color: #abb2bf;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .log-content pre {
+      margin: 0;
+      padding: 15px;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      tab-size: 4;
+      counter-reset: line;
+    }
+    
+    .log-content code {
+      display: block;
+      position: relative;
+      padding-left: 50px;
+    }
+    
+    .log-content code:before {
+      counter-increment: line;
+      content: counter(line);
+      position: absolute;
+      left: 0;
+      width: 40px;
+      padding-right: 10px;
+      color: #636d83;
+      text-align: right;
+      user-select: none;
+    }
+    
+    .log-footer {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: #f8f9fa;
+      border-top: 1px solid #e9ecef;
+    }
+    
+    /* 高亮特定日志级别 */
+    .log-error { color: #e06c75; }
+    .log-warn { color: #e5c07b; }
+    .log-info { color: #61afef; }
+    .log-debug { color: #98c379; }
+  </style>
 </head>
 <body>
 
-<div meld:id="content">
-
-<pre meld:id="tailbody"></pre>
-
-<form meld:id="form" action="index.html" method="POST">
-
-<div style="margin-top: 10px;">
-  <a href="tail.html?processname=thisprocess" meld:id="refresh_anchor">
-    <input type="button" value=" Refresh " name="refresh" />
-  </a>
+<div class="log-container">
+  <div class="log-header">
+    <h1 meld:id="title">进程日志</h1>
+    <div class="log-controls">
+      <button id="auto-scroll-btn" type="button">自动滚动</button>
+      <button id="copy-logs-btn" type="button">复制日志</button>
+      <a href="tail.html?processname=thisprocess" meld:id="refresh_anchor">
+        <button type="button">刷新</button>
+      </a>
+    </div>
+  </div>
+  
+  <div class="log-search">
+    <input type="text" id="log-search-input" placeholder="搜索日志..." />
+  </div>
+  
+  <div class="log-content">
+    <pre meld:id="tailbody"></pre>
+  </div>
+  
+  <div class="log-footer">
+    <span id="log-stats">行数: 0</span>
+    <a href="index.html">返回首页</a>
+  </div>
 </div>
 
-</form>
-
-</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // 初始化日志内容
+    const logContent = document.querySelector('.log-content');
+    const pre = document.querySelector('pre');
+    const logText = pre.textContent;
+    
+    // 清空 pre 并添加带行号的格式化日志
+    pre.innerHTML = '';
+    const lines = logText.split('\n');
+    lines.forEach(function(line) {
+      if(line.trim()) {
+        const code = document.createElement('code');
+        
+        // 添加日志级别高亮
+        if(line.includes('ERROR') || line.includes('CRITICAL')) {
+          code.classList.add('log-error');
+        } else if(line.includes('WARN') || line.includes('WARNING')) {
+          code.classList.add('log-warn');
+        } else if(line.includes('INFO')) {
+          code.classList.add('log-info');
+        } else if(line.includes('DEBUG')) {
+          code.classList.add('log-debug');
+        }
+        
+        code.textContent = line;
+        pre.appendChild(code);
+      }
+    });
+    
+    // 更新行数统计
+    const logStats = document.getElementById('log-stats');
+    const lineCount = pre.querySelectorAll('code').length;
+    logStats.textContent = `行数: ${lineCount}`;
+    
+    // 自动滚动
+    let autoScroll = true;
+    
+    function scrollToBottom() {
+      if(autoScroll) {
+        logContent.scrollTop = logContent.scrollHeight;
+      }
+    }
+    
+    scrollToBottom();
+    
+    const autoScrollBtn = document.getElementById('auto-scroll-btn');
+    autoScrollBtn.addEventListener('click', function() {
+      autoScroll = !autoScroll;
+      this.textContent = autoScroll ? '关闭自动滚动' : '自动滚动';
+      if(autoScroll) {
+        scrollToBottom();
+      }
+    });
+    
+    // 复制日志
+    const copyLogsBtn = document.getElementById('copy-logs-btn');
+    copyLogsBtn.addEventListener('click', function() {
+      const logText = Array.from(pre.querySelectorAll('code'))
+        .map(code => code.textContent)
+        .join('\n');
+      
+      navigator.clipboard.writeText(logText).then(function() {
+        const originalText = copyLogsBtn.textContent;
+        copyLogsBtn.textContent = '已复制!';
+        setTimeout(() => {
+          copyLogsBtn.textContent = originalText;
+        }, 2000);
+      });
+    });
+    
+    // 搜索功能
+    const searchInput = document.getElementById('log-search-input');
+    searchInput.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const codes = pre.querySelectorAll('code');
+      
+      if(searchTerm) {
+        codes.forEach(function(code) {
+          if(code.textContent.toLowerCase().includes(searchTerm)) {
+            code.style.backgroundColor = 'rgba(255, 215, 0, 0.2)';
+          } else {
+            code.style.backgroundColor = '';
+          }
+        });
+      } else {
+        codes.forEach(function(code) {
+          code.style.backgroundColor = '';
+        });
+      }
+    });
+  });
+</script>
 
 </body>
 </html>
