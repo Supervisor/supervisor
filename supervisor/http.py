@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""Medusa HTTP server implementation
+
+This module contains the HTTP server implementation used by supervisor.
+"""
+
 import os
 import stat
 import time
@@ -667,25 +673,25 @@ class tail_f_producer:
             self.sz = newsz
             
             if self.is_html and data:
-                # HTML 转义，防止破坏 HTML 结构
+                # HTML escape to prevent breaking HTML structure
                 data = data.replace(b'&', b'&amp;').replace(b'<', b'&lt;').replace(b'>', b'&gt;')
-                # 高亮日志级别
+                # Highlight log levels
                 data = self._highlight_log_levels(data)
             
             return data
         return NOT_DONE_YET
 
     def _highlight_log_levels(self, data):
-        """高亮显示不同级别的日志"""
+        """Highlight different log levels"""
         import re
         
-        # 将字节数据转换为字符串以便使用正则表达式
+        # Convert byte data to string for regular expression
         if isinstance(data, bytes):
             data_str = data.decode('utf-8', errors='replace')
         else:
             data_str = data
         
-        # 定义日志级别的正则表达式和对应的 CSS 类
+        # Define regex patterns for log levels and corresponding CSS classes
         patterns = [
             (r'\b(ERROR|CRITICAL|FATAL)\b', 'log-error'),
             (r'\b(WARN|WARNING)\b', 'log-warn'),
@@ -693,7 +699,7 @@ class tail_f_producer:
             (r'\b(DEBUG|TRACE)\b', 'log-debug')
         ]
         
-        # 为每个匹配项添加 span 标签
+        # Add span tags for each match
         for pattern, css_class in patterns:
             data_str = re.sub(pattern, r'<span class="%s">\1</span>' % css_class, data_str)
             
@@ -777,7 +783,7 @@ class logtail_handler:
             request.error(404) # not found
             return
 
-        # 获取请求的 format 参数，决定返回 HTML 还是纯文本
+        # Get the format parameter from request to decide whether to return HTML or plain text
         is_html = False
         if query:
             import cgi
@@ -785,18 +791,18 @@ class logtail_handler:
             is_html = parsed_query.get('format', ['plain'])[0] == 'html'
 
         if is_html:
-            # 返回美化的 HTML 页面
+            # Return a beautified HTML page
             mtime = os.stat(logfile)[stat.ST_MTIME]
             request['Last-Modified'] = http_date.build_http_date(mtime)
             request['Content-Type'] = 'text/html;charset=utf-8'
             request['X-Accel-Buffering'] = 'no'
 
-            # 创建进程的完整名称
+            # Create the full process name
             full_process_name = process_name
             if group_name != process_name:
                 full_process_name = "%s:%s" % (group_name, process_name)
 
-            # 构建 HTML 头部
+            # Build HTML header
             html_head = '''<!DOCTYPE html>
 <html>
 <head>
@@ -892,7 +898,7 @@ class logtail_handler:
       text-decoration: underline;
     }
     
-    /* 高亮特定日志级别 */
+    /* Highlight specific log levels */
     .log-error { color: #e06c75; }
     .log-warn { color: #e5c07b; }
     .log-info { color: #61afef; }
@@ -922,21 +928,21 @@ class logtail_handler:
 </body>
 </html>''' % (supervisor.options.VERSION)
 
-            # 发送带有美化页面的响应
+            # Send response with beautified page
             request.push(html_head)
             request.push(tail_f_producer(request, logfile, 1024, is_html=True))
             request.push(html_foot)
             request.done()
             
         else:
-            # 原始的纯文本响应
-            # 设置内容类型和必要的头部
+            # Original plain text response
+            # Set content type and necessary headers
             request['Content-Type'] = 'text/plain;charset=utf-8'
             mtime = os.stat(logfile)[stat.ST_MTIME]
             request['Last-Modified'] = http_date.build_http_date(mtime)
             request['X-Accel-Buffering'] = 'no'
 
-            # 直接推送日志内容
+            # Directly push log content
             request.push(tail_f_producer(request, logfile, 1024, is_html=False))
             request.done()
 
