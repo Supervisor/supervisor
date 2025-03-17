@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""Web interface implementation
+
+This module contains the web interface implementation used by supervisor.
+"""
+
 import os
 import re
 import time
@@ -177,7 +183,7 @@ class MeldView:
         response = self.context.response
         headers = response['headers']
         
-        # 处理直接返回的 HTML 字符串
+        # Handle direct HTML string return
         if isinstance(body, str) or isinstance(body, unicode):
             headers['Content-Type'] = self.content_type
             headers['Pragma'] = 'no-cache'
@@ -186,7 +192,7 @@ class MeldView:
             response['body'] = as_bytes(body)
             return response
         
-        # 原有的处理逻辑
+        # Original handling logic
         headers['Content-Type'] = self.content_type
         headers['Pragma'] = 'no-cache'
         headers['Cache-Control'] = 'no-cache'
@@ -235,7 +241,7 @@ class TailView(MeldView):
                     urllib.quote(processname), urllib.quote(str(abs(limit)))
                     )
         
-        # 设置模板中的值
+        # Set values in the template
         root.findmeld('title').content(title_text)
         root.findmeld('header_title').content(title_text)
         refresh_anchor = root.findmeld('refresh_anchor')
@@ -353,13 +359,13 @@ class StatusView(MeldView):
                 return restartall
                 
             elif action == 'startgroup':
-                # 启动整个组
+                # Start the entire group
                 return self.start_group(namespec)
             elif action == 'stopgroup':
-                # 停止整个组
+                # Stop the entire group
                 return self.stop_group(namespec)
             elif action == 'restartgroup':
-                # 重启整个组
+                # Restart the entire group
                 return self.restart_group(namespec)
 
             elif namespec:
