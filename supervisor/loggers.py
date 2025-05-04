@@ -292,8 +292,17 @@ class LogRecord:
             msg = as_string(self.msg)
             if self.kw:
                 msg = msg % self.kw
-            self.dictrepr = {'message':msg, 'levelname':levelname,
-                             'asctime':asctime}
+            self.dictrepr = {
+                'message': msg,
+                'levelname': levelname,
+                'asctime': asctime,
+                'levelno': self.level,
+                'process': os.getpid(),
+                'processName': 'supervisord',
+                'threadName': 'MainThread'
+            }
+            self.dictrepr.update(self.kw)
+
         return self.dictrepr
 
 class Logger:
@@ -413,10 +422,28 @@ def handle_file(logger, filename, fmt, rotating=False, maxbytes=0, backups=0):
     if filename == 'syslog': # TODO remove this
         handler = SyslogHandler()
     else:
-        if rotating is False:
-            handler = FileHandler(filename)
-        else:
-            handler = RotatingFileHandler(filename, 'a', maxbytes, backups)
-    handler.setFormat(fmt)
-    handler.setLevel(logger.level)
-    logger.addHandler(handler)
+        if filename == 'stdout':
+            return handle_stdout(logger, fmt)
+        if filename == 'stderr':
+            return handle_stderr(logger, fmt)
+        if not os.path.exists(filename):
+            # touching the file
+            try:
+                open(filename, 'a').close()
+            except (IOError, OSError):
+                pass
+        try:
+            if rotating:
+                handler = RotatingFileHandler(
+                    filename,
+                    maxBytes=maxbytes,
+                    backupCount=backups
+                )
+            else:
+                handler = FileHandler(filename)
+            handler.setFormat(fmt)
+            handler.setLevel(logger.level)
+            logger.addHandler(handler)
+            return handler
+        except (IOError, OSError):
+            logger.error('Cannot open file %s for writing' % filename)

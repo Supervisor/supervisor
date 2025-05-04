@@ -126,19 +126,21 @@ class POutputDispatcher(PDispatcher):
             self.normallog = config.options.getLogger()
 
         if logfile:
+            fmt = config.options.childlog_format
             loggers.handle_file(
                 self.normallog,
                 filename=logfile,
-                fmt='%(message)s',
+                fmt=fmt,
                 rotating=not not maxbytes, # optimization
                 maxbytes=maxbytes,
                 backups=backups
             )
 
         if to_syslog:
+            fmt = config.name + ' ' + config.options.childlog_format
             loggers.handle_syslog(
                 self.normallog,
-                fmt=config.name + ' %(message)s'
+                fmt=fmt
             )
 
     def _init_capturelog(self):
