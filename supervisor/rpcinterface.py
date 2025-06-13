@@ -15,6 +15,7 @@ from supervisor.datatypes import (
 
 from supervisor.options import readFile
 from supervisor.options import tailFile
+from supervisor.options import BadCommand
 from supervisor.options import NotExecutable
 from supervisor.options import NotFound
 from supervisor.options import NoPermission
@@ -59,7 +60,7 @@ class SupervisorNamespaceRPCInterface:
     def getAPIVersion(self):
         """ Return the version of the RPC API used by supervisord
 
-        @return string version version id
+        @return string version id
         """
         self._update('getAPIVersion')
         return API_VERSION
@@ -69,7 +70,7 @@ class SupervisorNamespaceRPCInterface:
     def getSupervisorVersion(self):
         """ Return the version of the supervisor package in use by supervisord
 
-        @return string version version id
+        @return string version id
         """
         self._update('getSupervisorVersion')
         return VERSION
@@ -293,7 +294,7 @@ class SupervisorNamespaceRPCInterface:
             filename, argv = process.get_execv_args()
         except NotFound as why:
             raise RPCError(Faults.NO_FILE, why.args[0])
-        except (NotExecutable, NoPermission) as why:
+        except (BadCommand, NotExecutable, NoPermission) as why:
             raise RPCError(Faults.NOT_EXECUTABLE, why.args[0])
 
         if process.get_state() in RUNNING_STATES:
@@ -567,6 +568,8 @@ class SupervisorNamespaceRPCInterface:
             inuse = gconfig.name in self.supervisord.process_groups
             for pconfig in gconfig.process_configs:
                 d = {'autostart': pconfig.autostart,
+                     'directory': pconfig.directory,
+                     'uid': pconfig.uid,
                      'command': pconfig.command,
                      'exitcodes': pconfig.exitcodes,
                      'group': gconfig.name,
@@ -592,6 +595,7 @@ class SupervisorNamespaceRPCInterface:
                      'stderr_logfile_backups': pconfig.stderr_logfile_backups,
                      'stderr_logfile_maxbytes': pconfig.stderr_logfile_maxbytes,
                      'stderr_syslog': pconfig.stderr_syslog,
+                     'serverurl': pconfig.serverurl,
                     }
                 # no support for these types in xml-rpc
                 d.update((k, 'auto') for k, v in d.items() if v is Automatic)

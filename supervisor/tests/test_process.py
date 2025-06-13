@@ -39,7 +39,7 @@ class SubprocessTests(unittest.TestCase):
         from supervisor.states import ProcessStates
         from supervisor.process import getProcessStateDescription
         for statename, code in ProcessStates.__dict__.items():
-            if isinstance(code, int):
+            if not statename.startswith("__"):
                 self.assertEqual(getProcessStateDescription(code), statename)
 
     def test_ctor(self):
@@ -783,7 +783,7 @@ class SubprocessTests(unittest.TestCase):
         # Sleep for 2 seconds
         time.sleep(2)
 
-        # This iteration of stop_report() should actaully trigger the report
+        # This iteration of stop_report() should actually trigger the report
         instance.stop_report()
 
         self.assertEqual(len(options.logger.data), 1)
@@ -1322,8 +1322,8 @@ class SubprocessTests(unittest.TestCase):
 
     def test_transition_stopped_to_starting_supervisor_stopping(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events = []
+        events.subscribe(events.ProcessStateEvent, emitted_events.append)
         from supervisor.states import ProcessStates, SupervisorStates
         options = DummyOptions()
         options.mood = SupervisorStates.SHUTDOWN
@@ -1335,12 +1335,14 @@ class SubprocessTests(unittest.TestCase):
         process.state = ProcessStates.STOPPED
         process.transition()
         self.assertEqual(process.state, ProcessStates.STOPPED)
-        self.assertEqual(L, [])
+        self.assertEqual(emitted_events, [])
 
     def test_transition_stopped_to_starting_supervisor_running(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events_with_states = []
+        def subscriber(e):
+            emitted_events_with_states.append((e, e.process.state))
+        events.subscribe(events.ProcessStateEvent, subscriber)
         from supervisor.states import ProcessStates, SupervisorStates
         options = DummyOptions()
         options.mood = SupervisorStates.RUNNING
@@ -1351,14 +1353,16 @@ class SubprocessTests(unittest.TestCase):
         process.state = ProcessStates.STOPPED
         process.transition()
         self.assertEqual(process.state, ProcessStates.STARTING)
-        self.assertEqual(len(L), 1)
-        event = L[0]
+        self.assertEqual(len(emitted_events_with_states), 1)
+        event, state_when_event_emitted = emitted_events_with_states[0]
         self.assertEqual(event.__class__, events.ProcessStateStartingEvent)
+        self.assertEqual(event.from_state, ProcessStates.STOPPED)
+        self.assertEqual(state_when_event_emitted, ProcessStates.STARTING)
 
     def test_transition_exited_to_starting_supervisor_stopping(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events = []
+        events.subscribe(events.ProcessStateEvent, emitted_events.append)
         from supervisor.states import ProcessStates, SupervisorStates
         options = DummyOptions()
         options.mood = SupervisorStates.SHUTDOWN
@@ -1374,12 +1378,14 @@ class SubprocessTests(unittest.TestCase):
         process.transition()
         self.assertEqual(process.state, ProcessStates.EXITED)
         self.assertTrue(process.system_stop)
-        self.assertEqual(L, [])
+        self.assertEqual(emitted_events, [])
 
     def test_transition_exited_to_starting_uncond_supervisor_running(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events_with_states = []
+        def subscriber(e):
+            emitted_events_with_states.append((e, e.process.state))
+        events.subscribe(events.ProcessStateEvent, subscriber)
         from supervisor.states import ProcessStates
         options = DummyOptions()
 
@@ -1391,14 +1397,18 @@ class SubprocessTests(unittest.TestCase):
         process.state = ProcessStates.EXITED
         process.transition()
         self.assertEqual(process.state, ProcessStates.STARTING)
-        self.assertEqual(len(L), 1)
-        event = L[0]
+        self.assertEqual(len(emitted_events_with_states), 1)
+        event, state_when_event_emitted = emitted_events_with_states[0]
         self.assertEqual(event.__class__, events.ProcessStateStartingEvent)
+        self.assertEqual(event.from_state, ProcessStates.EXITED)
+        self.assertEqual(state_when_event_emitted, ProcessStates.STARTING)
 
     def test_transition_exited_to_starting_condit_supervisor_running(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events_with_states = []
+        def subscriber(e):
+            emitted_events_with_states.append((e, e.process.state))
+        events.subscribe(events.ProcessStateEvent, subscriber)
         from supervisor.states import ProcessStates
         options = DummyOptions()
 
@@ -1411,14 +1421,16 @@ class SubprocessTests(unittest.TestCase):
         process.exitstatus = 'bogus'
         process.transition()
         self.assertEqual(process.state, ProcessStates.STARTING)
-        self.assertEqual(len(L), 1)
-        event = L[0]
+        self.assertEqual(len(emitted_events_with_states), 1)
+        event, state_when_event_emitted = emitted_events_with_states[0]
         self.assertEqual(event.__class__, events.ProcessStateStartingEvent)
+        self.assertEqual(event.from_state, ProcessStates.EXITED)
+        self.assertEqual(state_when_event_emitted, ProcessStates.STARTING)
 
     def test_transition_exited_to_starting_condit_fls_supervisor_running(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events = []
+        events.subscribe(events.ProcessStateEvent, emitted_events.append)
         from supervisor.states import ProcessStates
         options = DummyOptions()
 
@@ -1431,12 +1443,12 @@ class SubprocessTests(unittest.TestCase):
         process.exitstatus = 0
         process.transition()
         self.assertEqual(process.state, ProcessStates.EXITED)
-        self.assertEqual(L, [])
+        self.assertEqual(emitted_events, [])
 
     def test_transition_backoff_to_starting_supervisor_stopping(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events = []
+        events.subscribe(events.ProcessStateEvent, lambda x: emitted_events.append(x))
         from supervisor.states import ProcessStates, SupervisorStates
         options = DummyOptions()
         options.mood = SupervisorStates.SHUTDOWN
@@ -1449,12 +1461,14 @@ class SubprocessTests(unittest.TestCase):
         process.state = ProcessStates.BACKOFF
         process.transition()
         self.assertEqual(process.state, ProcessStates.BACKOFF)
-        self.assertEqual(L, [])
+        self.assertEqual(emitted_events, [])
 
     def test_transition_backoff_to_starting_supervisor_running(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events_with_states = []
+        def subscriber(e):
+            emitted_events_with_states.append((e, e.process.state))
+        events.subscribe(events.ProcessStateEvent, subscriber)
         from supervisor.states import ProcessStates, SupervisorStates
         options = DummyOptions()
         options.mood = SupervisorStates.RUNNING
@@ -1467,13 +1481,16 @@ class SubprocessTests(unittest.TestCase):
         process.state = ProcessStates.BACKOFF
         process.transition()
         self.assertEqual(process.state, ProcessStates.STARTING)
-        self.assertEqual(len(L), 1)
-        self.assertEqual(L[0].__class__, events.ProcessStateStartingEvent)
+        self.assertEqual(len(emitted_events_with_states), 1)
+        event, state_when_event_emitted = emitted_events_with_states[0]
+        self.assertEqual(event.__class__, events.ProcessStateStartingEvent)
+        self.assertEqual(event.from_state, ProcessStates.BACKOFF)
+        self.assertEqual(state_when_event_emitted, ProcessStates.STARTING)
 
     def test_transition_backoff_to_starting_supervisor_running_notyet(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events = []
+        events.subscribe(events.ProcessStateEvent, lambda x: emitted_events.append(x))
         from supervisor.states import ProcessStates, SupervisorStates
         options = DummyOptions()
         options.mood = SupervisorStates.RUNNING
@@ -1486,12 +1503,14 @@ class SubprocessTests(unittest.TestCase):
         process.state = ProcessStates.BACKOFF
         process.transition()
         self.assertEqual(process.state, ProcessStates.BACKOFF)
-        self.assertEqual(L, [])
+        self.assertEqual(emitted_events, [])
 
     def test_transition_starting_to_running(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events_with_states = []
+        def subscriber(e):
+            emitted_events_with_states.append((e, e.process.state))
+        events.subscribe(events.ProcessStateEvent, subscriber)
         from supervisor.states import ProcessStates
 
         options = DummyOptions()
@@ -1516,14 +1535,18 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.logger.data[0],
                          'success: process entered RUNNING state, process has '
                          'stayed up for > than 10 seconds (startsecs)')
-        self.assertEqual(len(L), 1)
-        event = L[0]
+        self.assertEqual(len(emitted_events_with_states), 1)
+        event, state_when_event_emitted = emitted_events_with_states[0]
         self.assertEqual(event.__class__, events.ProcessStateRunningEvent)
+        self.assertEqual(event.from_state, ProcessStates.STARTING)
+        self.assertEqual(state_when_event_emitted, ProcessStates.RUNNING)
 
     def test_transition_starting_to_running_laststart_in_future(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events_with_states = []
+        def subscriber(e):
+            emitted_events_with_states.append((e, e.process.state))
+        events.subscribe(events.ProcessStateEvent, subscriber)
         from supervisor.states import ProcessStates
 
         future_time = time.time() + 3600 # 1 hour into the future
@@ -1556,7 +1579,7 @@ class SubprocessTests(unittest.TestCase):
         # Sleep for (startsecs + 1)
         time.sleep(test_startsecs + 1)
 
-        # This iteration of transition() should actaully trigger the state
+        # This iteration of transition() should actually trigger the state
         # transition to RUNNING
         process.transition()
 
@@ -1568,14 +1591,18 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.logger.data[0],
                          'success: process entered RUNNING state, process has '
                          'stayed up for > than {} seconds (startsecs)'.format(test_startsecs))
-        self.assertEqual(len(L), 1)
-        event = L[0]
+        self.assertEqual(len(emitted_events_with_states), 1)
+        event, state_when_event_emitted = emitted_events_with_states[0]
         self.assertEqual(event.__class__, events.ProcessStateRunningEvent)
+        self.assertEqual(event.from_state, ProcessStates.STARTING)
+        self.assertEqual(state_when_event_emitted, ProcessStates.RUNNING)
 
     def test_transition_backoff_to_starting_delay_in_future(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events_with_states = []
+        def subscriber(e):
+            emitted_events_with_states.append((e, e.process.state))
+        events.subscribe(events.ProcessStateEvent, subscriber)
         from supervisor.states import ProcessStates
 
         future_time = time.time() + 3600 # 1 hour into the future
@@ -1598,18 +1625,23 @@ class SubprocessTests(unittest.TestCase):
         # Ensure process.delay has rolled backward
         self.assertTrue(process.delay < future_time)
 
-        # This iteration of transition() should actaully trigger the state
+        # This iteration of transition() should actually trigger the state
         # transition to STARTING
         process.transition()
 
         self.assertEqual(process.state, ProcessStates.STARTING)
-        self.assertEqual(len(L), 1)
-        self.assertEqual(L[0].__class__, events.ProcessStateStartingEvent)
+        self.assertEqual(len(emitted_events_with_states), 1)
+        event, state_when_event_emitted = emitted_events_with_states[0]
+        self.assertEqual(event.__class__, events.ProcessStateStartingEvent)
+        self.assertEqual(event.from_state, ProcessStates.BACKOFF)
+        self.assertEqual(state_when_event_emitted, ProcessStates.STARTING)
 
     def test_transition_backoff_to_fatal(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events_with_states = []
+        def subscriber(e):
+            emitted_events_with_states.append((e, e.process.state))
+        events.subscribe(events.ProcessStateEvent, subscriber)
         from supervisor.states import ProcessStates
         options = DummyOptions()
 
@@ -1633,14 +1665,16 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.logger.data[0],
                          'gave up: process entered FATAL state, too many start'
                          ' retries too quickly')
-        self.assertEqual(len(L), 1)
-        event = L[0]
+        self.assertEqual(len(emitted_events_with_states), 1)
+        event, state_when_event_emitted = emitted_events_with_states[0]
         self.assertEqual(event.__class__, events.ProcessStateFatalEvent)
+        self.assertEqual(event.from_state, ProcessStates.BACKOFF)
+        self.assertEqual(state_when_event_emitted, ProcessStates.FATAL)
 
     def test_transition_stops_unkillable_notyet(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events = []
+        events.subscribe(events.ProcessStateEvent, emitted_events.append)
         from supervisor.states import ProcessStates
         options = DummyOptions()
 
@@ -1651,12 +1685,12 @@ class SubprocessTests(unittest.TestCase):
 
         process.transition()
         self.assertEqual(process.state, ProcessStates.STOPPING)
-        self.assertEqual(L, [])
+        self.assertEqual(emitted_events, [])
 
     def test_transition_stops_unkillable(self):
         from supervisor import events
-        L = []
-        events.subscribe(events.ProcessStateEvent, lambda x: L.append(x))
+        emitted_events = []
+        events.subscribe(events.ProcessStateEvent, emitted_events.append)
         from supervisor.states import ProcessStates
         options = DummyOptions()
 
@@ -1674,7 +1708,7 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(options.logger.data[0],
                          "killing 'process' (1) with SIGKILL")
         self.assertEqual(options.kills[1], signal.SIGKILL)
-        self.assertEqual(L, [])
+        self.assertEqual(emitted_events, [])
 
     def test_change_state_doesnt_notify_if_no_state_change(self):
         options = DummyOptions()

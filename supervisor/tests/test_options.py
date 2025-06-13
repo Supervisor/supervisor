@@ -257,7 +257,106 @@ class OptionTests(unittest.TestCase):
         msg = 'A sample docstring for test_help\n'
         self.assertEqual(options.stdout.getvalue(), msg)
 
-class ClientOptionsTests(unittest.TestCase):
+class IncludeTestsMixin(object):
+    def test_read_config_include_with_no_files_raises_valueerror(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        ;no files=
+        """)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                ".ini file has [include] section, but no files setting")
+
+    def test_read_config_include_with_no_matching_files_logs_warning(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [supervisorctl]
+
+        [include]
+        files=nonexistent/*
+        """)
+        instance.read_config(StringIO(text))
+        self.assertEqual(instance.parse_warnings,
+                         ['No file matches via include "./nonexistent/*"'])
+
+    def test_read_config_include_reads_files_in_sorted_order(self):
+        dirname = tempfile.mkdtemp()
+        conf_d = os.path.join(dirname, "conf.d")
+        os.mkdir(conf_d)
+
+        supervisord_conf = os.path.join(dirname, "supervisord.conf")
+        text = lstrip("""\
+        [supervisord]
+
+        [supervisorctl]
+
+        [include]
+        files=%s/conf.d/*.conf
+        """ % dirname)
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+
+        from supervisor.compat import letters
+        a_z = letters[:26]
+        for letter in reversed(a_z):
+            filename = os.path.join(conf_d, "%s.conf" % letter)
+            with open(filename, "w") as f:
+                f.write("[program:%s]\n"
+                        "command=/bin/%s\n" % (letter, letter))
+
+        instance = self._makeOne()
+        try:
+            instance.read_config(supervisord_conf)
+        finally:
+            shutil.rmtree(dirname, ignore_errors=True)
+        expected_msgs = []
+        for letter in sorted(a_z):
+            filename = os.path.join(conf_d, "%s.conf" % letter)
+            expected_msgs.append(
+                'Included extra file "%s" during parsing' % filename)
+        self.assertEqual(instance.parse_infos, expected_msgs)
+
+    def test_read_config_include_extra_file_malformed(self):
+        dirname = tempfile.mkdtemp()
+        conf_d = os.path.join(dirname, "conf.d")
+        os.mkdir(conf_d)
+
+        supervisord_conf = os.path.join(dirname, "supervisord.conf")
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        files=%s/conf.d/*.conf
+        """ % dirname)
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+
+        malformed_file = os.path.join(conf_d, "a.conf")
+        with open(malformed_file, 'w') as f:
+            f.write("[inet_http_server]\njunk\n")
+
+        instance = self._makeOne()
+        try:
+            instance.read_config(supervisord_conf)
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertTrue('contains parsing errors:' in exc.args[0])
+            self.assertTrue(malformed_file in exc.args[0])
+            msg = 'Included extra file "%s" during parsing' % malformed_file
+            self.assertTrue(msg in instance.parse_infos)
+        finally:
+            shutil.rmtree(dirname, ignore_errors=True)
+
+
+class ClientOptionsTests(unittest.TestCase, IncludeTestsMixin):
     def _getTargetClass(self):
         from supervisor.options import ClientOptions
         return ClientOptions
@@ -439,7 +538,55 @@ class ClientOptionsTests(unittest.TestCase):
         instance.realize(args=[])
         self.assertEqual(instance.serverurl, 'unix:///dev/null')
 
-class ServerOptionsTests(unittest.TestCase):
+    def test_read_config_include_reads_extra_files(self):
+        dirname = tempfile.mkdtemp()
+        conf_d = os.path.join(dirname, "conf.d")
+        os.mkdir(conf_d)
+
+        supervisord_conf = os.path.join(dirname, "supervisord.conf")
+        text = lstrip("""\
+        [include]
+        files=%s/conf.d/*.conf %s/conf.d/*.ini
+        """ % (dirname, dirname))
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+
+        conf_file = os.path.join(conf_d, "a.conf")
+        with open(conf_file, 'w') as f:
+            f.write("[supervisorctl]\nhistory_file=%(here)s/sc_history\n")
+
+        ini_file = os.path.join(conf_d, "a.ini")
+        with open(ini_file, 'w') as f:
+            f.write("[supervisorctl]\nserverurl=unix://%(here)s/supervisord.sock\n")
+
+        instance = self._makeOne()
+        try:
+            instance.read_config(supervisord_conf)
+        finally:
+            shutil.rmtree(dirname, ignore_errors=True)
+        options = instance.configroot.supervisorctl
+        history_file = os.path.join(conf_d, 'sc_history')
+        self.assertEqual(options.serverurl, 'unix://' + conf_d + '/supervisord.sock')
+        self.assertEqual(options.history_file, history_file)
+        msg = 'Included extra file "%s" during parsing' % conf_file
+        self.assertTrue(msg in instance.parse_infos)
+        msg = 'Included extra file "%s" during parsing' % ini_file
+        self.assertTrue(msg in instance.parse_infos)
+
+    def test_read_config_include_expands_here(self):
+        conf = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), 'fixtures',
+            'include.conf')
+        root_here = os.path.dirname(conf)
+        include_here = os.path.join(root_here, 'example')
+        parser = self._makeOne()
+        parser.configfile = conf
+        parser.process_config_file(True)
+        section = parser.configroot.supervisorctl
+        self.assertEqual(section.history_file, include_here)
+
+
+class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
     def _getTargetClass(self):
         from supervisor.options import ServerOptions
         return ServerOptions
@@ -914,33 +1061,6 @@ class ServerOptionsTests(unittest.TestCase):
             self.assertEqual(exc.args[0],
                 ".ini file does not include supervisord section")
 
-    def test_read_config_include_with_no_files_raises_valueerror(self):
-        instance = self._makeOne()
-        text = lstrip("""\
-        [supervisord]
-
-        [include]
-        ;no files=
-        """)
-        try:
-            instance.read_config(StringIO(text))
-            self.fail("nothing raised")
-        except ValueError as exc:
-            self.assertEqual(exc.args[0],
-                ".ini file has [include] section, but no files setting")
-
-    def test_read_config_include_with_no_matching_files_logs_warning(self):
-        instance = self._makeOne()
-        text = lstrip("""\
-        [supervisord]
-
-        [include]
-        files=nonexistent/*
-        """)
-        instance.read_config(StringIO(text))
-        self.assertEqual(instance.parse_warnings,
-                         ['No file matches via include "./nonexistent/*"'])
-
     def test_read_config_include_reads_extra_files(self):
         dirname = tempfile.mkdtemp()
         conf_d = os.path.join(dirname, "conf.d")
@@ -975,72 +1095,6 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertTrue(msg in instance.parse_infos)
         msg = 'Included extra file "%s" during parsing' % ini_file
         self.assertTrue(msg in instance.parse_infos)
-
-    def test_read_config_include_reads_files_in_sorted_order(self):
-        dirname = tempfile.mkdtemp()
-        conf_d = os.path.join(dirname, "conf.d")
-        os.mkdir(conf_d)
-
-        supervisord_conf = os.path.join(dirname, "supervisord.conf")
-        text = lstrip("""\
-        [supervisord]
-
-        [include]
-        files=%s/conf.d/*.conf
-        """ % dirname)
-        with open(supervisord_conf, 'w') as f:
-            f.write(text)
-
-        from supervisor.compat import letters
-        a_z = letters[:26]
-        for letter in reversed(a_z):
-            filename = os.path.join(conf_d, "%s.conf" % letter)
-            with open(filename, "w") as f:
-                f.write("[program:%s]\n"
-                        "command=/bin/%s\n" % (letter, letter))
-
-        instance = self._makeOne()
-        try:
-            instance.read_config(supervisord_conf)
-        finally:
-            shutil.rmtree(dirname, ignore_errors=True)
-        expected_msgs = []
-        for letter in sorted(a_z):
-            filename = os.path.join(conf_d, "%s.conf" % letter)
-            expected_msgs.append(
-                'Included extra file "%s" during parsing' % filename)
-        self.assertEqual(instance.parse_infos, expected_msgs)
-
-    def test_read_config_include_extra_file_malformed(self):
-        dirname = tempfile.mkdtemp()
-        conf_d = os.path.join(dirname, "conf.d")
-        os.mkdir(conf_d)
-
-        supervisord_conf = os.path.join(dirname, "supervisord.conf")
-        text = lstrip("""\
-        [supervisord]
-
-        [include]
-        files=%s/conf.d/*.conf
-        """ % dirname)
-        with open(supervisord_conf, 'w') as f:
-            f.write(text)
-
-        malformed_file = os.path.join(conf_d, "a.conf")
-        with open(malformed_file, 'w') as f:
-            f.write("[inet_http_server]\njunk\n")
-
-        instance = self._makeOne()
-        try:
-            instance.read_config(supervisord_conf)
-            self.fail("nothing raised")
-        except ValueError as exc:
-            self.assertTrue('contains parsing errors:' in exc.args[0])
-            self.assertTrue(malformed_file in exc.args[0])
-            msg = 'Included extra file "%s" during parsing' % malformed_file
-            self.assertTrue(msg in instance.parse_infos)
-        finally:
-            shutil.rmtree(dirname, ignore_errors=True)
 
     def test_read_config_include_expands_host_node_name(self):
         dirname = tempfile.mkdtemp()
@@ -1152,6 +1206,16 @@ class ServerOptionsTests(unittest.TestCase):
         instance.realize(args=["--bad=1"])
         self.assertEqual(len(recorder), 1)
         self.assertEqual(recorder[0], "option --bad not recognized")
+
+    def test_realize_prefers_identifier_from_args(self):
+        text = lstrip("""
+        [supervisord]
+        identifier=from_config_file
+        """)
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=['-i', 'from_args'])
+        self.assertEqual(instance.identifier, "from_args")
 
     def test_options_afunix(self):
         instance = self._makeOne()
@@ -1378,9 +1442,9 @@ class ServerOptionsTests(unittest.TestCase):
                 "section [inet_http_server] has no port value")
 
     def test_cleanup_afunix_unlink(self):
-        fn = tempfile.mktemp()
-        with open(fn, 'w') as f:
-            f.write('foo')
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            fn = f.name
+            f.write(b'foo')
         instance = self._makeOne()
         instance.unlink_socketfiles = True
         class Server:
@@ -1392,10 +1456,10 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertFalse(os.path.exists(fn))
 
     def test_cleanup_afunix_nounlink(self):
-        fn = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            fn = f.name
+            f.write(b'foo')
         try:
-            with open(fn, 'w') as f:
-                f.write('foo')
             instance = self._makeOne()
             class Server:
                 pass
@@ -1413,10 +1477,10 @@ class ServerOptionsTests(unittest.TestCase):
 
     def test_cleanup_afunix_ignores_oserror_enoent(self):
         notfound = os.path.join(os.path.dirname(__file__), 'notfound')
-        socketname = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            socketname = f.name
+            f.write(b'foo')
         try:
-            with open(socketname, 'w') as f:
-                f.write('foo')
             instance = self._makeOne()
             instance.unlink_socketfiles = True
             class Server:
@@ -1435,10 +1499,10 @@ class ServerOptionsTests(unittest.TestCase):
                 pass
 
     def test_cleanup_removes_pidfile(self):
-        pidfile = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            pidfile = f.name
+            f.write(b'2')
         try:
-            with open(pidfile, 'w') as f:
-                f.write('2')
             instance = self._makeOne()
             instance.pidfile = pidfile
             instance.logger = DummyLogger()
@@ -1459,10 +1523,9 @@ class ServerOptionsTests(unittest.TestCase):
         instance.cleanup() # shouldn't raise
 
     def test_cleanup_does_not_remove_pidfile_from_another_supervisord(self):
-        pidfile = tempfile.mktemp()
-
-        with open(pidfile, 'w') as f:
-            f.write('1234')
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            pidfile = f.name
+            f.write(b'1234')
 
         try:
             instance = self._makeOne()
@@ -1480,10 +1543,10 @@ class ServerOptionsTests(unittest.TestCase):
                 pass
 
     def test_cleanup_closes_poller(self):
-        pidfile = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            pidfile = f.name
+            f.write(b'2')
         try:
-            with open(pidfile, 'w') as f:
-                f.write('2')
             instance = self._makeOne()
             instance.pidfile = pidfile
 
@@ -1498,21 +1561,15 @@ class ServerOptionsTests(unittest.TestCase):
             except OSError:
                 pass
 
-    def test_cleanup_fds_closes_5_upto_minfds_ignores_oserror(self):
+    @patch('os.closerange', Mock())
+    def test_cleanup_fds_closes_5_upto_minfds(self):
         instance = self._makeOne()
         instance.minfds = 10
 
-        closed = []
-        def close(fd):
-            if fd == 7:
-                raise OSError
-            closed.append(fd)
-
-        @patch('os.close', close)
         def f():
             instance.cleanup_fds()
         f()
-        self.assertEqual(closed, [5,6,8,9])
+        os.closerange.assert_called_with(5, 10)
 
     def test_close_httpservers(self):
         instance = self._makeOne()
@@ -1584,7 +1641,10 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(logger.data[0], 'supervisord logreopen')
 
     def test_write_pidfile_ok(self):
-        fn = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(delete=True) as f:
+            fn = f.name
+        self.assertFalse(os.path.exists(fn))
+
         try:
             instance = self._makeOne()
             instance.logger = DummyLogger()
@@ -1843,6 +1903,20 @@ class ServerOptionsTests(unittest.TestCase):
         pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
         self.assertEqual(instance.parse_warnings, [])
         self.assertEqual(pconfigs[0].stderr_logfile, None)
+
+    def test_processes_from_section_accepts_number_for_stopsignal(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo
+        stopsignal = %d
+        """ % signal.SIGQUIT)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(instance.parse_warnings, [])
+        self.assertEqual(pconfigs[0].stopsignal, signal.SIGQUIT)
 
     def test_options_with_environment_expansions(self):
         text = lstrip("""\
@@ -2586,7 +2660,26 @@ class ServerOptionsTests(unittest.TestCase):
         gconfig1 = gconfigs[0]
         self.assertEqual(gconfig1.result_handler, dummy_handler)
 
-    def test_event_listener_pool_result_handler_unimportable(self):
+    def test_event_listener_pool_result_handler_unimportable_ImportError(self):
+        text = lstrip("""\
+        [eventlistener:cat]
+        events=PROCESS_COMMUNICATION
+        command = /bin/cat
+        result_handler = thisishopefullynotanimportablepackage:nonexistent
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        try:
+            instance.process_groups_from_parser(config)
+            self.fail('nothing raised')
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                'thisishopefullynotanimportablepackage:nonexistent cannot be '
+                'resolved within [eventlistener:cat]')
+
+    def test_event_listener_pool_result_handler_unimportable_AttributeError(self):
         text = lstrip("""\
         [eventlistener:cat]
         events=PROCESS_COMMUNICATION
@@ -3924,10 +4017,3 @@ class UtilFunctionsTests(unittest.TestCase):
         self.assertEqual(s('process'), ('process', 'process'))
         self.assertEqual(s('group:'), ('group', None))
         self.assertEqual(s('group:*'), ('group', None))
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
-

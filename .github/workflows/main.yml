@@ -1,0 +1,189 @@
+name: Run all tests
+
+on: [push, pull_request]
+
+env:
+  PIP: "env PIP_DISABLE_PIP_VERSION_CHECK=1
+            PYTHONWARNINGS=ignore:DEPRECATION
+            pip --no-cache-dir"
+
+jobs:
+  tests_py27:
+    runs-on: ubuntu-20.04
+    container: python:2.7
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: $PIP install virtualenv tox
+
+    - name: Run the unit tests
+      run: TOXENV=py27 tox
+
+    - name: Run the end-to-end tests
+      run: TOXENV=py27 END_TO_END=1 tox
+
+  tests_py34:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build OpenSSL 1.0.2 (required by Python 3.4)
+      run: |
+        sudo apt-get install build-essential zlib1g-dev 
+
+        cd $RUNNER_TEMP
+        wget https://github.com/openssl/openssl/releases/download/OpenSSL_1_0_2u/openssl-1.0.2u.tar.gz
+        tar -xf openssl-1.0.2u.tar.gz
+        cd openssl-1.0.2u
+        ./config --prefix=/usr/local/ssl --openssldir=/usr/local/ssl shared zlib-dynamic
+        make
+        sudo make install
+
+        echo CFLAGS="-I/usr/local/ssl/include $CFLAGS" >> $GITHUB_ENV 
+        echo LDFLAGS="-L/usr/local/ssl/lib $LDFLAGS" >> $GITHUB_ENV
+        echo LD_LIBRARY_PATH="/usr/local/ssl/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+
+        sudo ln -s /usr/local/ssl/lib/libssl.so.1.0.0 /usr/lib/libssl.so.1.0.0
+        sudo ln -s /usr/local/ssl/lib/libcrypto.so.1.0.0 /usr/lib/libcrypto.so.1.0.0
+        sudo ldconfig
+
+    - name: Build Python 3.4
+      run: |
+        sudo apt-get install build-essential libncurses5-dev libgdbm-dev libnss3-dev libreadline-dev zlib1g-dev 
+
+        cd $RUNNER_TEMP
+        wget -O cpython-3.4.10.zip https://github.com/python/cpython/archive/refs/tags/v3.4.10.zip
+        unzip cpython-3.4.10.zip
+        cd cpython-3.4.10
+        ./configure
+        make
+        sudo make install
+
+        python3.4 --version
+        python3.4 -c 'import ssl'
+
+    - name: Install dependencies
+      run: $PIP install virtualenv==20.4.7 tox==3.28.0
+
+    - name: Run the unit tests
+      run: TOXENV=py34 tox
+
+    - name: Run the end-to-end tests
+      run: TOXENV=py34 END_TO_END=1 tox
+
+  tests_py35:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Work around pip SSL cert verify error
+      run: sudo $PIP config set global.trusted-host 'pypi.python.org pypi.org files.pythonhosted.org'
+
+    - name: Set up Python 3.5
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.5
+
+    - name: Install dependencies
+      run: $PIP install virtualenv tox
+
+    - name: Set variable for TOXENV based on Python version
+      id: toxenv
+      run: python -c 'import sys; print("TOXENV=py%d%d" % (sys.version_info.major, sys.version_info.minor))' | tee -a $GITHUB_OUTPUT
+
+    - name: Run the unit tests
+      run: TOXENV=${{steps.toxenv.outputs.TOXENV}} tox
+
+    - name: Run the end-to-end tests
+      run: TOXENV=${{steps.toxenv.outputs.TOXENV}} END_TO_END=1 tox
+
+  tests_py3x:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9, "3.10", 3.11, 3.12, 3.13]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: $PIP install virtualenv tox
+
+    - name: Set variable for TOXENV based on Python version
+      id: toxenv
+      run: python -c 'import sys; print("TOXENV=py%d%d" % (sys.version_info.major, sys.version_info.minor))' | tee -a $GITHUB_OUTPUT
+
+    - name: Run the unit tests
+      run: TOXENV=${{steps.toxenv.outputs.TOXENV}} tox
+
+    - name: Run the end-to-end tests
+      run: TOXENV=${{steps.toxenv.outputs.TOXENV}} END_TO_END=1 tox
+
+  coverage_py27:
+    runs-on: ubuntu-20.04
+    container: python:2.7
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: $PIP install virtualenv tox
+
+    - name: Run unit test coverage
+      run: TOXENV=cover tox
+
+  coverage_py3x:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: $PIP install virtualenv tox
+
+    - name: Run unit test coverage
+      run: TOXENV=cover3 tox
+
+  docs:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.8"
+
+    - name: Install dependencies
+      run: $PIP install virtualenv tox>=4.0.0
+
+    - name: Build the docs
+      run: TOXENV=docs tox

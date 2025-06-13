@@ -1,4 +1,3 @@
-import sys
 import unittest
 
 from supervisor.tests.base import DummyOptions
@@ -72,7 +71,7 @@ class TestEventTypes(unittest.TestCase):
         self.assertEqual(inst.pid, 2)
         self.assertEqual(inst.data, 3)
 
-    def test_ProcessLogEvent_inheritence(self):
+    def test_ProcessLogEvent_inheritance(self):
         from supervisor.events import ProcessLogEvent
         from supervisor.events import Event
         self.assertTrue(
@@ -87,7 +86,7 @@ class TestEventTypes(unittest.TestCase):
         self.assertEqual(inst.data, 3)
         self.assertEqual(inst.channel, 'stdout')
 
-    def test_ProcessLogStdoutEvent_inheritence(self):
+    def test_ProcessLogStdoutEvent_inheritance(self):
         from supervisor.events import ProcessLogStdoutEvent
         from supervisor.events import ProcessLogEvent
         self.assertTrue(
@@ -102,7 +101,7 @@ class TestEventTypes(unittest.TestCase):
         self.assertEqual(inst.data, 3)
         self.assertEqual(inst.channel, 'stderr')
 
-    def test_ProcessLogStderrEvent_inheritence(self):
+    def test_ProcessLogStderrEvent_inheritance(self):
         from supervisor.events import ProcessLogStderrEvent
         from supervisor.events import ProcessLogEvent
         self.assertTrue(
@@ -116,7 +115,7 @@ class TestEventTypes(unittest.TestCase):
         self.assertEqual(inst.pid, 2)
         self.assertEqual(inst.data, 3)
 
-    def test_ProcessCommunicationEvent_inheritence(self):
+    def test_ProcessCommunicationEvent_inheritance(self):
         from supervisor.events import ProcessCommunicationEvent
         from supervisor.events import Event
         self.assertTrue(
@@ -131,7 +130,7 @@ class TestEventTypes(unittest.TestCase):
         self.assertEqual(inst.data, 3)
         self.assertEqual(inst.channel, 'stdout')
 
-    def test_ProcessCommunicationStdoutEvent_inheritence(self):
+    def test_ProcessCommunicationStdoutEvent_inheritance(self):
         from supervisor.events import ProcessCommunicationStdoutEvent
         from supervisor.events import ProcessCommunicationEvent
         self.assertTrue(
@@ -147,7 +146,7 @@ class TestEventTypes(unittest.TestCase):
         self.assertEqual(inst.data, 3)
         self.assertEqual(inst.channel, 'stderr')
 
-    def test_ProcessCommunicationStderrEvent_inheritence(self):
+    def test_ProcessCommunicationStderrEvent_inheritance(self):
         from supervisor.events import ProcessCommunicationStderrEvent
         from supervisor.events import ProcessCommunicationEvent
         self.assertTrue(
@@ -161,7 +160,7 @@ class TestEventTypes(unittest.TestCase):
         self.assertEqual(inst.type, 1)
         self.assertEqual(inst.data, 2)
 
-    def test_RemoteCommunicationEvent_inheritence(self):
+    def test_RemoteCommunicationEvent_inheritance(self):
         from supervisor.events import RemoteCommunicationEvent
         from supervisor.events import Event
         self.assertTrue(
@@ -508,10 +507,3 @@ class TestUtilityFunctions(unittest.TestCase):
             self.assertTrue(events.EventTypes.FOO is FooEvent)
         finally:
             del events.EventTypes.FOO
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
-

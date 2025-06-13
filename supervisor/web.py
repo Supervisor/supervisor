@@ -8,6 +8,7 @@ from supervisor import templating
 
 from supervisor.compat import urllib
 from supervisor.compat import urlparse
+from supervisor.compat import as_bytes
 from supervisor.compat import as_string
 from supervisor.compat import PY2
 from supervisor.compat import unicode
@@ -179,7 +180,7 @@ class MeldView:
         headers['Pragma'] = 'no-cache'
         headers['Cache-Control'] = 'no-cache'
         headers['Expires'] = http_date.build_http_date(0)
-        response['body'] = as_string(body)
+        response['body'] = as_bytes(body)
         return response
 
     def render(self):

@@ -10,7 +10,6 @@ import pwd
 import grp
 import resource
 import stat
-import pkg_resources
 import glob
 import platform
 import warnings
@@ -22,6 +21,7 @@ from supervisor.compat import as_bytes, as_string
 from supervisor.compat import xmlrpclib
 from supervisor.compat import StringIO
 from supervisor.compat import basestring
+from supervisor.compat import import_spec
 
 from supervisor.medusa import asyncore_25 as asyncore
 
@@ -104,6 +104,9 @@ class Options:
         self.add(None, None, "h", "help", self.help)
         self.add(None, None, "?", None, self.help)
         self.add("configfile", None, "c:", "configuration=")
+        self.parse_criticals = []
+        self.parse_warnings = []
+        self.parse_infos = []
 
         here = os.path.dirname(os.path.dirname(sys.argv[0]))
         searchpaths = [os.path.join(here, 'etc', 'supervisord.conf'),
@@ -374,7 +377,7 @@ class Options:
                                  (section, factory_key))
             try:
                 factory = self.import_spec(factory_spec)
-            except ImportError:
+            except (AttributeError, ImportError):
                 raise ValueError('%s cannot be resolved within [%s]' % (
                     factory_spec, section))
 
@@ -387,14 +390,48 @@ class Options:
         return factories
 
     def import_spec(self, spec):
-        ep = pkg_resources.EntryPoint.parse("x=" + spec)
-        if hasattr(ep, 'resolve'):
-            # this is available on setuptools >= 10.2
-            return ep.resolve()
-        else:
-            # this causes a DeprecationWarning on setuptools >= 11.3
-            return ep.load(False)
+        """On failure, raises either AttributeError or ImportError"""
+        return import_spec(spec)
 
+    def read_include_config(self, fp, parser, expansions):
+        if parser.has_section('include'):
+            parser.expand_here(self.here)
+            if not parser.has_option('include', 'files'):
+                raise ValueError(".ini file has [include] section, but no "
+                "files setting")
+            files = parser.get('include', 'files')
+            files = expand(files, expansions, 'include.files')
+            files = files.split()
+            if hasattr(fp, 'name'):
+                base = os.path.dirname(os.path.abspath(fp.name))
+            else:
+                base = '.'
+            for pattern in files:
+                pattern = os.path.join(base, pattern)
+                filenames = glob.glob(pattern)
+                if not filenames:
+                    self.parse_warnings.append(
+                        'No file matches via include "%s"' % pattern)
+                    continue
+                for filename in sorted(filenames):
+                    self.parse_infos.append(
+                        'Included extra file "%s" during parsing' % filename)
+                    try:
+                        parser.read(filename)
+                    except ConfigParser.ParsingError as why:
+                        raise ValueError(str(why))
+                    else:
+                        parser.expand_here(
+                            os.path.abspath(os.path.dirname(filename))
+                        )
+
+    def _log_parsing_messages(self, logger):
+        for msg in self.parse_criticals:
+            logger.critical(msg)
+        for msg in self.parse_warnings:
+            logger.warn(msg)
+        for msg in self.parse_infos:
+            logger.info(msg)
 
 class ServerOptions(Options):
     user = None
@@ -453,9 +490,6 @@ class ServerOptions(Options):
                  "s", "silent", flag=1, default=0)
         self.pidhistory = {}
         self.process_group_configs = []
-        self.parse_criticals = []
-        self.parse_warnings = []
-        self.parse_infos = []
         self.signal_receiver = SignalReceiver()
         self.poller = poller.Poller(self)
 
@@ -543,8 +577,6 @@ class ServerOptions(Options):
         # self.serverurl may still be None if no servers at all are
         # configured in the config file
 
-        self.identifier = section.identifier
-
     def process_config(self, do_usage=True):
         Options.process_config(self, do_usage=do_usage)
 
@@ -586,36 +618,8 @@ class ServerOptions(Options):
         expansions = {'here':self.here,
                       'host_node_name':host_node_name}
         expansions.update(self.environ_expansions)
-        if parser.has_section('include'):
-            parser.expand_here(self.here)
-            if not parser.has_option('include', 'files'):
-                raise ValueError(".ini file has [include] section, but no "
-                "files setting")
-            files = parser.get('include', 'files')
-            files = expand(files, expansions, 'include.files')
-            files = files.split()
-            if hasattr(fp, 'name'):
-                base = os.path.dirname(os.path.abspath(fp.name))
-            else:
-                base = '.'
-            for pattern in files:
-                pattern = os.path.join(base, pattern)
-                filenames = glob.glob(pattern)
-                if not filenames:
-                    self.parse_warnings.append(
-                        'No file matches via include "%s"' % pattern)
-                    continue
-                for filename in sorted(filenames):
-                    self.parse_infos.append(
-                        'Included extra file "%s" during parsing' % filename)
-                    try:
-                        parser.read(filename)
-                    except ConfigParser.ParsingError as why:
-                        raise ValueError(str(why))
-                    else:
-                        parser.expand_here(
-                            os.path.abspath(os.path.dirname(filename))
-                        )
+
+        self.read_include_config(fp, parser, expansions)
 
         sections = parser.sections()
         if not 'supervisord' in sections:
@@ -759,7 +763,7 @@ class ServerOptions(Options):
                                        'supervisor.dispatchers:default_handler')
             try:
                 result_handler = self.import_spec(result_handler)
-            except ImportError:
+            except (AttributeError, ImportError):
                 raise ValueError('%s cannot be resolved within [%s]' % (
                     result_handler, section))
 
@@ -1329,11 +1333,7 @@ class ServerOptions(Options):
     def cleanup_fds(self):
         # try to close any leaked file descriptors (for reload)
         start = 5
-        for x in range(start, self.minfds):
-            try:
-                os.close(x)
-            except OSError:
-                pass
+        os.closerange(start, self.minfds)
 
     def kill(self, pid, signal):
         os.kill(pid, signal)
@@ -1512,12 +1512,7 @@ class ServerOptions(Options):
             maxbytes=self.logfile_maxbytes,
             backups=self.logfile_backups,
         )
-        for msg in self.parse_criticals:
-            self.logger.critical(msg)
-        for msg in self.parse_warnings:
-            self.logger.warn(msg)
-        for msg in self.parse_infos:
-            self.logger.info(msg)
+        self._log_parsing_messages(self.logger)
 
     def make_http_servers(self, supervisord):
         from supervisor.http import make_http_servers
@@ -1692,6 +1687,11 @@ class ClientOptions(Options):
         if not self.args:
             self.interactive = 1
 
+        format = '%(levelname)s: %(message)s\n'
+        logger = loggers.getLogger()
+        loggers.handle_stdout(logger, format)
+        self._log_parsing_messages(logger)
+
     def read_config(self, fp):
         section = self.configroot.supervisorctl
         need_close = False
@@ -1712,8 +1712,11 @@ class ClientOptions(Options):
             parser.read_file(fp)
         except AttributeError:
             parser.readfp(fp)
+
         if need_close:
             fp.close()
+        self.read_include_config(fp, parser, parser.expansions)
+
         sections = parser.sections()
         if not 'supervisorctl' in sections:
             raise ValueError('.ini file does not include supervisorctl section')

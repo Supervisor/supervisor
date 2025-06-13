@@ -2,13 +2,12 @@
 from __future__ import unicode_literals
 
 import os
-import sys
 import signal
+import sys
 import unittest
-import pkg_resources
+from supervisor.compat import resource_filename
 from supervisor.compat import xmlrpclib
 from supervisor.xmlrpc import SupervisorTransport
-
 
 # end-to-test tests are slow so only run them when asked
 if 'END_TO_END' in os.environ:
@@ -20,8 +19,26 @@ else:
 
 class EndToEndTests(BaseTestCase):
 
+    def test_issue_291a_percent_signs_in_original_env_are_preserved(self):
+        """When an environment variable whose value contains a percent sign is
+        present in the environment before supervisord starts, the value is
+        passed to the child without the percent sign being mangled."""
+        key = "SUPERVISOR_TEST_1441B"
+        val = "foo_%s_%_%%_%%%_%2_bar"
+        filename = resource_filename(__package__, 'fixtures/issue-291a.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        try:
+            os.environ[key] = val
+            supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+            self.addCleanup(supervisord.kill, signal.SIGINT)
+            supervisord.expect_exact(key + "=" + val)
+        finally:
+            del os.environ[key]
+
     def test_issue_550(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-550.conf')
+        """When an environment variable is set in the [supervisord] section,
+        it should be put into the environment of the subprocess."""
+        filename = resource_filename(__package__, 'fixtures/issue-550.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -35,7 +52,9 @@ class EndToEndTests(BaseTestCase):
         supervisorctl.expect(pexpect.EOF)
 
     def test_issue_565(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-565.conf')
+        """When a log file has Unicode characters in it, 'supervisorctl
+        tail -f name' should still work."""
+        filename = resource_filename(__package__, 'fixtures/issue-565.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -50,7 +69,9 @@ class EndToEndTests(BaseTestCase):
             supervisorctl.expect_exact(line, timeout=30)
 
     def test_issue_638(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-638.conf')
+        """When a process outputs something on its stdout or stderr file
+        descriptor that is not valid UTF-8, supervisord should not crash."""
+        filename = resource_filename(__package__, 'fixtures/issue-638.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -67,7 +88,9 @@ class EndToEndTests(BaseTestCase):
                                      'too many start retries too quickly', timeout=60)
 
     def test_issue_663(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-663.conf')
+        """When Supervisor is run on Python 3, the eventlistener protocol
+        should work."""
+        filename = resource_filename(__package__, 'fixtures/issue-663.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -76,11 +99,15 @@ class EndToEndTests(BaseTestCase):
             supervisord.expect_exact('BUSY -> ACKNOWLEDGED', timeout=30)
 
     def test_issue_664(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-664.conf')
+        """When a subprocess name has Unicode characters, 'supervisord'
+        should not send incomplete XML-RPC responses and 'supervisorctl
+        status' should work."""
+        filename = resource_filename(__package__, 'fixtures/issue-664.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         supervisord.expect_exact('test_öäü entered RUNNING state', timeout=60)
+
         args = ['-m', 'supervisor.supervisorctl', '-c', filename, 'status']
         supervisorctl = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisorctl.kill, signal.SIGINT)
@@ -91,8 +118,19 @@ class EndToEndTests(BaseTestCase):
             seen = False
         self.assertTrue(seen)
 
+    def test_issue_733(self):
+        """When a subprocess enters the FATAL state, a one-line eventlistener
+        can be used to signal supervisord to shut down."""
+        filename = resource_filename(__package__, 'fixtures/issue-733.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('gave up: nonexistent entered FATAL state')
+        supervisord.expect_exact('received SIGTERM indicating exit request')
+        supervisord.expect(pexpect.EOF)
+
     def test_issue_835(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-835.conf')
+        filename = resource_filename(__package__, 'fixtures/issue-835.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -108,7 +146,7 @@ class EndToEndTests(BaseTestCase):
             transport.connection.close()
 
     def test_issue_836(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-836.conf')
+        filename = resource_filename(__package__, 'fixtures/issue-836.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -128,8 +166,19 @@ class EndToEndTests(BaseTestCase):
             seen = False
         self.assertTrue(seen)
 
+    def test_issue_986_command_string_with_double_percent(self):
+        """A percent sign can be used in a command= string without being
+        expanded if it is escaped by a second percent sign."""
+        filename = resource_filename(__package__, 'fixtures/issue-986.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('dhcrelay -d -q -a %h:%p %P -i Vlan1000 192.168.0.1')
+
     def test_issue_1054(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1054.conf')
+        """When run on Python 3, the 'supervisorctl avail' command
+        should work."""
+        filename = resource_filename(__package__, 'fixtures/issue-1054.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -144,35 +193,52 @@ class EndToEndTests(BaseTestCase):
         self.assertTrue(seen)
 
     def test_issue_1170a(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1170a.conf')
+        """When the [supervisord] section has a variable defined in
+        environment=, that variable should be able to be used in an
+        %(ENV_x) expansion in a [program] section."""
+        filename = resource_filename(__package__, 'fixtures/issue-1170a.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         supervisord.expect_exact("set from [supervisord] section")
 
     def test_issue_1170b(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1170b.conf')
+        """When the [supervisord] section has a variable defined in
+        environment=, and a variable by the same name is defined in
+        enviroment= of a [program] section, the one in the [program]
+        section should be used."""
+        filename = resource_filename(__package__, 'fixtures/issue-1170b.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         supervisord.expect_exact("set from [program] section")
 
     def test_issue_1170c(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1170c.conf')
+        """When the [supervisord] section has a variable defined in
+        environment=, and a variable by the same name is defined in
+        enviroment= of an [eventlistener] section, the one in the
+        [eventlistener] section should be used."""
+        filename = resource_filename(__package__, 'fixtures/issue-1170c.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         supervisord.expect_exact("set from [eventlistener] section")
 
     def test_issue_1224(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1224.conf')
+        """When the main log file does not need rotation (logfile_maxbyte=0)
+        then the non-rotating logger will be used to avoid an
+        IllegalSeekError in the case that the user has configured a
+        non-seekable file like /dev/stdout."""
+        filename = resource_filename(__package__, 'fixtures/issue-1224.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
         supervisord.expect_exact('cat entered RUNNING state', timeout=60)
 
     def test_issue_1231a(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231a.conf')
+        """When 'supervisorctl tail -f name' is run and the log contains
+        unicode, it should not fail."""
+        filename = resource_filename(__package__, 'fixtures/issue-1231a.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -186,9 +252,10 @@ class EndToEndTests(BaseTestCase):
             line = '%d - hash=57d94b…381088' % i
             supervisorctl.expect_exact(line, timeout=30)
 
-
     def test_issue_1231b(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231b.conf')
+        """When 'supervisorctl tail -f name' is run and the log contains
+        unicode, it should not fail."""
+        filename = resource_filename(__package__, 'fixtures/issue-1231b.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -220,7 +287,9 @@ class EndToEndTests(BaseTestCase):
                 break
 
     def test_issue_1231c(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1231c.conf')
+        """When 'supervisorctl tail -f name' is run and the log contains
+        unicode, it should not fail."""
+        filename = resource_filename(__package__, 'fixtures/issue-1231c.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -242,6 +311,8 @@ class EndToEndTests(BaseTestCase):
             supervisorctl.expect('Unicode output may fail.', timeout=30)
 
     def test_issue_1251(self):
+        """When -? is given to supervisord or supervisorctl, help should be
+        displayed like -h does."""
         args = ['-m', 'supervisor.supervisord', '-?']
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -257,7 +328,10 @@ class EndToEndTests(BaseTestCase):
         supervisorctl.expect(pexpect.EOF)
 
     def test_issue_1298(self):
-        filename = pkg_resources.resource_filename(__name__, 'fixtures/issue-1298.conf')
+        """When the output of 'supervisorctl tail -f worker' is piped such as
+        'supervisor tail -f worker | grep something', 'supervisorctl' should
+        not crash."""
+        filename = resource_filename(__package__, 'fixtures/issue-1298.conf')
         args = ['-m', 'supervisor.supervisord', '-c', filename]
         supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
         self.addCleanup(supervisord.kill, signal.SIGINT)
@@ -270,8 +344,114 @@ class EndToEndTests(BaseTestCase):
         self.addCleanup(bash.kill, signal.SIGINT)
         bash.expect('spewage 2', timeout=30)
 
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
+    def test_issue_1418_pidproxy_cmd_with_no_args(self):
+        """When pidproxy is given a command to run that has no arguments, it
+        runs that command."""
+        args = ['-m', 'supervisor.pidproxy', 'nonexistent-pidfile', "/bin/echo"]
+        pidproxy = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(pidproxy.kill, signal.SIGINT)
+        pidproxy.expect(pexpect.EOF)
+        self.assertEqual(pidproxy.before.strip(), "")
 
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
+    def test_issue_1418_pidproxy_cmd_with_args(self):
+        """When pidproxy is given a command to run that has arguments, it
+        runs that command."""
+        args = ['-m', 'supervisor.pidproxy', 'nonexistent-pidfile', "/bin/echo", "1", "2"]
+        pidproxy = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(pidproxy.kill, signal.SIGINT)
+        pidproxy.expect(pexpect.EOF)
+        self.assertEqual(pidproxy.before.strip(), "1 2")
+
+    def test_issue_1483a_identifier_default(self):
+        """When no identifier is supplied on the command line or in the config
+        file, the default is used."""
+        filename = resource_filename(__package__, 'fixtures/issue-1483a.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('supervisord started with pid')
+
+        from supervisor.compat import xmlrpclib
+        from supervisor.xmlrpc import SupervisorTransport
+        transport = SupervisorTransport('', '', 'unix:///tmp/issue-1483a.sock')
+        try:
+            server = xmlrpclib.ServerProxy('http://transport.ignores.host/RPC2', transport)
+            ident = server.supervisor.getIdentification()
+        finally:
+            transport.close()
+        self.assertEqual(ident, "supervisor")
+
+    def test_issue_1483b_identifier_from_config_file(self):
+        """When the identifier is supplied in the config file only, that
+        identifier is used instead of the default."""
+        filename = resource_filename(__package__, 'fixtures/issue-1483b.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('supervisord started with pid')
+
+        from supervisor.compat import xmlrpclib
+        from supervisor.xmlrpc import SupervisorTransport
+        transport = SupervisorTransport('', '', 'unix:///tmp/issue-1483b.sock')
+        try:
+            server = xmlrpclib.ServerProxy('http://transport.ignores.host/RPC2', transport)
+            ident = server.supervisor.getIdentification()
+        finally:
+            transport.close()
+        self.assertEqual(ident, "from_config_file")
+
+    def test_issue_1483c_identifier_from_command_line(self):
+        """When an identifier is supplied in both the config file and on the
+        command line, the one from the command line is used."""
+        filename = resource_filename(__package__, 'fixtures/issue-1483c.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename, '-i', 'from_command_line']
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('supervisord started with pid')
+
+        from supervisor.compat import xmlrpclib
+        from supervisor.xmlrpc import SupervisorTransport
+        transport = SupervisorTransport('', '', 'unix:///tmp/issue-1483c.sock')
+        try:
+            server = xmlrpclib.ServerProxy('http://transport.ignores.host/RPC2', transport)
+            ident = server.supervisor.getIdentification()
+        finally:
+            transport.close()
+        self.assertEqual(ident, "from_command_line")
+
+    def test_pull_request_1578_echo_supervisord_conf(self):
+        """The command echo_supervisord_conf, whose implementation depends on
+        importlib.resources to work, should print the example config."""
+        args = ['-c', 'from supervisor import confecho; confecho.main()']
+        echo_supervisord_conf = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(echo_supervisord_conf.kill, signal.SIGKILL)
+        echo_supervisord_conf.expect_exact('Sample supervisor config file')
+
+    def test_issue_1596_asyncore_close_does_not_crash(self):
+        """If the socket is already closed when socket.shutdown(socket.SHUT_RDWR)
+        is called in the close() method of an asyncore dispatcher, an exception
+        will be raised (at least with Python 3.11.7 on macOS 14.2.1).  If it is
+        not caught in that method, supervisord will crash."""
+        filename = resource_filename(__package__, 'fixtures/issue-1596.conf')
+        args = ['-m', 'supervisor.supervisord', '-c', filename]
+        supervisord = pexpect.spawn(sys.executable, args, encoding='utf-8')
+        self.addCleanup(supervisord.kill, signal.SIGINT)
+        supervisord.expect_exact('supervisord started with pid')
+
+        from supervisor.compat import xmlrpclib
+        from supervisor.xmlrpc import SupervisorTransport
+
+        socket_url = 'unix:///tmp/issue-1596.sock'
+        dummy_url = 'http://transport.ignores.host/RPC2'
+
+        # supervisord will crash after close() if it has the bug
+        t1 = SupervisorTransport('', '', socket_url)
+        s1 = xmlrpclib.ServerProxy(dummy_url, t1)
+        s1.system.listMethods()
+        t1.close()
+
+        # this call will only succeed if supervisord did not crash
+        t2 = SupervisorTransport('', '', socket_url)
+        s2 = xmlrpclib.ServerProxy(dummy_url, t2)
+        s2.system.listMethods()
+        t2.close()

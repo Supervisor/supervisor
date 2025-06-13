@@ -977,6 +977,12 @@ class DefaultControllerPlugin(ControllerPluginBase):
                         " see reread and update.")
 
     def do_shutdown(self, arg):
+        if arg:
+            self.ctl.output('Error: shutdown accepts no arguments')
+            self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
+            self.help_shutdown()
+            return
+
         if self.ctl.options.interactive:
             yesno = raw_input('Really shut the remote supervisord process '
                               'down y/N? ')

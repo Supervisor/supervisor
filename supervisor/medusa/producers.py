@@ -11,7 +11,7 @@ For example, you can feed dynamically-produced output into the compressing
 producer, then wrap this with the 'chunked' transfer-encoding producer.
 """
 
-from asynchat import find_prefix_at_end
+from supervisor.medusa.asynchat_25 import find_prefix_at_end
 from supervisor.compat import as_bytes
 
 class simple_producer:

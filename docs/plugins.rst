@@ -25,6 +25,9 @@ instances running on different servers.
 `Supervisord-Monitor <https://github.com/mlazarov/supervisord-monitor>`_
     Web-based dashboard written in PHP.
 
+`Supervisord-Monitor 2 <https://github.com/KoNekoD/supervisord-monitor>`_
+    Modern and adaptive next gen web-based dashboard written in PHP.
+
 `SupervisorUI <https://github.com/luxbet/supervisorui>`_
     Another Web-based dashboard written in PHP.
 
@@ -48,6 +51,11 @@ instances running on different servers.
 `Dart <https://github.com/plockaby/dart>`_
     Web-based dashboard and command line tool written in Python using PostgreSQL
     with a REST API, event monitoring, and configuration management.
+
+`Polyvisor <https://github.com/poly-laboratory/poly-visor>`_
+    Web-based dashboard written in Python using `flask <http://flask.pocoo.org>`_ web server.
+    Frontend based on `Svelte <https://svelte.dev/>`_ result in lightweighted packages. Communicate via supervisor's event-listener.
+    Providing system resource management via visualized charts & easy to config processes configs via web interface.
 
 Third Party Plugins and Libraries for Supervisor
 ------------------------------------------------
@@ -184,3 +192,5 @@ with third party applications:
 `supervisor-alert <https://github.com/rahiel/supervisor-alert>`_
     Send event notifications over `Telegram <https://telegram.org>`_ or to an
     arbitrary command.
+`supervisor-discord <https://github.com/chaos-a/supervisor-discord>`_
+    Send event notifications to `Discord <https://discord.com>`_ via webhooks.

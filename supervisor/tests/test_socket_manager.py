@@ -1,7 +1,6 @@
 """Test suite for supervisor.socket_manager"""
 
 import gc
-import sys
 import os
 import unittest
 import socket
@@ -248,9 +247,3 @@ def gc_collect():
         gc.collect()
         gc.collect()
         gc.collect()
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')

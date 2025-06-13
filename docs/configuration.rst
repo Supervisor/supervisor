@@ -291,7 +291,7 @@ follows.
   activity log.  One of ``critical``, ``error``, ``warn``, ``info``,
   ``debug``, ``trace``, or ``blather``.  Note that at log level
   ``debug``, the supervisord log file will record the stderr/stdout
-  output of its child processes and extended info info about process
+  output of its child processes and extended info about process
   state changes, which is useful for debugging a process which isn't
   starting properly.  See also: :ref:`activity_log_levels`.
 
@@ -731,7 +731,7 @@ where specified.
 ``numprocs_start``
 
   An integer offset that is used to compute the number at which
-  ``numprocs`` starts.
+  ``process_num`` starts.
 
   *Default*: 0
 
@@ -853,8 +853,9 @@ where specified.
 
 ``stopsignal``
 
-  The signal used to kill the program when a stop is requested.  This
-  can be any of TERM, HUP, INT, QUIT, KILL, USR1, or USR2.
+  The signal used to kill the program when a stop is requested.  This can be
+  specified using the signal's name or its number.  It is normally one of:
+  ``TERM``, ``HUP``, ``INT``, ``QUIT``, ``KILL``, ``USR1``, or ``USR2``.
 
   *Default*: TERM
 
@@ -1250,12 +1251,6 @@ section, it must contain a single key named "files".  The values in
 this key specify other configuration files to be included within the
 configuration.
 
-.. note::
-
-    The ``[include]`` section is processed only by ``supervisord``.  It is
-    ignored by ``supervisorctl``.
-
-
 ``[include]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1279,6 +1274,10 @@ configuration.
   *Introduced*: 3.0
 
   *Changed*: 3.3.0.  Added support for the ``host_node_name`` expansion.
+
+  *Changed*: 4.3.0.  Added support to :program:`supervisorctl` for reading
+  files specified in the ``[include]`` section.  In previous versions,
+  the ``[include]`` section was only supported by :program:`supervisord`.
 
 ``[include]`` Section Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1546,9 +1545,9 @@ sections do not have.
 
 ``result_handler``
 
-  A `pkg_resources entry point string
-  <http://peak.telecommunity.com/DevCenter/PkgResources>`_ that
-  resolves to a Python callable.  The default value is
+  An `entry point object reference
+  <https://packaging.python.org/en/latest/specifications/entry-points/#data-model>`_
+  string that resolves to a Python callable.  The default value is
   ``supervisor.dispatchers:default_handler``.  Specifying an alternate
   result handler is a very uncommon thing to need to do, and as a
   result, how to create one is not documented.
@@ -1599,8 +1598,8 @@ Adding ``rpcinterface:x`` settings in the configuration file is only
 useful for people who wish to extend supervisor with additional custom
 behavior.
 
-In the sample config file, there is a section which is named
-``[rpcinterface:supervisor]``.  By default it looks like the
+In the sample config file (see :ref:`create_config`), there is a section
+which is named ``[rpcinterface:supervisor]``.  By default it looks like the
 following.
 
 .. code-block:: ini
@@ -1649,7 +1648,7 @@ And a section in the config file meant to configure it.
 
 ``supervisor.rpcinterface_factory``
 
-  ``pkg_resources`` "entry point" dotted name to your RPC interface's
+  ``entry point object reference`` dotted name to your RPC interface's
   factory function.
 
   *Default*: N/A

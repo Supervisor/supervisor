@@ -737,10 +737,11 @@ class logtail_handler:
         logfile = getattr(process.config, '%s_logfile' % channel, None)
 
         if logfile is None or not os.path.exists(logfile):
-            # XXX problematic: processes that don't start won't have a log
-            # file and we probably don't want to go into fatal state if we try
-            # to read the log of a process that did not start.
-            request.error(410) # gone
+            # we return 404 because no logfile is a temporary condition.
+            # if the process has never been started, no logfile will exist
+            # on disk.  a logfile of None is also a temporary condition,
+            # since the config file can be reloaded.
+            request.error(404) # not found
             return
 
         mtime = os.stat(logfile)[stat.ST_MTIME]
@@ -774,7 +775,10 @@ class mainlogtail_handler:
         logfile = self.supervisord.options.logfile
 
         if logfile is None or not os.path.exists(logfile):
-            request.error(410) # gone
+            # we return 404 because no logfile is a temporary condition.
+            # even if a log file of None is configured, the config file
+            # may be reloaded, and the new config may have a logfile.
+            request.error(404) # not found
             return
 
         mtime = os.stat(logfile)[stat.ST_MTIME]

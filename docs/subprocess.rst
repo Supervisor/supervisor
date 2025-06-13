@@ -248,7 +248,7 @@ per the following directed graph.
    Subprocess State Transition Graph
 
 A process is in the ``STOPPED`` state if it has been stopped
-adminstratively or if it has never been started.
+administratively or if it has never been started.
 
 When an autorestarting process is in the ``BACKOFF`` state, it will be
 automatically restarted by :program:`supervisord`.  It will switch
@@ -263,7 +263,7 @@ exceeded the maximum, at which point it will transition to the
 
     So if you set ``startretries=3``, :program:`supervisord` will wait one,
     two and then three seconds between each restart attempt, for a total of
-    5 seconds.
+    6 seconds.
 
 When a process is in the ``EXITED`` state, it will
 automatically restart:

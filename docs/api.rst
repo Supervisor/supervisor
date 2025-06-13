@@ -297,7 +297,7 @@ Process Control
 
         .. describe:: stderr_logfile
 
-            Absolute path and filename to the STDOUT logfile
+            Absolute path and filename to the STDERR logfile
 
         .. describe:: spawnerr
 
@@ -320,6 +320,8 @@ Process Control
         Each element contains a struct, and this struct contains the exact
         same elements as the struct returned by ``getProcessInfo``. If the process
         table is empty, an empty array is returned.
+
+    .. automethod:: getAllConfigInfo
 
     .. automethod:: startProcess
 

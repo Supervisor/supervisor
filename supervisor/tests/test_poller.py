@@ -1,4 +1,3 @@
-import sys
 import unittest
 import errno
 import select
@@ -437,10 +436,3 @@ class FakeKEvent(object):
     def __init__(self, ident, filter):
         self.ident = ident
         self.filter = filter
-
-
-def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')

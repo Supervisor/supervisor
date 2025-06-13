@@ -134,7 +134,7 @@ Supervisor Components
   The command-line client talks to the server across a UNIX domain
   socket or an internet (TCP) socket.  The server can assert that the
   user of a client should present authentication credentials before it
-  allows him to perform commands.  The client process typically uses
+  allows them to perform commands.  The client process typically uses
   the same configuration file as the server but any configuration file
   with a ``[supervisorctl]`` section in it will work.
 

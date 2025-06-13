@@ -135,7 +135,7 @@ def inet_address(s):
     # returns (host, port) tuple
     host = ''
     if ":" in s:
-        host, s = s.split(":", 1)
+        host, s = s.rsplit(":", 1)
         if not s:
             raise ValueError("no port number specified in %r" % s)
         port = port_number(s)
@@ -391,10 +391,7 @@ byte_size = SuffixMultiplier({'kb': 1024,
                               'gb': 1024*1024*long(1024),})
 
 def url(value):
-    # earlier Python 2.6 urlparse (2.6.4 and under) can't parse unix:// URLs,
-    # later ones can but we need to straddle
-    uri = value.replace('unix://', 'http://', 1).strip()
-    scheme, netloc, path, params, query, fragment = urlparse.urlparse(uri)
+    scheme, netloc, path, params, query, fragment = urlparse.urlparse(value)
     if scheme and (netloc or path):
         return value
     raise ValueError("value %r is not a URL" % value)

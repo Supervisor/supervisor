@@ -1,9 +1,7 @@
 _NOW = 1151365354
 _TIMEFORMAT = '%b %d %I:%M %p'
 
-import errno
 import functools
-import os
 
 from supervisor.compat import Fault
 from supervisor.compat import as_bytes
@@ -235,7 +233,6 @@ class DummyOptions:
         return self.tempfile_name
 
     def remove(self, path):
-        import os
         if self.remove_exception is not None:
             raise self.remove_exception
         self.removed.append(path)
@@ -603,8 +600,8 @@ def makeExecutable(file, substitutions=None):
     for key in substitutions.keys():
         data = data.replace('<<%s>>' % key.upper(), substitutions[key])
 
-    tmpnam = tempfile.mktemp(prefix=last)
-    with open(tmpnam, 'w') as f:
+    with tempfile.NamedTemporaryFile(prefix=last, delete=False) as f:
+        tmpnam = f.name
         f.write(data)
     os.chmod(tmpnam, 0o755)
     return tmpnam

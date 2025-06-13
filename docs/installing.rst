@@ -48,11 +48,8 @@ differently.  Since both ``pip`` and ``python setup.py
 install`` depend on internet access to perform downloads of dependent
 software, neither will work on machines without internet access until
 dependencies are installed.  To install to a machine which is not
-internet-connected, obtain the following dependencies on a machine
-which is internet-connected:
-
-- setuptools (latest) from `https://pypi.org/pypi/setuptools/
-  <https://pypi.org/pypi/setuptools/>`_.
+internet-connected, obtain the dependencies listed in ``setup.py``
+using a machine which is internet-connected.
 
 Copy these files to removable media and put them on the target
 machine.  Install each onto the target machine as per its
@@ -100,6 +97,8 @@ the system boots.
     by the initial release of the package.  The package was fixed later.  See
     `Ubuntu Bug #1594740 <https://bugs.launchpad.net/ubuntu/+source/supervisor/+bug/1594740>`_
     for more information.
+
+.. _create_config:
 
 Creating a Configuration File
 -----------------------------

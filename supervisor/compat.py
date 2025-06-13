@@ -149,3 +149,52 @@ try: # pragma: no cover
     from html.parser import HTMLParser
 except ImportError: # pragma: no cover
     from HTMLParser import HTMLParser
+
+# Begin importlib/setuptools compatibility code
+
+# Supervisor used pkg_resources (a part of setuptools) to load package
+# resources for 15 years, until setuptools 67.5.0 (2023-03-05) deprecated
+# the use of pkg_resources.  On Python 3.8 or later, Supervisor now uses
+# importlib (part of Python 3 stdlib).  Unfortunately, on Python < 3.8,
+# Supervisor needs to use pkg_resources despite its deprecation.  The PyPI
+# backport packages "importlib-resources" and "importlib-metadata" couldn't
+# be added as dependencies to Supervisor because they require even more
+# dependencies that would likely cause some Supervisor installs to fail.
+from warnings import filterwarnings as _fw
+_fw("ignore", message="pkg_resources is deprecated as an API")
+
+try: # pragma: no cover
+    from importlib.metadata import EntryPoint as _EntryPoint
+
+    def import_spec(spec):
+        return _EntryPoint(None, spec, None).load()
+
+except ImportError: # pragma: no cover
+    from pkg_resources import EntryPoint as _EntryPoint
+
+    def import_spec(spec):
+        ep = _EntryPoint.parse("x=" + spec)
+        if hasattr(ep, 'resolve'):
+            # this is available on setuptools >= 10.2
+            return ep.resolve()
+        else:
+            # this causes a DeprecationWarning on setuptools >= 11.3
+            return ep.load(False)
+
+try: # pragma: no cover
+    import importlib.resources as _importlib_resources
+
+    if hasattr(_importlib_resources, "files"):
+        def resource_filename(package, path):
+            return str(_importlib_resources.files(package).joinpath(path))
+
+    else:
+        # fall back to deprecated .path if .files is not available
+        def resource_filename(package, path):
+            with _importlib_resources.path(package, '__init__.py') as p:
+                return str(p.parent.joinpath(path))
+
+except ImportError: # pragma: no cover
+    from pkg_resources import resource_filename
+
+# End importlib/setuptools compatibility code
