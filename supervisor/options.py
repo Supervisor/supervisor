@@ -107,6 +107,7 @@ class Options:
         self.parse_criticals = []
         self.parse_warnings = []
         self.parse_infos = []
+        self.parse_debugs = []
 
         here = os.path.dirname(os.path.dirname(sys.argv[0]))
         searchpaths = [os.path.join(here, 'etc', 'supervisord.conf'),
@@ -414,7 +415,7 @@ class Options:
                         'No file matches via include "%s"' % pattern)
                     continue
                 for filename in sorted(filenames):
-                    self.parse_infos.append(
+                    self.parse_debugs.append(
                         'Included extra file "%s" during parsing' % filename)
                     try:
                         parser.read(filename)
@@ -432,6 +433,8 @@ class Options:
             logger.warn(msg)
         for msg in self.parse_infos:
             logger.info(msg)
+        for msg in self.parse_debugs:
+            logger.debug(msg)
 
 class ServerOptions(Options):
     user = None
