@@ -3411,7 +3411,12 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
 
     def test_default_log_format_options(self):
         """Test that default log format options are set correctly"""
+        text = lstrip('''
+        [supervisord]
+        logfile=/tmp/supervisord.log
+        ''')
         instance = self._makeOne()
+        instance.configfile = StringIO(text)
         instance.realize(args=[])
         options = instance.configroot.supervisord
         self.assertEqual(options.logfile_format, '%(asctime)s %(levelname)s %(message)s')

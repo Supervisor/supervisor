@@ -153,8 +153,11 @@ class FileHandler(Handler):
     """File handler which supports reopening of logs.
     """
 
-    def __init__(self, filename, mode='ab'):
+    def __init__(self, filename, mode='ab', fmt=None):
         Handler.__init__(self)
+
+        if fmt is not None:
+            self.setFormat(fmt)
 
         try:
             self.stream = open(filename, mode)
@@ -187,7 +190,7 @@ class FileHandler(Handler):
 
 class RotatingFileHandler(FileHandler):
     def __init__(self, filename, mode='ab', maxBytes=512*1024*1024,
-                 backupCount=10):
+                 backupCount=10, fmt=None):
         """
         Open the specified file and use it as the stream for logging.
 
@@ -210,7 +213,7 @@ class RotatingFileHandler(FileHandler):
         """
         if maxBytes > 0:
             mode = 'ab' # doesn't make sense otherwise!
-        FileHandler.__init__(self, filename, mode)
+        FileHandler.__init__(self, filename, mode, fmt)
         self.maxBytes = maxBytes
         self.backupCount = backupCount
         self.counter = 0
@@ -388,8 +391,18 @@ class SyslogHandler(Handler):
         except:
             self.handleError()
 
-def getLogger(level=None):
-    return Logger(level)
+def getLogger(level=None, fmt=None):
+    logger = Logger(level)
+    if fmt is not None:
+        # Create a handler with the specified format
+        handler = StreamHandler()
+        handler.setFormat(fmt)
+        if level is not None:
+            handler.setLevel(level)
+        else:
+            handler.setLevel(logger.level)
+        logger.addHandler(handler)
+    return logger
 
 _2MB = 1<<21
 
@@ -405,6 +418,13 @@ def handle_boundIO(logger, fmt, maxbytes=_2MB):
 def handle_stdout(logger, fmt):
     """Attach a new StreamHandler with stdout handler to an existing Logger"""
     handler = StreamHandler(sys.stdout)
+    handler.setFormat(fmt)
+    handler.setLevel(logger.level)
+    logger.addHandler(handler)
+
+def handle_stderr(logger, fmt):
+    """Attach a new StreamHandler with stderr handler to an existing Logger"""
+    handler = StreamHandler(sys.stderr)
     handler.setFormat(fmt)
     handler.setLevel(logger.level)
     logger.addHandler(handler)

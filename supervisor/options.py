@@ -544,10 +544,15 @@ class ServerOptions(Options):
         # Configure the main logger
         self.logger = loggers.getLogger(loglevel)
 
+        if self.logfile:
+            logfile = self.logfile
+        else:
+            logfile = section.logfile
+
         if logfile:
             loggers.handle_file(
                 self.logger,
-                self.logfile,
+                logfile,
                 logfile_format,
                 rotating=True,
                 maxbytes=section.logfile_maxbytes,
@@ -677,8 +682,10 @@ class ServerOptions(Options):
         section.identifier = get('identifier', 'supervisor')
         section.nodaemon = boolean(get('nodaemon', 'false'))
         section.logfile_format = get('logfile_format',
-                                '%(asctime)s %(levelname)s %(message)s')
-        section.childlog_format = get('childlog_format', '%(message)s')
+                                '%(asctime)s %(levelname)s %(message)s',
+                        do_expand=False)
+        section.childlog_format = get('childlog_format', '%(message)s',
+                        do_expand=False)
         section.silent = boolean(get('silent', 'false'))
 
         tempdir = tempfile.gettempdir()

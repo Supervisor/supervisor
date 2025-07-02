@@ -105,7 +105,13 @@ class POutputDispatcher(PDispatcher):
         self.endtoken_data = (endtoken, len(endtoken))
         self.mainlog_level = loggers.LevelsByName.DEBG
         config = self.process.config
-        self.log_to_mainlog = config.options.loglevel <= self.mainlog_level
+        # Handle case where options haven't been realized yet
+        loglevel = getattr(config.options, 'loglevel', None)
+        if loglevel is None:
+            # Default loglevel when not set
+            from supervisor.loggers import LevelsByName
+            loglevel = LevelsByName.INFO
+        self.log_to_mainlog = loglevel <= self.mainlog_level
         self.stdout_events_enabled = config.stdout_events_enabled
         self.stderr_events_enabled = config.stderr_events_enabled
 
@@ -126,7 +132,9 @@ class POutputDispatcher(PDispatcher):
             self.normallog = config.options.getLogger()
 
         if logfile:
-            fmt = config.options.childlog_format
+            fmt = getattr(config.options, 'childlog_format', None)
+            if fmt is None:
+                fmt = '%(message)s'  # Default format
             loggers.handle_file(
                 self.normallog,
                 filename=logfile,
@@ -137,7 +145,10 @@ class POutputDispatcher(PDispatcher):
             )
 
         if to_syslog:
-            fmt = config.name + ' ' + config.options.childlog_format
+            childlog_format = getattr(config.options, 'childlog_format', None)
+            if childlog_format is None:
+                childlog_format = '%(message)s'  # Default format
+            fmt = config.name + ' ' + childlog_format
             loggers.handle_syslog(
                 self.normallog,
                 fmt=fmt
