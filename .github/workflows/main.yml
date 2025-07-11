@@ -9,7 +9,7 @@ env:
 
 jobs:
   tests_py27:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     container: python:2.7
     strategy:
       fail-fast: false
@@ -27,7 +27,7 @@ jobs:
       run: TOXENV=py27 END_TO_END=1 tox
 
   tests_py34:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
 
@@ -36,7 +36,7 @@ jobs:
 
     - name: Build OpenSSL 1.0.2 (required by Python 3.4)
       run: |
-        sudo apt-get install build-essential zlib1g-dev 
+        sudo apt-get install build-essential zlib1g-dev
 
         cd $RUNNER_TEMP
         wget https://github.com/openssl/openssl/releases/download/OpenSSL_1_0_2u/openssl-1.0.2u.tar.gz
@@ -46,7 +46,7 @@ jobs:
         make
         sudo make install
 
-        echo CFLAGS="-I/usr/local/ssl/include $CFLAGS" >> $GITHUB_ENV 
+        echo CFLAGS="-I/usr/local/ssl/include $CFLAGS" >> $GITHUB_ENV
         echo LDFLAGS="-L/usr/local/ssl/lib $LDFLAGS" >> $GITHUB_ENV
         echo LD_LIBRARY_PATH="/usr/local/ssl/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
 
@@ -56,7 +56,7 @@ jobs:
 
     - name: Build Python 3.4
       run: |
-        sudo apt-get install build-essential libncurses5-dev libgdbm-dev libnss3-dev libreadline-dev zlib1g-dev 
+        sudo apt-get install build-essential libncurses5-dev libgdbm-dev libnss3-dev libreadline-dev zlib1g-dev
 
         cd $RUNNER_TEMP
         wget -O cpython-3.4.10.zip https://github.com/python/cpython/archive/refs/tags/v3.4.10.zip
@@ -79,7 +79,7 @@ jobs:
       run: TOXENV=py34 END_TO_END=1 tox
 
   tests_py35:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
 
@@ -108,7 +108,7 @@ jobs:
       run: TOXENV=${{steps.toxenv.outputs.TOXENV}} END_TO_END=1 tox
 
   tests_py3x:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -136,7 +136,7 @@ jobs:
       run: TOXENV=${{steps.toxenv.outputs.TOXENV}} END_TO_END=1 tox
 
   coverage_py27:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     container: python:2.7
     strategy:
       fail-fast: false
@@ -151,7 +151,7 @@ jobs:
       run: TOXENV=cover tox
 
   coverage_py3x:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -172,7 +172,7 @@ jobs:
       run: TOXENV=cover3 tox
 
   docs:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     steps:
     - uses: actions/checkout@v4
