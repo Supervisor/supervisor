@@ -221,6 +221,32 @@ class FileHandlerTests(HandlerTests, unittest.TestCase):
         self.assertTrue(dummy_stderr.written.endswith(b'OSError\n'),
                         dummy_stderr.written)
 
+    def test_format_applied_to_handler(self):
+        """Test that the format is correctly applied to the handler"""
+        from supervisor.loggers import FileHandler
+        custom_format = '%(asctime)s [%(levelname)s] %(message)s'
+        handler = FileHandler(self.filename, fmt=custom_format)
+        record = self._makeLogRecord("test message")
+        handler.emit(record)
+        handler.close()
+        with open(self.filename, 'r') as f:
+            content = f.read()
+        # Check that the format was applied - should have timestamp and level
+        import re
+        self.assertTrue(re.match(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} \[INFO\] test message', content))
+
+    def test_default_format_when_not_specified(self):
+        """Test default format when no format is specified"""
+        from supervisor.loggers import FileHandler
+        handler = FileHandler(self.filename)  # No format specified
+        record = self._makeLogRecord("test message")
+        handler.emit(record)
+        handler.close()
+        with open(self.filename, 'r') as f:
+            content = f.read()
+        # Should just contain the message itself
+        self.assertEqual(content, "test message")
+
 if os.path.exists('/dev/stdout'):
     StdoutTestsBase = FileHandlerTests
 else:

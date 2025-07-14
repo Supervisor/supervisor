@@ -569,6 +569,47 @@ class POutputDispatcherTests(unittest.TestCase):
         dispatcher.close() # make sure we don't error if we try to close twice
         self.assertEqual(dispatcher.closed, True)
 
+    def test_custom_format_for_process_logs(self):
+        """Test custom format is applied to process logs"""
+        from supervisor.datatypes import boolean, logfile_name
+        from supervisor.options import ServerOptions
+        options = ServerOptions()  # need real options to get a real logger
+        options.childlog_format = '%(asctime)s [%(levelname)s] %(message)s'
+
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                            stdout_logfile=logfile_name('/tmp/foo'))
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+
+        # Check that format is passed to logger
+        self.assertEqual(dispatcher.childlog.handlers[0].fmt,
+                    '%(asctime)s [%(levelname)s] %(message)s')
+
+    def test_different_formats_for_main_and_child_logs(self):
+        """Test different formats for main and child logs"""
+        from supervisor.datatypes import boolean, logfile_name
+        from supervisor.options import ServerOptions
+        options = ServerOptions()
+        options.logfile_format = '%(asctime)s MAIN: %(message)s'
+        options.childlog_format = '%(asctime)s CHILD: %(message)s'
+
+        # Configure child process logs
+        config = DummyPConfig(options, 'process1', '/bin/process1',
+                            stdout_logfile=logfile_name('/tmp/foo'))
+        process = DummyProcess(config)
+        dispatcher = self._makeOne(process)
+
+        # Check that child format is used
+        self.assertEqual(dispatcher.childlog.handlers[0].fmt,
+                    '%(asctime)s CHILD: %(message)s')
+
+        # Configure a main log
+        from supervisor.loggers import getLogger
+        logger = getLogger(fmt=options.logfile_format)
+
+        # Check that main format is used
+        self.assertEqual(logger.handlers[0].fmt,
+                    '%(asctime)s MAIN: %(message)s')
 
 class PInputDispatcherTests(unittest.TestCase):
     def _getTargetClass(self):
