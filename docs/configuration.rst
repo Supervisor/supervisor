@@ -642,6 +642,7 @@ where specified.
   expressions are evaluated against a dictionary containing the keys
   ``group_name``, ``host_node_name``, ``program_name``, ``process_num``,
   ``numprocs``, ``here`` (the directory of the supervisord config file),
+  ``directory`` (if set in this section), ``user`` (if set in section),
   and all supervisord's environment variables prefixed with ``ENV_``.
   Controlled programs should themselves not be daemons, as supervisord
   assumes it is responsible for daemonizing its subprocesses (see
@@ -916,7 +917,8 @@ where specified.
   can contain Python string expressions that will evaluated against a
   dictionary that contains the keys ``group_name``, ``host_node_name``,
   ``process_num``, ``program_name``, and ``here`` (the directory of the
-  supervisord config file).
+  supervisord config file). If ``directory`` section is set, the value
+  ``%(directory)s`` can be used.
 
   .. note::
 

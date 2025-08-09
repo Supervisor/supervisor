@@ -1,6 +1,8 @@
 4.3.0.dev0 (Next Release)
 -------------------------
 
+- Support ``directory`` expansions. Patch by Waket Zheng.
+
 - Fixed a bug where the poller would not unregister a closed
   file descriptor under some circumstances, which caused excessive
   polling, resulting in higher CPU usage.  Patch by aftersnow.
