@@ -107,6 +107,7 @@ class Options:
         self.parse_criticals = []
         self.parse_warnings = []
         self.parse_infos = []
+        self.parse_debugs = []
 
         here = os.path.dirname(os.path.dirname(sys.argv[0]))
         searchpaths = [os.path.join(here, 'etc', 'supervisord.conf'),
@@ -414,7 +415,7 @@ class Options:
                         'No file matches via include "%s"' % pattern)
                     continue
                 for filename in sorted(filenames):
-                    self.parse_infos.append(
+                    self.parse_debugs.append(
                         'Included extra file "%s" during parsing' % filename)
                     try:
                         parser.read(filename)
@@ -432,6 +433,8 @@ class Options:
             logger.warn(msg)
         for msg in self.parse_infos:
             logger.info(msg)
+        for msg in self.parse_debugs:
+            logger.debug(msg)
 
 class ServerOptions(Options):
     user = None
@@ -660,6 +663,8 @@ class ServerOptions(Options):
         environ_str = get('environment', '')
         environ_str = expand(environ_str, expansions, 'environment')
         section.environment = dict_of_key_value_pairs(environ_str)
+        section.environment_file = get('environment_file', None)
+        section.environment_loader = get('environment_loader', None)
 
         # extend expansions for global from [supervisord] environment definition
         for k, v in section.environment.items():
@@ -678,6 +683,13 @@ class ServerOptions(Options):
                 env = section.environment.copy()
                 env.update(proc.environment)
                 proc.environment = env
+
+                # set the environment file/loader on the process configs but let them override it
+                if not proc.environment_file and not proc.environment_loader:
+                    if section.environment_file:
+                        proc.environment_file = section.environment_file
+                    elif section.environment_loader:
+                        proc.environment_loader = section.environment_loader
         section.server_configs = self.server_configs_from_parser(parser)
         section.profile_options = None
         return section
@@ -929,6 +941,8 @@ class ServerOptions(Options):
         numprocs = integer(get(section, 'numprocs', 1))
         numprocs_start = integer(get(section, 'numprocs_start', 0))
         environment_str = get(section, 'environment', '', do_expand=False)
+        environment_file = get(section, 'environment_file', '', do_expand=False)
+        environment_loader = get(section, 'environment_loader', '', do_expand=False)
         stdout_cmaxbytes = byte_size(get(section,'stdout_capture_maxbytes','0'))
         stdout_events = boolean(get(section, 'stdout_events_enabled','false'))
         stderr_cmaxbytes = byte_size(get(section,'stderr_capture_maxbytes','0'))
@@ -1061,6 +1075,8 @@ class ServerOptions(Options):
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
                 environment=environment,
+                environment_file=environment_file,
+                environment_loader=environment_loader,
                 serverurl=serverurl)
 
             programs.append(pconfig)
@@ -1878,7 +1894,7 @@ class ProcessConfig(Config):
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
         'exitcodes', 'redirect_stderr' ]
-    optional_param_names = [ 'environment', 'serverurl' ]
+    optional_param_names = [ 'environment', 'environment_file', 'environment_loader', 'serverurl' ]
 
     def __init__(self, options, **params):
         self.options = options
@@ -1941,6 +1957,80 @@ class ProcessConfig(Config):
         if stdin_fd is not None:
             dispatchers[stdin_fd] = PInputDispatcher(proc, 'stdin', stdin_fd)
         return dispatchers, p
+
+    def load_external_environment_definition(self):
+        return self.load_external_environment_definition_for_config(self)
+
+    # NOTE - THIS IS BLOCKING CODE AND MUST ONLY BE CALLED IN TESTS OR IN CHILD PROCESSES, NOT THE
+    # MAIN SUPERVISORD THREAD OF EXECUTION
+    @classmethod
+    def load_external_environment_definition_for_config(cls, config):
+        # lazily load extra env vars before we drop privileges so that this can be used to load a secrets file
+        # or execute a program to get more env configuration. It doesn't have to be secrets, just config that
+        # needs to be separate from the supervisor config for whatever reason. The supervisor config interpolation
+        # is not supported here. The data format is just plain text, with one k=v value per line. Lines starting
+        # with '#' are ignored.
+        env = {}
+        envdata = None
+        if config.environment_file:
+            if os.path.exists(config.environment_file):
+                try:
+                    with open(config.environment_file, 'r') as f:
+                        envdata = f.read()
+
+                except Exception as e:
+                    raise ProcessException("environment_file read failure on %s: %s" % (config.environment_file, e))
+
+        elif config.environment_loader:
+            try:
+                from subprocess import check_output, CalledProcessError, STDOUT as subprocess_STDOUT
+
+                envdata = check_output(config.environment_loader, shell=True, stderr=subprocess_STDOUT)
+                envdata = as_string(envdata)
+
+            except CalledProcessError as e:
+                raise ProcessException("environment_loader failure with %s: %d, %s" % \
+                    (config.environment_loader, e.returncode, as_string(e.output))
+                )
+
+        if envdata:
+            extra_env = {}
+
+            for line in envdata.splitlines():
+                line = line.strip()
+                if not line or line.startswith('#'):  # ignore comments and empty lines
+                    continue
+
+                line_parts = line.split("=", 1) # ignore malformed lines
+                if len(line_parts) != 2:
+                    continue
+
+                key, val = [s.strip() for s in line_parts]
+                if not key or not val:
+                    continue
+
+                # for compatibility with .env files and the npm dotenv library, if the value is quoted let's
+                # unquote it. Also, double quoted strings get embedded '\\n' chars expanded to real newlines.
+                # Don't strip whitespace inside quoted values.
+                if val.startswith("\""):
+                    val = val.strip("\"")
+
+                    # expand embedded '\n' chars into actual newlines
+                    val.replace("\\n", "\n")
+
+                elif val.startswith("'"):
+                    val = val.strip("'")
+                elif val.startswith("`"):
+                    val = val.strip("`")
+
+                extra_env[key.upper()] = val
+
+            if extra_env:
+                print(f"updating process env with: {extra_env}")
+                env.update(extra_env)
+
+
+        return env
 
 class EventListenerConfig(ProcessConfig):
     def make_dispatchers(self, proc):
