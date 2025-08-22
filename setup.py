@@ -25,7 +25,8 @@ elif (3, 0) < py_version < (3, 4):
 # setuptools is required as a runtime dependency only on Python < 3.8.
 # See the comments in supervisor/compat.py.  An environment marker 
 # like "setuptools; python_version < '3.8'" is not used here because
-# it breaks installation via "python setup.py install".
+# it breaks installation via "python setup.py install".  See also the
+# discussion at: https://github.com/Supervisor/supervisor/issues/1692
 requires = []
 if py_version < (3, 8):
     requires.append("setuptools")
