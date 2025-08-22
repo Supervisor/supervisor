@@ -27,9 +27,17 @@ elif (3, 0) < py_version < (3, 4):
 # like "setuptools; python_version < '3.8'" is not used here because
 # it breaks installation via "python setup.py install".  See also the
 # discussion at: https://github.com/Supervisor/supervisor/issues/1692
-requires = []
 if py_version < (3, 8):
-    requires.append("setuptools")
+    try:
+        import pkg_resources
+        import setuptools
+    except ImportError:
+        raise RuntimeError(
+            "On Python < 3.8, Supervisor requires setuptools as a runtime"
+            " dependency because pkg_resources is used to load plugins"
+            )
+
+requires = []
 
 tests_require = []
 testing_extras = tests_require + [
