@@ -16,6 +16,14 @@
 - On Python 3.8 and later, ``setuptools`` is no longer a runtime
   dependency.  Patch by Ofek Lev.
 
+- On Python versions before 3.8, ``setuptools`` is still a runtime
+  dependency (for ``pkg_resources``) but it is no longer declared in
+  ``setup.py`` as such.  This is because adding a conditional dependency
+  with an environment marker (``setuptools; python_version < '3.8'``)
+  breaks installation in some scenarios, e.g. ``setup.py install`` or
+  older versions of ``pip``.  Ensure that ``setuptools`` in installed
+  if using Python before 3.8.
+
 4.2.5 (2022-12-23)
 ------------------
 

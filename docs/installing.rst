@@ -22,6 +22,12 @@ to be the root user to install Supervisor successfully using
 
 You can also install supervisor in a virtualenv via ``pip``.
 
+.. note::
+
+   If installing on a Python version before 3.8, first ensure that the
+   ``setuptools`` package is installed because it is a runtime
+   dependency of Supervisor.
+
 Internet-Installing Without Pip
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -38,6 +44,12 @@ finally install Supervisor itself.
    Depending on the permissions of your system's Python, you might
    need to be the root user to successfully invoke ``python
    setup.py install``.
+
+.. note::
+
+   The ``setuptools`` package is required to run ``python setup.py install``.
+   On Python versions before 3.8, ``setuptools`` is also a runtime
+   dependency of Supervisor.
 
 Installing To A System Without Internet Access
 ----------------------------------------------
@@ -62,6 +74,12 @@ Finally, run supervisor's ``python setup.py install``.
    Depending on the permissions of your system's Python, you might
    need to be the root user to invoke ``python setup.py install``
    successfully for each package.
+
+.. note::
+
+   The ``setuptools`` package is required to run ``python setup.py install``.
+   On Python versions before 3.8, ``setuptools`` is also a runtime
+   dependency of Supervisor.
 
 Installing a Distribution Package
 ---------------------------------
