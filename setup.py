@@ -36,14 +36,6 @@ if py_version < (3, 8):
             " dependency because pkg_resources is used to load plugins"
             )
 
-requires = []
-
-tests_require = []
-testing_extras = tests_require + [
-    'pytest',
-    'pytest-cov',
-    ]
-
 from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
 try:
@@ -102,14 +94,12 @@ dist = setup(
     author="Chris McDonough",
     author_email="chrism@plope.com",
     packages=find_packages(),
-    install_requires=requires,
+    install_requires=[],
     extras_require={
-        'testing': testing_extras,
+        'test': ['pytest', 'pytest-cov']
     },
-    tests_require=tests_require,
     include_package_data=True,
     zip_safe=False,
-    test_suite="supervisor.tests",
     entry_points={
         'console_scripts': [
             'supervisord = supervisor.supervisord:main',
