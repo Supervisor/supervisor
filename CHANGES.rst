@@ -1,5 +1,13 @@
-4.3.0.dev0 (Next Release)
+4.4.0.dev0 (Next Release)
 -------------------------
+
+- ``supervisorctl`` now reads extra files included via the ``[include]``
+  section in ``supervisord.conf`` like ``supervisord`` does.  This allows
+  the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
+  included files.  Patch by François Granade.
+
+4.3.0 (2025-08-23)
+------------------
 
 - Fixed a bug where the poller would not unregister a closed
   file descriptor under some circumstances, which caused excessive
@@ -23,11 +31,6 @@
   breaks installation in some scenarios, e.g. ``setup.py install`` or
   older versions of ``pip``.  Ensure that ``setuptools`` is installed
   if using Python before 3.8.
-
-- ``supervisorctl`` now reads extra files included via the ``[include]``
-  section in ``supervisord.conf`` like ``supervisord`` does.  This allows
-  the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
-  included files.  Patch by François Granade.
 
 4.2.5 (2022-12-23)
 ------------------
