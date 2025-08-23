@@ -1,5 +1,5 @@
-4.3.0.dev0 (Next Release)
--------------------------
+4.3.0 (2025-08-23)
+------------------
 
 - Fixed a bug where the poller would not unregister a closed
   file descriptor under some circumstances, which caused excessive
