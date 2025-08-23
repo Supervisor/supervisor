@@ -30,7 +30,6 @@ elif (3, 0) < py_version < (3, 4):
 if py_version < (3, 8):
     try:
         import pkg_resources
-        import setuptools
     except ImportError:
         raise RuntimeError(
             "On Python < 3.8, Supervisor requires setuptools as a runtime"
