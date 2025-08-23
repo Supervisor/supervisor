@@ -21,7 +21,7 @@
   ``setup.py`` as such.  This is because adding a conditional dependency
   with an environment marker (``setuptools; python_version < '3.8'``)
   breaks installation in some scenarios, e.g. ``setup.py install`` or
-  older versions of ``pip``.  Ensure that ``setuptools`` in installed
+  older versions of ``pip``.  Ensure that ``setuptools`` is installed
   if using Python before 3.8.
 
 4.2.5 (2022-12-23)
