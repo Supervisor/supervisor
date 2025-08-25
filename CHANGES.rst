@@ -1,6 +1,13 @@
 4.4.0.dev0 (Next Release)
 -------------------------
 
+- Parsing ``environment=`` in the config file now uses ``shlex`` in POSIX
+  mode instead of legacy mode to allow for escaped quotes in the values.
+  However, on Python 2 before 2.7.13 and Python 3 before 3.5.3, POSIX mode
+  can't be used because of a `bug <https://bugs.python.org/issue21999>`_
+  in ``shlex``.  If ``supervisord`` is run on a Python version with the bug,
+  it will fall back to legacy mode.  Patch by Stefan Friesel.
+
 - ``supervisorctl`` now reads extra files included via the ``[include]``
   section in ``supervisord.conf`` like ``supervisord`` does.  This allows
   the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
