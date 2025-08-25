@@ -1,6 +1,9 @@
 4.4.0.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug where the XML-RPC method ``supervisor.getAllConfigInfo()``
+  did not return the value of the ``autorestart`` program option.
+
 - Parsing ``environment=`` in the config file now uses ``shlex`` in POSIX
   mode instead of legacy mode to allow for escaped quotes in the values.
   However, on Python 2 before 2.7.13 and Python 3 before 3.5.3, POSIX mode

@@ -17,6 +17,7 @@ from supervisor.tests.base import _TIMEFORMAT
 
 from supervisor.compat import as_string, PY2
 from supervisor.datatypes import Automatic
+from supervisor.datatypes import RestartWhenExitUnexpected
 
 class TestBase(unittest.TestCase):
     def setUp(self):
@@ -1146,10 +1147,12 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord = DummySupervisor(options, 'foo')
 
         pconfig1 = DummyPConfig(options, 'process1', __file__,
+                                autorestart=False,
                                 stdout_logfile=Automatic,
                                 stderr_logfile=Automatic,
                                 )
         pconfig2 = DummyPConfig(options, 'process2', __file__,
+                                autorestart=RestartWhenExitUnexpected,
                                 stdout_logfile=None,
                                 stderr_logfile=None,
                                 )
@@ -1160,6 +1163,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         interface = self._makeOne(supervisord)
         configs = interface.getAllConfigInfo()
         self.assertEqual(configs[0]['autostart'], True)
+        self.assertEqual(configs[0]['autorestart'], False)
         self.assertEqual(configs[0]['stopwaitsecs'], 10)
         self.assertEqual(configs[0]['stdout_events_enabled'], False)
         self.assertEqual(configs[0]['stderr_events_enabled'], False)
@@ -1187,6 +1191,7 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         assert 'test_rpcinterfaces.py' in configs[0]['command']
 
         self.assertEqual(configs[1]['autostart'], True)
+        self.assertEqual(configs[1]['autorestart'], "unexpected")
         self.assertEqual(configs[1]['stopwaitsecs'], 10)
         self.assertEqual(configs[1]['stdout_events_enabled'], False)
         self.assertEqual(configs[1]['stderr_events_enabled'], False)
