@@ -657,7 +657,7 @@ class ServerOptions(Options):
         section.nocleanup = boolean(get('nocleanup', 'false'))
         section.strip_ansi = boolean(get('strip_ansi', 'false'))
 
-        environ_str = get('environment', '')
+        environ_str = get('environment', '', do_expand=False)
         environ_str = expand(environ_str, expansions, 'environment')
         section.environment = dict_of_key_value_pairs(environ_str)
 
