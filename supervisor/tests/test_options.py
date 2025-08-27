@@ -3409,6 +3409,18 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         instance.poller.before_daemonize.assert_called_once_with()
         instance.poller.after_daemonize.assert_called_once_with()
 
+    def test_options_environment_of_supervisord_with_escaped_chars(self):
+        text = lstrip("""
+        [supervisord]
+        environment=VAR_WITH_P="some_value_%%_end"
+        """)
+
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        options = instance.configroot.supervisord
+        self.assertEqual(options.environment, dict(VAR_WITH_P="some_value_%_end"))
+
 class ProcessConfigTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ProcessConfig
