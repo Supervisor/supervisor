@@ -4,6 +4,11 @@
 - Fixed a bug where the XML-RPC method ``supervisor.getAllConfigInfo()``
   did not return the value of the ``autorestart`` program option.
 
+- Fixed a bug where an escaped percent sign (``%%``) could not be used
+  in ``environment=`` in the ``[supervisord]`` section of the config file.
+  The bug did not affect ``[program:x]`` sections, where an escaped
+  percent sign in ``environment=`` already worked.  Patch by yuk1pedia.
+
 - Parsing ``environment=`` in the config file now uses ``shlex`` in POSIX
   mode instead of legacy mode to allow for escaped quotes in the values.
   However, on Python 2 before 2.7.13 and Python 3 before 3.5.3, POSIX mode
