@@ -439,6 +439,7 @@ class ServerOptions(Options):
     sockchmod = None
     logfile = None
     loglevel = None
+    logformat = None
     pidfile = None
     passwdfile = None
     nodaemon = None
@@ -470,6 +471,8 @@ class ServerOptions(Options):
                  "z:", "logfile_backups=", integer, default=10)
         self.add("loglevel", "supervisord.loglevel", "e:", "loglevel=",
                  logging_level, default="info")
+        self.add("logformat", "supervisord.logformat", "", "logformat=",
+                 str, default='%(asctime)s %(levelname)s %(message)s')
         self.add("pidfile", "supervisord.pidfile", "j:", "pidfile=",
                  existing_dirpath, default="supervisord.pid")
         self.add("identifier", "supervisord.identifier", "i:", "identifier=",
@@ -530,6 +533,9 @@ class ServerOptions(Options):
 
         if not self.loglevel:
             self.loglevel = section.loglevel
+
+        if not self.logformat:
+            self.logformat = section.logformat
 
         if self.logfile:
             logfile = self.logfile
@@ -647,6 +653,7 @@ class ServerOptions(Options):
         section.logfile_maxbytes = byte_size(get('logfile_maxbytes', '50MB'))
         section.logfile_backups = integer(get('logfile_backups', 10))
         section.loglevel = logging_level(get('loglevel', 'info'))
+        section.logformat = str(get('logformat', '%(asctime)s %(levelname)s %(message)s', do_expand=False))
         section.pidfile = existing_dirpath(get('pidfile', 'supervisord.pid'))
         section.identifier = get('identifier', 'supervisor')
         section.nodaemon = boolean(get('nodaemon', 'false'))
@@ -1487,7 +1494,7 @@ class ServerOptions(Options):
 
     def make_logger(self):
         # must be called after realize() and after supervisor does setuid()
-        format = '%(asctime)s %(levelname)s %(message)s\n'
+        format = self.logformat+'\n'
         self.logger = loggers.getLogger(self.loglevel)
         if self.nodaemon and not self.silent:
             loggers.handle_stdout(self.logger, format)
