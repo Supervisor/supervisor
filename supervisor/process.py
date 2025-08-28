@@ -5,6 +5,7 @@ import signal
 import shlex
 import time
 import traceback
+import psutil
 
 from supervisor.compat import maxint
 from supervisor.compat import as_bytes
@@ -376,11 +377,11 @@ class Subprocess(object):
             if self.delay > 0 and test_time < (self.delay - self.backoff):
                 self.delay = test_time + self.backoff
 
-    def stop(self):
+    def stop(self, supervisor=None):
         """ Administrative stop """
         self.administrative_stop = True
         self.laststopreport = 0
-        return self.kill(self.config.stopsignal)
+        return self.kill(self.config.stopsignal, supervisor)
 
     def stop_report(self):
         """ Log a 'waiting for x to stop' message with throttling. """
@@ -401,12 +402,18 @@ class Subprocess(object):
         self._assertInState(ProcessStates.BACKOFF)
         self.change_state(ProcessStates.FATAL)
 
-    def kill(self, sig):
+    def kill(self, sig, supervisor=None):
         """Send a signal to the subprocess with the intention to kill
         it (to make it exit).  This may or may not actually kill it.
 
         Return None if the signal was sent, or an error message string
         if an error occurred or if the subprocess is not running.
+        Parameters:
+            sig: signal to kill the process
+            supervsior: supervisor instance to keep track of signaled
+            processes. This is needed to check if a process properly
+            terminated. If no supervisor instance is given, this will
+            not be checked.
         """
         now = time.time()
         options = self.config.options
@@ -464,7 +471,25 @@ class Subprocess(object):
 
         try:
             try:
+                # make sure all child processes are properly stopped as well
+                parent = psutil.Process(abs(pid))
+                children = parent.children(recursive=True)
+                for child in reversed(children):
+                    try:
+                        # kill all child processes with same signal as parent
+                        options.kill(child.pid, sig)
+                        # add to list but only if not disabled
+                        if not self.config.disable_force_shutdown and sig is not signal.SIGKILL:
+                            supervisor.terminated_processes.append((child.pid, time.time()))
+                    except PermissionError:
+                        msg = ("No permission to signal child process with name '%s' and pid %i of parent process '%s' with pid %i. "
+                              % (child.name(), child.pid, parent.name(), parent.pid)
+                              + "Will continue with sending %s to parent process" % (sig.name))
+                        options.logger.warn(msg)
                 options.kill(pid, sig)
+                if not self.config.disable_force_shutdown and sig is not signal.SIGKILL and supervisor is not None:
+                        supervisor.terminated_processes.append((pid, time.time()))
+
             except OSError as exc:
                 if exc.errno == errno.ESRCH:
                     msg = ("unable to signal %s (pid %s), it probably just exited "
@@ -653,7 +678,7 @@ class Subprocess(object):
     def get_state(self):
         return self.state
 
-    def transition(self):
+    def transition(self, supervisor=None):
         now = time.time()
         state = self.state
 
@@ -715,7 +740,7 @@ class Subprocess(object):
                 self.config.options.logger.warn(
                     'killing \'%s\' (%s) with SIGKILL' % (processname,
                                                           self.pid))
-                self.kill(signal.SIGKILL)
+                self.kill(signal.SIGKILL, supervisor)
 
 class FastCGISubprocess(Subprocess):
     """Extends Subprocess class to handle FastCGI subprocesses"""
@@ -810,7 +835,7 @@ class ProcessGroupBase(object):
         for process in self.processes.values():
             process.reopenlogs()
 
-    def stop_all(self):
+    def stop_all(self, supervisor=None):
         processes = list(self.processes.values())
         processes.sort()
         processes.reverse() # stop in desc priority order
@@ -819,10 +844,10 @@ class ProcessGroupBase(object):
             state = proc.get_state()
             if state == ProcessStates.RUNNING:
                 # RUNNING -> STOPPING
-                proc.stop()
+                proc.stop(supervisor)
             elif state == ProcessStates.STARTING:
                 # STARTING -> STOPPING
-                proc.stop()
+                proc.stop(supervisor)
             elif state == ProcessStates.BACKOFF:
                 # BACKOFF -> FATAL
                 proc.give_up()

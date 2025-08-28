@@ -936,6 +936,7 @@ class ServerOptions(Options):
         serverurl = get(section, 'serverurl', None)
         if serverurl and serverurl.strip().upper() == 'AUTO':
             serverurl = None
+        disable_force_shutdown  = get(section, 'disable_force_shutdown', False)
 
         # find uid from "user" option
         user = get(section, 'user', None)
@@ -1061,7 +1062,8 @@ class ServerOptions(Options):
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
                 environment=environment,
-                serverurl=serverurl)
+                serverurl=serverurl,
+                disable_force_shutdown=disable_force_shutdown)
 
             programs.append(pconfig)
 
@@ -1877,8 +1879,8 @@ class ProcessConfig(Config):
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
-        'exitcodes', 'redirect_stderr' ]
-    optional_param_names = [ 'environment', 'serverurl' ]
+        'exitcodes', 'redirect_stderr']
+    optional_param_names = [ 'environment', 'serverurl', 'disable_force_shutdown']
 
     def __init__(self, options, **params):
         self.options = options
