@@ -51,13 +51,14 @@ else: # pragma: no cover
         if isinstance(s, bytes):
             return s
         else:
-            return s.encode(encoding)
+            return s.encode(encoding, errors='replace')
 
     def as_string(s, encoding='utf8'):
         if isinstance(s, str):
             return s
         else:
-            return s.decode(encoding)
+            # 인입된 bytes에서 깨진 부분은 '�'로 표시하고 나머지 부분은 계속 decode 진행
+            return s.decode(encoding, errors='replace')
 
     def is_text_stream(stream):
         import _io
