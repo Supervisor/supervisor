@@ -51,13 +51,13 @@ else: # pragma: no cover
         if isinstance(s, bytes):
             return s
         else:
-            return s.encode(encoding)
+            return s.encode(encoding, errors='replace')
 
     def as_string(s, encoding='utf8'):
         if isinstance(s, str):
             return s
         else:
-            return s.decode(encoding)
+            return s.decode(encoding, errors='replace')
 
     def is_text_stream(stream):
         import _io
