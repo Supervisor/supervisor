@@ -57,7 +57,6 @@ else: # pragma: no cover
         if isinstance(s, str):
             return s
         else:
-            # 인입된 bytes에서 깨진 부분은 '�'로 표시하고 나머지 부분은 계속 decode 진행
             return s.decode(encoding, errors='replace')
 
     def is_text_stream(stream):
