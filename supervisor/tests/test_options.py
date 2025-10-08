@@ -1738,6 +1738,20 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         self.assertEqual(pconfig.environment,
                          {'KEY1':'val1', 'KEY2':'val2', 'KEY3':'0'})
 
+    def test_processes_from_section_environment_with_escaped_chars(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo
+        environment=VAR_WITH_P="some_value_%%_end"
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        expected = {'VAR_WITH_P': 'some_value_%_end'}
+        self.assertEqual(pconfigs[0].environment, expected)
+
     def test_processes_from_section_host_node_name_expansion(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -1933,7 +1947,7 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         nocleanup = %(ENV_SUPD_NOCLEANUP)s
         childlogdir = %(ENV_HOME)s
         strip_ansi = %(ENV_SUPD_STRIP_ANSI)s
-        environment = FAKE_ENV_VAR=/some/path
+        environment = GLOBAL_ENV_VAR=%(ENV_SUPR_ENVIRONMENT_VALUE)s
 
         [inet_http_server]
         port=*:%(ENV_HTSRV_PORT)s
@@ -1954,6 +1968,7 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         startretries=%(ENV_CAT1_STARTRETRIES)s
         directory=%(ENV_CAT1_DIR)s
         umask=%(ENV_CAT1_UMASK)s
+        environment = PROGRAM_ENV_VAR=%(ENV_CAT1_ENVIRONMENT_VALUE)s
         """)
         from supervisor import datatypes
         from supervisor.options import UnhosedConfigParser
@@ -1964,6 +1979,7 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
             'ENV_HTSRV_PORT': '9210',
             'ENV_HTSRV_USER': 'someuser',
             'ENV_HTSRV_PASS': 'passwordhere',
+            'ENV_SUPR_ENVIRONMENT_VALUE': 'from_supervisord_section',
             'ENV_SUPD_LOGFILE_MAXBYTES': '51MB',
             'ENV_SUPD_LOGFILE_BACKUPS': '10',
             'ENV_SUPD_LOGLEVEL': 'info',
@@ -1978,6 +1994,7 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
             'ENV_CAT1_COMMAND_LOGDIR': '/path/to/logs',
             'ENV_CAT1_PRIORITY': '3',
             'ENV_CAT1_AUTOSTART': 'true',
+            'ENV_CAT1_ENVIRONMENT_VALUE': 'from_program_section',
             'ENV_CAT1_USER': 'root', # resolved to uid
             'ENV_CAT1_STDOUT_LOGFILE': '/tmp/cat.log',
             'ENV_CAT1_STDOUT_LOGFILE_MAXBYTES': '78KB',
@@ -2043,7 +2060,11 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         self.assertEqual(proc1.exitcodes, [0])
         self.assertEqual(proc1.directory, '/tmp')
         self.assertEqual(proc1.umask, 2)
-        self.assertEqual(proc1.environment, dict(FAKE_ENV_VAR='/some/path'))
+        expected_env = {
+            'GLOBAL_ENV_VAR': 'from_supervisord_section',
+            'PROGRAM_ENV_VAR': 'from_program_section'
+            }
+        self.assertEqual(proc1.environment, expected_env)
 
     def test_options_supervisord_section_expands_here(self):
         instance = self._makeOne()
@@ -3436,6 +3457,19 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         options = instance.configroot.supervisord
         self.assertEqual(options.logfile_format, '%(asctime)s [%(levelname)s] [PID:%(process)d] %(message)s')
         self.assertEqual(options.childlog_format, '[%(asctime)s] %(message)s')
+        
+    def test_options_environment_of_supervisord_with_escaped_chars(self):
+        text = lstrip("""
+        [supervisord]
+        environment=VAR_WITH_P="some_value_%%_end"
+        """)
+
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        options = instance.configroot.supervisord
+        self.assertEqual(options.environment, dict(VAR_WITH_P="some_value_%_end"))
+
 class ProcessConfigTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ProcessConfig

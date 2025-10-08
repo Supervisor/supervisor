@@ -22,17 +22,19 @@ if py_version < (2, 7):
 elif (3, 0) < py_version < (3, 4):
     raise RuntimeError('On Python 3, Supervisor requires Python 3.4 or later')
 
-# setuptools is required as a runtime dependency only on
-# Python < 3.8.  See the comments in supervisor/compat.py.
-requires = [
-    "setuptools; python_version < '3.8'",
-]
-
-tests_require = []
-testing_extras = tests_require + [
-    'pytest',
-    'pytest-cov',
-    ]
+# setuptools is required as a runtime dependency only on Python < 3.8.
+# See the comments in supervisor/compat.py.  An environment marker 
+# like "setuptools; python_version < '3.8'" is not used here because
+# it breaks installation via "python setup.py install".  See also the
+# discussion at: https://github.com/Supervisor/supervisor/issues/1692
+if py_version < (3, 8):
+    try:
+        import pkg_resources
+    except ImportError:
+        raise RuntimeError(
+            "On Python < 3.8, Supervisor requires setuptools as a runtime"
+            " dependency because pkg_resources is used to load plugins"
+            )
 
 from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
@@ -92,14 +94,12 @@ dist = setup(
     author="Chris McDonough",
     author_email="chrism@plope.com",
     packages=find_packages(),
-    install_requires=requires,
+    install_requires=[],
     extras_require={
-        'testing': testing_extras,
+        'test': ['pytest', 'pytest-cov']
     },
-    tests_require=tests_require,
     include_package_data=True,
     zip_safe=False,
-    test_suite="supervisor.tests",
     entry_points={
         'console_scripts': [
             'supervisord = supervisor.supervisord:main',

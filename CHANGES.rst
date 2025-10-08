@@ -1,5 +1,28 @@
-4.3.0.dev0 (Next Release)
+4.4.0.dev0 (Next Release)
 -------------------------
+
+- Fixed a bug where the XML-RPC method ``supervisor.getAllConfigInfo()``
+  did not return the value of the ``autorestart`` program option.
+
+- Fixed a bug where an escaped percent sign (``%%``) could not be used
+  in ``environment=`` in the ``[supervisord]`` section of the config file.
+  The bug did not affect ``[program:x]`` sections, where an escaped
+  percent sign in ``environment=`` already worked.  Patch by yuk1pedia.
+
+- Parsing ``environment=`` in the config file now uses ``shlex`` in POSIX
+  mode instead of legacy mode to allow for escaped quotes in the values.
+  However, on Python 2 before 2.7.13 and Python 3 before 3.5.3, POSIX mode
+  can't be used because of a `bug <https://bugs.python.org/issue21999>`_
+  in ``shlex``.  If ``supervisord`` is run on a Python version with the bug,
+  it will fall back to legacy mode.  Patch by Stefan Friesel.
+
+- ``supervisorctl`` now reads extra files included via the ``[include]``
+  section in ``supervisord.conf`` like ``supervisord`` does.  This allows
+  the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
+  included files.  Patch by François Granade.
+
+4.3.0 (2025-08-23)
+------------------
 
 - Fixed a bug where the poller would not unregister a closed
   file descriptor under some circumstances, which caused excessive
@@ -16,10 +39,13 @@
 - On Python 3.8 and later, ``setuptools`` is no longer a runtime
   dependency.  Patch by Ofek Lev.
 
-- ``supervisorctl`` now reads extra files included via the ``[include]``
-  section in ``supervisord.conf`` like ``supervisord`` does.  This allows
-  the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
-  included files.  Patch by François Granade.
+- On Python versions before 3.8, ``setuptools`` is still a runtime
+  dependency (for ``pkg_resources``) but it is no longer declared in
+  ``setup.py`` as such.  This is because adding a conditional dependency
+  with an environment marker (``setuptools; python_version < '3.8'``)
+  breaks installation in some scenarios, e.g. ``setup.py install`` or
+  older versions of ``pip``.  Ensure that ``setuptools`` is installed
+  if using Python before 3.8.
 
 4.2.5 (2022-12-23)
 ------------------

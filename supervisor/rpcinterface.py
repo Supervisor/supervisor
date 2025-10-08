@@ -10,6 +10,7 @@ from supervisor.compat import unicode
 
 from supervisor.datatypes import (
     Automatic,
+    RestartWhenExitUnexpected,
     signal_number,
     )
 
@@ -568,6 +569,7 @@ class SupervisorNamespaceRPCInterface:
             inuse = gconfig.name in self.supervisord.process_groups
             for pconfig in gconfig.process_configs:
                 d = {'autostart': pconfig.autostart,
+                     'autorestart': pconfig.autorestart,
                      'directory': pconfig.directory,
                      'uid': pconfig.uid,
                      'command': pconfig.command,
@@ -597,9 +599,16 @@ class SupervisorNamespaceRPCInterface:
                      'stderr_syslog': pconfig.stderr_syslog,
                      'serverurl': pconfig.serverurl,
                     }
+
                 # no support for these types in xml-rpc
-                d.update((k, 'auto') for k, v in d.items() if v is Automatic)
-                d.update((k, 'none') for k, v in d.items() if v is None)
+                for k, v in d.items():
+                    if v is Automatic:
+                        d[k] = "auto"
+                    elif v is None:
+                        d[k] = "none"
+                    elif v is RestartWhenExitUnexpected:
+                        d[k] = "unexpected"
+
                 configinfo.append(d)
 
         configinfo.sort(key=lambda r: r['name'])
