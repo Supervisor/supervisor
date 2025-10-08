@@ -3409,6 +3409,33 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         instance.poller.before_daemonize.assert_called_once_with()
         instance.poller.after_daemonize.assert_called_once_with()
 
+    def test_default_log_format_options(self):
+        """Test that default log format options are set correctly"""
+        text = lstrip('''
+        [supervisord]
+        logfile=/tmp/supervisord.log
+        ''')
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        options = instance.configroot.supervisord
+        self.assertEqual(options.logfile_format, '%(asctime)s %(levelname)s %(message)s')
+        self.assertEqual(options.childlog_format, '%(message)s')
+
+    def test_parse_log_format_options(self):
+        """Test parsing log format options from config"""
+        text = lstrip('''
+        [supervisord]
+        logfile=/tmp/supervisord.log
+        logfile_format=%(asctime)s [%(levelname)s] [PID:%(process)d] %(message)s
+        childlog_format=[%(asctime)s] %(message)s
+        ''')
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        options = instance.configroot.supervisord
+        self.assertEqual(options.logfile_format, '%(asctime)s [%(levelname)s] [PID:%(process)d] %(message)s')
+        self.assertEqual(options.childlog_format, '[%(asctime)s] %(message)s')
 class ProcessConfigTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ProcessConfig
