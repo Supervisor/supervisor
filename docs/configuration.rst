@@ -301,6 +301,35 @@ follows.
 
   *Introduced*: 3.0
 
+``logfile_format``
+
+  The format string used for entries in the main supervisord activity log.
+  This uses Python's `logging format strings <https://docs.python.org/3/library/logging.html#logrecord-attributes>`_.
+  Available fields include ``%(asctime)s`` (timestamp), ``%(levelname)s``
+  (log level), ``%(message)s`` (log message), ``%(process)d`` (process ID),
+  ``%(name)s`` (logger name), and other standard Python logging attributes.
+
+  *Default*: ``%(asctime)s %(levelname)s %(message)s``
+
+  *Required*:  No.
+
+  *Introduced*: 4.3.0
+
+``childlog_format``
+
+  The format string used for entries in child process log files (stdout/stderr).
+  This uses Python's `logging format strings <https://docs.python.org/3/library/logging.html#logrecord-attributes>`_.
+  Available fields include ``%(asctime)s`` (timestamp), ``%(message)s``
+  (the actual output from the child process), ``%(name)s`` (logger name),
+  and other standard Python logging attributes. Note that ``%(levelname)s``
+  and ``%(process)d`` refer to the supervisord process, not the child process.
+
+  *Default*: ``%(message)s``
+
+  *Required*:  No.
+
+  *Introduced*: 4.3.0
+
 ``pidfile``
 
   The location in which supervisord keeps its pid file.  This option
@@ -485,6 +514,8 @@ follows.
    logfile_maxbytes = 50MB
    logfile_backups=10
    loglevel = info
+   logfile_format = %(asctime)s %(levelname)s %(message)s
+   childlog_format = %(message)s
    pidfile = /tmp/supervisord.pid
    nodaemon = false
    minfds = 1024
@@ -930,6 +961,13 @@ where specified.
     that is not seekable, log rotation must be disabled by setting
     ``stdout_logfile_maxbytes = 0``.
 
+  .. note::
+
+    The format of entries written to the stdout log file is controlled
+    by the ``childlog_format`` option in the ``[supervisord]`` section.
+    By default, only the raw output from the child process is logged,
+    but you can customize it to include timestamps and other information.
+
   *Default*: ``AUTO``
 
   *Required*:  No.
@@ -990,6 +1028,8 @@ where specified.
 ``stdout_syslog``
 
   If true, stdout will be directed to syslog along with the process name.
+  The format of syslog entries is controlled by the ``childlog_format``
+  option in the ``[supervisord]`` section, prefixed with the process name.
 
   *Default*: False
 
@@ -1014,6 +1054,13 @@ where specified.
     If ``stderr_logfile`` is set to a special file like ``/dev/stderr``
     that is not seekable, log rotation must be disabled by setting
     ``stderr_logfile_maxbytes = 0``.
+
+  .. note::
+
+    The format of entries written to the stderr log file is controlled
+    by the ``childlog_format`` option in the ``[supervisord]`` section.
+    By default, only the raw output from the child process is logged,
+    but you can customize it to include timestamps and other information.
 
   *Default*: ``AUTO``
 
@@ -1073,6 +1120,8 @@ where specified.
 ``stderr_syslog``
 
   If true, stderr will be directed to syslog along with the process name.
+  The format of syslog entries is controlled by the ``childlog_format``
+  option in the ``[supervisord]`` section, prefixed with the process name.
 
   *Default*: False
 
