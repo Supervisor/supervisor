@@ -23,7 +23,7 @@ elif (3, 0) < py_version < (3, 4):
     raise RuntimeError('On Python 3, Supervisor requires Python 3.4 or later')
 
 # setuptools is required as a runtime dependency only on Python < 3.8.
-# See the comments in supervisor/compat.py.  An environment marker 
+# See the comments in supervisor/compat.py.  An environment marker
 # like "setuptools; python_version < '3.8'" is not used here because
 # it breaks installation via "python setup.py install".  See also the
 # discussion at: https://github.com/Supervisor/supervisor/issues/1692
@@ -72,6 +72,7 @@ CLASSIFIERS = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 
 version_txt = os.path.join(here, 'supervisor/version.txt')
