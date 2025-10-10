@@ -305,7 +305,11 @@ class SupervisorNamespaceRPCInterface:
             raise RPCError(Faults.FAILED,
                            "%s is in an unknown process state" % name)
 
-        process.spawn()
+        process.spawn(self.supervisord)
+        # if process has dependees, return succesfull start -
+        # errors will be handled in main loop and inside process.spawn()
+        if process.config.depends_on is not None:
+            return True
 
         # We call reap() in order to more quickly obtain the side effects of
         # process.finish(), which reap() eventually ends up calling.  This
@@ -598,6 +602,8 @@ class SupervisorNamespaceRPCInterface:
                      'stderr_logfile_maxbytes': pconfig.stderr_logfile_maxbytes,
                      'stderr_syslog': pconfig.stderr_syslog,
                      'serverurl': pconfig.serverurl,
+                     'depends_on': pconfig.depends_on,
+                     'spawn_timeout': pconfig.spawn_timeout,
                     }
 
                 # no support for these types in xml-rpc
