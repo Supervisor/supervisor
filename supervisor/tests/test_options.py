@@ -633,6 +633,8 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         autostart=true
         user=root
         stdout_logfile=/tmp/cat.log
+        stdout_prepend_timestamp=true
+        stderr_prepend_timestamp=false
         stopsignal=KILL
         stopwaitsecs=5
         startsecs=5
@@ -720,6 +722,8 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         self.assertEqual(proc1.startretries, 10)
         self.assertEqual(proc1.uid, 0)
         self.assertEqual(proc1.stdout_logfile, '/tmp/cat.log')
+        self.assertEqual(proc1.stdout_prepend_timestamp, True)
+        self.assertEqual(proc1.stderr_prepend_timestamp, False)
         self.assertEqual(proc1.stopsignal, signal.SIGKILL)
         self.assertEqual(proc1.stopwaitsecs, 5)
         self.assertEqual(proc1.stopasgroup, False)
@@ -745,6 +749,8 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         self.assertEqual(proc2.autorestart, False)
         self.assertEqual(proc2.uid, None)
         self.assertEqual(proc2.stdout_logfile, '/tmp/cat2.log')
+        self.assertEqual(proc2.stdout_prepend_timestamp, False)
+        self.assertEqual(proc2.stderr_prepend_timestamp, False)
         self.assertEqual(proc2.stopsignal, signal.SIGTERM)
         self.assertEqual(proc2.stopasgroup, False)
         self.assertEqual(proc2.killasgroup, False)

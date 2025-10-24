@@ -121,6 +121,16 @@ class POutputDispatcher(PDispatcher):
         maxbytes = getattr(config, '%s_logfile_maxbytes' % channel)
         backups = getattr(config, '%s_logfile_backups' % channel)
         to_syslog = getattr(config, '%s_syslog' % channel)
+        prepend_timestamp = getattr(config, '%s_prepend_timestamp' % channel)
+        prepend_timestamp_format = getattr(config, '%s_prepend_timestamp_format' % channel)
+
+        formatter = '%(message)s'
+
+        if prepend_timestamp and not prepend_timestamp_format:
+            formatter = '%(asctime)s %(message)s'
+
+        if prepend_timestamp and prepend_timestamp_format:
+            formatter = '%(custime)s %(message)s'
 
         if logfile or to_syslog:
             self.normallog = config.options.getLogger()
@@ -129,7 +139,8 @@ class POutputDispatcher(PDispatcher):
             loggers.handle_file(
                 self.normallog,
                 filename=logfile,
-                fmt='%(message)s',
+                fmt=formatter,
+                datefmt=prepend_timestamp_format,
                 rotating=not not maxbytes, # optimization
                 maxbytes=maxbytes,
                 backups=backups
