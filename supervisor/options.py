@@ -447,6 +447,8 @@ class ServerOptions(Options):
     unlink_pidfile = False
     unlink_socketfiles = False
     mood = states.SupervisorStates.RUNNING
+    notify_sock_path = None
+    notify_sock = None
 
     def __init__(self):
         Options.__init__(self)
@@ -555,6 +557,8 @@ class ServerOptions(Options):
 
         self.server_configs = sconfigs = section.server_configs
 
+        self.notify_sock_path = section.notify_sock_path
+
         # we need to set a fallback serverurl that process.spawn can use
 
         # prefer a unix domain socket
@@ -651,6 +655,11 @@ class ServerOptions(Options):
         section.identifier = get('identifier', 'supervisor')
         section.nodaemon = boolean(get('nodaemon', 'false'))
         section.silent = boolean(get('silent', 'false'))
+        section.notify_sock_path = get('notifysock', None)
+        if section.notify_sock_path is not None:
+            if sys.platform != 'linux':
+                raise ValueError("notifysock is only supported on Linux platform")
+            section.notify_sock_path = existing_dirpath(section.notify_sock_path)
 
         tempdir = tempfile.gettempdir()
         section.childlogdir = existing_directory(get('childlogdir', tempdir))
@@ -1252,6 +1261,12 @@ class ServerOptions(Options):
             # also https://web.archive.org/web/20160729222427/http://www.plope.com/software/collector/253
             server.close()
 
+    def close_notify_socket(self):
+        if self.notify_sock is None:
+            return
+        self.notify_sock.close()
+        self.notify_sock = None
+
     def close_logger(self):
         self.logger.close()
 
@@ -1287,6 +1302,14 @@ class ServerOptions(Options):
                                (help, errorname, why.args[0]))
         except ValueError as why:
             self.usage(why.args[0])
+
+    def open_notify_socket(self):
+        if self.notify_sock_path is None:
+            return
+        self._try_unlink(self.notify_sock_path)
+        self.notify_sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+        self.notify_sock.bind(self.notify_sock_path)
+        self.notify_sock.setsockopt(socket.SOL_SOCKET, socket.SO_PASSCRED, 1)
 
     def get_autochildlog_name(self, name, identifier, channel):
         prefix='%s-%s---%s-' % (name, channel, identifier)
