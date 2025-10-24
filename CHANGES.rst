@@ -1,6 +1,9 @@
 4.4.0.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug where ``supervisord`` would wait 1 second on startup before
+  starting any programs.  Patch by Stepan Blyshchak.
+
 - Fixed a bug where the XML-RPC method ``supervisor.getAllConfigInfo()``
   did not return the value of the ``autorestart`` program option.
 
