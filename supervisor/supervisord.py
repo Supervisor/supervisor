@@ -173,17 +173,12 @@ class Supervisor:
 
     def runforever(self):
         events.notify(events.SupervisorRunningEvent())
+        timeout = 1 # this cannot be fewer than the smallest TickEvent (5)
         first_poll = True
 
         socket_map = self.options.get_socket_map()
 
         while 1:
-            if first_poll:
-                timeout = 0
-                first_poll = False
-            else:
-                timeout = 1 # this cannot not be fewer than the smallest TickEvent (5)
-
             combined_map = {}
             combined_map.update(socket_map)
             combined_map.update(self.get_process_map())
@@ -212,7 +207,12 @@ class Supervisor:
                 if dispatcher.writable():
                     self.options.poller.register_writable(fd)
 
-            r, w = self.options.poller.poll(timeout)
+            if first_poll:
+                # initial timeout of 0 avoids delaying supervisord startup
+                r, w = self.options.poller.poll(0)
+                first_poll = False
+            else:
+                r, w = self.options.poller.poll(timeout)
 
             for fd in r:
                 if fd in combined_map:
