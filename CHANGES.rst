@@ -19,11 +19,6 @@
   in ``shlex``.  If ``supervisord`` is run on a Python version with the bug,
   it will fall back to legacy mode.  Patch by Stefan Friesel.
 
-- ``supervisorctl`` now reads extra files included via the ``[include]``
-  section in ``supervisord.conf`` like ``supervisord`` does.  This allows
-  the ``[supervisorctl]`` section or ``[ctlplugin:x]`` sections to be in
-  included files.  Patch by François Granade.
-
 4.3.0 (2025-08-23)
 ------------------
 
