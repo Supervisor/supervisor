@@ -19,6 +19,10 @@
   in ``shlex``.  If ``supervisord`` is run on a Python version with the bug,
   it will fall back to legacy mode.  Patch by Stefan Friesel.
 
+- The old example scripts in the ``supervisor/scripts/`` directory of
+  the package, which were largely undocumented, had no test coverage, and
+  were last updated over a decade ago, have been removed.
+
 4.3.0 (2025-08-23)
 ------------------
 
