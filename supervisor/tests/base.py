@@ -89,6 +89,7 @@ class DummyOptions:
         self.umaskset = None
         self.poller = DummyPoller(self)
         self.silent = False
+        self.childlog_format = '%(message)s'
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
