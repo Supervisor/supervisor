@@ -310,6 +310,9 @@ class Subprocess(object):
             # set environment
             env = os.environ.copy()
             env['SUPERVISOR_ENABLED'] = '1'
+            notify_sock_path = self.config.options.notify_sock_path
+            if notify_sock_path is not None:
+                env['NOTIFY_SOCKET'] = notify_sock_path
             serverurl = self.config.serverurl
             if serverurl is None: # unset
                 serverurl = self.config.options.serverurl # might still be None
@@ -717,6 +720,17 @@ class Subprocess(object):
                                                           self.pid))
                 self.kill(signal.SIGKILL)
 
+    def handle_sd_notify(self, msg):
+        for kv in msg.splitlines():
+            if kv == "READY=1":
+                if self.state == ProcessStates.STARTING:
+                    self.delay = 0
+                    self.backoff = 0
+                    self.change_state(ProcessStates.RUNNING)
+                    msg = 'entered RUNNING state, process sent READY=1'
+                    self.config.options.logger.info('success: %s %s' % (self.config.name, msg))
+
+
 class FastCGISubprocess(Subprocess):
     """Extends Subprocess class to handle FastCGI subprocesses"""
 
@@ -841,10 +855,19 @@ class ProcessGroupBase(object):
     def before_remove(self):
         pass
 
+    def handle_sd_notify(self, _msg, _pid):
+        pass
+
 class ProcessGroup(ProcessGroupBase):
     def transition(self):
         for proc in self.processes.values():
             proc.transition()
+
+    def handle_sd_notify(self, msg, pid):
+        for proc in self.processes.values():
+            if proc.pid == pid:
+                proc.handle_sd_notify(msg)
+                break
 
 class FastCGIProcessGroup(ProcessGroup):
 

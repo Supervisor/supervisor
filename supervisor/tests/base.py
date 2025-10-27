@@ -31,6 +31,8 @@ class DummyOptions:
     make_pipes_exception = None
     remove_exception = None
     write_exception = None
+    notify_sock_path = None
+    notify_sock = None
 
     def __init__(self):
         self.identifier = 'supervisor'
@@ -116,6 +118,9 @@ class DummyOptions:
 
     def openhttpservers(self, supervisord):
         self.httpservers_opened = True
+
+    def open_notify_socket(self):
+        pass
 
     def daemonize(self):
         self.daemonized = True
