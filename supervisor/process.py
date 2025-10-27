@@ -118,7 +118,11 @@ class Subprocess(object):
             raise BadCommand("command is empty")
 
         if "/" in program:
-            filename = program
+            if program.startswith('/'):
+                filename = program
+            else:
+                filename = os.path.join(self.config.directory, program)
+
             try:
                 st = self.config.options.stat(filename)
             except OSError:
