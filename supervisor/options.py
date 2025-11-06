@@ -629,6 +629,7 @@ class ServerOptions(Options):
             section.directory = None
         else:
             section.directory = existing_directory(directory)
+        expansions.update(directory=directory)
 
         section.user = get('user', None)
         section.umask = octal_type(get('umask', '022'))
@@ -966,6 +967,7 @@ class ServerOptions(Options):
                 expansions['ENV_%s' % k] = v
 
             directory = get(section, 'directory', None)
+            expansions.update(directory=directory)
 
             logfiles = {}
 
