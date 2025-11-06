@@ -4,7 +4,6 @@ include LICENSES.txt
 include README.rst
 include tox.ini
 include supervisor/version.txt
-include supervisor/scripts/*.py
 include supervisor/skel/*.conf
 recursive-include supervisor/tests/fixtures *.conf *.py
 recursive-include supervisor/ui *.html *.css *.png *.gif

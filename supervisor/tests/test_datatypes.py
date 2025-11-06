@@ -8,6 +8,7 @@ import unittest
 
 from supervisor.tests.base import Mock, patch, sentinel
 from supervisor.compat import maxint
+from supervisor.compat import shlex_posix_works
 
 from supervisor import datatypes
 
@@ -163,6 +164,16 @@ class DictOfKeyValuePairsTests(unittest.TestCase):
         actual = datatypes.dict_of_key_value_pairs('foo="a\nb\nc"')
         expected = {'foo': 'a\nb\nc'}
         self.assertEqual(actual, expected)
+
+    def test_handles_quotes_inside_quotes(self):
+        func = lambda: datatypes.dict_of_key_value_pairs('foo="\'\\""')
+
+        if shlex_posix_works:
+            actual = func()
+            expected = {'foo': '\'"'}
+            self.assertEqual(actual, expected)
+        else:
+            self.assertRaises(ValueError, func)
 
     def test_handles_empty_inside_quotes(self):
         actual = datatypes.dict_of_key_value_pairs('foo=""')

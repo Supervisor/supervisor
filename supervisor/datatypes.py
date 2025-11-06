@@ -5,6 +5,7 @@ import signal
 import socket
 import shlex
 
+from supervisor.compat import shlex_posix_works
 from supervisor.compat import urlparse
 from supervisor.compat import long
 from supervisor.loggers import getLevelNumByDescription
@@ -68,7 +69,7 @@ def dict_of_key_value_pairs(arg):
     """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'}
         Quotes can be used to allow commas in the value
     """
-    lexer = shlex.shlex(str(arg))
+    lexer = shlex.shlex(str(arg), posix=shlex_posix_works)
     lexer.wordchars += '/.+-():'
 
     tokens = list(lexer)
@@ -81,7 +82,12 @@ def dict_of_key_value_pairs(arg):
         if len(k_eq_v) != 3 or k_eq_v[1] != '=':
             raise ValueError(
                 "Unexpected end of key/value pairs in value '%s'" % arg)
-        D[k_eq_v[0]] = k_eq_v[2].strip('\'"')
+
+        k, v = k_eq_v[0], k_eq_v[2]
+        if not shlex_posix_works:
+            v = v.strip('\'"')
+
+        D[k] = v
         i += 4
     return D
 

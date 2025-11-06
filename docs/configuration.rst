@@ -1184,6 +1184,12 @@ section, it must contain a single key named "files".  The values in
 this key specify other configuration files to be included within the
 configuration.
 
+.. note::
+
+    The ``[include]`` section is processed only by ``supervisord``.  It is
+    ignored by ``supervisorctl``.
+
+
 ``[include]`` Section Values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1207,10 +1213,6 @@ configuration.
   *Introduced*: 3.0
 
   *Changed*: 3.3.0.  Added support for the ``host_node_name`` expansion.
-
-  *Changed*: 4.3.0.  Added support to :program:`supervisorctl` for reading
-  files specified in the ``[include]`` section.  In previous versions,
-  the ``[include]`` section was only supported by :program:`supervisord`.
 
 ``[include]`` Section Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

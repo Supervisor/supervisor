@@ -257,106 +257,7 @@ class OptionTests(unittest.TestCase):
         msg = 'A sample docstring for test_help\n'
         self.assertEqual(options.stdout.getvalue(), msg)
 
-class IncludeTestsMixin(object):
-    def test_read_config_include_with_no_files_raises_valueerror(self):
-        instance = self._makeOne()
-        text = lstrip("""\
-        [supervisord]
-
-        [include]
-        ;no files=
-        """)
-        try:
-            instance.read_config(StringIO(text))
-            self.fail("nothing raised")
-        except ValueError as exc:
-            self.assertEqual(exc.args[0],
-                ".ini file has [include] section, but no files setting")
-
-    def test_read_config_include_with_no_matching_files_logs_warning(self):
-        instance = self._makeOne()
-        text = lstrip("""\
-        [supervisord]
-
-        [supervisorctl]
-
-        [include]
-        files=nonexistent/*
-        """)
-        instance.read_config(StringIO(text))
-        self.assertEqual(instance.parse_warnings,
-                         ['No file matches via include "./nonexistent/*"'])
-
-    def test_read_config_include_reads_files_in_sorted_order(self):
-        dirname = tempfile.mkdtemp()
-        conf_d = os.path.join(dirname, "conf.d")
-        os.mkdir(conf_d)
-
-        supervisord_conf = os.path.join(dirname, "supervisord.conf")
-        text = lstrip("""\
-        [supervisord]
-
-        [supervisorctl]
-
-        [include]
-        files=%s/conf.d/*.conf
-        """ % dirname)
-        with open(supervisord_conf, 'w') as f:
-            f.write(text)
-
-        from supervisor.compat import letters
-        a_z = letters[:26]
-        for letter in reversed(a_z):
-            filename = os.path.join(conf_d, "%s.conf" % letter)
-            with open(filename, "w") as f:
-                f.write("[program:%s]\n"
-                        "command=/bin/%s\n" % (letter, letter))
-
-        instance = self._makeOne()
-        try:
-            instance.read_config(supervisord_conf)
-        finally:
-            shutil.rmtree(dirname, ignore_errors=True)
-        expected_msgs = []
-        for letter in sorted(a_z):
-            filename = os.path.join(conf_d, "%s.conf" % letter)
-            expected_msgs.append(
-                'Included extra file "%s" during parsing' % filename)
-        self.assertEqual(instance.parse_infos, expected_msgs)
-
-    def test_read_config_include_extra_file_malformed(self):
-        dirname = tempfile.mkdtemp()
-        conf_d = os.path.join(dirname, "conf.d")
-        os.mkdir(conf_d)
-
-        supervisord_conf = os.path.join(dirname, "supervisord.conf")
-        text = lstrip("""\
-        [supervisord]
-
-        [include]
-        files=%s/conf.d/*.conf
-        """ % dirname)
-        with open(supervisord_conf, 'w') as f:
-            f.write(text)
-
-        malformed_file = os.path.join(conf_d, "a.conf")
-        with open(malformed_file, 'w') as f:
-            f.write("[inet_http_server]\njunk\n")
-
-        instance = self._makeOne()
-        try:
-            instance.read_config(supervisord_conf)
-            self.fail("nothing raised")
-        except ValueError as exc:
-            self.assertTrue('contains parsing errors:' in exc.args[0])
-            self.assertTrue(malformed_file in exc.args[0])
-            msg = 'Included extra file "%s" during parsing' % malformed_file
-            self.assertTrue(msg in instance.parse_infos)
-        finally:
-            shutil.rmtree(dirname, ignore_errors=True)
-
-
-class ClientOptionsTests(unittest.TestCase, IncludeTestsMixin):
+class ClientOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ClientOptions
         return ClientOptions
@@ -538,55 +439,7 @@ class ClientOptionsTests(unittest.TestCase, IncludeTestsMixin):
         instance.realize(args=[])
         self.assertEqual(instance.serverurl, 'unix:///dev/null')
 
-    def test_read_config_include_reads_extra_files(self):
-        dirname = tempfile.mkdtemp()
-        conf_d = os.path.join(dirname, "conf.d")
-        os.mkdir(conf_d)
-
-        supervisord_conf = os.path.join(dirname, "supervisord.conf")
-        text = lstrip("""\
-        [include]
-        files=%s/conf.d/*.conf %s/conf.d/*.ini
-        """ % (dirname, dirname))
-        with open(supervisord_conf, 'w') as f:
-            f.write(text)
-
-        conf_file = os.path.join(conf_d, "a.conf")
-        with open(conf_file, 'w') as f:
-            f.write("[supervisorctl]\nhistory_file=%(here)s/sc_history\n")
-
-        ini_file = os.path.join(conf_d, "a.ini")
-        with open(ini_file, 'w') as f:
-            f.write("[supervisorctl]\nserverurl=unix://%(here)s/supervisord.sock\n")
-
-        instance = self._makeOne()
-        try:
-            instance.read_config(supervisord_conf)
-        finally:
-            shutil.rmtree(dirname, ignore_errors=True)
-        options = instance.configroot.supervisorctl
-        history_file = os.path.join(conf_d, 'sc_history')
-        self.assertEqual(options.serverurl, 'unix://' + conf_d + '/supervisord.sock')
-        self.assertEqual(options.history_file, history_file)
-        msg = 'Included extra file "%s" during parsing' % conf_file
-        self.assertTrue(msg in instance.parse_infos)
-        msg = 'Included extra file "%s" during parsing' % ini_file
-        self.assertTrue(msg in instance.parse_infos)
-
-    def test_read_config_include_expands_here(self):
-        conf = os.path.join(
-            os.path.abspath(os.path.dirname(__file__)), 'fixtures',
-            'include.conf')
-        root_here = os.path.dirname(conf)
-        include_here = os.path.join(root_here, 'example')
-        parser = self._makeOne()
-        parser.configfile = conf
-        parser.process_config_file(True)
-        section = parser.configroot.supervisorctl
-        self.assertEqual(section.history_file, include_here)
-
-
-class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
+class ServerOptionsTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import ServerOptions
         return ServerOptions
@@ -1061,6 +914,33 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
             self.assertEqual(exc.args[0],
                 ".ini file does not include supervisord section")
 
+    def test_read_config_include_with_no_files_raises_valueerror(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        ;no files=
+        """)
+        try:
+            instance.read_config(StringIO(text))
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertEqual(exc.args[0],
+                ".ini file has [include] section, but no files setting")
+
+    def test_read_config_include_with_no_matching_files_logs_warning(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        files=nonexistent/*
+        """)
+        instance.read_config(StringIO(text))
+        self.assertEqual(instance.parse_warnings,
+                         ['No file matches via include "./nonexistent/*"'])
+
     def test_read_config_include_reads_extra_files(self):
         dirname = tempfile.mkdtemp()
         conf_d = os.path.join(dirname, "conf.d")
@@ -1095,6 +975,72 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         self.assertTrue(msg in instance.parse_infos)
         msg = 'Included extra file "%s" during parsing' % ini_file
         self.assertTrue(msg in instance.parse_infos)
+
+    def test_read_config_include_reads_files_in_sorted_order(self):
+        dirname = tempfile.mkdtemp()
+        conf_d = os.path.join(dirname, "conf.d")
+        os.mkdir(conf_d)
+
+        supervisord_conf = os.path.join(dirname, "supervisord.conf")
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        files=%s/conf.d/*.conf
+        """ % dirname)
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+
+        from supervisor.compat import letters
+        a_z = letters[:26]
+        for letter in reversed(a_z):
+            filename = os.path.join(conf_d, "%s.conf" % letter)
+            with open(filename, "w") as f:
+                f.write("[program:%s]\n"
+                        "command=/bin/%s\n" % (letter, letter))
+
+        instance = self._makeOne()
+        try:
+            instance.read_config(supervisord_conf)
+        finally:
+            shutil.rmtree(dirname, ignore_errors=True)
+        expected_msgs = []
+        for letter in sorted(a_z):
+            filename = os.path.join(conf_d, "%s.conf" % letter)
+            expected_msgs.append(
+                'Included extra file "%s" during parsing' % filename)
+        self.assertEqual(instance.parse_infos, expected_msgs)
+
+    def test_read_config_include_extra_file_malformed(self):
+        dirname = tempfile.mkdtemp()
+        conf_d = os.path.join(dirname, "conf.d")
+        os.mkdir(conf_d)
+
+        supervisord_conf = os.path.join(dirname, "supervisord.conf")
+        text = lstrip("""\
+        [supervisord]
+
+        [include]
+        files=%s/conf.d/*.conf
+        """ % dirname)
+        with open(supervisord_conf, 'w') as f:
+            f.write(text)
+
+        malformed_file = os.path.join(conf_d, "a.conf")
+        with open(malformed_file, 'w') as f:
+            f.write("[inet_http_server]\njunk\n")
+
+        instance = self._makeOne()
+        try:
+            instance.read_config(supervisord_conf)
+            self.fail("nothing raised")
+        except ValueError as exc:
+            self.assertTrue('contains parsing errors:' in exc.args[0])
+            self.assertTrue(malformed_file in exc.args[0])
+            msg = 'Included extra file "%s" during parsing' % malformed_file
+            self.assertTrue(msg in instance.parse_infos)
+        finally:
+            shutil.rmtree(dirname, ignore_errors=True)
 
     def test_read_config_include_expands_host_node_name(self):
         dirname = tempfile.mkdtemp()
@@ -1738,6 +1684,20 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         self.assertEqual(pconfig.environment,
                          {'KEY1':'val1', 'KEY2':'val2', 'KEY3':'0'})
 
+    def test_processes_from_section_environment_with_escaped_chars(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo
+        environment=VAR_WITH_P="some_value_%%_end"
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        expected = {'VAR_WITH_P': 'some_value_%_end'}
+        self.assertEqual(pconfigs[0].environment, expected)
+
     def test_processes_from_section_host_node_name_expansion(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -1933,7 +1893,7 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         nocleanup = %(ENV_SUPD_NOCLEANUP)s
         childlogdir = %(ENV_HOME)s
         strip_ansi = %(ENV_SUPD_STRIP_ANSI)s
-        environment = FAKE_ENV_VAR=/some/path
+        environment = GLOBAL_ENV_VAR=%(ENV_SUPR_ENVIRONMENT_VALUE)s
 
         [inet_http_server]
         port=*:%(ENV_HTSRV_PORT)s
@@ -1954,6 +1914,7 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         startretries=%(ENV_CAT1_STARTRETRIES)s
         directory=%(ENV_CAT1_DIR)s
         umask=%(ENV_CAT1_UMASK)s
+        environment = PROGRAM_ENV_VAR=%(ENV_CAT1_ENVIRONMENT_VALUE)s
         """)
         from supervisor import datatypes
         from supervisor.options import UnhosedConfigParser
@@ -1964,6 +1925,7 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
             'ENV_HTSRV_PORT': '9210',
             'ENV_HTSRV_USER': 'someuser',
             'ENV_HTSRV_PASS': 'passwordhere',
+            'ENV_SUPR_ENVIRONMENT_VALUE': 'from_supervisord_section',
             'ENV_SUPD_LOGFILE_MAXBYTES': '51MB',
             'ENV_SUPD_LOGFILE_BACKUPS': '10',
             'ENV_SUPD_LOGLEVEL': 'info',
@@ -1978,6 +1940,7 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
             'ENV_CAT1_COMMAND_LOGDIR': '/path/to/logs',
             'ENV_CAT1_PRIORITY': '3',
             'ENV_CAT1_AUTOSTART': 'true',
+            'ENV_CAT1_ENVIRONMENT_VALUE': 'from_program_section',
             'ENV_CAT1_USER': 'root', # resolved to uid
             'ENV_CAT1_STDOUT_LOGFILE': '/tmp/cat.log',
             'ENV_CAT1_STDOUT_LOGFILE_MAXBYTES': '78KB',
@@ -2043,7 +2006,11 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         self.assertEqual(proc1.exitcodes, [0])
         self.assertEqual(proc1.directory, '/tmp')
         self.assertEqual(proc1.umask, 2)
-        self.assertEqual(proc1.environment, dict(FAKE_ENV_VAR='/some/path'))
+        expected_env = {
+            'GLOBAL_ENV_VAR': 'from_supervisord_section',
+            'PROGRAM_ENV_VAR': 'from_program_section'
+            }
+        self.assertEqual(proc1.environment, expected_env)
 
     def test_options_supervisord_section_expands_here(self):
         instance = self._makeOne()
@@ -3408,6 +3375,19 @@ class ServerOptionsTests(unittest.TestCase, IncludeTestsMixin):
         instance.daemonize()
         instance.poller.before_daemonize.assert_called_once_with()
         instance.poller.after_daemonize.assert_called_once_with()
+
+    def test_options_environment_of_supervisord_with_escaped_chars(self):
+        text = lstrip("""
+        [supervisord]
+        environment=VAR_WITH_P="some_value_%%_end"
+        """)
+
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        options = instance.configroot.supervisord
+        self.assertEqual(options.environment, dict(VAR_WITH_P="some_value_%_end"))
+
 
 class ProcessConfigTests(unittest.TestCase):
     def _getTargetClass(self):
