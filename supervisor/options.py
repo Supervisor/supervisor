@@ -628,6 +628,8 @@ class ServerOptions(Options):
         if directory is None:
             section.directory = None
         else:
+            if "~" in directory:
+                directory = normalize_path(directory)
             section.directory = existing_directory(directory)
 
         section.user = get('user', None)
@@ -966,6 +968,8 @@ class ServerOptions(Options):
                 expansions['ENV_%s' % k] = v
 
             directory = get(section, 'directory', None)
+            if directory and "~" in directory:
+                directory = normalize_path(directory)
 
             logfiles = {}
 
