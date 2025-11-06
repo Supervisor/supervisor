@@ -631,6 +631,7 @@ class ServerOptions(Options):
             if "~" in directory:
                 directory = normalize_path(directory)
             section.directory = existing_directory(directory)
+        expansions.update(directory=directory)
 
         section.user = get('user', None)
         section.umask = octal_type(get('umask', '022'))
@@ -970,6 +971,7 @@ class ServerOptions(Options):
             directory = get(section, 'directory', None)
             if directory and "~" in directory:
                 directory = normalize_path(directory)
+            expansions.update(directory=directory)
 
             logfiles = {}
 
