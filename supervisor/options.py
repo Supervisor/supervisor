@@ -1530,6 +1530,7 @@ class ServerOptions(Options):
         os._urandomfd = None
         fd, filename = tempfile.mkstemp(suffix, prefix, dir)
         os.close(fd)
+        os.chmod(filename, 0o666 ^ self.configroot.supervisord.umask)
         return filename
 
     def remove(self, path):
