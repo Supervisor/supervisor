@@ -1019,6 +1019,13 @@ class ServerOptions(Options):
                 raise ValueError(
                     'program section %s does not specify a command' % section)
 
+            custom_action_name = get(section, 'custom_action_name', None, expansions=expansions)
+            custom_action_href = get(section, 'custom_action_href', None, expansions=expansions)
+            if custom_action_name is None:
+                custom_action_href = None
+            if custom_action_href is None:
+                custom_action_name = None
+
             pconfig = klass(
                 self,
                 name=expand(process_name, expansions, 'process_name'),
@@ -1050,7 +1057,9 @@ class ServerOptions(Options):
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
                 environment=environment,
-                serverurl=serverurl)
+                serverurl=serverurl,
+                custom_action_name=custom_action_name,
+                custom_action_href=custom_action_href)
 
             programs.append(pconfig)
 
@@ -1863,7 +1872,8 @@ class ProcessConfig(Config):
         'stderr_logfile_backups', 'stderr_logfile_maxbytes',
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
-        'exitcodes', 'redirect_stderr' ]
+        'exitcodes', 'redirect_stderr',
+        'custom_action_name', 'custom_action_href' ]
     optional_param_names = [ 'environment', 'serverurl' ]
 
     def __init__(self, options, **params):
