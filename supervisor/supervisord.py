@@ -114,7 +114,12 @@ class Supervisor:
         name = config.name
         if name not in self.process_groups:
             config.after_setuid()
-            self.process_groups[name] = config.make_group()
+            try:
+                self.process_groups[name] = config.make_group()
+            except BaseException as why:
+                self.options.logger.warn('Unable to add group %s: %s' % (name, why))
+                events.notify(events.AddProcessGroupFailedEvent(name, why))
+                return False
             events.notify(events.ProcessGroupAddedEvent(name))
             return True
         return False
