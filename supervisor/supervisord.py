@@ -44,6 +44,9 @@ from supervisor.options import signame
 from supervisor import events
 from supervisor.states import SupervisorStates
 from supervisor.states import getProcessStateDescription
+from supervisor.graphutils import Graph
+
+from supervisor.states import ProcessStates
 
 class Supervisor:
     stopping = False # set after we detect that we are handling a stop request
@@ -55,6 +58,9 @@ class Supervisor:
         self.options = options
         self.process_groups = {}
         self.ticks = {}
+        self.process_spawn_dict = dict()
+        self.process_started_dict = dict()
+        self.abort_queing = None
 
     def main(self):
         if not self.options.first:
@@ -84,6 +90,29 @@ class Supervisor:
         try:
             for config in self.options.process_group_configs:
                 self.add_process_group(config)
+            # add processes to directed graph, to check for dependency cycles
+            self.g = Graph(len(self.options.process_group_configs))
+            # replace depends_on string with actual process object
+            for config in (self.options.process_group_configs):
+                # check dependencies for all programs in group:
+                for conf in enumerate(config.process_configs):
+                    if config.process_configs[conf[0]].depends_on is not None:
+                        process_dict=dict({})
+                        # split to get all processes in case there are multiple dependencies
+                        dependent_processes = (config.process_configs[conf[0]].depends_on).split()
+                        for process in dependent_processes:
+                            # this can be of form group:process or simply process
+                            try:
+                                dependent_group, dependent_process=process.split(":")
+                            except:
+                                dependent_group=dependent_process=process
+                            self.g.addEdge(config.process_configs[conf[0]].name, dependent_process)
+                            process_dict[dependent_process] = self.process_groups[dependent_group].processes[dependent_process]
+                        config.process_configs[conf[0]].depends_on = process_dict
+            # check for cyclical process dependencies
+            if self.g.cyclic() == 1:
+                raise AttributeError('Process config contains dependeny cycle(s)! Check config files again!')
+
             self.options.openhttpservers(self)
             self.options.setsignals()
             if (not self.options.nodaemon) and self.options.first:
@@ -259,7 +288,10 @@ class Supervisor:
                         pass
 
             for group in pgroups:
-                group.transition()
+                group.transition(self)
+
+            self._spawn_dependee_queue()
+            self._handle_spawn_timeout()
 
             self.reap()
             self.handle_signal()
@@ -335,6 +367,133 @@ class Supervisor:
 
     def get_state(self):
         return self.options.mood
+
+    def _spawn_dependee_queue(self):
+        """
+        Iterate over processes that are not started but added to
+        process_spawn_dict. Spawn all processes which are ready
+        (All dependees RUNNING or process without dependees)
+        """
+        for process_name, process_object in list(self.process_spawn_dict.items()):
+            if process_object.config.depends_on is not None:
+                failed_depending_processes = self._get_failed_depending_processes(process_object)
+                if failed_depending_processes:
+                    self._remove_failed_process_and_dependency_from_queue(process_object, failed_depending_processes)
+                    break
+                if self._all_dependees_running(process_object):
+                    self._spawn_process_from_process_dict(process_name, process_object)
+            else:
+                self._spawn_process_from_process_dict(process_name, process_object)
+
+    def _get_failed_depending_processes(self, process_object):
+        """ Return all processes in the dependency chain which have failed.
+        """
+        failed_depending_processes = dict()
+        for dependee in process_object.config.depends_on.values():
+            if dependee.state is ProcessStates.BACKOFF or dependee.state is ProcessStates.FATAL:
+                failed_depending_processes[dependee.config.name] = dependee
+        return failed_depending_processes
+
+    def _all_dependees_running(self, process_object):
+        return all([dependee.state is ProcessStates.RUNNING for dependee in
+                            process_object.config.depends_on.values()])
+ 
+    def _spawn_process_from_process_dict(self, process_name, process_object):
+        self.process_started_dict[process_name] = process_object
+        del self.process_spawn_dict[process_name]
+        # only spawn if the process is not running yet (could be started in the meanwhile)
+        if (process_object.state is not ProcessStates.STARTING and
+            process_object.state is not ProcessStates.RUNNING):
+            process_object.spawn(self)
+        process_object.notify_timer = 5
+
+    def _remove_processes_from_queue(self, processes):
+        for process_name in processes:
+            self.process_spawn_dict.pop(process_name, None)
+
+    def _remove_failed_process_and_dependency_from_queue(self, process_object, failed_depending_processes):
+        not_startable_processes = []
+        for failed_process_name, failed_process in failed_depending_processes.items():
+            not_startable_processes.append(failed_process_name)
+            # get all processes which can not be spawned any longer because any dependency failed
+            for process_name, process_object in self.process_spawn_dict.items():
+                if self.g.connected(process_name, failed_process_name):
+                    not_startable_processes.append(process_name)
+                    if process_object.config.autostart:
+                        process_object.config.autostart=False
+                        msg = ("Disabling the autostart of process {}, "
+                               "because a dependent process failed to start".format(process_name))
+                        process_object.config.options.logger.warn(msg)
+                    msg = ("Trying to start process {}. "
+                           "Any of the dependent processe(s) failed to start. "
+                           "Please fix all processe(s) in FATAL state or restart these manually, "
+                           "otherwise process {} can not be started"
+                           .format(process_name,
+                                   process_name))
+                    process_object.config.options.logger.warn(msg)
+        self._remove_processes_from_queue(not_startable_processes)
+
+    def _handle_spawn_timeout(self):
+        """
+        Log info message each 5 seconds if some process is waiting on a dependee
+        Timeout if a process needs longer than spawn_timeout (default=60 seconds)
+        to reach RUNNING
+        """
+        # check if any of the processes which was started did not make it and
+        # remove RUNNING processes from the process_started_dict.
+        if self.abort_queing is not None:
+            self.abort_queing.change_state(ProcessStates.FATAL)
+            self.abort_queing = None
+        if self.process_started_dict:
+            for process_name, process_object in list(self.process_started_dict.items()):
+                if process_object.state is ProcessStates.RUNNING:
+                    del self.process_started_dict[process_name]
+                # handle timeout error.
+                elif (time.time() - process_object.laststart) >= process_object.config.spawn_timeout:
+                    self._timeout_process(process_name, process_object)
+                    del self.process_started_dict[process_name]
+                    break
+                # notify user about waiting
+                elif (time.time() - process_object.laststart) >= process_object.notify_timer:
+                    self._notfiy_user_about_waiting(process_name, process_object)
+
+    def _timeout_process(self, process_name, process_object):
+        msg = ("timeout: dependee process {} in {} did not reach RUNNING within"
+                " {} seconds."
+                .format(process_name,
+                        getProcessStateDescription(process_object.state),
+                        process_object.config.spawn_timeout))
+        process_object.config.options.logger.warn(msg)
+        process_object.stop()
+        # keep track of the process that timed out - will be set to FATAL in
+        # the next iteration
+        self.abort_queing = process_object
+        keys_to_remove = []
+        for process_name, process_object in self.process_spawn_dict.items():
+            if self.g.connected(process_name, self.abort_queing.config.name):
+                keys_to_remove.append(process_name)
+                msg = ("{} will not be spawned, because {} did not "
+                       "successfully start".format(process_name, self.abort_queing.config.name))
+                process_object.config.options.logger.warn(msg)
+        for key in keys_to_remove:
+            del self.process_spawn_dict[key]
+        keys_to_remove = []
+        for process_name, process_object in self.process_started_dict.items():
+            if self.g.connected(process_name, self.abort_queing.config.name):
+                keys_to_remove.append(process_name)
+                msg = ("stopping {}, because {} did not successfully "
+                       "start".format(process_name, self.abort_queing.config.name))
+                process_object.config.options.logger.warn(msg)
+                process_object.stop()
+        for key in keys_to_remove:
+            del self.process_started_dict[key]
+
+    def _notfiy_user_about_waiting(self, process_name, process_object):
+        process_object.notify_timer += 5
+        msg = ("waiting for dependee process {} in {} state to be RUNNING"
+                .format(process_name,
+                        getProcessStateDescription(process_object.state)))
+        process_object.config.options.logger.info(msg)
 
 def timeslice(period, when):
     return int(when - (when % period))

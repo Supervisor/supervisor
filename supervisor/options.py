@@ -925,6 +925,8 @@ class ServerOptions(Options):
         serverurl = get(section, 'serverurl', None)
         if serverurl and serverurl.strip().upper() == 'AUTO':
             serverurl = None
+        depends_on = get(section, 'depends_on', None)
+        spawn_timeout = int(get(section, 'spawn_timeout', 60))
 
         # find uid from "user" option
         user = get(section, 'user', None)
@@ -1050,7 +1052,10 @@ class ServerOptions(Options):
                 exitcodes=exitcodes,
                 redirect_stderr=redirect_stderr,
                 environment=environment,
-                serverurl=serverurl)
+                serverurl=serverurl,
+                depends_on=depends_on,
+                spawn_timeout=spawn_timeout,
+            )
 
             programs.append(pconfig)
 
@@ -1864,7 +1869,8 @@ class ProcessConfig(Config):
         'stderr_events_enabled', 'stderr_syslog',
         'stopsignal', 'stopwaitsecs', 'stopasgroup', 'killasgroup',
         'exitcodes', 'redirect_stderr' ]
-    optional_param_names = [ 'environment', 'serverurl' ]
+    optional_param_names = [ 'environment', 'serverurl',
+        'depends_on', 'spawn_timeout' ]
 
     def __init__(self, options, **params):
         self.options = options
