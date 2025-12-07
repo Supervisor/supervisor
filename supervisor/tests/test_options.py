@@ -2644,7 +2644,8 @@ class ServerOptionsTests(unittest.TestCase):
         except ValueError as exc:
             self.assertEqual(exc.args[0],
                 'thisishopefullynotanimportablepackage:nonexistent cannot be '
-                'resolved within [eventlistener:cat]')
+                'resolved within [eventlistener:cat]: No module named '
+                '\'thisishopefullynotanimportablepackage\'')
 
     def test_event_listener_pool_result_handler_unimportable_AttributeError(self):
         text = lstrip("""\
@@ -2663,7 +2664,8 @@ class ServerOptionsTests(unittest.TestCase):
         except ValueError as exc:
             self.assertEqual(exc.args[0],
                 'supervisor.tests.base:nonexistent cannot be '
-                'resolved within [eventlistener:cat]')
+                'resolved within [eventlistener:cat]: module '
+                '\'supervisor.tests.base\' has no attribute \'nonexistent\'')
 
     def test_event_listener_pool_noeventsline(self):
         text = lstrip("""\
@@ -3216,7 +3218,7 @@ class ServerOptionsTests(unittest.TestCase):
             self.fail('nothing raised')
         except ValueError as exc:
             self.assertEqual(exc.args[0], 'nonexistent cannot be resolved '
-                'within [rpcinterface:dummy]')
+                'within [rpcinterface:dummy]: No module named \'nonexistent\'')
 
     def test_clear_autochildlogdir(self):
         dn = tempfile.mkdtemp()

@@ -374,9 +374,9 @@ class Options:
                                  (section, factory_key))
             try:
                 factory = self.import_spec(factory_spec)
-            except (AttributeError, ImportError):
-                raise ValueError('%s cannot be resolved within [%s]' % (
-                    factory_spec, section))
+            except (AttributeError, ImportError) as e:
+                raise ValueError('%s cannot be resolved within [%s]: %s' % (
+                    factory_spec, section, e))
 
             extras = {}
             for k in parser.options(section):
@@ -743,9 +743,9 @@ class ServerOptions(Options):
                                        'supervisor.dispatchers:default_handler')
             try:
                 result_handler = self.import_spec(result_handler)
-            except (AttributeError, ImportError):
-                raise ValueError('%s cannot be resolved within [%s]' % (
-                    result_handler, section))
+            except (AttributeError, ImportError) as e:
+                raise ValueError('%s cannot be resolved within [%s]: %s' % (
+                    result_handler, section, e))
 
             pool_event_names = [x.upper() for x in
                                 list_of_strings(get(section, 'events', ''))]
