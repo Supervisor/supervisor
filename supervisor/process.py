@@ -325,7 +325,7 @@ class Subprocess(object):
             cwd = self.config.directory
             try:
                 if cwd is not None:
-                    options.chdir(cwd)
+                    options.chdir(os.path.expanduser(cwd))
             except OSError as why:
                 code = errno.errorcode.get(why.args[0], why.args[0])
                 msg = "couldn't chdir to %s: %s\n" % (cwd, code)
