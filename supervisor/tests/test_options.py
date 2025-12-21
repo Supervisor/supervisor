@@ -2642,10 +2642,18 @@ class ServerOptionsTests(unittest.TestCase):
             instance.process_groups_from_parser(config)
             self.fail('nothing raised')
         except ValueError as exc:
-            self.assertEqual(exc.args[0],
-                'thisishopefullynotanimportablepackage:nonexistent cannot be '
-                'resolved within [eventlistener:cat]: No module named '
-                '\'thisishopefullynotanimportablepackage\'')
+            possible_msgs = (
+                # py27, py34
+                "thisishopefullynotanimportablepackage:nonexistent cannot be "
+                "resolved within [eventlistener:cat]: No module named "
+                "thisishopefullynotanimportablepackage"
+
+                # py35+
+                "thisishopefullynotanimportablepackage:nonexistent cannot be "
+                "resolved within [eventlistener:cat]: No module named "
+                "'thisishopefullynotanimportablepackage'"
+            )
+            self.assertTrue(exc.args[0] in possible_msgs, exc.args[0])
 
     def test_event_listener_pool_result_handler_unimportable_AttributeError(self):
         text = lstrip("""\
@@ -2662,10 +2670,18 @@ class ServerOptionsTests(unittest.TestCase):
             instance.process_groups_from_parser(config)
             self.fail('nothing raised')
         except ValueError as exc:
-            self.assertEqual(exc.args[0],
-                'supervisor.tests.base:nonexistent cannot be '
-                'resolved within [eventlistener:cat]: module '
-                '\'supervisor.tests.base\' has no attribute \'nonexistent\'')
+            possible_msgs = (
+                # py27, py34
+                "supervisor.tests.base:nonexistent cannot be resolved "
+                "within [eventlistener:cat]: 'module' object "
+                "has no attribute 'nonexistent'",
+
+                # py35+
+                "supervisor.tests.base:nonexistent cannot be resolved "
+                "within [eventlistener:cat]: module 'supervisor.tests.base' "
+                "has no attribute 'nonexistent'"
+            )
+            self.assertTrue(exc.args[0] in possible_msgs, exc.args[0])
 
     def test_event_listener_pool_noeventsline(self):
         text = lstrip("""\
@@ -3217,8 +3233,16 @@ class ServerOptionsTests(unittest.TestCase):
                                  'rpcinterface:')
             self.fail('nothing raised')
         except ValueError as exc:
-            self.assertEqual(exc.args[0], 'nonexistent cannot be resolved '
-                'within [rpcinterface:dummy]: No module named \'nonexistent\'')
+            possible_msgs = (
+                # py27, py34
+                "nonexistent cannot be resolved within [rpcinterface:dummy]: "
+                "No module named nonexistent",
+
+                # py35+
+                "nonexistent cannot be resolved within [rpcinterface:dummy]: "
+                "No module named 'nonexistent'",
+            )
+            self.assertTrue(exc.args[0] in possible_msgs, exc.args[0])
 
     def test_clear_autochildlogdir(self):
         dn = tempfile.mkdtemp()

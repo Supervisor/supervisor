@@ -23,6 +23,10 @@
   the package, which were largely undocumented, had no test coverage, and
   were last updated over a decade ago, have been removed.
 
+- When importing a plugin fails, the error message printed by ``supervisord``
+  now includes the Python exception message for easier debugging.
+  Patch by Sandro Jaeckel.
+
 4.3.0 (2025-08-23)
 ------------------
 
