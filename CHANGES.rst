@@ -25,7 +25,7 @@
 
 - When importing a plugin fails, the error message printed by ``supervisord``
   now includes the Python exception message for easier debugging.
-  Patch by Sandro Jaeckel.
+  Patch by Sandro Jäckel.
 
 4.3.0 (2025-08-23)
 ------------------
