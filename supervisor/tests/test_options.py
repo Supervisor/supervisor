@@ -490,6 +490,7 @@ class ServerOptionsTests(unittest.TestCase):
         stopwaitsecs=5
         startsecs=5
         startretries=10
+        restartpause=2
         directory=/tmp
         umask=002
 
@@ -571,6 +572,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.autorestart, datatypes.RestartWhenExitUnexpected)
         self.assertEqual(proc1.startsecs, 5)
         self.assertEqual(proc1.startretries, 10)
+        self.assertEqual(proc1.restartpause, 2)
         self.assertEqual(proc1.uid, 0)
         self.assertEqual(proc1.stdout_logfile, '/tmp/cat.log')
         self.assertEqual(proc1.stopsignal, signal.SIGKILL)
@@ -1644,6 +1646,7 @@ class ServerOptionsTests(unittest.TestCase):
         autorestart = false
         startsecs = 100
         startretries = 100
+        restartpause = 2
         user = root
         stdout_logfile = NONE
         stdout_logfile_backups = 1
@@ -1670,6 +1673,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(pconfig.autorestart, False)
         self.assertEqual(pconfig.startsecs, 100)
         self.assertEqual(pconfig.startretries, 100)
+        self.assertEqual(pconfig.restartpause, 2)
         self.assertEqual(pconfig.uid, 0)
         self.assertEqual(pconfig.stdout_logfile, None)
         self.assertEqual(pconfig.stdout_capture_maxbytes, 0)
@@ -1912,6 +1916,7 @@ class ServerOptionsTests(unittest.TestCase):
         stopwaitsecs=%(ENV_CAT1_STOPWAIT)s
         startsecs=%(ENV_CAT1_STARTWAIT)s
         startretries=%(ENV_CAT1_STARTRETRIES)s
+        restartpause=%(ENV_CAT1_RESTARTPAUSE)s
         directory=%(ENV_CAT1_DIR)s
         umask=%(ENV_CAT1_UMASK)s
         environment = PROGRAM_ENV_VAR=%(ENV_CAT1_ENVIRONMENT_VALUE)s
@@ -1949,6 +1954,7 @@ class ServerOptionsTests(unittest.TestCase):
             'ENV_CAT1_STOPWAIT': '5',
             'ENV_CAT1_STARTWAIT': '5',
             'ENV_CAT1_STARTRETRIES': '10',
+            'ENV_CAT1_RESTARTPAUSE': '2',
             'ENV_CAT1_DIR': '/tmp',
             'ENV_CAT1_UMASK': '002',
            }
@@ -1994,6 +2000,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(proc1.autorestart, datatypes.RestartWhenExitUnexpected)
         self.assertEqual(proc1.startsecs, 5)
         self.assertEqual(proc1.startretries, 10)
+        self.assertEqual(proc1.restartpause, 2)
         self.assertEqual(proc1.uid, 0)
         self.assertEqual(proc1.stdout_logfile, '/tmp/cat.log')
         self.assertEqual(proc1.stopsignal, signal.SIGKILL)
@@ -3424,7 +3431,7 @@ class ProcessConfigTests(unittest.TestCase):
         defaults = {}
         for name in ('name', 'command', 'directory', 'umask',
                      'priority', 'autostart', 'autorestart',
-                     'startsecs', 'startretries', 'uid',
+                     'startsecs', 'startretries', 'restartpause' ,'uid',
                      'stdout_logfile', 'stdout_capture_maxbytes',
                      'stdout_events_enabled', 'stdout_syslog',
                      'stderr_logfile', 'stderr_capture_maxbytes',
@@ -3522,7 +3529,7 @@ class EventListenerConfigTests(unittest.TestCase):
         defaults = {}
         for name in ('name', 'command', 'directory', 'umask',
                      'priority', 'autostart', 'autorestart',
-                     'startsecs', 'startretries', 'uid',
+                     'startsecs', 'startretries', 'restartpause' ,'uid',
                      'stdout_logfile', 'stdout_capture_maxbytes',
                      'stdout_events_enabled', 'stdout_syslog',
                      'stderr_logfile', 'stderr_capture_maxbytes',
@@ -3570,7 +3577,7 @@ class FastCGIProcessConfigTests(unittest.TestCase):
         defaults = {}
         for name in ('name', 'command', 'directory', 'umask',
                      'priority', 'autostart', 'autorestart',
-                     'startsecs', 'startretries', 'uid',
+                     'startsecs', 'startretries', 'restartpause', 'uid',
                      'stdout_logfile', 'stdout_capture_maxbytes',
                      'stdout_events_enabled', 'stdout_syslog',
                      'stderr_logfile', 'stderr_capture_maxbytes',
