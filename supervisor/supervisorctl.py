@@ -742,19 +742,20 @@ class DefaultControllerPlugin(ControllerPluginBase):
     def _startresult(self, result):
         name = make_namespec(result['group'], result['name'])
         code = result['status']
-        template = '%s: ERROR (%s)'
+        description = result.get('description', '')
+        template = '%s: ERROR (%s) : %s'
         if code == xmlrpc.Faults.BAD_NAME:
-            return template % (name, 'no such process')
+            return template % (name, 'no such process', description)
         elif code == xmlrpc.Faults.NO_FILE:
-            return template % (name, 'no such file')
+            return template % (name, 'no such file', description)
         elif code == xmlrpc.Faults.NOT_EXECUTABLE:
-            return template % (name, 'file is not executable')
+            return template % (name, 'file is not executable', description)
         elif code == xmlrpc.Faults.ALREADY_STARTED:
-            return template % (name, 'already started')
+            return template % (name, 'already started', description)
         elif code == xmlrpc.Faults.SPAWN_ERROR:
-            return template % (name, 'spawn error')
+            return template % (name, 'spawn error', description)
         elif code == xmlrpc.Faults.ABNORMAL_TERMINATION:
-            return template % (name, 'abnormal termination')
+            return template % (name, 'abnormal termination', description)
         elif code == xmlrpc.Faults.SUCCESS:
             return '%s: started' % name
         # assertion
