@@ -85,6 +85,7 @@ class Supervisor:
             for config in self.options.process_group_configs:
                 self.add_process_group(config)
             self.options.openhttpservers(self)
+            self.options.open_notify_socket()
             self.options.setsignals()
             if (not self.options.nodaemon) and self.options.first:
                 self.options.daemonize()
@@ -177,6 +178,7 @@ class Supervisor:
         first_poll = True
 
         socket_map = self.options.get_socket_map()
+        notify_sock = self.options.notify_sock
 
         while 1:
             combined_map = {}
@@ -200,6 +202,9 @@ class Supervisor:
                     # if there are no unstopped processes (we're done
                     # killing everything), it's OK to shutdown or reload
                     raise asyncore.ExitNow
+
+            if self.options.notify_sock:
+                self.options.poller.register_readable(notify_sock.fileno())
 
             for fd, dispatcher in combined_map.items():
                 if dispatcher.readable():
@@ -257,6 +262,17 @@ class Supervisor:
                         self.options.poller.unregister_writable(fd)
                     except:
                         pass
+
+            if notify_sock and notify_sock.fileno() in r:
+                import socket
+                import struct
+                data, ancdata, _, _ = notify_sock.recvmsg(4096, socket.CMSG_SPACE(struct.calcsize("3i")))
+                msg = data.decode("utf-8")
+                for cmsg_level, cmsg_type, cmsg_data in ancdata:
+                    if cmsg_level == socket.SOL_SOCKET and cmsg_type == socket.SCM_CREDENTIALS:
+                        pid, _, _ = struct.unpack("3i", cmsg_data)
+                for group in pgroups:
+                    group.handle_sd_notify(msg, pid)
 
             for group in pgroups:
                 group.transition()
@@ -378,6 +394,7 @@ def main(args=None, test=False):
         else:
             go(options)
         options.close_httpservers()
+        options.close_notify_socket()
         options.close_logger()
         first = False
         if test or (options.mood < SupervisorStates.RESTARTING):
