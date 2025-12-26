@@ -454,6 +454,22 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertRaises(SystemExit, options.version, None)
         self.assertEqual(options.stdout.getvalue(), VERSION + '\n')
 
+    def test_mktempfile(self):
+        text = lstrip("""
+        [supervisord]
+        identifier=foo ;comment should not be in identifier
+        """)
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        options = instance.configroot.supervisord
+        filename = instance.mktempfile('', 'tmp', None)
+        try:
+            mode = os.stat(filename).st_mode & 0o777
+            self.assertEqual(oct(mode), oct(0o666 ^ options.umask))
+        finally:
+            os.remove(filename)
+
     def test_options(self):
         s = lstrip("""
         [supervisord]
@@ -3248,10 +3264,11 @@ class ServerOptionsTests(unittest.TestCase):
         dn = tempfile.mkdtemp()
         try:
             instance = self._makeOne()
+            instance.configroot.supervisord.umask = 0o022
             instance.childlogdir = dn
             sid = 'supervisor'
             instance.identifier = sid
-            logfn = instance.get_autochildlog_name('foo', sid,'stdout')
+            logfn = instance.get_autochildlog_name('foo', sid, 'stdout')
             first = logfn + '.1'
             second = logfn + '.2'
             f1 = open(first, 'w')
