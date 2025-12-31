@@ -414,6 +414,12 @@ class ServerOptions(Options):
         self.add(None, None, "v", "version", self.version)
         self.add("nodaemon", "supervisord.nodaemon", "n", "nodaemon", flag=1,
                  default=0)
+        self.add("logfile_format", "supervisord.logfile_format",
+                 "", "logfile_format=", str,
+                 default="%(asctime)s %(levelname)s %(message)s")
+        self.add("childlog_format", "supervisord.childlog_format",
+                 "", "childlog_format=", str,
+                 default="%(message)s")
         self.add("user", "supervisord.user", "u:", "user=")
         self.add("umask", "supervisord.umask", "m:", "umask=",
                  octal_type, default='022')
@@ -488,6 +494,31 @@ class ServerOptions(Options):
                 self.usage(msg) # invalid user
             self.uid = uid
             self.gid = gid_for_uid(uid)
+
+        loglevel = self.loglevel
+        if loglevel is None:
+            loglevel = section.loglevel
+
+        logfile_format = section.logfile_format
+        childlog_format = section.childlog_format
+
+        # Configure the main logger
+        self.logger = loggers.getLogger(loglevel)
+
+        if self.logfile:
+            logfile = self.logfile
+        else:
+            logfile = section.logfile
+
+        if logfile:
+            loggers.handle_file(
+                self.logger,
+                logfile,
+                logfile_format,
+                rotating=True,
+                maxbytes=section.logfile_maxbytes,
+                backups=section.logfile_backups
+            )
 
         if not self.loglevel:
             self.loglevel = section.loglevel
@@ -639,6 +670,11 @@ class ServerOptions(Options):
         section.pidfile = existing_dirpath(get('pidfile', 'supervisord.pid'))
         section.identifier = get('identifier', 'supervisor')
         section.nodaemon = boolean(get('nodaemon', 'false'))
+        section.logfile_format = get('logfile_format',
+                                '%(asctime)s %(levelname)s %(message)s',
+                        do_expand=False)
+        section.childlog_format = get('childlog_format', '%(message)s',
+                        do_expand=False)
         section.silent = boolean(get('silent', 'false'))
 
         tempdir = tempfile.gettempdir()
