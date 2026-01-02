@@ -188,11 +188,33 @@ class Subprocess(object):
         self.spawnerr = msg
         self.config.options.logger.info("spawnerr: %s" % msg)
 
-    def spawn(self):
+    def queue_all_dependee_processes(self, supervisor):
+        if (self.config.name not in supervisor.process_spawn_dict.keys() and
+            self.config.name not in supervisor.process_started_dict.keys()):
+            supervisor.process_spawn_dict[self.config.name] = self
+        if self.config.depends_on is not None:
+            for dependee in self.config.depends_on.values():
+                if dependee.state is not ProcessStates.RUNNING and dependee.state is not ProcessStates.STARTING:
+                    if (dependee.config.name not in supervisor.process_spawn_dict.keys() and
+                        dependee.config.name not in supervisor.process_started_dict.keys()):
+                        supervisor.process_spawn_dict[dependee.config.name] = dependee
+                        dependee.queue_all_dependee_processes(supervisor)
+
+    def spawn(self, supervisor=None):
         """Start the subprocess.  It must not be running already.
 
         Return the process id.  If the fork() call fails, return None.
+        Parameters:
+            supervisor : supervisord instance. This parameter is required
+            to keep track of all dependent processes in
+            supervisor.process_spawn_dict
         """
+        if self.config.depends_on is not None and not supervisor.abort_queing :
+            if any([dependee.state is not ProcessStates.RUNNING for dependee in
+                    self.config.depends_on.values()]):
+                self.queue_all_dependee_processes(supervisor)
+                return
+
         options = self.config.options
         processname = as_string(self.config.name)
 
@@ -653,7 +675,13 @@ class Subprocess(object):
     def get_state(self):
         return self.state
 
-    def transition(self):
+    def transition(self, supervisor=None):
+        """
+        Parameters:
+            supervisor : supervisord instance. This parameter is required
+            to keep track of all dependent processes in
+            supervisor.process_spawn_dict
+        """
         now = time.time()
         state = self.state
 
@@ -665,22 +693,22 @@ class Subprocess(object):
             # dont start any processes if supervisor is shutting down
             if state == ProcessStates.EXITED:
                 if self.config.autorestart:
+                    # STOPPED -> STARTING
                     if self.config.autorestart is RestartUnconditionally:
                         # EXITED -> STARTING
-                        self.spawn()
+                        self.spawn(supervisor)
                     else: # autorestart is RestartWhenExitUnexpected
                         if self.exitstatus not in self.config.exitcodes:
                             # EXITED -> STARTING
-                            self.spawn()
+                            self.spawn(supervisor)
             elif state == ProcessStates.STOPPED and not self.laststart:
                 if self.config.autostart:
-                    # STOPPED -> STARTING
-                    self.spawn()
+                    self.spawn(supervisor)
             elif state == ProcessStates.BACKOFF:
                 if self.backoff <= self.config.startretries:
                     if now > self.delay:
                         # BACKOFF -> STARTING
-                        self.spawn()
+                        self.spawn(supervisor)
 
         processname = as_string(self.config.name)
         if state == ProcessStates.STARTING:
@@ -735,9 +763,13 @@ class FastCGISubprocess(Subprocess):
                                       '%s:%s' % (self.group, dir(self.group)))
         self.fcgi_sock = self.group.socket_manager.get_socket()
 
-    def spawn(self):
+    def spawn(self, supervisor=None):
         """
         Overrides Subprocess.spawn() so we can hook in before it happens
+        Parameters:
+            supervisor : This parameter has no effect and is only for
+            not breaking the tests. This would be needed for the depends_on
+            feature which is not available for FastCGI subprocesses.
         """
         self.before_spawn()
         pid = Subprocess.spawn(self)
@@ -842,9 +874,15 @@ class ProcessGroupBase(object):
         pass
 
 class ProcessGroup(ProcessGroupBase):
-    def transition(self):
+    def transition(self, supervisor=None):
+        """
+        Parameters:
+            supervisor : supervisord instance. This parameter is required
+            to keep track of all dependent processes in
+            supervisor.process_spawn_dict
+        """
         for proc in self.processes.values():
-            proc.transition()
+            proc.transition(supervisor)
 
 class FastCGIProcessGroup(ProcessGroup):
 
@@ -879,11 +917,17 @@ class EventListenerPool(ProcessGroupBase):
             # rebuffer the event
             self._acceptEvent(event.event, head=True)
 
-    def transition(self):
+    def transition(self, supervisor=None):
+        """
+        Parameters:
+            supervisor : This parameter has no effect and is only for
+            not breaking the tests. This would be needed for the depends_on
+            feature which is not available for EventListenerPool.
+        """
         processes = self.processes.values()
         dispatch_capable = False
         for process in processes:
-            process.transition()
+            process.transition(supervisor)
             # this is redundant, we do it in _dispatchEvent too, but we
             # want to reduce function call overhead
             if process.state == ProcessStates.RUNNING:

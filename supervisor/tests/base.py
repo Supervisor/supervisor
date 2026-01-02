@@ -450,7 +450,7 @@ class DummyProcess(object):
         self.sent_signal = signal
 
 
-    def spawn(self):
+    def spawn(self, supervisor=None):
         self.spawned = True
         from supervisor.process import ProcessStates
         self.state = ProcessStates.RUNNING
@@ -494,7 +494,7 @@ class DummyProcess(object):
             raise self.write_exception
         self.stdin_buffer += chars
 
-    def transition(self):
+    def transition(self, supervisor=None):
         self.transitioned = True
 
     def __eq__(self, other):
@@ -517,7 +517,8 @@ class DummyPConfig:
                  stderr_syslog=False,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
-                 exitcodes=(0,), environment=None, serverurl=None):
+                 exitcodes=(0,), environment=None, serverurl=None, depends_on=None,
+                 spawn_timeout=60):
         self.options = options
         self.name = name
         self.command = command
@@ -553,6 +554,8 @@ class DummyPConfig:
         self.umask = umask
         self.autochildlogs_created = False
         self.serverurl = serverurl
+        self.depends_on = depends_on
+        self.spawn_timeout = spawn_timeout
 
     def get_path(self):
         return ["/bin", "/usr/bin", "/usr/local/bin"]
@@ -1043,7 +1046,7 @@ class DummyProcessGroup(object):
         self.unstopped_processes = []
         self.before_remove_called = False
 
-    def transition(self):
+    def transition(self, supervisor=None):
         self.transitioned = True
 
     def before_remove(self):
