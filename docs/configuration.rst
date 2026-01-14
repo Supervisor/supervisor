@@ -1139,6 +1139,36 @@ where specified.
 
   *Introduced*: 3.0
 
+``custom_action_name``
+
+  Custom action name to be displayed along the usual Start/Stop/Tail log
+  actions in the Web UI. When this custom action button is clicked a new
+  browser window will open with URL provided by custom_action_href parameter.
+  This is useful for example to open an application dashboard or control panel.
+  Both custom_action_name and custom_action_href parameters have to be
+  defined for custom button to be displayed.
+
+  *Default*: None
+
+  *Required*:  No.
+
+  *Introduced*: 4.3.0
+
+``custom_action_href``
+
+  Custom action link to be displayed along the usual Start/Stop/Tail log
+  actions in the Web UI. Title for the custom action link is defined by the
+  custom_action_name parameter. When this custom action button is clicked a new
+  browser window will open with URL provided by custom_action_href parameter.
+  Both custom_action_name and custom_action_href parameters have to be
+  defined for custom button to be displayed.
+
+  *Default*: None
+
+  *Required*:  No.
+
+  *Introduced*: 4.3.0
+
 ``[program:x]`` Section Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
