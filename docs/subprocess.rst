@@ -255,7 +255,8 @@ automatically restarted by :program:`supervisord`.  It will switch
 between ``STARTING`` and ``BACKOFF`` states until it becomes evident
 that it cannot be started because the number of ``startretries`` has
 exceeded the maximum, at which point it will transition to the
-``FATAL`` state.
+``FATAL`` state. If ``startretries`` is set to ``-1``, it will retry
+indefinitely without reaching the ``FATAL`` state.
 
 .. note::
     Retries will take increasingly more time depending on the number of
