@@ -739,7 +739,19 @@ class FastCGISubprocess(Subprocess):
         """
         Overrides Subprocess.spawn() so we can hook in before it happens
         """
-        self.before_spawn()
+        try:
+            self.before_spawn()
+        except NotImplementedError:
+            raise
+        except BaseException as e:
+            if hasattr(self, 'group') and hasattr(self.group, 'socket_manager'):
+                self.record_spawnerr('Could not create FastCGI socket %s: %s' % (
+                    self.group.socket_manager.config(), e))
+            else:
+                self.record_spawnerr(e.args[0])
+            self.change_state(ProcessStates.BACKOFF)
+            self.give_up()
+            return
         pid = Subprocess.spawn(self)
         if pid is None:
             #Remove object reference to decrement the reference count on error
