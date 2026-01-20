@@ -465,6 +465,7 @@ class ServerOptionsTests(unittest.TestCase):
         logfile_maxbytes=1000MB
         logfile_backups=5
         loglevel=error
+        logformat=%%(asctime)s | %%(levelname)s | %%(message)s
         pidfile=supervisord.pid
         nodaemon=true
         silent=true
@@ -540,6 +541,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(options.logfile_maxbytes, 1000 * 1024 * 1024)
         self.assertEqual(options.logfile_backups, 5)
         self.assertEqual(options.loglevel, 40)
+        self.assertEqual(options.logformat, '%(asctime)s | %(levelname)s | %(message)s')
         self.assertEqual(options.pidfile, 'supervisord.pid')
         self.assertEqual(options.nodaemon, True)
         self.assertEqual(options.silent, True)
@@ -690,6 +692,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(instance.logfile_maxbytes, 1000 * 1024 * 1024)
         self.assertEqual(instance.logfile_backups, 5)
         self.assertEqual(instance.loglevel, 40)
+        self.assertEqual(instance.logformat, '%(asctime)s | %(levelname)s | %(message)s')
         self.assertEqual(instance.pidfile, os.path.join(here,'supervisord.pid'))
         self.assertEqual(instance.nodaemon, True)
         self.assertEqual(instance.silent, True)
