@@ -677,6 +677,10 @@ class Subprocess(object):
                     # STOPPED -> STARTING
                     self.spawn()
             elif state == ProcessStates.BACKOFF:
+                # immediate retry on startretries set to -1
+                if self.config.startretries == -1:
+                    # BACKOFF -> STARTING
+                    self.spawn()
                 if self.backoff <= self.config.startretries:
                     if now > self.delay:
                         # BACKOFF -> STARTING
@@ -698,13 +702,18 @@ class Subprocess(object):
                 logger.info('success: %s %s' % (processname, msg))
 
         if state == ProcessStates.BACKOFF:
-            if self.backoff > self.config.startretries:
-                # BACKOFF -> FATAL if the proc has exceeded its number
-                # of retries
-                self.give_up()
-                msg = ('entered FATAL state, too many start retries too '
-                       'quickly')
-                logger.info('gave up: %s %s' % (processname, msg))
+            # never give up if startretries set to -1 - otherwise
+            # check whether backoff exceeded the configured startretries.
+            if self.config.startretries == -1:
+                pass
+            else:
+                if self.backoff > self.config.startretries:
+                    # BACKOFF -> FATAL if the proc has exceeded its number
+                    # of retries
+                    self.give_up()
+                    msg = ('entered FATAL state, too many start retries too '
+                           'quickly')
+                    logger.info('gave up: %s %s' % (processname, msg))
 
         elif state == ProcessStates.STOPPING:
             time_left = self.delay - now

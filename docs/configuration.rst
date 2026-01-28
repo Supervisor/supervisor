@@ -752,7 +752,8 @@ where specified.
 
   The number of serial failure attempts that :program:`supervisord`
   will allow when attempting to start the program before giving up and
-  putting the process into an ``FATAL`` state.
+  putting the process into an ``FATAL`` state. If set to ``-1`` it will
+  retry forever without increasing the delay between retries.
 
   .. note::
 
