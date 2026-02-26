@@ -116,7 +116,7 @@ class POutputDispatcherTests(unittest.TestCase):
         dispatcher = self._makeOne(process)
         try:
             raise ValueError('foo')
-        except:
+        except Exception:
             dispatcher.handle_error()
         result = options.logger.data[0]
         self.assertTrue(result.startswith(
@@ -680,7 +680,7 @@ class PInputDispatcherTests(unittest.TestCase):
         dispatcher = self._makeOne(process)
         try:
             raise ValueError('foo')
-        except:
+        except Exception:
             dispatcher.handle_error()
         result = options.logger.data[0]
         self.assertTrue(result.startswith(
@@ -1119,7 +1119,7 @@ class PEventListenerDispatcherTests(unittest.TestCase):
         dispatcher = self._makeOne(process)
         try:
             raise ValueError('foo')
-        except:
+        except Exception:
             dispatcher.handle_error()
         result = options.logger.data[0]
         self.assertTrue(result.startswith(

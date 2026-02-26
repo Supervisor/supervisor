@@ -107,7 +107,7 @@ class Handler:
                 # time it's called. So just do it again
                 self.stream.write(msg)
             self.flush()
-        except:
+        except Exception:
             self.handleError()
 
     def handleError(self):
@@ -376,7 +376,7 @@ class SyslogHandler(Handler):
                     self._syslog(msg)
                 except UnicodeError:
                     self._syslog(msg.encode("UTF-8"))
-        except:
+        except Exception:
             self.handleError()
 
 def getLogger(level=None):

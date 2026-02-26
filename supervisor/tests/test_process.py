@@ -690,7 +690,7 @@ class SubprocessTests(unittest.TestCase):
         finally:
             try:
                 os.remove(executable)
-            except:
+            except Exception:
                 pass
             signal.signal(signal.SIGCHLD, signal.SIG_DFL)
 

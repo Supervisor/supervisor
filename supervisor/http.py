@@ -448,7 +448,7 @@ class deferring_http_channel(http_server.http_channel):
                         # This isn't used anywhere.
                         # r.handler = h # CYCLE
                         h.handle_request (r)
-                    except:
+                    except Exception:
                         self.server.exceptions.increment()
                         (file, fun, line), t, v, tbinfo = \
                                asyncore.compact_traceback()
@@ -458,7 +458,7 @@ class deferring_http_channel(http_server.http_channel):
                             'error')
                         try:
                             r.error (500)
-                        except:
+                        except Exception:
                             pass
                     return
 
@@ -588,7 +588,7 @@ class supervisor_af_unix_http_server(supervisor_http_server):
                     sys.stderr.write(msg)
                     try:
                         os.unlink(socketname)
-                    except:
+                    except Exception:
                         pass
                     sock.close()
                     time.sleep(.3)
@@ -819,7 +819,7 @@ def make_http_servers(options, supervisord):
         for name, factory, d in options.rpcinterface_factories:
             try:
                 inst = factory(supervisord, **d)
-            except:
+            except Exception:
                 tb = traceback.format_exc()
                 options.logger.warn(tb)
                 raise ValueError('Could not make %s rpc interface' % name)

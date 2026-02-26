@@ -455,7 +455,7 @@ class PEventListenerDispatcher(PDispatcher):
             logger.warn('%s: event was rejected' % procname)
             self._change_listener_state(EventListenerStates.ACKNOWLEDGED)
             notify(EventRejectedEvent(process, process.event))
-        except:
+        except Exception:
             logger.warn('%s: event caused an error' % procname)
             self._change_listener_state(EventListenerStates.UNKNOWN)
             notify(EventRejectedEvent(process, process.event))

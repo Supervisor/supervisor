@@ -226,7 +226,7 @@ class Supervisor:
                             self.options.poller.unregister_readable(fd)
                     except asyncore.ExitNow:
                         raise
-                    except:
+                    except Exception:
                         combined_map[fd].handle_error()
                 else:
                     # if the fd is not in combined_map, we should unregister it. otherwise,
@@ -234,7 +234,7 @@ class Supervisor:
                     self.options.logger.blather('unexpected read event from fd %r' % fd)
                     try:
                         self.options.poller.unregister_readable(fd)
-                    except:
+                    except Exception:
                         pass
 
             for fd in w:
@@ -249,13 +249,13 @@ class Supervisor:
                             self.options.poller.unregister_writable(fd)
                     except asyncore.ExitNow:
                         raise
-                    except:
+                    except Exception:
                         combined_map[fd].handle_error()
                 else:
                     self.options.logger.blather('unexpected write event from fd %r' % fd)
                     try:
                         self.options.poller.unregister_writable(fd)
-                    except:
+                    except Exception:
                         pass
 
             for group in pgroups:

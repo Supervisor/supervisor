@@ -53,7 +53,7 @@ class auth_handler:
                 cookie = get_header (AUTHORIZATION, request.header, 2)
                 try:
                     decoded = as_string(decodestring(as_bytes(cookie)))
-                except:
+                except Exception:
                     sys.stderr.write('malformed authorization info <%s>\n' % cookie)
                     request.error (400)
                     return

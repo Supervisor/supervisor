@@ -616,7 +616,7 @@ class http_channel (asynchat.async_chat):
                         # This isn't used anywhere.
                         # r.handler = h # CYCLE
                         h.handle_request (r)
-                    except:
+                    except Exception:
                         self.server.exceptions.increment()
                         (file, fun, line), t, v, tbinfo = asyncore.compact_traceback()
                         self.log_info(
@@ -624,7 +624,7 @@ class http_channel (asynchat.async_chat):
                                         'error')
                         try:
                             r.error (500)
-                        except:
+                        except Exception:
                             pass
                     return
 

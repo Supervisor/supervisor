@@ -43,7 +43,7 @@ def list_of_strings(arg):
         return []
     try:
         return [x.strip() for x in arg.split(',')]
-    except:
+    except Exception:
         raise ValueError("not a valid list of strings: " + repr(arg))
 
 def list_of_ints(arg):
@@ -52,7 +52,7 @@ def list_of_ints(arg):
     else:
         try:
             return list(map(int, arg.split(",")))
-        except:
+        except Exception:
             raise ValueError("not a valid list of ints: " + repr(arg))
 
 def list_of_exitcodes(arg):
@@ -62,7 +62,7 @@ def list_of_exitcodes(arg):
             if (val > 255) or (val < 0):
                 raise ValueError('Invalid exit code "%s"' % val)
         return vals
-    except:
+    except Exception:
         raise ValueError("not a valid list of exit codes: " + repr(arg))
 
 def dict_of_key_value_pairs(arg):
@@ -221,7 +221,7 @@ class InetStreamSocketConfig(SocketConfig):
         try:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind(self.addr())
-        except:
+        except Exception:
             sock.close()
             raise
         return sock
@@ -252,7 +252,7 @@ class UnixStreamSocketConfig(SocketConfig):
             sock.bind(self.addr())
             self._chown()
             self._chmod()
-        except:
+        except Exception:
             sock.close()
             if os.path.exists(self.path):
                 os.unlink(self.path)
@@ -295,7 +295,7 @@ def colon_separated_user_group(arg):
             uid = name_to_uid(parts[0])
             gid = name_to_gid(parts[1])
         return (uid, gid)
-    except:
+    except Exception:
         raise ValueError('Invalid user:group definition %s' % arg)
 
 def name_to_uid(name):

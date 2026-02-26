@@ -134,7 +134,7 @@ class rotating_file_logger (file_logger):
                 pass
             os.rename(self.filename, newname)
             self.file = open(self.filename, self.mode)
-        except:
+        except Exception:
             pass
 
 # log to a stream socket, asynchronously
