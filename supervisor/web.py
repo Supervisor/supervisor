@@ -54,7 +54,7 @@ class DeferredWebProducer:
             self.finished = True
             return self.sendresponse(response)
 
-        except:
+        except Exception:
             tb = traceback.format_exc()
             # this should go to the main supervisor log file
             self.request.channel.server.logger.log('Web interface error', tb)

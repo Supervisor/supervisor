@@ -341,7 +341,7 @@ class Subprocess(object):
                 code = errno.errorcode.get(why.args[0], why.args[0])
                 msg = "couldn't exec %s: %s\n" % (argv[0], code)
                 options.write(2, "supervisor: " + msg)
-            except:
+            except Exception:
                 (file, fun, line), t,v,tbinfo = asyncore.compact_traceback()
                 error = '%s, %s: file: %s line: %s' % (t, v, file, line)
                 msg = "couldn't exec %s: %s\n" % (filename, error)
@@ -474,7 +474,7 @@ class Subprocess(object):
                     # not.  we will do it during normal SIGCHLD processing.
                     return None
                 raise
-        except:
+        except Exception:
             tb = traceback.format_exc()
             msg = 'unknown problem killing %s (%s):%s' % (processname,
                                                           self.pid, tb)
@@ -523,7 +523,7 @@ class Subprocess(object):
                     # not.  we will do it during normal SIGCHLD processing.
                     return None
                 raise
-        except:
+        except Exception:
             tb = traceback.format_exc()
             msg = 'unknown problem sending sig %s (%s):%s' % (
                                 processname, self.pid, tb)

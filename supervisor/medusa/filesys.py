@@ -78,7 +78,7 @@ import re
 def safe_stat (path):
     try:
         return path, os.stat (path)
-    except:
+    except Exception:
         return None
 
 class os_filesystem:
@@ -118,7 +118,7 @@ class os_filesystem:
                     os.chdir (translated_path)
                     can = 1
                     self.wd = p
-                except:
+                except Exception:
                     pass
             finally:
                 if can:
@@ -295,7 +295,7 @@ def msdos_longify (file, stat_info):
 def msdos_date (t):
     try:
         info = time.gmtime (t)
-    except:
+    except Exception:
         info = time.gmtime (0)
     # year, month, day, hour, minute, second, ...
     hour = info[3]
@@ -359,7 +359,7 @@ def unix_longify (file, stat_info):
 def ls_date (now, t):
     try:
         info = time.gmtime (t)
-    except:
+    except Exception:
         info = time.gmtime (0)
     # 15,600,000 == 86,400 * 180
     if (now - t) > 15600000:

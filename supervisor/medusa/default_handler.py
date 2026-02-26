@@ -132,7 +132,7 @@ class default_handler:
                     length = int(length)
                     if length != file_length:
                         length_match = 0
-                except:
+                except Exception:
                     pass
 
         ims_date = 0
@@ -142,7 +142,7 @@ class default_handler:
 
         try:
             mtime = self.filesystem.stat (path)[stat.ST_MTIME]
-        except:
+        except Exception:
             request.error (404)
             return
 

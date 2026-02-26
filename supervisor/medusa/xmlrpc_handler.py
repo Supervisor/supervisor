@@ -12,7 +12,7 @@ from supervisor.compat import as_string
 import supervisor.medusa.http_server as http_server
 try:
     import xmlrpclib
-except:
+except Exception:
     import xmlrpc.client as xmlrpclib
 
 import sys
@@ -40,14 +40,14 @@ class xmlrpc_handler:
                 response = self.call (method, params)
                 if type(response) != type(()):
                     response = (response,)
-            except:
+            except Exception:
                 # report exception back to server
                 response = xmlrpclib.dumps (
                         xmlrpclib.Fault (1, "%s:%s" % (sys.exc_info()[0], sys.exc_info()[1]))
                         )
             else:
                 response = xmlrpclib.dumps (response, methodresponse=1)
-        except:
+        except Exception:
             # internal error, report as HTTP server error
             request.error (500)
         else:

@@ -525,7 +525,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
             else:
                 try:
                     bytes = int(what)
-                except:
+                except Exception:
                     self.ctl.output('Error: bad argument %s' % modifier)
                     self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                     return
@@ -590,7 +590,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
                     return self._tailf(path)
                 try:
                     what = int(what)
-                except:
+                except Exception:
                     self.ctl.output('Error: bad argument %s' % args[0])
                     self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
                     return

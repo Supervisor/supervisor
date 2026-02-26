@@ -87,7 +87,7 @@ class DeferredXMLRPCResponse:
 
             return self.getresponse(body)
 
-        except:
+        except Exception:
             tb = traceback.format_exc()
             self.request.channel.server.logger.log(
                 "XML-RPC response callback error", tb
@@ -247,7 +247,7 @@ class SystemNamespaceRPCInterface:
                 except RPCError as exc:
                     value = {'faultCode': exc.code,
                              'faultString': exc.text}
-                except:
+                except Exception:
                     info = sys.exc_info()
                     errmsg = "%s:%s" % (info[0], info[1])
                     value = {'faultCode': Faults.FAILED,
@@ -276,7 +276,7 @@ class SystemNamespaceRPCInterface:
                 except RPCError as exc:
                     value = {'faultCode': exc.code,
                              'faultString': exc.text}
-                except:
+                except Exception:
                     info = sys.exc_info()
                     errmsg = "%s:%s" % (info[0], info[1])
                     value = {'faultCode': Faults.FAILED,
@@ -383,7 +383,7 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                 if PY2:
                     data = data.encode('ascii', 'xmlcharrefreplace')
                 params, method = self.loads(data)
-            except:
+            except Exception:
                 logger.error(
                     'XML-RPC request data %r is invalid: unmarshallable' %
                     (data,)
@@ -433,7 +433,7 @@ class supervisor_xmlrpc_handler(xmlrpc_handler):
                 request.push(body)
                 request.done()
 
-        except:
+        except Exception:
             tb = traceback.format_exc()
             logger.critical(
                 "Handling XML-RPC request with data %r raised an unexpected "
