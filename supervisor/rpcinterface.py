@@ -598,6 +598,8 @@ class SupervisorNamespaceRPCInterface:
                      'stderr_logfile_maxbytes': pconfig.stderr_logfile_maxbytes,
                      'stderr_syslog': pconfig.stderr_syslog,
                      'serverurl': pconfig.serverurl,
+                     'post_stop_command': pconfig.post_stop_command,
+                     'post_stop_command_delay': pconfig.post_stop_command_delay,
                     }
 
                 # no support for these types in xml-rpc
