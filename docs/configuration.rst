@@ -1139,6 +1139,57 @@ where specified.
 
   *Introduced*: 3.0
 
+``post_stop_command``
+
+  A command that will be executed after the process has stopped or exited.
+  This command is executed by the shell, so you can use shell features
+  like pipes, redirection, and command substitution. The command is
+  executed synchronously (blocking), meaning that :program:`supervisord`
+  will wait for the command to complete before continuing with other tasks.
+  The command will be executed after waiting for ``post_stop_command_delay``
+  seconds. This is useful for cleanup tasks, notifications, or any
+  post-processing that needs to occur after a process stops.
+
+  .. note::
+
+     The post-stop command will be executed when the process transitions to
+     any of the following states:
+
+     - STOPPED: as a result of a stop request (manual stop or shutdown)
+     - EXITED: when the process exits with an expected or unexpected exit code
+     - BACKOFF: when the process exits too quickly during startup
+
+     The post-stop command will not be executed if the process transitions to
+     other states like STARTING, RUNNING, or UNKNOWN.
+
+  .. warning::
+
+     The post-stop command has a default timeout of 30 seconds. If the
+     command takes longer than this, it will be terminated. Design your
+     post-stop commands to complete quickly to avoid blocking supervisor
+     operations.
+
+  *Default*: None (no command will be executed)
+
+  *Required*:  No.
+
+  *Introduced*: 4.x.x
+
+``post_stop_command_delay``
+
+  The number of seconds to wait after the process has stopped or exited before
+  executing the ``post_stop_command``. This delay occurs after the
+  process has transitioned to the STOPPED, EXITED, or BACKOFF state. During this delay,
+  :program:`supervisord` will block and wait before executing the
+  post-stop command. Set this to 0 to execute the command immediately
+  after the process stops or exits.
+
+  *Default*: 0
+
+  *Required*:  No.
+
+  *Introduced*: 4.x.x
+
 ``[program:x]`` Section Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1174,6 +1225,8 @@ where specified.
    stderr_events_enabled=false
    environment=A="1",B="2"
    serverurl=AUTO
+   post_stop_command=/path/to/cleanup.sh
+   post_stop_command_delay=5
 
 ``[include]`` Section Settings
 ------------------------------
@@ -1443,6 +1496,8 @@ above constraints and additions.
    stderr_events_enabled=false
    environment=A="1",B="2"
    serverurl=AUTO
+   post_stop_command=/path/to/cleanup.sh
+   post_stop_command_delay=0
 
 ``[eventlistener:x]`` Section Settings
 --------------------------------------
@@ -1525,6 +1580,8 @@ above constraints and additions.
    stderr_events_enabled=false
    environment=A="1",B="2"
    serverurl=AUTO
+   post_stop_command=/path/to/cleanup.sh
+   post_stop_command_delay=0
 
 ``[rpcinterface:x]`` Section Settings
 -------------------------------------

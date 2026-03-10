@@ -89,6 +89,8 @@ class DummyOptions:
         self.umaskset = None
         self.poller = DummyPoller(self)
         self.silent = False
+        self.post_stop_command = None
+        self.post_stop_command_delay = None
 
     def getLogger(self, *args, **kw):
         logger = DummyLogger()
@@ -517,7 +519,8 @@ class DummyPConfig:
                  stderr_syslog=False,
                  redirect_stderr=False,
                  stopsignal=None, stopwaitsecs=10, stopasgroup=False, killasgroup=False,
-                 exitcodes=(0,), environment=None, serverurl=None):
+                 exitcodes=(0,), environment=None, serverurl=None,
+                 post_stop_command_delay=None, post_stop_command=None):
         self.options = options
         self.name = name
         self.command = command
@@ -553,6 +556,8 @@ class DummyPConfig:
         self.umask = umask
         self.autochildlogs_created = False
         self.serverurl = serverurl
+        self.post_stop_command_delay = post_stop_command_delay
+        self.post_stop_command = post_stop_command
 
     def get_path(self):
         return ["/bin", "/usr/bin", "/usr/local/bin"]

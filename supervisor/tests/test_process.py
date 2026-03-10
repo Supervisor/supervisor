@@ -1,12 +1,14 @@
 import errno
 import os
 import signal
+import subprocess
 import tempfile
 import time
 import unittest
 
 from supervisor.compat import as_bytes
 from supervisor.compat import maxint
+from supervisor.states import ProcessStates
 
 from supervisor.tests.base import Mock, patch, sentinel
 from supervisor.tests.base import DummyOptions
@@ -1726,6 +1728,378 @@ class SubprocessTests(unittest.TestCase):
         instance.change_state(ProcessStates.BACKOFF)
         self.assertEqual(instance.backoff, 1)
         self.assertTrue(instance.delay > 0)
+
+    def test_execute_post_stop_command_no_command_configured(self):
+        """Test that _execute_post_stop_command returns early if no command configured"""
+        options = DummyOptions()
+        config = DummyPConfig(options, 'test', '/test', post_stop_command=None)
+        instance = self._makeOne(config)
+        # Should not raise an error
+        instance._execute_post_stop_command(delay=0)
+        # No log messages should be added
+        self.assertEqual(len(options.logger.data), 0)
+
+    def test_execute_post_stop_command_zero_delay(self):
+        """Test _execute_post_stop_command executes immediately with zero delay"""
+        options = DummyOptions()
+        config = DummyPConfig(
+            options, 'test', '/test', post_stop_command='echo "test"',
+        )
+        instance = self._makeOne(config)
+        start_time = time.time()
+        instance._execute_post_stop_command(delay=0)
+        end_time = time.time()
+
+        # Should execute immediately (less than 0.5 seconds)
+        elapsed = end_time - start_time
+        self.assertTrue(elapsed < 0.5)
+
+        # Check that command was executed
+        self.assertTrue(any('executing post_stop_command' in msg for msg in options.logger.data))
+        self.assertTrue(any('completed successfully' in msg for msg in options.logger.data))
+
+    def test_execute_post_stop_command_with_delay(self):
+        """Test _execute_post_stop_command waits for delay before executing"""
+        options = DummyOptions()
+        config = DummyPConfig(
+            options, 'test', '/test', post_stop_command='echo "delayed"',
+        )
+        instance = self._makeOne(config)
+
+        delay_seconds = 0.1
+        start_time = time.time()
+        instance._execute_post_stop_command(delay=delay_seconds)
+        end_time = time.time()
+
+        # Should wait at least delay_seconds
+        elapsed = end_time - start_time
+        self.assertTrue(elapsed >= delay_seconds - 0.05)  # Allow small tolerance
+
+        # Check that command was executed
+        self.assertTrue(any('executing post_stop_command' in msg for msg in options.logger.data))
+
+    @patch('supervisor.process.subprocess.run')
+    def test_execute_post_stop_command_success(self, mock_run):
+        """Test successful execution of post_stop_command"""
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = 'command output'
+        mock_result.stderr = ''
+        mock_run.return_value = mock_result
+
+        options = DummyOptions()
+        config = DummyPConfig(
+            options, 'testproc', '/test', post_stop_command='cleanup.sh',
+        )
+        instance = self._makeOne(config)
+        instance._execute_post_stop_command(delay=0)
+
+        # Verify subprocess.run was called
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args
+        self.assertEqual(call_args.kwargs['shell'], True)
+        self.assertEqual(call_args.kwargs['capture_output'], True)
+        self.assertEqual(call_args.kwargs['timeout'], 30)
+
+        # Check success message was logged
+        self.assertTrue(any('completed successfully' in msg for msg in options.logger.data))
+
+    @patch('supervisor.process.subprocess.run')
+    def test_execute_post_stop_command_failure(self, mock_run):
+        """Test failed execution of post_stop_command"""
+        mock_result = Mock()
+        mock_result.returncode = 1
+        mock_result.stdout = ''
+        mock_result.stderr = 'error message'
+        mock_run.return_value = mock_result
+
+        options = DummyOptions()
+        config = DummyPConfig(
+            options,'testproc','/test', post_stop_command='bad_command.sh',
+        )
+        instance = self._makeOne(config)
+        instance._execute_post_stop_command(delay=0)
+
+        # Check warning was logged for failure
+        self.assertTrue(any('failed for' in msg and 'exit code' in msg for msg in options.logger.data))
+
+    @patch('supervisor.process.subprocess.run')
+    def test_execute_post_stop_command_timeout(self, mock_run):
+        """Test timeout handling in post_stop_command execution"""
+        mock_run.side_effect = subprocess.TimeoutExpired('test', 30)
+
+        options = DummyOptions()
+        config = DummyPConfig(
+            options, 'testproc', '/test', post_stop_command='slow_command.sh',
+        )
+        instance = self._makeOne(config)
+        instance._execute_post_stop_command(delay=0)
+
+        # Check timeout error was logged
+        self.assertTrue(any('timed out' in msg for msg in options.logger.data))
+
+    @patch('supervisor.process.subprocess.run')
+    def test_execute_post_stop_command_exception(self, mock_run):
+        """Test exception handling in post_stop_command execution"""
+        mock_run.side_effect = OSError('Command not found')
+
+        options = DummyOptions()
+        config = DummyPConfig(
+            options, 'testproc', '/test', post_stop_command='nonexistent.sh',
+        )
+        instance = self._makeOne(config)
+        instance._execute_post_stop_command(delay=0)
+
+        # Check error was logged
+        self.assertTrue(any('error executing' in msg for msg in options.logger.data))
+
+    def test_finish_calls_post_stop_command_when_stopping(self):
+        """Test that finish() calls post_stop_command when process stops"""
+        options = DummyOptions()
+        config = DummyPConfig(
+            options,
+            'testproc',
+            '/test',
+            post_stop_command='cleanup.sh',
+            post_stop_command_delay=0,
+        )
+        instance = self._makeOne(config)
+        instance.pid = 123
+        instance.killing = True
+        instance.pipes = {'stdout':'','stderr':''}
+
+        instance.state = ProcessStates.STOPPING
+
+        # Patch _execute_post_stop_command to track if it was called
+        call_log = []
+        def track_call(delay=0):
+            call_log.append(delay)
+            # Don't actually execute
+        instance._execute_post_stop_command = track_call
+
+        instance.finish(123, 1)
+
+        # Verify post_stop_command was called with correct delay
+        self.assertEqual(len(call_log), 1)
+        self.assertEqual(call_log[0], 0)
+        self.assertEqual(instance.state, ProcessStates.STOPPED)
+
+    def test_finish_uses_post_stop_command_delay(self):
+        """Test that finish() passes correct delay to post_stop_command"""
+        options = DummyOptions()
+        delay_value = 2.5
+        config = DummyPConfig(
+            options,
+            'testproc',
+            '/test',
+            post_stop_command='cleanup.sh',
+            post_stop_command_delay=delay_value,
+        )
+        instance = self._makeOne(config)
+        instance.pid = 123
+        instance.killing = True
+        instance.pipes = {'stdout':'','stderr':''}
+
+        instance.state = ProcessStates.STOPPING
+
+        # Track the delay parameter
+        call_log = []
+        def track_call(delay=0):
+            call_log.append(delay)
+        instance._execute_post_stop_command = track_call
+
+        instance.finish(123, 1)
+
+        # Verify correct delay was passed
+        self.assertEqual(len(call_log), 1)
+        self.assertEqual(call_log[0], delay_value)
+
+    def test_finish_without_post_stop_command(self):
+        """Test that finish() works normally when no post_stop_command configured"""
+        options = DummyOptions()
+        config = DummyPConfig(
+            options, 'testproc', '/test', post_stop_command=None,
+        )
+        instance = self._makeOne(config)
+        instance.pid = 123
+        instance.killing = True
+        instance.pipes = {'stdout':'','stderr':''}
+
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.STOPPING
+
+        # Track if _execute_post_stop_command was called
+        call_log = []
+        def track_call(delay=0):
+            call_log.append(delay)
+        instance._execute_post_stop_command = track_call
+
+        instance.finish(123, 1)
+
+        # Should not call _execute_post_stop_command
+        self.assertEqual(len(call_log), 0)
+        self.assertEqual(instance.state, ProcessStates.STOPPED)
+
+    def test_finish_calls_post_stop_command_when_exited_expected(self):
+        """Test that finish() calls post_stop_command when process exits with expected code"""
+        options = DummyOptions()
+        config = DummyPConfig(
+            options,
+            'testproc',
+            '/test',
+            post_stop_command='cleanup.sh',
+            post_stop_command_delay=1.5,
+            exitcodes=(0, 2),  # 0 and 2 are expected exit codes
+            startsecs=10,
+        )
+        instance = self._makeOne(config)
+        instance.pid = 123
+        instance.pipes = {'stdout':'','stderr':''}
+        instance.laststart = time.time() - 20  # Process ran for 20 seconds
+
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.RUNNING
+
+        # Patch _execute_post_stop_command to track if it was called
+        call_log = []
+        def track_call(delay=0):
+            call_log.append(delay)
+        instance._execute_post_stop_command = track_call
+
+        # Finish with exit code 0 (expected)
+        instance.finish(123, 0)
+
+        # Verify post_stop_command was called with correct delay
+        self.assertEqual(len(call_log), 1)
+        self.assertEqual(call_log[0], 1.5)
+        self.assertEqual(instance.state, ProcessStates.EXITED)
+
+    def test_finish_calls_post_stop_command_when_exited_unexpected(self):
+        """Test that finish() calls post_stop_command when process exits with unexpected code"""
+        options = DummyOptions()
+        config = DummyPConfig(
+            options,
+            'testproc',
+            '/test',
+            post_stop_command='notify.sh',
+            post_stop_command_delay=0,
+            exitcodes=(0,),  # Only 0 is expected
+            startsecs=10,
+        )
+        instance = self._makeOne(config)
+        instance.pid = 123
+        instance.pipes = {'stdout':'','stderr':''}
+        instance.laststart = time.time() - 20  # Process ran for 20 seconds
+
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.RUNNING
+
+        # Track post_stop_command calls
+        call_log = []
+        def track_call(delay=0):
+            call_log.append(delay)
+        instance._execute_post_stop_command = track_call
+
+        # Finish with exit code 1 (unexpected)
+        instance.finish(123, 1)
+
+        # Verify post_stop_command was called
+        self.assertEqual(len(call_log), 1)
+        self.assertEqual(call_log[0], 0)
+        self.assertEqual(instance.state, ProcessStates.EXITED)
+
+    def test_finish_calls_post_stop_command_when_backoff(self):
+        """Test that finish() calls post_stop_command when process exits too quickly"""
+        options = DummyOptions()
+        config = DummyPConfig(
+            options,
+            'testproc',
+            '/test',
+            post_stop_command='quick_restart.sh',
+            post_stop_command_delay=0.5,
+            startsecs=10,  # Process must stay up for 10 seconds
+        )
+        instance = self._makeOne(config)
+        instance.pid = 123
+        instance.pipes = {'stdout':'','stderr':''}
+        instance.laststart = time.time() - 1  # Process only ran for 1 second
+
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.STARTING
+
+        # Track post_stop_command calls
+        call_log = []
+        def track_call(delay=0):
+            call_log.append(delay)
+        instance._execute_post_stop_command = track_call
+
+        # Finish with exit code 0 (but too quickly)
+        instance.finish(123, 0)
+
+        # Verify post_stop_command was called
+        self.assertEqual(len(call_log), 1)
+        self.assertEqual(call_log[0], 0.5)
+        self.assertEqual(instance.state, ProcessStates.BACKOFF)
+
+    def test_finish_without_post_stop_command_on_exited(self):
+        """Test that finish() works when no post_stop_command configured for EXITED state"""
+        options = DummyOptions()
+        config = DummyPConfig(
+            options,
+            'testproc',
+            '/test',
+            post_stop_command=None,  # No post_stop_command
+            startsecs=10,
+        )
+        instance = self._makeOne(config)
+        instance.pid = 123
+        instance.pipes = {'stdout':'','stderr':''}
+        instance.laststart = time.time() - 20
+
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.RUNNING
+
+        # Track if _execute_post_stop_command was called
+        call_log = []
+        def track_call(delay=0):
+            call_log.append(delay)
+        instance._execute_post_stop_command = track_call
+
+        instance.finish(123, 0)
+
+        # Should not call _execute_post_stop_command
+        self.assertEqual(len(call_log), 0)
+        self.assertEqual(instance.state, ProcessStates.EXITED)
+
+    def test_finish_without_post_stop_command_on_backoff(self):
+        """Test that finish() works when no post_stop_command configured for BACKOFF state"""
+        options = DummyOptions()
+        config = DummyPConfig(
+            options,
+            'testproc',
+            '/test',
+            post_stop_command=None,  # No post_stop_command
+            startsecs=10,
+        )
+        instance = self._makeOne(config)
+        instance.pid = 123
+        instance.pipes = {'stdout':'','stderr':''}
+        instance.laststart = time.time() - 1  # Too quickly
+
+        from supervisor.states import ProcessStates
+        instance.state = ProcessStates.STARTING
+
+        # Track if _execute_post_stop_command was called
+        call_log = []
+        def track_call(delay=0):
+            call_log.append(delay)
+        instance._execute_post_stop_command = track_call
+
+        instance.finish(123, 0)
+
+        # Should not call _execute_post_stop_command
+        self.assertEqual(len(call_log), 0)
+        self.assertEqual(instance.state, ProcessStates.BACKOFF)
 
 class FastCGISubprocessTests(unittest.TestCase):
     def _getTargetClass(self):

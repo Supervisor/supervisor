@@ -3,6 +3,7 @@ import functools
 import os
 import signal
 import shlex
+import subprocess
 import time
 import traceback
 
@@ -376,6 +377,51 @@ class Subprocess(object):
             if self.delay > 0 and test_time < (self.delay - self.backoff):
                 self.delay = test_time + self.backoff
 
+    def _execute_post_stop_command(self, delay=0):
+        """Execute the post_stop_command after the process has been stopped.
+
+        This method is called from finish() and will wait for the specified
+        delay before executing the command. This is a blocking call that
+        waits until the command completes before returning.
+        """
+        if delay > 0:
+            time.sleep(delay)
+
+        processname = as_string(self.config.name)
+        logger = self.config.options.logger
+
+        if not self.config.post_stop_command:
+            return
+
+        logger.info('executing post_stop_command for process %s: %s' %
+                    (processname, self.config.post_stop_command))
+
+        try:
+            # Execute the command using subprocess
+            result = subprocess.run(
+                self.config.post_stop_command,
+                shell=True,
+                capture_output=True,
+                timeout=30,
+                text=True
+            )
+
+            if result.returncode == 0:
+                logger.info('post_stop_command completed successfully for %s' % processname)
+                if result.stdout:
+                    logger.debug('post_stop_command stdout: %s' % result.stdout.strip())
+            else:
+                logger.warn('post_stop_command failed for %s with exit code %s' %
+                           (processname, result.returncode))
+                if result.stderr:
+                    logger.warn('post_stop_command stderr: %s' % result.stderr.strip())
+        except subprocess.TimeoutExpired:
+            logger.error('post_stop_command timed out for process %s' % processname)
+        except Exception as e:
+            logger.error('error executing post_stop_command for %s: %s' %
+                        (processname, str(e)))
+
+
     def stop(self):
         """ Administrative stop """
         self.administrative_stop = True
@@ -573,7 +619,6 @@ class Subprocess(object):
             else:
                 self.config.options.logger.warn(msg)
 
-
         elif too_quickly:
             # the program did not stay up long enough to make it to RUNNING
             # implies STARTING -> BACKOFF
@@ -611,6 +656,11 @@ class Subprocess(object):
                 msg = "exited: %s (%s)" % (processname, msg + "; not expected")
                 self.change_state(ProcessStates.EXITED, expected=False)
                 self.config.options.logger.warn(msg)
+
+        # Execute post_stop_command if configured, with delay
+        # This covers both EXITED states (expected and unexpected)
+        if self.config.post_stop_command:
+            self._execute_post_stop_command(delay=self.config.post_stop_command_delay)
 
         self.pid = 0
         self.config.options.close_parent_pipes(self.pipes)
@@ -660,6 +710,7 @@ class Subprocess(object):
         self._check_and_adjust_for_system_clock_rollback(now)
 
         logger = self.config.options.logger
+
 
         if self.config.options.mood > SupervisorStates.RESTARTING:
             # dont start any processes if supervisor is shutting down
