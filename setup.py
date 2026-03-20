@@ -95,7 +95,7 @@ dist = setup(
     author="Chris McDonough",
     author_email="chrism@plope.com",
     packages=find_packages(),
-    install_requires=[],
+    install_requires=['subprocess32'] if py_version[0] == 2 else [],
     extras_require={
         'test': ['pytest', 'pytest-cov']
     },

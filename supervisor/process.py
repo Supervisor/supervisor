@@ -3,6 +3,7 @@ import functools
 import os
 import signal
 import shlex
+import subprocess
 import time
 import traceback
 
@@ -29,6 +30,60 @@ from supervisor import events
 from supervisor.datatypes import RestartUnconditionally
 
 from supervisor.socket_manager import SocketManager
+
+
+# Python 2/3.6 compatibility: subprocess.run doesn't exist in Python 2, and
+# capture_output parameter doesn't exist in Python 3.6
+if True:  # Always wrap to handle capture_output
+    if not hasattr(subprocess, 'run') and PY2:
+        import subprocess32 as subprocess
+    import collections
+
+    # Create a simple result object that mimics subprocess.CompletedProcess
+    _CompletedProcess = collections.namedtuple(
+        'CompletedProcess', ['returncode', 'stdout', 'stderr'],
+    )
+
+    _original_run = getattr(subprocess, 'run', None)
+
+    def _subprocess_run(cmd, shell=False, capture_output=False, timeout=None, text=False, **kwargs):
+        """Compatibility wrapper for subprocess.run for Python 2 and Python 3.6"""
+        # Convert capture_output to explicit stdout/stderr pipes
+        if capture_output:
+            kwargs['stdout'] = subprocess.PIPE
+            kwargs['stderr'] = subprocess.PIPE
+        
+        # If native subprocess.run exists, try to use it
+        if _original_run is not None:
+            try:
+                return _original_run(cmd, shell=shell, timeout=timeout, text=text, **kwargs)
+            except TypeError:
+                # capture_output not supported, fall through to Popen
+                pass
+        
+        # Fall back to Popen for Python 2 or if run doesn't work
+        stdout_pipe = kwargs.get('stdout', None)
+        stderr_pipe = kwargs.get('stderr', None)
+        proc = None
+
+        try:
+            proc = subprocess.Popen(cmd, shell=shell, stdout=stdout_pipe, stderr=stderr_pipe)
+            stdout, stderr = proc.communicate(timeout=timeout)
+
+            if text:
+                stdout = stdout.decode('utf-8') if stdout else ''
+                stderr = stderr.decode('utf-8') if stderr else ''
+
+            return _CompletedProcess(returncode=proc.returncode, stdout=stdout, stderr=stderr)
+        except subprocess.TimeoutExpired:
+            if proc:
+                proc.kill()
+                proc.wait()
+            raise
+
+
+    subprocess.run = _subprocess_run
+
 
 @functools.total_ordering
 class Subprocess(object):
@@ -376,6 +431,51 @@ class Subprocess(object):
             if self.delay > 0 and test_time < (self.delay - self.backoff):
                 self.delay = test_time + self.backoff
 
+    def _execute_post_stop_command(self, delay=0):
+        """Execute the post_stop_command after the process has been stopped.
+
+        This method is called from finish() and will wait for the specified
+        delay before executing the command. This is a blocking call that
+        waits until the command completes before returning.
+        """
+        if delay > 0:
+            time.sleep(delay)
+
+        processname = as_string(self.config.name)
+        logger = self.config.options.logger
+
+        if not self.config.post_stop_command:
+            return
+
+        logger.info('executing post_stop_command for process %s: %s' %
+                    (processname, self.config.post_stop_command))
+
+        try:
+            # Execute the command using subprocess
+            result = subprocess.run(
+                self.config.post_stop_command,
+                shell=True,
+                capture_output=True,
+                timeout=30,
+                text=True
+            )
+
+            if result.returncode == 0:
+                logger.info('post_stop_command completed successfully for %s' % processname)
+                if result.stdout:
+                    logger.debug('post_stop_command stdout: %s' % result.stdout.strip())
+            else:
+                logger.warn('post_stop_command failed for %s with exit code %s' %
+                           (processname, result.returncode))
+                if result.stderr:
+                    logger.warn('post_stop_command stderr: %s' % result.stderr.strip())
+        except subprocess.TimeoutExpired:
+            logger.error('post_stop_command timed out for process %s' % processname)
+        except Exception as e:
+            logger.error('error executing post_stop_command for %s: %s' %
+                        (processname, str(e)))
+
+
     def stop(self):
         """ Administrative stop """
         self.administrative_stop = True
@@ -573,7 +673,6 @@ class Subprocess(object):
             else:
                 self.config.options.logger.warn(msg)
 
-
         elif too_quickly:
             # the program did not stay up long enough to make it to RUNNING
             # implies STARTING -> BACKOFF
@@ -611,6 +710,11 @@ class Subprocess(object):
                 msg = "exited: %s (%s)" % (processname, msg + "; not expected")
                 self.change_state(ProcessStates.EXITED, expected=False)
                 self.config.options.logger.warn(msg)
+
+        # Execute post_stop_command if configured, with delay
+        # This covers both EXITED states (expected and unexpected)
+        if self.config.post_stop_command:
+            self._execute_post_stop_command(delay=self.config.post_stop_command_delay)
 
         self.pid = 0
         self.config.options.close_parent_pipes(self.pipes)
@@ -660,6 +764,7 @@ class Subprocess(object):
         self._check_and_adjust_for_system_clock_rollback(now)
 
         logger = self.config.options.logger
+
 
         if self.config.options.mood > SupervisorStates.RESTARTING:
             # dont start any processes if supervisor is shutting down
