@@ -192,10 +192,6 @@ In this circumstance, :program:`supervisord` will emit a
 ``PROCESS_COMMUNICATIONS_STDOUT`` event with data in the payload of
 "Hello!".
 
-An example of a script (written in Python) which emits a process
-communication event is in the :file:`scripts` directory of the
-supervisor package, named :file:`sample_commevent.py`.
-
 The output of processes specified as "event listeners"
 (``[eventlistener:x]`` sections) is not processed this way.
 Output from these processes cannot enter capture mode.

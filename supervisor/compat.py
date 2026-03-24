@@ -150,6 +150,26 @@ try: # pragma: no cover
 except ImportError: # pragma: no cover
     from HTMLParser import HTMLParser
 
+# Begin check for working shlex posix mode
+
+# https://github.com/Supervisor/supervisor/issues/328
+# https://github.com/Supervisor/supervisor/issues/873
+# https://bugs.python.org/issue21999
+
+from shlex import shlex as _shlex
+
+_shlex_posix_expectations = {
+    'foo="",bar=a': ['foo', '=', '', ',', 'bar', '=', 'a'],
+    "'')abc":       ['', ')', 'abc']
+}
+
+shlex_posix_works = all(
+    list(_shlex(_input, posix=True)) == _expected
+    for _input, _expected in _shlex_posix_expectations.items()
+)
+
+# End check for working shlex posix mode
+
 # Begin importlib/setuptools compatibility code
 
 # Supervisor used pkg_resources (a part of setuptools) to load package
