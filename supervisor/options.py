@@ -932,6 +932,7 @@ class ServerOptions(Options):
             uid = None
         else:
             uid = name_to_uid(user)
+            common_expansions['user'] = user
 
         umask = get(section, 'umask', None)
         if umask is not None:
@@ -966,6 +967,8 @@ class ServerOptions(Options):
                 expansions['ENV_%s' % k] = v
 
             directory = get(section, 'directory', None)
+            if directory is not None:
+                expansions['directory'] = directory
 
             logfiles = {}
 

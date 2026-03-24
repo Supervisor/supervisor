@@ -1,6 +1,8 @@
 4.4.0.dev0 (Next Release)
 -------------------------
 
+- Support ``directory`` and ``user`` expansion. Patch by Waket Zheng.
+
 - Fixed a bug where ``supervisord`` would wait 1 second on startup before
   starting any programs.  Patch by Stepan Blyshchak.
 

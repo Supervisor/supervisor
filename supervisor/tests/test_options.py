@@ -1796,6 +1796,53 @@ class ServerOptionsTests(unittest.TestCase):
         expected = "/foo/bar:%s" % os.environ['PATH']
         self.assertEqual(pconfigs[0].environment['PATH'], expected)
 
+    def test_processes_from_section_expands_with_user(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        user = root
+        command = uv run --config-file /home/%(user)s/.config/uv/uv.toml app/main.py
+        directory = /home/%(user)s/myproject
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(pconfigs[0].directory, '/home/root/myproject')
+        self.assertEqual(
+            pconfigs[0].command,
+            'uv run --config-file /home/root/.config/uv/uv.toml app/main.py'
+        )
+
+    def test_processes_from_section_expands_with_directory(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        user = root
+        directory = /tmp/%(user)s/myproject
+        command = uv run --project %(directory)s --config-file /home/%(user)s/.config/uv/uv.toml app/main.py
+        stderr_logfile = %(directory)s/error.log
+        """)
+        from supervisor.options import UnhosedConfigParser
+
+        if not os.path.exists('/tmp/root/myproject'):
+            if not os.path.exists('/tmp/root'):
+                os.mkdir('/tmp/root')
+            os.mkdir('/tmp/root/myproject')
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(pconfigs[0].directory, '/tmp/root/myproject')
+        self.assertEqual(
+            pconfigs[0].command,
+            (
+                'uv run --project /tmp/root/myproject'
+                ' --config-file /home/root/.config/uv/uv.toml'
+                ' app/main.py'
+            )
+        )
+        self.assertEqual(pconfigs[0].stderr_logfile , '/tmp/root/myproject/error.log')
+
     def test_processes_from_section_redirect_stderr_with_filename(self):
         instance = self._makeOne()
         text = lstrip("""\
