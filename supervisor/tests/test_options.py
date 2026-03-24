@@ -1638,7 +1638,7 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         text = lstrip("""\
         [program:foo]
-        command = /bin/cat /%(user)s/.vimrc
+        command = /bin/cat
         priority = 1
         autostart = false
         autorestart = false
@@ -1665,7 +1665,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(len(pconfigs), 2)
         pconfig = pconfigs[0]
         self.assertEqual(pconfig.name, 'bar_foo_00')
-        self.assertEqual(pconfig.command, '/bin/cat /root/.vimrc')
+        self.assertEqual(pconfig.command, '/bin/cat')
         self.assertEqual(pconfig.autostart, False)
         self.assertEqual(pconfig.autorestart, False)
         self.assertEqual(pconfig.startsecs, 100)
@@ -1713,21 +1713,13 @@ class ServerOptionsTests(unittest.TestCase):
 
     def test_processes_from_section_process_num_expansion(self):
         instance = self._makeOne()
-        nums = (0, 1)
-        for num in nums:
-            log_dir = '/tmp/foo_{0}/foo_{0}_stdout'.format(num)
-            if not os.path.exists(log_dir):
-                parent = os.path.dirname(log_dir)
-                if not os.path.exists(parent):
-                    os.mkdir(parent)
-                os.mkdir(log_dir)
         text = lstrip("""\
         [program:foo]
         process_name = foo_%(process_num)d
-        command = /bin/foo --num=%(process_num)d --dir=%(directory)s
+        command = /bin/foo --num=%(process_num)d
         directory = /tmp/foo_%(process_num)d
         stderr_logfile = /tmp/foo_%(process_num)d_stderr
-        stdout_logfile = %(directory)s/foo_%(process_num)d_stdout
+        stdout_logfile = /tmp/foo_%(process_num)d_stdout
         environment = NUM=%(process_num)d
         numprocs = 2
         """)
@@ -1736,15 +1728,14 @@ class ServerOptionsTests(unittest.TestCase):
         config.read_string(text)
         pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
         self.assertEqual(len(pconfigs), 2)
-        for num in nums:
+        for num in (0, 1):
             self.assertEqual(pconfigs[num].name, 'foo_%d' % num)
-            self.assertEqual(pconfigs[num].command,
-                "/bin/foo --num=%d --dir=/tmp/foo_%d" % (num, num))
+            self.assertEqual(pconfigs[num].command, "/bin/foo --num=%d" % num)
             self.assertEqual(pconfigs[num].directory, '/tmp/foo_%d' % num)
             self.assertEqual(pconfigs[num].stderr_logfile,
                 '/tmp/foo_%d_stderr' % num)
             self.assertEqual(pconfigs[num].stdout_logfile,
-                '/tmp/foo_%d/foo_%d_stdout' % (num, num))
+                '/tmp/foo_%d_stdout' % num)
             self.assertEqual(pconfigs[num].environment, {'NUM': '%d' % num})
 
     def test_processes_from_section_numprocs_expansion(self):
@@ -1804,6 +1795,53 @@ class ServerOptionsTests(unittest.TestCase):
         pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
         expected = "/foo/bar:%s" % os.environ['PATH']
         self.assertEqual(pconfigs[0].environment['PATH'], expected)
+
+    def test_processes_from_section_expands_with_user(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        user = root
+        command = uv run --config-file /home/%(user)s/.config/uv/uv.toml app/main.py
+        directory = /home/%(user)s/myproject
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(pconfigs[0].directory, '/home/root/myproject')
+        self.assertEqual(
+            pconfigs[0].command,
+            'uv run --config-file /home/root/.config/uv/uv.toml app/main.py'
+        )
+
+    def test_processes_from_section_expands_with_directory(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        user = root
+        directory = /tmp/%(user)s/myproject
+        command = uv run --project %(directory)s --config-file /home/%(user)s/.config/uv/uv.toml app/main.py
+        stderr_logfile = %(directory)s/error.log
+        """)
+        from supervisor.options import UnhosedConfigParser
+
+        if not os.path.exists('/tmp/root/myproject'):
+            if not os.path.exists('/tmp/root'):
+                os.mkdir('/tmp/root')
+            os.mkdir('/tmp/root/myproject')
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(pconfigs[0].directory, '/tmp/root/myproject')
+        self.assertEqual(
+            pconfigs[0].command,
+            (
+                'uv run --project /tmp/root/myproject'
+                ' --config-file /home/root/.config/uv/uv.toml'
+                ' app/main.py'
+            )
+        )
+        self.assertEqual(pconfigs[0].stderr_logfile , '/tmp/root/myproject/error.log')
 
     def test_processes_from_section_redirect_stderr_with_filename(self):
         instance = self._makeOne()
