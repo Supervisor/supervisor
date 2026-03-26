@@ -34,7 +34,7 @@ from supervisor.datatypes import existing_dirpath
 from supervisor.datatypes import byte_size
 from supervisor.datatypes import signal_number
 from supervisor.datatypes import list_of_exitcodes
-from supervisor.datatypes import dict_of_key_value_pairs
+from supervisor.datatypes import list_of_key_value_pairs
 from supervisor.datatypes import logfile_name
 from supervisor.datatypes import list_of_strings
 from supervisor.datatypes import octal_type
@@ -647,8 +647,8 @@ class ServerOptions(Options):
         section.strip_ansi = boolean(get('strip_ansi', 'false'))
 
         environ_str = get('environment', '', do_expand=False)
-        environ_str = expand(environ_str, expansions, 'environment')
-        section.environment = dict_of_key_value_pairs(environ_str)
+        section.environment = expand_key_value_pairs(
+            environ_str, expansions, 'environment')
 
         # extend expansions for global from [supervisord] environment definition
         for k, v in section.environment.items():
@@ -958,12 +958,8 @@ class ServerOptions(Options):
             expansions.update({'process_num': process_num, 'numprocs': numprocs})
             expansions.update(self.environ_expansions)
 
-            environment = dict_of_key_value_pairs(
-                expand(environment_str, expansions, 'environment'))
-
-            # extend expansions for process from [program:x] environment definition
-            for k, v in environment.items():
-                expansions['ENV_%s' % k] = v
+            environment = expand_key_value_pairs(
+                environment_str, expansions, 'environment')
 
             directory = get(section, 'directory', None)
 
@@ -2212,6 +2208,16 @@ def expand(s, expansions, name):
             'Format string %r for %r is badly formatted: %s' %
             (s, name, str(ex))
         )
+
+
+def expand_key_value_pairs(arg, expansions, name):
+    """Parse and expand KEY=val pairs in order."""
+    pairs = []
+    for k, v in list_of_key_value_pairs(arg):
+        v = expand(v, expansions, name)
+        pairs.append((k, v))
+        expansions['ENV_%s' % k] = v
+    return dict(pairs)
 
 def make_namespec(group_name, process_name):
     # we want to refer to the process by its "short name" (a process named

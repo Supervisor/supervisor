@@ -65,17 +65,19 @@ def list_of_exitcodes(arg):
     except:
         raise ValueError("not a valid list of exit codes: " + repr(arg))
 
-def dict_of_key_value_pairs(arg):
-    """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'}
-        Quotes can be used to allow commas in the value
+def list_of_key_value_pairs(arg):
+    """Parse KEY=val,KEY2=val2 into a list of (KEY, val) tuples.
+
+    Quotes can be used to allow commas in the value. The original order is
+    preserved so callers can expand values incrementally.
     """
     lexer = shlex.shlex(str(arg), posix=shlex_posix_works)
-    lexer.wordchars += '/.+-():'
+    lexer.wordchars += '/.+-():%'
 
     tokens = list(lexer)
     tokens_len = len(tokens)
 
-    D = {}
+    pairs = []
     i = 0
     while i < tokens_len:
         k_eq_v = tokens[i:i+3]
@@ -87,9 +89,16 @@ def dict_of_key_value_pairs(arg):
         if not shlex_posix_works:
             v = v.strip('\'"')
 
-        D[k] = v
+        pairs.append((k, v))
         i += 4
-    return D
+    return pairs
+
+
+def dict_of_key_value_pairs(arg):
+    """ parse KEY=val,KEY2=val2 into {'KEY':'val', 'KEY2':'val2'}
+        Quotes can be used to allow commas in the value
+    """
+    return dict(list_of_key_value_pairs(arg))
 
 class Automatic:
     pass
