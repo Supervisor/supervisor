@@ -1796,6 +1796,20 @@ class ServerOptionsTests(unittest.TestCase):
         expected = "/foo/bar:%s" % os.environ['PATH']
         self.assertEqual(pconfigs[0].environment['PATH'], expected)
 
+    def test_processes_from_section_environment_can_reuse_earlier_vars(self):
+        instance = self._makeOne()
+        text = lstrip("""\
+        [program:foo]
+        command = /bin/foo --value=%(ENV_B)s
+        environment = A="1",B="%(ENV_A)s"
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        pconfigs = instance.processes_from_section(config, 'program:foo', 'bar')
+        self.assertEqual(pconfigs[0].environment, {'A': '1', 'B': '1'})
+        self.assertEqual(pconfigs[0].command, '/bin/foo --value=1')
+
     def test_processes_from_section_redirect_stderr_with_filename(self):
         instance = self._makeOne()
         text = lstrip("""\
@@ -3413,6 +3427,18 @@ class ServerOptionsTests(unittest.TestCase):
         instance.realize(args=[])
         options = instance.configroot.supervisord
         self.assertEqual(options.environment, dict(VAR_WITH_P="some_value_%_end"))
+
+    def test_options_environment_of_supervisord_can_reuse_earlier_vars(self):
+        text = lstrip("""
+        [supervisord]
+        environment=A="1",B="%(ENV_A)s"
+        """)
+
+        instance = self._makeOne()
+        instance.configfile = StringIO(text)
+        instance.realize(args=[])
+        options = instance.configroot.supervisord
+        self.assertEqual(options.environment, dict(A="1", B="1"))
 
 
 class ProcessConfigTests(unittest.TestCase):
