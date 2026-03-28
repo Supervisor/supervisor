@@ -1526,6 +1526,73 @@ above constraints and additions.
    environment=A="1",B="2"
    serverurl=AUTO
 
+``[collection:x]`` Section Settings
+------------------------------------
+
+Collections provide a way to organize programs into logical groups that
+can span multiple process groups.  Unlike ``[group:x]`` sections which
+own process lifecycle, collections are purely organizational — they
+allow you to view and control sets of related processes without
+affecting which group owns them.
+
+A program can belong to any number of collections.  Collection
+operations like start and stop delegate to the owning process groups.
+
+To define a collection, add a ``[collection:x]`` section in your
+configuration file.  The header value is the word "collection",
+followed by a colon, then the collection name.  A header value of
+``[collection:foo]`` describes a collection with the name "foo".  The
+name must not include a colon character or a bracket character.
+
+``[collection:x]`` Section Values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``programs``
+
+  A comma-separated list of program names.  The programs referenced
+  here are resolved at runtime to their owning process groups.  Missing
+  references are silently skipped.
+
+  *Required*:  No (but at least one of ``programs`` or ``groups`` is
+  required).
+
+  *Introduced*: 4.0
+
+``groups``
+
+  A comma-separated list of group names.  All processes in the
+  referenced groups become members of this collection.  Missing
+  references are silently skipped.
+
+  *Required*:  No (but at least one of ``programs`` or ``groups`` is
+  required).
+
+  *Introduced*: 4.0
+
+``priority``
+
+  A priority number analogous to a ``[program:x]`` priority value.
+
+  *Default*: 999
+
+  *Required*:  No.
+
+  *Introduced*: 4.0
+
+``[collection:x]`` Section Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: ini
+
+   [collection:web-tier]
+   programs=nginx,gunicorn,celery-worker
+   priority=100
+
+   [collection:monitoring]
+   groups=metrics
+   programs=nginx,prometheus-exporter
+
+
 ``[rpcinterface:x]`` Section Settings
 -------------------------------------
 

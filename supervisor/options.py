@@ -448,6 +448,7 @@ class ServerOptions(Options):
                  "s", "silent", flag=1, default=0)
         self.pidhistory = {}
         self.process_group_configs = []
+        self.collection_configs = []
         self.parse_criticals = []
         self.parse_warnings = []
         self.parse_infos = []
@@ -543,6 +544,9 @@ class ServerOptions(Options):
 
         new = self.configroot.supervisord.process_group_configs
         self.process_group_configs = new
+
+        new_collections = self.configroot.supervisord.collection_configs
+        self.collection_configs = new_collections
 
     def read_config(self, fp):
         # Clear parse messages, since we may be re-reading the
@@ -667,6 +671,7 @@ class ServerOptions(Options):
                 env = section.environment.copy()
                 env.update(proc.environment)
                 proc.environment = env
+        section.collection_configs = self.collections_from_parser(parser)
         section.server_configs = self.server_configs_from_parser(parser)
         section.profile_options = None
         return section
@@ -839,6 +844,46 @@ class ServerOptions(Options):
 
         groups.sort()
         return groups
+
+    def collections_from_parser(self, parser):
+        collections = []
+        all_sections = parser.sections()
+
+        common_expansions = {'here':self.here}
+        def get(section, opt, default, **kwargs):
+            expansions = kwargs.get('expansions', {})
+            expansions.update(common_expansions)
+            kwargs['expansions'] = expansions
+            return parser.saneget(section, opt, default, **kwargs)
+
+        for section in all_sections:
+            if not section.startswith('collection:'):
+                continue
+            name = process_or_group_name(section.split(':', 1)[1])
+            priority = integer(get(section, 'priority', 999))
+            programs_str = get(section, 'programs', None)
+            groups_str = get(section, 'groups', None)
+
+            program_names = []
+            if programs_str is not None:
+                program_names = list_of_strings(programs_str)
+
+            group_names = []
+            if groups_str is not None:
+                group_names = list_of_strings(groups_str)
+
+            if not program_names and not group_names:
+                raise ValueError(
+                    '[%s] must specify at least one of programs or groups'
+                    % section)
+
+            collections.append(
+                CollectionConfig(self, name, priority,
+                                 program_names, group_names)
+            )
+
+        collections.sort()
+        return collections
 
     def parse_fcgi_socket(self, sock, proc_uid, socket_owner, socket_mode,
             socket_backlog):
@@ -2054,6 +2099,41 @@ class FastCGIGroupConfig(ProcessGroupConfig):
     def make_group(self):
         from supervisor.process import FastCGIProcessGroup
         return FastCGIProcessGroup(self)
+
+class CollectionConfig:
+    def __init__(self, options, name, priority, program_names, group_names):
+        self.options = options
+        self.name = name
+        self.priority = priority
+        self.program_names = program_names  # list of str
+        self.group_names = group_names      # list of str
+
+    def __eq__(self, other):
+        if not isinstance(other, CollectionConfig):
+            return False
+        return (self.name == other.name and
+                self.priority == other.priority and
+                self.program_names == other.program_names and
+                self.group_names == other.group_names)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __lt__(self, other):
+        return self.priority < other.priority
+
+    def __le__(self, other):
+        return self.priority <= other.priority
+
+    def __gt__(self, other):
+        return self.priority > other.priority
+
+    def __ge__(self, other):
+        return self.priority >= other.priority
+
+    def __repr__(self):
+        return '<%s instance named %s at %s>' % (self.__class__,
+                                                  self.name, id(self))
 
 def readFile(filename, offset, length):
     """ Read length bytes from the file named by filename starting at

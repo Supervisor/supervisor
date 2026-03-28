@@ -320,6 +320,13 @@ class Controller(cmd.Cmd):
             elif action in ('clear', 'fg', 'pid', 'restart', 'signal',
                             'start', 'status', 'stop', 'tail'):
                 matches = self._complete_processes(text)
+            elif action == 'collection':
+                if len(words) == 2 and not line.endswith(' '):
+                    matches = [s + ' ' for s in
+                               ('status', 'start', 'stop')
+                               if s.startswith(text)]
+                elif len(words) >= 2:
+                    matches = self._complete_collections(text)
         if len(matches) > state:
             return matches[state]
 
@@ -354,6 +361,15 @@ class Controller(cmd.Cmd):
         if self._complete_info is None:
             self._complete_info = self.get_supervisor().getAllProcessInfo()
         return self._complete_info
+
+    def _complete_collections(self, text):
+        """Build a completion list of collection names matching text"""
+        try:
+            collections = self.get_supervisor().listCollections()
+        except Exception:
+            return []
+        names = [c['name'] for c in collections]
+        return [n + ' ' for n in names if n.startswith(text)]
 
     def do_help(self, arg):
         if arg.strip() == 'help':
@@ -1121,6 +1137,12 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 raise
         else:
             self._formatChanges(result[0])
+            if len(result) > 1:
+                coll_added, coll_changed, coll_removed = result[1]
+                if coll_added or coll_changed or coll_removed:
+                    self.ctl.output("")
+                    self.ctl.output("Collections:")
+                    self._formatChanges(result[1])
 
     def help_reread(self):
         self.ctl.output("reread \t\t\tReload the daemon's configuration files without add/remove")
@@ -1242,10 +1264,142 @@ class DefaultControllerPlugin(ControllerPluginBase):
             supervisor.addProcessGroup(gname)
             log(gname, "added process group")
 
+        # Handle collection updates
+        if len(result) > 1:
+            coll_added, coll_changed, coll_removed = result[1]
+            for cname in coll_removed:
+                log(cname, "removed collection")
+            for cname in coll_changed:
+                log(cname, "updated collection")
+            for cname in coll_added:
+                log(cname, "added collection")
+
     def help_update(self):
         self.ctl.output("update\t\t\tReload config and add/remove as necessary, and will restart affected programs")
         self.ctl.output("update all\t\tReload config and add/remove as necessary, and will restart affected programs")
         self.ctl.output("update <gname> [...]\tUpdate specific groups")
+
+    def do_collection(self, arg):
+        args = arg.split()
+        if not args:
+            self.help_collection()
+            return
+
+        subcommand = args[0]
+        rest = ' '.join(args[1:])
+
+        if subcommand == 'status':
+            self._collection_status(rest)
+        elif subcommand == 'start':
+            self._collection_start(rest)
+        elif subcommand == 'stop':
+            self._collection_stop(rest)
+        else:
+            self.ctl.output("Error: unknown collection subcommand '%s'" %
+                            subcommand)
+            self.help_collection()
+
+    def _collection_status(self, arg):
+        if not self.ctl.upcheck():
+            return
+
+        supervisor = self.ctl.get_supervisor()
+        try:
+            collections = supervisor.listCollections()
+        except xmlrpclib.Fault as e:
+            self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
+            if e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
+                self.ctl.output('ERROR: supervisor shutting down')
+            else:
+                raise
+            return
+
+        names = arg.split()
+
+        if not names:
+            if not collections:
+                self.ctl.output('No collections configured')
+                return
+            for coll in collections:
+                programs = ', '.join(coll['program_names'])
+                groups = ', '.join(coll['group_names'])
+                parts = []
+                if programs:
+                    parts.append('programs=%s' % programs)
+                if groups:
+                    parts.append('groups=%s' % groups)
+                self.ctl.output('%s\t\t%s' % (coll['name'],
+                                               ' '.join(parts)))
+        else:
+            for name in names:
+                try:
+                    infos = supervisor.getCollectionProcessInfo(name)
+                except xmlrpclib.Fault as e:
+                    if e.faultCode == xmlrpc.Faults.BAD_NAME:
+                        self.ctl.output('%s: ERROR (no such collection)' %
+                                        name)
+                        self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
+                    else:
+                        raise
+                else:
+                    self.ctl.output('Collection: %s' % name)
+                    self._show_statuses(infos)
+
+    def _collection_start(self, arg):
+        if not self.ctl.upcheck():
+            return
+
+        names = arg.split()
+        if not names:
+            self.ctl.output('Error: collection start requires a collection name')
+            self.ctl.exitstatus = LSBInitExitStatuses.INVALID_ARGS
+            return
+
+        supervisor = self.ctl.get_supervisor()
+        for name in names:
+            try:
+                results = supervisor.startCollection(name)
+                for result in results:
+                    self.ctl.output(self._startresult(result))
+                    self.ctl.set_exitstatus_from_xmlrpc_fault(
+                        result['status'], xmlrpc.Faults.ALREADY_STARTED)
+            except xmlrpclib.Fault as e:
+                if e.faultCode == xmlrpc.Faults.BAD_NAME:
+                    self.ctl.output('%s: ERROR (no such collection)' % name)
+                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
+                else:
+                    raise
+
+    def _collection_stop(self, arg):
+        if not self.ctl.upcheck():
+            return
+
+        names = arg.split()
+        if not names:
+            self.ctl.output('Error: collection stop requires a collection name')
+            self.ctl.exitstatus = LSBInitExitStatuses.INVALID_ARGS
+            return
+
+        supervisor = self.ctl.get_supervisor()
+        for name in names:
+            try:
+                results = supervisor.stopCollection(name)
+                for result in results:
+                    self.ctl.output(self._stopresult(result))
+                    self.ctl.set_exitstatus_from_xmlrpc_fault(
+                        result['status'], xmlrpc.Faults.NOT_RUNNING)
+            except xmlrpclib.Fault as e:
+                if e.faultCode == xmlrpc.Faults.BAD_NAME:
+                    self.ctl.output('%s: ERROR (no such collection)' % name)
+                    self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
+                else:
+                    raise
+
+    def help_collection(self):
+        self.ctl.output("collection status\t\tList all collections")
+        self.ctl.output("collection status <name>\tGet processes in a collection")
+        self.ctl.output("collection start <name>\t\tStart all processes in a collection")
+        self.ctl.output("collection stop <name>\t\tStop all processes in a collection")
 
     def _clearresult(self, result):
         name = make_namespec(result['group'], result['name'])

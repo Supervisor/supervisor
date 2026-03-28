@@ -198,7 +198,16 @@ class SupervisorNamespaceRPCInterface:
         added = [group.name for group in added]
         changed = [group.name for group in changed]
         removed = [group.name for group in removed]
-        return [[added, changed, removed]] # cannot return len > 1, apparently
+
+        coll_added, coll_changed, coll_removed = \
+            self.supervisord.diff_collections_to_active()
+
+        coll_added = [c.name for c in coll_added]
+        coll_changed = [c.name for c in coll_changed]
+        coll_removed = [c.name for c in coll_removed]
+
+        return [[added, changed, removed],
+                [coll_added, coll_changed, coll_removed]]
 
     def addProcessGroup(self, name):
         """ Update the config for a running process from config file.
@@ -916,6 +925,128 @@ class SupervisorNamespaceRPCInterface:
                 raise
 
         return True
+
+    # Collection API methods
+
+    def listCollections(self):
+        """ Get info about all configured collections.
+
+        @return array result  An array of collection info structs
+        """
+        self._update('listCollections')
+        result = []
+        for coll in self.supervisord.collections.values():
+            result.append({
+                'name': coll.config.name,
+                'priority': coll.config.priority,
+                'program_names': coll.config.program_names,
+                'group_names': coll.config.group_names,
+            })
+        return result
+
+    def getCollectionProcessInfo(self, name):
+        """ Get info about all processes in a collection named name.
+
+        @param string name  The name of the collection
+        @return array result  An array of process status results
+        """
+        self._update('getCollectionProcessInfo')
+
+        collection = self.supervisord.collections.get(name)
+        if collection is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
+        output = []
+        seen = set()
+        for group, process in collection.get_processes():
+            key = (group.config.name, process.config.name)
+            if key not in seen:
+                seen.add(key)
+                namespec = make_namespec(group.config.name,
+                                         process.config.name)
+                output.append(self.getProcessInfo(namespec))
+        return output
+
+    def startCollection(self, name, wait=True):
+        """ Start all processes in the collection named 'name'
+
+        @param string name     The collection name
+        @param boolean wait    Wait for each process to be fully started
+        @return array result   An array of process status info structs
+        """
+        self._update('startCollection')
+
+        collection = self.supervisord.collections.get(name)
+        if collection is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
+        seen = set()
+        processes = []
+        for group, process in collection.get_processes():
+            key = (group.config.name, process.config.name)
+            if key not in seen:
+                seen.add(key)
+                processes.append((group, process))
+
+        startall = make_allfunc(processes, isNotRunning, self.startProcess,
+                                wait=wait)
+        startall.delay = 0.05
+        startall.rpcinterface = self
+        return startall  # deferred
+
+    def stopCollection(self, name, wait=True):
+        """ Stop all processes in the collection named 'name'
+
+        @param string name     The collection name
+        @param boolean wait    Wait for each process to be fully stopped
+        @return array result   An array of process status info structs
+        """
+        self._update('stopCollection')
+
+        collection = self.supervisord.collections.get(name)
+        if collection is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
+        seen = set()
+        processes = []
+        for group, process in collection.get_processes():
+            key = (group.config.name, process.config.name)
+            if key not in seen:
+                seen.add(key)
+                processes.append((group, process))
+
+        killall = make_allfunc(processes, isRunning, self.stopProcess,
+                               wait=wait)
+        killall.delay = 0.05
+        killall.rpcinterface = self
+        return killall  # deferred
+
+    def signalCollection(self, name, signal):
+        """ Send a signal to all processes in the collection named 'name'
+
+        @param string name    The collection name
+        @param string signal  Signal to send, as name ('HUP') or number ('1')
+        @return array
+        """
+        self._update('signalCollection')
+
+        collection = self.supervisord.collections.get(name)
+        if collection is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
+        seen = set()
+        processes = []
+        for group, process in collection.get_processes():
+            key = (group.config.name, process.config.name)
+            if key not in seen:
+                seen.add(key)
+                processes.append((group, process))
+
+        sendall = make_allfunc(processes, isSignallable, self.signalProcess,
+                               signal=signal)
+        result = sendall()
+        self._update('signalCollection')
+        return result
 
     def sendRemoteCommEvent(self, type, data):
         """ Send an event that will be received by event listener

@@ -488,10 +488,19 @@ class StatusView(MeldView):
               SupervisorNamespaceRPCInterface(supervisord))]
             )
 
+        collection_name = form.get('collection')
+
         processnames = []
-        for group in supervisord.process_groups.values():
-            for gprocname in group.processes.keys():
-                processnames.append((group.config.name, gprocname))
+        if collection_name:
+            collection = supervisord.collections.get(collection_name)
+            if collection is not None:
+                for group, proc in collection.get_processes():
+                    processnames.append((group.config.name,
+                                         proc.config.name))
+        else:
+            for group in supervisord.process_groups.values():
+                for gprocname in group.processes.keys():
+                    processnames.append((group.config.name, gprocname))
 
         processnames.sort()
 

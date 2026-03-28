@@ -177,6 +177,19 @@ class ProcessGroupAddedEvent(ProcessGroupEvent):
 class ProcessGroupRemovedEvent(ProcessGroupEvent):
     pass
 
+class CollectionEvent(Event):
+    def __init__(self, collection):
+        self.collection = collection
+
+    def payload(self):
+        return 'collectionname:%s\n' % self.collection
+
+class CollectionAddedEvent(CollectionEvent):
+    pass
+
+class CollectionRemovedEvent(CollectionEvent):
+    pass
+
 class TickEvent(Event):
     """ Abstract """
     def __init__(self, when, supervisord):

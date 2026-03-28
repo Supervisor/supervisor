@@ -232,7 +232,8 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         supervisord.diff_to_active = lambda : changes
 
         value = interface.reloadConfig()
-        self.assertEqual(value, [[['added'], ['changed'], ['dropped']]])
+        self.assertEqual(value, [[['added'], ['changed'], ['dropped']],
+                                  [[], [], []]])
 
     def test_reloadConfig_process_config_raises_ValueError(self):
         from supervisor import xmlrpc

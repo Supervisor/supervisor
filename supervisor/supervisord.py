@@ -54,6 +54,7 @@ class Supervisor:
     def __init__(self, options):
         self.options = options
         self.process_groups = {}
+        self.collections = {}
         self.ticks = {}
 
     def main(self):
@@ -80,10 +81,13 @@ class Supervisor:
     def run(self):
         self.process_groups = {} # clear
         self.stop_groups = None # clear
+        self.collections = {} # clear
         events.clear()
         try:
             for config in self.options.process_group_configs:
                 self.add_process_group(config)
+            for config in self.options.collection_configs:
+                self.add_collection(config)
             self.options.openhttpservers(self)
             self.options.setsignals()
             if (not self.options.nodaemon) and self.options.first:
@@ -126,6 +130,60 @@ class Supervisor:
         del self.process_groups[name]
         events.notify(events.ProcessGroupRemovedEvent(name))
         return True
+
+    def resolve_collection(self, config):
+        """Resolve a CollectionConfig into a list of (group, process) tuples
+        by looking up program_names and group_names against active process
+        groups. Missing references are silently skipped."""
+        from supervisor.collection import Collection
+        seen = set()
+        members = []
+
+        for program_name in config.program_names:
+            for group in self.process_groups.values():
+                for proc_name, proc in group.processes.items():
+                    if proc.config.name == program_name:
+                        key = (group.config.name, proc_name)
+                        if key not in seen:
+                            seen.add(key)
+                            members.append((group, proc))
+
+        for group_name in config.group_names:
+            group = self.process_groups.get(group_name)
+            if group is None:
+                continue
+            for proc_name, proc in group.processes.items():
+                key = (group.config.name, proc_name)
+                if key not in seen:
+                    seen.add(key)
+                    members.append((group, proc))
+
+        return Collection(config, members)
+
+    def add_collection(self, config):
+        name = config.name
+        self.collections[name] = self.resolve_collection(config)
+        events.notify(events.CollectionAddedEvent(name))
+        return True
+
+    def remove_collection(self, name):
+        del self.collections[name]
+        events.notify(events.CollectionRemovedEvent(name))
+        return True
+
+    def diff_collections_to_active(self):
+        new = self.options.collection_configs
+        cur = [coll.config for coll in self.collections.values()]
+
+        curdict = dict(zip([cfg.name for cfg in cur], cur))
+        newdict = dict(zip([cfg.name for cfg in new], new))
+
+        added = [cand for cand in new if cand.name not in curdict]
+        removed = [cand for cand in cur if cand.name not in newdict]
+        changed = [cand for cand in new
+                   if cand != curdict.get(cand.name, cand)]
+
+        return added, changed, removed
 
     def get_process_map(self):
         process_map = {}

@@ -43,6 +43,7 @@ class DummyOptions:
         self.strip_ansi = False
         self.pidhistory = {}
         self.process_group_configs = []
+        self.collection_configs = []
         self.nodaemon = False
         self.socket_map = {}
         self.mood = 1
@@ -304,9 +305,14 @@ class DummySupervisor:
             self.process_groups = {}
         else:
             self.process_groups = process_groups
+        self.collections = {}
+        self.collection_configs = []
 
     def get_state(self):
         return self.options.mood
+
+    def diff_collections_to_active(self):
+        return [], [], []
 
 class DummySocket:
     bind_called = False
@@ -891,7 +897,29 @@ class DummySupervisorRPCNamespace:
         raise Fault(xmlrpc.Faults.SHUTDOWN_STATE, '')
 
     def reloadConfig(self):
-        return [[['added'], ['changed'], ['removed']]]
+        return [[['added'], ['changed'], ['removed']],
+                [[], [], []]]
+
+    def listCollections(self):
+        return []
+
+    def getCollectionProcessInfo(self, name):
+        from supervisor import xmlrpc
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+        return []
+
+    def startCollection(self, name):
+        from supervisor import xmlrpc
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+        return []
+
+    def stopCollection(self, name):
+        from supervisor import xmlrpc
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+        return []
 
     def addProcessGroup(self, name):
         from supervisor import xmlrpc

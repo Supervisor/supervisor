@@ -351,6 +351,21 @@ Process Control
 
     .. automethod:: removeProcessGroup
 
+Collections
+-----------
+
+  .. autoclass:: SupervisorNamespaceRPCInterface
+
+    .. automethod:: listCollections
+
+    .. automethod:: getCollectionProcessInfo
+
+    .. automethod:: startCollection
+
+    .. automethod:: stopCollection
+
+    .. automethod:: signalCollection
+
 Process Logging
 ---------------
 
