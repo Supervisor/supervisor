@@ -750,6 +750,18 @@ class SignalNumberTests(unittest.TestCase):
             expected = "value 'BADSIG' is not a valid signal name"
             self.assertEqual(e.args[0], expected)
 
+    @unittest.skipUnless(
+        hasattr(signal, 'SIGRTMIN'), 'real-time signals not available'
+    )
+    def test_accepts_realtime_signal_number(self):
+        self.assertEqual(self._callFUT(signal.SIGRTMIN), signal.SIGRTMIN)
+
+    @unittest.skipUnless(
+        hasattr(signal, 'SIGRTMAX'), 'real-time signals not available'
+    )
+    def test_accepts_realtime_signal_max(self):
+        self.assertEqual(self._callFUT(signal.SIGRTMAX), signal.SIGRTMAX)
+
 class AutoRestartTests(unittest.TestCase):
     def _callFUT(self, arg):
         return datatypes.auto_restart(arg)
