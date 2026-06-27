@@ -404,6 +404,8 @@ def url(value):
 
 # all valid signal numbers
 SIGNUMS = [ getattr(signal, k) for k in dir(signal) if k.startswith('SIG') ]
+if hasattr(signal, 'SIGRTMIN') and hasattr(signal, 'SIGRTMAX'):
+    SIGNUMS.extend(range(signal.SIGRTMIN, signal.SIGRTMAX + 1))
 
 def signal_number(value):
     try:
