@@ -318,9 +318,21 @@ restart all
    Restart all processes
    Note: restart does not reread config files. For that, see reread and update.
 
-signal
+signal <signal name> <name>
 
-   No help on signal
+   Signal a process
+
+signal <signal name> <gname>:\*
+
+   Signal all processes in a group
+
+signal <signal name> <name> <name>
+
+   Signal multiple processes or groups
+
+signal <signal name> all
+
+   Signal all processes
 
 start <name>
 
