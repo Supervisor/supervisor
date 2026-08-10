@@ -118,6 +118,22 @@ class ControllerTests(unittest.TestCase):
                          ' enabled in the configuration file'
                          ' (see sample.conf).\n')
 
+    def test__upcheck_shutdown_state(self):
+        options = DummyClientOptions()
+        from supervisor.xmlrpc import Faults
+        def getVersion():
+            raise xmlrpclib.Fault(Faults.SHUTDOWN_STATE, 'bye')
+        options._server.supervisor.getVersion = getVersion
+        controller = self._makeOne(options)
+        controller.stdout = StringIO()
+
+        result = controller.upcheck()
+
+        self.assertEqual(result, False)
+        self.assertEqual(controller.stdout.getvalue(),
+                         'ERROR: supervisord is shutting down; retry later\n')
+        self.assertEqual(controller.exitstatus, LSBInitExitStatuses.GENERIC)
+
     def test__upcheck_reraises_other_xmlrpc_faults(self):
         options = DummyClientOptions()
         from supervisor.xmlrpc import Faults
