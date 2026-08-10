@@ -275,6 +275,10 @@ class Controller(cmd.Cmd):
                     'configuration file (see sample.conf).')
                 self.exitstatus = LSBInitExitStatuses.UNIMPLEMENTED_FEATURE
                 return False
+            elif e.faultCode == xmlrpc.Faults.SHUTDOWN_STATE:
+                self.output('ERROR: supervisord is shutting down; retry later')
+                self.exitstatus = LSBInitExitStatuses.GENERIC
+                return False
             self.exitstatus = LSBInitExitStatuses.GENERIC
             raise
         except socket.error as e:
