@@ -672,6 +672,26 @@ where specified.
   ``group_name``, ``host_node_name``, ``process_num``, ``program_name``,
   and ``here`` (the directory of the supervisord config file).
 
+  .. note::
+
+    When multiple ``[program:x]`` sections are combined into a single
+    ``[group:y]`` section, the
+    ``process_name`` expansion for every process across all of that
+    group's programs **must be unique**.  Processes within a group are
+    tracked internally by their expanded process name, so if two
+    programs in the same group produce the same ``process_name`` (for
+    example, both set ``process_name=%(process_num)02d`` with
+    ``numprocs`` greater than 1), the collision is not just cosmetic:
+    the duplicate name causes one program's processes to overwrite the
+    other's, and one of the programs will not run at all.  Since
+    ``supervisor`` 4.4.0, ``supervisord`` detects this condition at
+    config parse time and refuses to start, raising an error that names
+    the colliding programs and group instead of silently dropping
+    processes. To avoid the error, make sure ``process_name``
+    expressions differ across programs in the same group, typically by
+    including ``%(program_name)s``, e.g.
+    ``process_name=%(program_name)s_%(process_num)02d``.
+
   *Default*: ``%(program_name)s``
 
   *Required*:  No.
@@ -1269,6 +1289,17 @@ been under them will now be moved into the ``foo`` group.
 
   A comma-separated list of program names.  The programs which are
   listed become members of the group.
+
+  .. note::
+
+    Each process belonging to the programs in a group is tracked by
+    its expanded ``process_name``. These names must be unique
+    across every program in the group; if two programs in the group
+    produce the same expanded ``process_name`` (which typically
+    happens when ``numprocs`` is used and ``process_name`` does not
+    include ``%(program_name)s`` or another program-specific value),
+    ``supervisord`` will raise a configuration error at startup rather
+    than silently starting only one of the colliding programs.
 
   *Default*: No default (required)
 

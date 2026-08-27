@@ -3160,6 +3160,84 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertRaises(ValueError, instance.process_groups_from_parser,
                           config)
 
+    def test_duplicate_process_name_in_heterogeneous_group(self):
+        text = lstrip("""\
+        [program:b]
+        command = /bin/cat
+        process_name = %(process_num)02d
+        numprocs = 10
+
+        [program:c]
+        command = /bin/cat
+        process_name = %(process_num)02d
+        numprocs = 10
+
+        [group:a]
+        programs = b,c
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        try:
+            instance.process_groups_from_parser(config)
+            self.fail("expected ValueError")
+        except ValueError as exc:
+            self.assertIn('00', str(exc))
+            self.assertIn('program:b', str(exc))
+            self.assertIn('program:c', str(exc))
+
+    def test_duplicate_process_name_in_heterogeneous_group_default_process_name(self):
+        # Two programs whose process_name expressions collide even
+        # though they don't use numprocs; this covers the case where
+        # process_name is set to a fixed (non program-specific) string.
+        text = lstrip("""\
+        [program:b]
+        command = /bin/cat
+        process_name = worker
+
+        [program:c]
+        command = /bin/cat
+        process_name = worker
+
+        [group:a]
+        programs = b,c
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        self.assertRaises(ValueError, instance.process_groups_from_parser,
+                          config)
+
+    def test_no_duplicate_process_name_error_when_names_differ(self):
+        # process_name expansions that include %(program_name)s (or are
+        # otherwise distinct) should not trigger the duplicate check even
+        # when numprocs > 1 is used for more than one program in a group.
+        text = lstrip("""\
+        [program:b]
+        command = /bin/cat
+        process_name = %(program_name)s_%(process_num)02d
+        numprocs = 10
+
+        [program:c]
+        command = /bin/cat
+        process_name = %(program_name)s_%(process_num)02d
+        numprocs = 10
+
+        [group:a]
+        programs = b,c
+        """)
+        from supervisor.options import UnhosedConfigParser
+        config = UnhosedConfigParser()
+        config.read_string(text)
+        instance = self._makeOne()
+        gconfigs = instance.process_groups_from_parser(config)
+        self.assertEqual(len(gconfigs), 1)
+        gconfig = gconfigs[0]
+        self.assertEqual(gconfig.name, 'a')
+        self.assertEqual(len(gconfig.process_configs), 20)
+
     def test_rpcinterfaces_from_parser(self):
         text = lstrip("""\
         [rpcinterface:dummy]
