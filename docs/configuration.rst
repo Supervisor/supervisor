@@ -675,7 +675,7 @@ where specified.
   .. note::
 
     When multiple ``[program:x]`` sections are combined into a single
-    ``[group:y]`` section (see :ref:`group:x`), the
+    ``[group:y]`` section, the
     ``process_name`` expansion for every process across all of that
     group's programs **must be unique**.  Processes within a group are
     tracked internally by their expanded process name, so if two
