@@ -1,6 +1,18 @@
 4.4.0.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug where a ``[group:x]`` section containing two or more
+  programs whose ``process_name`` expressions expanded to the same
+  value would silently drop one of the programs: internally, processes
+  in a group are tracked in a dict keyed by their expanded process
+  name, so the colliding program's process configs simply overwrote
+  the other program's, and one of the programs never started, with no
+  warning or error.  ``supervisord`` now raises a configuration error
+  at startup when it detects duplicate ``process_name`` expansions
+  within a ``[group:x]`` section, naming the colliding programs and
+  group so the conflict can be fixed in configuration instead of
+  failing silently at runtime.
+
 - Fixed a bug where ``supervisord`` would wait 1 second on startup before
   starting any programs.  Patch by Stepan Blyshchak.
 

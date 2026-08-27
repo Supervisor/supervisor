@@ -691,6 +691,7 @@ class ServerOptions(Options):
             programs = list_of_strings(get(section, 'programs', None))
             priority = integer(get(section, 'priority', 999))
             group_processes = []
+            process_name_to_program = {}
             for program in programs:
                 program_section = "program:%s" % program
                 fcgi_section = "fcgi-program:%s" % program
@@ -705,6 +706,20 @@ class ServerOptions(Options):
                 homogeneous_exclude.append(section)
                 processes = self.processes_from_section(parser, section,
                                                         group_name, ProcessConfig)
+
+                for process in processes:
+                    if process.name in process_name_to_program:
+                        other_program = process_name_to_program[process.name]
+                        raise ValueError(
+                            'Process name %r, resulting from the "process_name" '
+                            'expansion for [%s], collides with the same process '
+                            'name generated for [program:%s] within [%s]. '
+                            'The "process_name" expression for each program in a '
+                            'group must expand to a name that is unique across '
+                            'the entire group (for example by including '
+                            '%%(program_name)s in the expression).' %
+                            (process.name, section, other_program, group_name))
+                    process_name_to_program[process.name] = program
 
                 group_processes.extend(processes)
             groups.append(
