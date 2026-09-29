@@ -1281,21 +1281,39 @@ class DefaultControllerPlugin(ControllerPluginBase):
         else:
             for name in names:
                 group_name, process_name = split_namespec(name)
-                try:
-                    supervisor.clearProcessLogs(name)
-                except xmlrpclib.Fault as e:
-                    error = {'status': e.faultCode,
-                             'name': process_name,
-                             'group': group_name,
-                             'description': e.faultString}
-                    self.ctl.output(self._clearresult(error))
-                    self.ctl.set_exitstatus_from_xmlrpc_fault(error['status'])
+                if process_name is None:
+                    try:
+                        results = supervisor.clearProcessGroupLogs(group_name)
+                        for result in results:
+                            self.ctl.output(self._clearresult(result))
+                            self.ctl.set_exitstatus_from_xmlrpc_fault(
+                                result['status'])
+                    except xmlrpclib.Fault as e:
+                        if e.faultCode == xmlrpc.Faults.BAD_NAME:
+                            error = "%s: ERROR (no such group)" % group_name
+                            self.ctl.output(error)
+                            self.ctl.exitstatus = LSBInitExitStatuses.INVALID_ARGS
+                        else:
+                            self.ctl.exitstatus = LSBInitExitStatuses.GENERIC
+                            raise
                 else:
-                    name = make_namespec(group_name, process_name)
-                    self.ctl.output('%s: cleared' % name)
+                    try:
+                        supervisor.clearProcessLogs(name)
+                    except xmlrpclib.Fault as e:
+                        error = {'status': e.faultCode,
+                                 'name': process_name,
+                                 'group': group_name,
+                                 'description': e.faultString}
+                        self.ctl.output(self._clearresult(error))
+                        self.ctl.set_exitstatus_from_xmlrpc_fault(error['status'])
+                    else:
+                        name = make_namespec(group_name, process_name)
+                        self.ctl.output('%s: cleared' % name)
 
     def help_clear(self):
         self.ctl.output("clear <name>\t\tClear a process' log files.")
+        self.ctl.output(
+            "clear <gname>:*\t\tClear logs for all processes in a group")
         self.ctl.output(
             "clear <name> <name>\tClear multiple process' log files")
         self.ctl.output("clear all\t\tClear all process' log files")

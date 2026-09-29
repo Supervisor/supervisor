@@ -1,6 +1,11 @@
 4.4.0.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug where ``supervisorctl clear <group>:*`` reported
+  ``<group>:None`` and did not clear logs for processes in a group
+  with ``numprocs`` greater than 1.  ``clear`` now accepts a group
+  name the same way ``start`` and ``stop`` do.  Patch by 00200200.
+
 - Fixed a bug where ``supervisord`` would wait 1 second on startup before
   starting any programs.  Patch by Stepan Blyshchak.
 

@@ -834,6 +834,57 @@ class SupervisorNamespaceRPCInterface:
 
     clearProcessLog = clearProcessLogs # b/c alias
 
+    def clearProcessGroupLogs(self, name):
+        """ Clear all process log files in the process group named 'name'
+
+        @param string name     The group name
+        @return array result   An array of process status info structs
+        """
+        self._update('clearProcessGroupLogs')
+
+        group = self.supervisord.process_groups.get(name)
+        if group is None:
+            raise RPCError(Faults.BAD_NAME, name)
+
+        results = []
+        callbacks = []
+
+        processes = list(group.processes.values())
+        processes.sort()
+        for process in processes:
+            callbacks.append((group, process, self.clearProcessLog))
+
+        def cleargroup():
+            if not callbacks:
+                return results
+
+            group, process, callback = callbacks.pop(0)
+            procname = make_namespec(group.config.name, process.config.name)
+            try:
+                callback(procname)
+            except RPCError as e:
+                results.append(
+                    {'name': process.config.name,
+                     'group': group.config.name,
+                     'status': e.code,
+                     'description': e.text})
+            else:
+                results.append(
+                    {'name': process.config.name,
+                     'group': group.config.name,
+                     'status': Faults.SUCCESS,
+                     'description': 'OK'}
+                    )
+
+            if callbacks:
+                return NOT_DONE_YET
+
+            return results
+
+        cleargroup.delay = 0.05
+        cleargroup.rpcinterface = self
+        return cleargroup # deferred
+
     def clearAllProcessLogs(self):
         """ Clear all process log files
 

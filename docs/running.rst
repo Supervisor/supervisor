@@ -265,6 +265,10 @@ clear <name>
 
    Clear a process' log files.
 
+clear <gname>:*
+
+   Clear log files for all processes in a group.
+
 clear <name> <name>
 
    Clear multiple process' log files

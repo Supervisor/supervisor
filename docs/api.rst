@@ -367,6 +367,8 @@ Process Logging
 
     .. automethod:: clearProcessLogs
 
+    .. automethod:: clearProcessGroupLogs
+
     .. automethod:: clearAllProcessLogs
 
 
