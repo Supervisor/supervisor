@@ -1974,6 +1974,76 @@ class SupervisorNamespaceXMLRPCInterfaceTests(TestBase):
         results = callback()
         self.assertEqual(results, [])
 
+    def test_clearProcessGroupLogs(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'foo', priority=1)
+        pconfig2 = DummyPConfig(options, 'process2', 'bar', priority=2)
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
+                                               pconfig2)
+        interface = self._makeOne(supervisord)
+        callback = interface.clearProcessGroupLogs('foo')
+        callback()
+        results = callback()
+        from supervisor import xmlrpc
+        self.assertEqual(results[0],
+                         {'name':'process1',
+                          'group':'foo',
+                          'status':xmlrpc.Faults.SUCCESS,
+                          'description':'OK'})
+        self.assertEqual(results[1],
+                         {'name':'process2',
+                          'group':'foo',
+                          'status':xmlrpc.Faults.SUCCESS,
+                          'description':'OK'})
+        self.assertEqual(interface.update_text, 'clearProcessLogs')
+        process1 = supervisord.process_groups['foo'].processes['process1']
+        self.assertEqual(process1.logsremoved, True)
+        process2 = supervisord.process_groups['foo'].processes['process2']
+        self.assertEqual(process2.logsremoved, True)
+
+    def test_clearProcessGroupLogs_onefails(self):
+        options = DummyOptions()
+        pconfig1 = DummyPConfig(options, 'process1', 'foo', priority=1)
+        pconfig2 = DummyPConfig(options, 'process2', 'bar', priority=2)
+        supervisord = PopulatedDummySupervisor(options, 'foo', pconfig1,
+                                               pconfig2)
+        supervisord.set_procattr('process1', 'error_at_clear', True)
+        interface = self._makeOne(supervisord)
+        callback = interface.clearProcessGroupLogs('foo')
+        callback()
+        results = callback()
+        process1 = supervisord.process_groups['foo'].processes['process1']
+        self.assertEqual(process1.logsremoved, False)
+        process2 = supervisord.process_groups['foo'].processes['process2']
+        self.assertEqual(process2.logsremoved, True)
+        self.assertEqual(len(results), 2)
+        from supervisor import xmlrpc
+        self.assertEqual(results[0],
+                         {'name':'process1',
+                          'group':'foo',
+                          'status':xmlrpc.Faults.FAILED,
+                          'description':'FAILED: foo:process1'})
+        self.assertEqual(results[1],
+                         {'name':'process2',
+                          'group':'foo',
+                          'status':xmlrpc.Faults.SUCCESS,
+                          'description':'OK'})
+
+    def test_clearProcessGroupLogs_badname(self):
+        from supervisor import xmlrpc
+        supervisord = DummySupervisor()
+        interface = self._makeOne(supervisord)
+        self._assertRPCError(xmlrpc.Faults.BAD_NAME,
+                             interface.clearProcessGroupLogs, 'foo')
+
+    def test_clearProcessGroupLogs_no_processes(self):
+        options = DummyOptions()
+        supervisord = PopulatedDummySupervisor(options, 'foo')
+        interface = self._makeOne(supervisord)
+        callback = interface.clearProcessGroupLogs('foo')
+        results = callback()
+        self.assertEqual(results, [])
+
     def test_sendProcessStdin_raises_incorrect_params_when_not_chars(self):
         options = DummyOptions()
         pconfig1 = DummyPConfig(options, 'process1', 'foo')

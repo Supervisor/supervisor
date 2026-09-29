@@ -1131,6 +1131,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         plugin.help_clear()
         out = plugin.ctl.stdout.getvalue()
         self.assertTrue("clear <name>" in out)
+        self.assertTrue("clear <gname>:*" in out)
 
     def test_clear_fail(self):
         plugin = self._makeOne()
@@ -1164,6 +1165,32 @@ class TestDefaultControllerPlugin(unittest.TestCase):
                          'foo: cleared\n')
         self.assertEqual(plugin.ctl.exitstatus, LSBInitExitStatuses.SUCCESS)
 
+    def test_clear_group(self):
+        plugin = self._makeOne()
+        result = plugin.do_clear('foo:*')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo:foo_00: cleared\n'
+                         'foo:foo_01: cleared\n')
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitExitStatuses.SUCCESS)
+
+    def test_clear_group_empty_process_name(self):
+        plugin = self._makeOne()
+        result = plugin.do_clear('foo:')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'foo:foo_00: cleared\n'
+                         'foo:foo_01: cleared\n')
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitExitStatuses.SUCCESS)
+
+    def test_clear_group_bad_name(self):
+        plugin = self._makeOne()
+        result = plugin.do_clear('BAD_NAME:*')
+        self.assertEqual(result, None)
+        self.assertEqual(plugin.ctl.stdout.getvalue(),
+                         'BAD_NAME: ERROR (no such group)\n')
+        self.assertEqual(plugin.ctl.exitstatus, LSBInitExitStatuses.INVALID_ARGS)
+
     def test_clear_many(self):
         plugin = self._makeOne()
         result = plugin.do_clear('foo bar')
@@ -1192,6 +1219,7 @@ class TestDefaultControllerPlugin(unittest.TestCase):
         supervisor = plugin.ctl.options._server.supervisor
         supervisor.clearAllProcessLogs = f
         supervisor.clearProcessLogs = f
+        supervisor.clearProcessGroupLogs = f
         plugin.do_clear('foo')
         self.assertEqual(called, [])
 

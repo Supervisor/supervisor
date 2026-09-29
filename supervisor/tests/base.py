@@ -822,6 +822,20 @@ class DummySupervisorRPCNamespace:
              'description': 'OK'},
             ]
 
+    def clearProcessGroupLogs(self, name):
+        from supervisor import xmlrpc
+        from supervisor.compat import Fault
+        if name == 'BAD_NAME':
+            raise Fault(xmlrpc.Faults.BAD_NAME, 'BAD_NAME')
+        return [
+            {'name':'foo_00', 'group':'foo',
+             'status': xmlrpc.Faults.SUCCESS,
+             'description': 'OK'},
+            {'name':'foo_01', 'group':'foo',
+             'status':xmlrpc.Faults.SUCCESS,
+             'description': 'OK'},
+            ]
+
     def startAllProcesses(self):
         from supervisor import xmlrpc
         return [
