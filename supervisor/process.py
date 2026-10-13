@@ -25,6 +25,7 @@ from supervisor.options import ProcessException, BadCommand
 from supervisor.dispatchers import EventListenerStates
 
 from supervisor import events
+from supervisor import loggers
 
 from supervisor.datatypes import RestartUnconditionally
 
@@ -67,6 +68,17 @@ class Subprocess(object):
         self.state = ProcessStates.STOPPED
 
     def removelogs(self):
+        if not self.dispatchers:
+            # Stopped processes have no dispatchers to manage their log files.
+            for channel in ('stdout', 'stderr'):
+                filename = getattr(self.config, '%s_logfile' % channel)
+                if filename and filename != 'syslog':
+                    handler = loggers.FileHandler(filename)
+                    try:
+                        handler.remove()
+                        handler.reopen()
+                    finally:
+                        handler.close()
         for dispatcher in self.dispatchers.values():
             if hasattr(dispatcher, 'removelogs'):
                 dispatcher.removelogs()

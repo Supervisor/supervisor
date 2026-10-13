@@ -1,6 +1,8 @@
 4.4.0.dev0 (Next Release)
 -------------------------
 
+- Fixed a bug where clearing the logs of a stopped process had no effect.
+
 - Fixed a bug where ``supervisord`` would wait 1 second on startup before
   starting any programs.  Patch by Stepan Blyshchak.
 

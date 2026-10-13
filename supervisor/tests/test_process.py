@@ -90,6 +90,49 @@ class SubprocessTests(unittest.TestCase):
         self.assertEqual(instance.dispatchers[0].logs_removed, True)
         self.assertEqual(instance.dispatchers[1].logs_removed, False)
 
+    def test_removelogs_stopped(self):
+        with tempfile.NamedTemporaryFile() as stdout:
+            with tempfile.NamedTemporaryFile() as stderr:
+                stdout.write(b'stdout from previous run\n')
+                stderr.write(b'stderr from previous run\n')
+                stdout.flush()
+                stderr.flush()
+                config = DummyPConfig(
+                    DummyOptions(), 'test', '/test',
+                    stdout_logfile=stdout.name,
+                    stderr_logfile=stderr.name)
+                instance = self._makeOne(config)
+
+                instance.removelogs()
+
+                with open(stdout.name, 'rb') as logfile:
+                    self.assertEqual(logfile.read(), b'')
+                with open(stderr.name, 'rb') as logfile:
+                    self.assertEqual(logfile.read(), b'')
+                self.assertEqual(instance.dispatchers, {})
+
+    def test_removelogs_stopped_disabled(self):
+        config = DummyPConfig(DummyOptions(), 'test', '/test')
+        instance = self._makeOne(config)
+        instance.removelogs()
+        self.assertEqual(instance.dispatchers, {})
+
+    def test_removelogs_stopped_syslog(self):
+        config = DummyPConfig(DummyOptions(), 'test', '/test',
+                              stdout_logfile='syslog', stderr_syslog=True)
+        instance = self._makeOne(config)
+        with patch('supervisor.loggers.FileHandler') as handler:
+            instance.removelogs()
+            self.assertFalse(handler.called)
+
+    def test_removelogs_stopped_failed(self):
+        with tempfile.NamedTemporaryFile() as logfile:
+            config = DummyPConfig(
+                DummyOptions(), 'test', '/test',
+                stdout_logfile=os.path.join(logfile.name, 'missing.log'))
+            instance = self._makeOne(config)
+            self.assertRaises((IOError, OSError), instance.removelogs)
+
     def test_drain(self):
         options = DummyOptions()
         config = DummyPConfig(options, 'test', '/test',
