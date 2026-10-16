@@ -392,6 +392,7 @@ class Options:
 
 
 class ServerOptions(Options):
+    signal_wakeup = None
     user = None
     sockchown = None
     sockchmod = None
@@ -1210,6 +1211,7 @@ class ServerOptions(Options):
                     self._try_unlink(socketname)
         if self.unlink_pidfile:
             self._try_unlink(self.pidfile)
+        self.close_signal_wakeup()
         self.poller.close()
 
     def _try_unlink(self, path):
@@ -1252,6 +1254,15 @@ class ServerOptions(Options):
         signal.signal(signal.SIGHUP, receive)
         signal.signal(signal.SIGCHLD, receive)
         signal.signal(signal.SIGUSR2, receive)
+        if self.signal_wakeup is None:
+            self.signal_wakeup = SignalWakeup()
+            self.get_socket_map()[self.signal_wakeup.fd] = self.signal_wakeup
+
+    def close_signal_wakeup(self):
+        if self.signal_wakeup is not None:
+            self.get_socket_map().pop(self.signal_wakeup.fd, None)
+            self.signal_wakeup.close()
+            self.signal_wakeup = None
 
     def get_signal(self):
         return self.signal_receiver.get_signal()
@@ -2179,6 +2190,43 @@ def _init_signames():
         if k_startswith("SIG") and not k_startswith("SIG_"):
             d[v] = k
     _signames = d
+
+class SignalWakeup:
+    """Makes an fd in the socket map readable whenever a signal arrives, so
+    the main loop's poll returns at once. Python 3 retries a poll that a
+    signal interrupts (PEP 475): without this, a SIGCHLD is seen only when
+    the poll times out, up to a second later, and a program that exits
+    within startsecs while a child keeps its output open is counted as
+    started."""
+
+    def __init__(self):
+        self.fd, self._write_fd = os.pipe()
+        for fd in (self.fd, self._write_fd):
+            flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+            fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+        self._previous = signal.set_wakeup_fd(self._write_fd)
+
+    def readable(self):
+        return True
+
+    def writable(self):
+        return False
+
+    def handle_read_event(self):
+        try:
+            while os.read(self.fd, 4096):
+                pass
+        except OSError as e:
+            if e.errno not in (errno.EAGAIN, errno.EWOULDBLOCK):
+                raise
+
+    def handle_error(self):
+        pass
+
+    def close(self):
+        signal.set_wakeup_fd(self._previous)
+        os.close(self.fd)
+        os.close(self._write_fd)
 
 class SignalReceiver:
     def __init__(self):

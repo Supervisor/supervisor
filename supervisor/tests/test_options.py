@@ -1097,6 +1097,35 @@ class ServerOptionsTests(unittest.TestCase):
         instance = self._makeOne()
         self.assertEqual(os.getpid(), instance.get_pid())
 
+    def test_setsignals_makes_a_signal_wake_the_main_loop(self):
+        # Python 3 retries a poll that a signal interrupts (PEP 475), so the
+        # main loop sees a SIGCHLD at once only if the signal also makes an
+        # fd in the socket map readable.
+        import select
+        from supervisor.options import SignalWakeup
+        instance = self._makeOne()
+        signums = (signal.SIGTERM, signal.SIGINT, signal.SIGQUIT,
+                   signal.SIGHUP, signal.SIGCHLD, signal.SIGUSR2)
+        handlers = dict((s, signal.getsignal(s)) for s in signums)
+        try:
+            instance.setsignals()
+            wakeups = [d for d in instance.get_socket_map().values()
+                       if isinstance(d, SignalWakeup)]
+            self.assertEqual(len(wakeups), 1)
+            wakeup = wakeups[0]
+            os.kill(os.getpid(), signal.SIGCHLD)
+            r, w, x = select.select([wakeup.fd], [], [], 1)
+            self.assertEqual(r, [wakeup.fd])
+            wakeup.handle_read_event()
+            r, w, x = select.select([wakeup.fd], [], [], 0)
+            self.assertEqual(r, [])
+        finally:
+            instance.close_signal_wakeup()
+            for s, handler in handlers.items():
+                signal.signal(s, handler)
+        self.assertFalse(any(isinstance(d, SignalWakeup)
+                             for d in instance.get_socket_map().values()))
+
     def test_get_signal_delegates_to_signal_receiver(self):
         instance = self._makeOne()
         instance.signal_receiver.receive(signal.SIGTERM, None)
