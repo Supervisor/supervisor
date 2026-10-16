@@ -392,6 +392,7 @@ class Options:
 
 
 class ServerOptions(Options):
+    daemon_ready_fd = None
     user = None
     sockchown = None
     sockchmod = None
@@ -1161,12 +1162,29 @@ class ServerOptions(Options):
         # This explanation was (gratefully) garnered from
         # http://www.cems.uwe.ac.uk/~irjohnso/coursenotes/lrc/system/daemons/d3.htm
 
+        # The parent exits once the child has written its pidfile, or failed
+        # to, so whoever started supervisord can read the pidfile as soon as
+        # the command returns, as an init system such as systemd's
+        # Type=forking expects.  The child closes its end of this pipe in
+        # write_pidfile(); the parent's read then returns.
+        ready_r, ready_w = os.pipe()
         pid = os.fork()
         if pid != 0:
             # Parent
+            os.close(ready_w)
+            self.logger.blather("supervisord forked; parent waiting for pidfile")
+            while 1:
+                try:
+                    os.read(ready_r, 1)
+                    break
+                except OSError as e:
+                    if e.errno != errno.EINTR:
+                        break
             self.logger.blather("supervisord forked; parent exiting")
             os._exit(0)
         # Child
+        os.close(ready_r)
+        self.daemon_ready_fd = ready_w
         self.logger.info("daemonizing the supervisord process")
         if self.directory:
             try:
@@ -1201,6 +1219,9 @@ class ServerOptions(Options):
         else:
             self.unlink_pidfile = True
             self.logger.info('supervisord started with pid %s' % pid)
+        if self.daemon_ready_fd is not None:
+            os.close(self.daemon_ready_fd)
+            self.daemon_ready_fd = None
 
     def cleanup(self):
         for config, server in self.httpservers:

@@ -1619,6 +1619,29 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertTrue(msg.startswith('could not write pidfile'))
         self.assertFalse(instance.unlink_pidfile)
 
+    def test_write_pidfile_tells_the_daemonizing_parent(self):
+        # The parent of a daemonized supervisord waits for this, so the
+        # pidfile exists once the command that started supervisord returns.
+        for fn in (None, '/cannot/possibly/exist'):
+            if fn is None:
+                with tempfile.NamedTemporaryFile(delete=True) as f:
+                    fn = f.name
+            ready_r, ready_w = os.pipe()
+            try:
+                instance = self._makeOne()
+                instance.logger = DummyLogger()
+                instance.pidfile = fn
+                instance.daemon_ready_fd = ready_w
+                instance.write_pidfile()
+                self.assertEqual(instance.daemon_ready_fd, None)
+                self.assertEqual(os.read(ready_r, 1), b'')
+            finally:
+                os.close(ready_r)
+                try:
+                    os.unlink(fn)
+                except OSError:
+                    pass
+
     def test_close_fd(self):
         instance = self._makeOne()
         innie, outie = os.pipe()

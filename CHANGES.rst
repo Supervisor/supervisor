@@ -27,6 +27,11 @@
   now includes the Python exception message for easier debugging.
   Patch by Sandro Jäckel.
 
+- When ``supervisord`` daemonizes, the parent process now exits only after
+  the daemon has written its pidfile.  Previously a script or init system
+  that read the pidfile as soon as ``supervisord`` returned could find it
+  missing.
+
 4.3.0 (2025-08-23)
 ------------------
 
