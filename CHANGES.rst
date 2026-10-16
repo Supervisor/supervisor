@@ -27,6 +27,13 @@
   now includes the Python exception message for easier debugging.
   Patch by Sandro Jäckel.
 
+- Fixed a bug on Python 3 where ``supervisord`` noticed a program had exited
+  only when its main loop next timed out, up to 1 second later, if a child
+  of the program kept its output open.  A program that failed at once was
+  then counted as started once ``startsecs`` passed, so ``startretries``
+  never applied and it was restarted forever.  A signal now wakes the main
+  loop at once.
+
 4.3.0 (2025-08-23)
 ------------------
 
