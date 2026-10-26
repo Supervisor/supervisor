@@ -1506,6 +1506,7 @@ class ServerOptions(Options):
             pass
 
     def fork(self):
+        self.signal_receiver.prepare_for_fork()
         return os.fork()
 
     def dup2(self, frm, to):
@@ -2183,8 +2184,20 @@ def _init_signames():
 class SignalReceiver:
     def __init__(self):
         self._signals_recvd = []
+        self._supervisor_pid = None
+
+    def prepare_for_fork(self):
+        self._supervisor_pid = os.getpid()
 
     def receive(self, sig, frame):
+        if (self._supervisor_pid is not None and
+                os.getpid() != self._supervisor_pid):
+            # A managed child has inherited our handler but will never drain
+            # our signal queue.  Apply the default disposition, as exec will,
+            # so a stop requested before exec cannot be silently discarded.
+            signal.signal(sig, signal.SIG_DFL)
+            os.kill(os.getpid(), sig)
+            return
         if sig not in self._signals_recvd:
             self._signals_recvd.append(sig)
 

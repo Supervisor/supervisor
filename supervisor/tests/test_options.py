@@ -3759,6 +3759,40 @@ class SignalReceiverTests(unittest.TestCase):
         self.assertEqual(sr.get_signal(), signal.SIGCHLD)
         self.assertEqual(sr.get_signal(), None)
 
+    def test_supervisor_still_queues_signals_after_preparing_for_fork(self):
+        from supervisor.options import SignalReceiver
+        sr = SignalReceiver()
+        sr.prepare_for_fork()
+        sr.receive(signal.SIGTERM, 'frame')
+        self.assertEqual(sr.get_signal(), signal.SIGTERM)
+        self.assertEqual(sr.get_signal(), None)
+
+    def _signal_in_spawned_child(self, sig):
+        from supervisor.options import ServerOptions
+        options = ServerOptions()
+        pid = options.fork()
+        if pid == 0:
+            try:
+                # The managed child inherits these handlers until exec.  Its
+                # copy of the supervisor signal queue is never drained.
+                signal.signal(sig, options.signal_receiver.receive)
+                os.kill(os.getpid(), sig)
+            finally:
+                os._exit(0)
+        waited_pid, status = os.waitpid(pid, 0)
+        self.assertEqual(waited_pid, pid)
+        return status
+
+    def test_spawned_child_does_not_swallow_stop_signal(self):
+        status = self._signal_in_spawned_child(signal.SIGTERM)
+        self.assertTrue(os.WIFSIGNALED(status))
+        self.assertEqual(os.WTERMSIG(status), signal.SIGTERM)
+
+    def test_spawned_child_preserves_default_ignored_signal(self):
+        status = self._signal_in_spawned_child(signal.SIGCHLD)
+        self.assertTrue(os.WIFEXITED(status))
+        self.assertEqual(os.WEXITSTATUS(status), 0)
+
 class UnhosedConfigParserTests(unittest.TestCase):
     def _getTargetClass(self):
         from supervisor.options import UnhosedConfigParser
